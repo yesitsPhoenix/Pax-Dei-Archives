@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="js/inis.js"></script>
+<html lang="en">
+
+<head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport">
+    <link href="css/map_styles.css" rel="stylesheet">
+
+    <style>
+        .leaflet-container {
+            background: none !important;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #2C2C2B;
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: top;
+            font-family: Arial, sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <header>
+    </header>
+        <div>
+        </div>
+    </header>
+    <main>
+        <div id="map-container">
+            <div id="map" style="width: 100%; height: 100vh;"></div>
+        </div>
+    </main>
+    <footer>
+        
+        <div id="mouse-coordinates">
+            <span class="dynamic-coordinates"></span>
+        </div>
+        <div id="map-overlay"></div>
+    </footer>
+</body>
+
+</html>
