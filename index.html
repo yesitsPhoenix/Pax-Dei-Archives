@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Pax Dei Archives</title>
+	<link href="frontend/www/assets/book.png" rel="icon" type="image/png">
+	<link href="frontend/www/css/styles.css" rel="stylesheet">
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@31.1.1/dist/ag-grid-community.min.js"></script>
+	<link href="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/styles/ag-grid.css" rel="stylesheet">
+	<link href="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/styles/ag-theme-alpine-dark.css" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet">
+	<link href="https://cdn.jsdelivr.net/npm/@ionic/core/css/ionic.bundle.css"/>
+	<link href="https://cdn.skypack.dev/@ionic/core@7/css/ionic.bundle.css" />
+	<link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+	<meta content="width=device-width, initial-scale=1" name="viewport">
+</head>
+<body>
+
+	<div class="top-bar">
+		<div class="logo-details">
+			<a href="/"><img alt="Book Icon" class="book-icon" src="frontend/www/assets/book.png"></a> <span class="logo_name">Pax Dei Archives</span>
+		</div>
+		<input id="quickFilterInput" placeholder="Search this list..." type="text">
+		<div class="column-wrapper">
+			<div class="column-header">
+				<span class="legend-box lock-pinned"></span>
+			</div>
+			<div id="rt_sidebar" class="rt_sidebar">
+				<span id="closeSidebarBtn" class="close-btn">&times;</span>
+				
+				<ion-card>
+					<ion-thumbnail class="cardIcon" id="cardThumbnail"></ion-thumbnail>
+					<ion-card-header>
+						<ion-card-title id="cardTitle">Card Title</ion-card-title>
+						<br><ion-card-subtitle id="cardSubtitle">Card Subtitle</ion-card-subtitle>
+					</ion-card-header>
+					<ion-card-content id="cardContent">Here's a small text description for the card content. Nothing more, nothing less.</ion-card-content>
+					<br><br><br>
+					<ion-card-content id="unlockedByContent">Unlocked By: Unknown</ion-card-content>
+					<!-- <ion-list>
+						<ion-item>
+						  <ion-thumbnail id="unlockedByContent" slot="start">
+							<img alt="item_slot_1" src="https://ionicframework.com/docs/img/demos/thumbnail.svg" />
+						  </ion-thumbnail>
+						  <ion-label></ion-label>
+						</ion-item>
+						<br><br>
+						<ion-item>
+							<ion-thumbnail id="regions" slot="start">
+							  <img alt="item_slot_2" src="https://ionicframework.com/docs/img/demos/thumbnail.svg" />
+							</ion-thumbnail>
+							<ion-label></ion-label>
+						  </ion-item> -->
+				</ion-card>
+				
+			</div>
+
+			<div class="ag-theme-alpine-dark" id="grid-container" style="width: 94vw; height: 92vh"></div>
+			<iframe frameborder="0" id="mapIframe" name="mapIframe"></iframe>
+			<div class="sidebar close">
+						
+
+				<ul class="nav-links">
+					<li>
+						<a id="openSidebarLink"><i class='bx bx-menu'></i> <span class="link_name">Menu</span></a>
+					</li><!-- Items -->
+					<li>
+						<div class="icon-link">
+							<a><i class='bx bxs-leaf'></i> <span class="link_name">Items</span></a> <i class='bx bxs-chevron-down arrow'></i>
+						</div>
+						<ul class="main-menu">
+							<li>
+								<a class="link_name">Items</a>
+							</li>
+							<li class="sub-menu-item" data-table-id="woods-table"><img alt="Woods" class="list-icon" src="frontend/www/assets/woods.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Woods</li>
+							<li class="sub-menu-item" data-table-id="fruit-table"><img alt="Fruit" class="list-icon" src="frontend/www/assets/fruit.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Fruit</li>
+							<li class="sub-menu-item" data-table-id="fauna-drops-table"><img alt="Fauna Drops" class="list-icon" src="frontend/www/assets/fauna.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Fauna Drops</li>
+							<li class="sub-menu-item" data-table-id="flora-table"><img alt="Flora" class="list-icon" src="frontend/www/assets/flora.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Flora</li>
+							<li class="sub-menu-item" data-table-id="fungi-table"><img alt="Fungi" class="list-icon" src="frontend/www/assets/fungi.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Fungi</li>
+							<li class="sub-menu-item" data-table-id="stone-table"><img alt="Stones" class="list-icon" src="frontend/www/assets/stones.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Stone</li>
+							<li class="sub-menu-item" data-table-id="refined-resources-table"><img alt="Refined" class="list-icon" src="frontend/www/assets/refined.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Refined Resources</li>
+							<li style="list-style: none; display: inline">
+								<hr class="solid">
+							</li>
+							<li class="sub-menu-item" data-table-id="weapons-table"><img alt="Weapons" class="list-icon" src="frontend/www/assets/weapons.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Weapons</li>
+							<li class="sub-menu-item" data-table-id="armor-table"><img alt="Armor" class="list-icon" src="frontend/www/assets/armor.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Armor</li>
+							<li class="sub-menu-item" data-table-id="jewelry-table"><img alt="Jewelry" class="list-icon" src="frontend/www/assets/jewelry.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Jewelry</li>
+							<li class="sub-menu-item" data-table-id="relics-table"><img alt="Relics" class="list-icon" src="frontend/www/assets/relics.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Relics</li>
+							<li class="sub-menu-item" data-table-id="spells-table"><img alt="Spells" class="list-icon" src="frontend/www/assets/spell.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Spells</li>
+							<li class="sub-menu-item" data-table-id="tools-table"><img alt="Tools" class="list-icon" src="frontend/www/assets/tools.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Tools</li>
+							<li style="list-style: none; display: inline">
+								<hr class="solid">
+							</li>
+							<!-- <li class="sub-menu-item" data-table-id="crafting-items-table"><img alt="Crafting" class="list-icon" src="frontend/www/assets/anvil.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Crafting Items</li>
+							<li class="sub-menu-item" data-table-id="building-items-table"><img alt="Building" class="list-icon" src="frontend/www/assets/crafting.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Building Items</li> -->
+							<li class="sub-menu-item" data-table-id="all_items-table"><img alt="IDs" class="list-icon" src="frontend/www/assets/special_icon.png" style="width: 35px; margin-right: 10px; margin-left: 5px">All Items</li>
+						</ul>
+					</li><!-- Mobs -->
+					<li>
+						<div class="icon-link">
+							<a><i class='bx bx-book-alt'></i> <span class="link_name">Mobs</span></a> <i class='bx bxs-chevron-down arrow'></i>
+						</div>
+						<ul class="main-menu">
+							<li>
+								<a class="link_name">Mobs</a>
+							</li>
+							<li class="sub-menu-item" data-table-id="inquisition-table"><img alt="Inquisition" class="list-icon" src="frontend/www/assets/inquisition.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Inquisition</li>
+							<li class="sub-menu-item" data-table-id="zebians-table"><img alt="Zebians" class="list-icon" src="frontend/www/assets/zebian.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Zebians</li>
+							<li class="sub-menu-item" data-table-id="fauna-mobs-table"><img alt="Fauna Mobs" class="list-icon" src="frontend/www/assets/fauna.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Fauna Mobs</li>
+						</ul>
+					</li><!-- Stations -->
+					<li>
+						<div class="icon-link">
+							<a><i class='bx bxs-wrench'></i> <span class="link_name">Stations</span></a> <i class='bx bxs-chevron-down arrow'></i>
+						</div>
+						<ul class="main-menu">
+							<li>
+								<a class="link_name">Stations</a>
+							</li>
+							<li class="sub-menu-item" data-table-id="alchemy-stations"><img alt="Alchemy Stations" class="list-icon" src="frontend/www/assets/alchemy.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Alchemy Stations</li>
+							<li class="sub-menu-item" data-table-id="baking-stations"><img alt="Baking Stations" class="list-icon" src="frontend/www/assets/baking.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Baking Stations</li>
+							<li class="sub-menu-item" data-table-id="blacksmith-stations"><img alt="Blacksmith Stations" class="list-icon" src="frontend/www/assets/anvil.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Blacksmith Stations</li>
+							<li class="sub-menu-item" data-table-id="builder-stations"><img alt="Builder Stations" class="list-icon" src="frontend/www/assets/building.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Builder Stations</li>
+							<li class="sub-menu-item" data-table-id="charcuterie-stations"><img alt="Charcuterie Stations" class="list-icon" src="frontend/www/assets/charcuterie.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Charcuterie Stations</li>
+							<li class="sub-menu-item" data-table-id="cooking-stations"><img alt="Cooking Stations" class="list-icon" src="frontend/www/assets/cooking.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Cooking Stations</li>
+							<li class="sub-menu-item" data-table-id="fletching-stations"><img alt="Fletching Stations" class="list-icon" src="frontend/www/assets/weapons.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Fletching Stations</li>
+							<li class="sub-menu-item" data-table-id="leatherworking-stations"><img alt="Leatherworking Stations" class="list-icon" src="frontend/www/assets/leatherworking.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Leatherworking Stations</li>
+							<li class="sub-menu-item" data-table-id="jewelry-stations"><img alt="Jewelry Stations" class="list-icon" src="frontend/www/assets/jewelry.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Jewelry Stations</li>
+							<li class="sub-menu-item" data-table-id="tailoring-stations"><img alt="tailoring Stations" class="list-icon" src="frontend/www/assets/tailoring.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Tailoring Stations</li>
+							<li class="sub-menu-item" data-table-id="tanning-stations"><img alt="Tanning Stations" class="list-icon" src="frontend/www/assets/tanning.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Tanning Stations</li>
+							<li class="sub-menu-item" data-table-id="winemaking-brewing-stations"><img alt="Winemaking & Brewing Stations" class="list-icon" src="frontend/www/assets/brewing.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Winemaking & Brewing Stations</li>
+						</ul>
+					</li>
+					<li>
+						<!-- Maps -->
+						<div class="icon-link">
+							<a id="mapsMenuLink"><i class='bx bx-map-alt'></i> <span class="link_name">Maps</span></a> <i class='bx bxs-chevron-down arrow'></i>
+						</div>
+						<ul class="main-menu" id="mapsSubMenu">
+							<li><span class="link_name" id="mapsMenuItem">Maps</span></li>
+							<li class="sub-menu-item-map"><img alt="Combined Map" class="list-icon" src="frontend/www/assets/map.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Combined Map</li>
+							<li class="sub-menu-map"><img alt="Ancien Map" class="list-icon" src="frontend/www/assets/map.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Ancien</li>
+							<li class="sub-menu-map"><img alt="Inis Gallia Map" class="list-icon" src="frontend/www/assets/map.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Inis Gallia</li>
+							<li class="sub-menu-map"><img alt="Kerys Map" class="list-icon" src="frontend/www/assets/map.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Kerys</li>
+							<li class="sub-menu-map"><img alt="Lyonnesse Map" class="list-icon" src="frontend/www/assets/map.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Lyonnesse</li>
+							<li class="sub-menu-map"><img alt="Merrie Map" class="list-icon" src="frontend/www/assets/map.png" style="width: 35px; margin-right: 10px; margin-left: 5px">Merrie</li>
+							
+						</ul>
+					</li>
+					<li>
+
+					<li style="list-style: none; display: inline">
+						<div class="profile-details">
+							<div class="profile-content"><img alt="profileImg" src="frontend/www/assets/profile.png" style="width: 50px"></div>
+							<div class="name-job">
+								<div class="profile_name">
+									Phoenix
+								</div>
+								<div class="job">
+									Handmade with love and tears ✨
+								</div>
+							</div>
+						</div>
+					</li>
+				</ul>
+			</div>
+			<script src="frontend/www/js/grid.js"></script>
+			<script src="frontend/www/js/sidebar.js"></script>
+		</div>
+	</div>
+</body>
+</html>
