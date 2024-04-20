@@ -689,7 +689,7 @@ document.addEventListener("DOMContentLoaded", function() {
             // Hide the Maps sub-menu
             mapsSubMenu.classList.remove('active');
             // Load map.html into the iframe
-            mapIframe.src = './map.html';
+            mapIframe.src = 'frontend/www/map.html';
         });
 
         // Add click event listeners to each Maps sub-menu item
@@ -703,7 +703,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 // Hide the Maps sub-menu
                 mapsSubMenu.classList.remove('active');
                 // Load map.html into the iframe based on the clicked map
-                mapIframe.src = './' + item.textContent.trim().toLowerCase().replace(/\s/g, '_') + '.html';
+                mapIframe.src = 'frontend/www/' + item.textContent.trim().toLowerCase().replace(/\s/g, '_') + '.html';
             });
         });
 
