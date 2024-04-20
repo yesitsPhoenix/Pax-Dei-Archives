@@ -658,7 +658,7 @@ document.addEventListener("DOMContentLoaded", function() {
 	
 	// Display the banner image initially
 	var gridContainer = document.getElementById('grid-container');
-	gridContainer.innerHTML = '<img src="frontend/www/assets/banner.jpg" alt="Banner" class="banner-image">'
+	gridContainer.innerHTML = '<img src="../assets/banner.jpg" alt="Banner" class="banner-image">'
 	const openSidebarLink = document.getElementById("openSidebarLink");
 	openSidebarLink.addEventListener("click", function(event) {
 		event.preventDefault();
