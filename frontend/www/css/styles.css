@@ -494,8 +494,8 @@ img.map-image {
 
 #mapIframe {
 
-	height: 94vh;
-	width: 95vw;
+	height: 100%;
+	width: 100%;
 }
 
 #mapsMenuItem.link_name {
