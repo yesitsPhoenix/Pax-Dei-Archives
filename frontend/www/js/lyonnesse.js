@@ -39,7 +39,7 @@ async function fetchData(fileName) {
             zoomSnap: 0.1,
             crs: L.CRS.Simple
         }).setView(
-            [0, 0], 0);
+            [0, 0], 2);
         map.on("zoomend", function() {
             if (map.getZoom() > map.options.maxZoom) {
                 map.setZoom(map.options.maxZoom);
@@ -93,7 +93,7 @@ async function fetchData(fileName) {
             },
   
             _zoomHome: function(e) {
-                this._map.setView([0, 0], 0, {
+                this._map.setView([0, 0], 2, {
                     animate: true
                 });
             },
