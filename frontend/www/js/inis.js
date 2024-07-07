@@ -12,6 +12,12 @@ async function fetchData(fileName) {
   }
   
   let map;
+  const tempMarkerIcon = L.icon({
+    iconUrl: 'https://i.postimg.cc/5t1dwrLM/red.png',
+    iconSize: [40, 41],
+    iconAnchor: [18, 41],
+    popupAnchor: [1, -34],
+  });
 
   function delayMapLoading() {
     return new Promise(resolve => {
@@ -33,7 +39,7 @@ async function fetchData(fileName) {
             zoomSnap: 0.1,
             crs: L.CRS.Simple
         }).setView(
-            [0, 0], 0);
+            [-445, 236], 1);
         map.on("zoomend", function() {
             if (map.getZoom() > map.options.maxZoom) {
                 map.setZoom(map.options.maxZoom);
@@ -87,7 +93,7 @@ async function fetchData(fileName) {
             },
   
             _zoomHome: function(e) {
-                this._map.setView([0, 0], 0, {
+                this._map.setView([-445, 236], 1, {
                     animate: true
                 });
             },
@@ -149,23 +155,93 @@ async function fetchData(fileName) {
   
         var imageOverlay = L.imageOverlay(
             "assets/inis_gallia.webp", [
-                [480, -480], // North West
-                [-480, 480], // South East
+                [-202, 0], // North West
+                [-679, 480], // South East
             ]
         ).addTo(map);
         imageOverlay.getElement().classList.add('image-overlay');
 
         
-        // Add event listener to update mouse coordinates when the mouse moves over the map
-        map.on("mousemove", (e) => {
+         // Add event listener to update mouse coordinates when the mouse moves over the map
+         map.on("mousemove", (e) => {
             const mouseCoordinates = document.getElementById("mouse-coordinates");
             mouseCoordinates.textContent = `[${e.latlng.lat.toFixed(3)}], ${e.latlng.lng.toFixed(3)}]`;
         });
         const mouseCoordinatesDiv = document.getElementById("mouse-coordinates");
         map.on("mousemove", (e) => {
-            mouseCoordinatesDiv.textContent = `[${e.latlng.lat.toFixed(3)}], [${e.latlng.lng.toFixed(3)}]`;
+            mouseCoordinatesDiv.textContent = `Work-in-Progress\n[${e.latlng.lat.toFixed(3)}], [${e.latlng.lng.toFixed(3)}]`;
         });
   
+        // Event listener for the map's click event
+        map.on("click", function(e) {
+        // Create a temporary marker
+        const tempMarker = L.marker(e.latlng, {
+            icon: tempMarkerIcon
+        }).addTo(map);
+
+        // Create a custom popup-like behavior
+        const popupDiv = document.createElement("div");
+        const inputField = document.createElement("input");
+        inputField.type = "text";
+        inputField.id = "marker-input";
+        inputField.placeholder = "Enter text";
+
+        const coordinatesText = document.createElement("p");
+        coordinatesText.textContent = `Coordinates: [${e.latlng.lat.toFixed(3)}, ${e.latlng.lng.toFixed(3)}]`;
+
+        const copyButton = document.createElement("button");
+        copyButton.id = "copy-data";
+        copyButton.textContent = "Copy Data";
+
+        const saveButton = document.createElement("button");
+        saveButton.id = "save-location";
+        saveButton.textContent = "Save Location";
+
+        popupDiv.appendChild(inputField);
+        popupDiv.appendChild(coordinatesText);
+
+        // Add spacing between the Copy and Save buttons
+        popupDiv.appendChild(document.createElement("br"));
+        popupDiv.appendChild(copyButton);
+        popupDiv.appendChild(document.createTextNode("\u00A0\u00A0"));
+        popupDiv.appendChild(saveButton);
+
+        // Bind the custom popup to the temporary marker
+        tempMarker.bindPopup(popupDiv).openPopup();
+
+        // Event listener for the marker's click event
+        tempMarker.on("click", function(event) {
+            // Check if the Ctrl key (Windows/Linux) or Command key (Mac) is pressed
+            if (event.originalEvent.ctrlKey || event.originalEvent.metaKey) {
+                // Remove the temporary marker
+                tempMarker.remove();
+            }
+        });
+
+        // Event listener for copying data (text and coordinates)
+        const copyDataButton = popupDiv.querySelector("#copy-data");
+        copyDataButton.addEventListener("click", function() {
+            // Get the text and coordinates entered by the user
+            const inputField = document.getElementById("marker-input");
+            const enteredText = inputField.value;
+            const coordinates = ` ${e.latlng.lat.toFixed(3)},${e.latlng.lng.toFixed(3)}`;
+
+            // Combine text and coordinates without brackets and copy to clipboard
+            const combinedText = `${enteredText}${coordinates}`;
+            copyToClipboard(combinedText);
+        });
+
+        // Function to copy text to the clipboard
+        function copyToClipboard(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textArea);
+        }
+    });
+
   
     } catch (error) {
         console.error(error);
