@@ -593,6 +593,8 @@ document.addEventListener("DOMContentLoaded", function() {
 	
 	// Start the initial timeout to close the sidebar after 5 seconds of inactivity
 	closeSidebarAfterDelay();
+
+
 	// Select all list items in the navigation menu
 	let links = document.querySelectorAll(".nav-links li");
 	// Iterate over each list item
@@ -629,31 +631,24 @@ document.addEventListener("DOMContentLoaded", function() {
 	// Select all submenu items
 	let submenuItems = document.querySelectorAll(".sub-menu-item");
 	let submenuMaps = document.querySelectorAll(".sub-menu-map");
-	
-	// Add click event listener to submenu items
-	submenuItems.forEach((item) => {
+	let submenuItemMaps = document.querySelectorAll(".sub-menu-item-map");
+
+	// Combine submenu items, submenu maps, and submenu item maps into a single array
+	const combinedSubmenuItems = [...submenuItems, ...submenuMaps, ...submenuItemMaps];
+
+	// Add click event listener to combined submenu items
+	combinedSubmenuItems.forEach((item) => {
 		item.addEventListener("click", (e) => {
-			// Remove 'highlight' class from all submenu items
-			submenuItems.forEach((item) => {
+			// Remove 'highlight' class from all combined submenu items
+			combinedSubmenuItems.forEach((item) => {
 				item.classList.remove("highlight");
 			});
 			// Add 'highlight' class to the clicked submenu item
 			e.currentTarget.classList.add("highlight");
 			resetSidebarTimeout();
 		});
-	});
-	
-	// Add click event listener to submenu maps
-	submenuMaps.forEach((item) => {
-		item.addEventListener("click", (e) => {
-			// Remove 'highlight' class from all submenu items
-			submenuMaps.forEach((item) => {
-				item.classList.remove("highlight");
-			});
-			// Add 'highlight' class to the clicked submenu item
-			e.currentTarget.classList.add("highlight");
-			resetSidebarTimeout();
-		});
+
+
 	});
 	
 	// Display the banner image initially
