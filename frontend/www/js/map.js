@@ -362,7 +362,7 @@ const corruptedBoarIcon = L.icon({
 
         map = L.map("map", {
             zoomControl: false,
-            maxZoom: 4,
+            maxZoom: 5,
             scrollWheelZoom: false,
             smoothWheelZoom: true,
             smoothSensitivity: 1,
