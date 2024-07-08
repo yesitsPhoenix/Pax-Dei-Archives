@@ -11,7 +11,7 @@ async function fetchData(fileName) {
     }
   }
   async function fetchResourceLocations() {
-    return fetchData("backend/data/resources.json");
+    return fetchData("Pax-Dei-Archives/backend/data/resources.json");
   }
   
 
