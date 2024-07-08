@@ -11,7 +11,7 @@ async function fetchData(fileName) {
     }
   }
   async function fetchResourceLocations() {
-    return fetchData("http://homecraftlodge.serveminecraft.net:5500//backend/data/resources.json");
+    return fetchData("backend/data/resources.json");
   }
   
 
