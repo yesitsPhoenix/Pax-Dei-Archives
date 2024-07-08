@@ -11,7 +11,7 @@ async function fetchData(fileName) {
     }
   }
   async function fetchResourceLocations() {
-    return fetchData("/backend/data/resources.json");
+    return fetchData("http://homecraftlodge.serveminecraft.net:5500//backend/data/resources.json");
   }
   
 
@@ -256,8 +256,8 @@ const grapesIcon = L.icon({
 });
 const tempMarkerIcon = L.icon({
   iconUrl: 'https://i.postimg.cc/5t1dwrLM/red.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
+  iconSize: [41, 41],
+  iconAnchor: [18, 41],
   popupAnchor: [1, -34],
 });
 const impureIronDepositIcon = L.icon({
