@@ -11,8 +11,8 @@ async function fetchData(fileName) {
     }
   }
   async function fetchResourceLocations() {
-    return fetchData("Pax-Dei-Archives/backend/data/resources.json");
-  }
+    return fetchData("https://yesitsphoenix.github.io/Pax-Dei-Archives/backend/data/resources.json");
+}
   
 
 let map;
