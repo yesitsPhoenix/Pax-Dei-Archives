@@ -130,8 +130,10 @@
 
 .sidebar .nav-links {
 	height: 100%;
-	padding: 45px 0 150px 0;
+	padding: 45px 0 0 0;
+	
 	overflow: auto;
+
 }
 
 #quickFilterInput {
@@ -182,10 +184,10 @@
 }
 
 .sidebar .nav-links li i {
-	height: 50px;
+	height: 40px;
 	min-width: 78px;
 	text-align: center;
-	line-height: 50px;
+	line-height: 40px;
 	color: #fff;
 	font-size: 16px;
 	cursor: pointer;
@@ -494,8 +496,8 @@ img.map-image {
 
 #mapIframe {
 
-	height: 94vh;
-	width: 95vw;
+	height: 100%;
+	width: 100%;
 }
 
 #mapsMenuItem.link_name {
