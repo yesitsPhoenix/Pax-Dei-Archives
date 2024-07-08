@@ -194,9 +194,9 @@ async function fetchData(fileName) {
         copyButton.id = "copy-data";
         copyButton.textContent = "Copy Data";
 
-        const saveButton = document.createElement("button");
-        saveButton.id = "save-location";
-        saveButton.textContent = "Save Location";
+        // const saveButton = document.createElement("button");
+        // saveButton.id = "save-location";
+        // saveButton.textContent = "Save Location";
 
         popupDiv.appendChild(inputField);
         popupDiv.appendChild(coordinatesText);
@@ -205,7 +205,7 @@ async function fetchData(fileName) {
         popupDiv.appendChild(document.createElement("br"));
         popupDiv.appendChild(copyButton);
         popupDiv.appendChild(document.createTextNode("\u00A0\u00A0"));
-        popupDiv.appendChild(saveButton);
+        //popupDiv.appendChild(saveButton);
 
         // Bind the custom popup to the temporary marker
         tempMarker.bindPopup(popupDiv).openPopup();
