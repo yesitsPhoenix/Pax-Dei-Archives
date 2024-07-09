@@ -1,0 +1,308 @@
+[
+  {
+    "category": "Fruit",
+    "name": "Blueberry",
+    "locations": [
+
+    ]
+  },
+  {
+    "category": "Fruit",
+    "name": "Raspberry",
+    "locations": [
+      {
+        "lat": -393.667,
+        "lng": 324.676
+      },
+      {
+        "lat": -393.636,
+        "lng": 324.549
+      }
+    ]
+  },
+  {
+    "category": "Fruit",
+    "name": "Grapes",
+    "locations": []
+  },
+  {
+    "category": "Animals",
+    "name": "Deer",
+    "locations": [
+      {
+        "lat": -400.772,
+        "lng": 302.411
+      }
+    ]
+  },
+  {
+    "category": "Animals",
+    "name": "Boar",
+    "locations": [
+      {
+        "lat": -396.09,
+        "lng": 323.463
+      }
+    ]
+  },
+  {
+    "category": "Animals",
+    "name": "Bear",
+    "locations": [
+
+    ]
+  },
+  {
+    "category": "Animals",
+    "name": "Grey Wolf",
+    "locations": []
+  },
+  {
+    "category": "Animals",
+    "name": "Rabbit",
+    "locations": [
+
+    ]
+  },
+  {
+    "name": "Garlic",
+    "category": "Plants",
+    "locations": []
+  },
+  {
+    "name": "Reeds",
+    "category": "Plants",
+    "locations": [
+
+      {
+        "lat": -402.738,
+        "lng": 303.612
+      }
+    ]
+  },
+  {
+    "name": "Sage",
+    "category": "Plants",
+    "locations": [
+
+    ]
+  },
+  {
+    "name": "Loios Tears",
+    "category": "Plants",
+    "locations": [
+
+    ]
+  },
+  {
+    "name": "Flax",
+    "category": "Plants",
+    "locations": [
+      
+    ]
+  },
+  {
+    "name": "Nightshade",
+    "category": "Plants",
+    "locations": [
+
+    ]
+  },
+  {
+    "name": "Batflower",
+    "category": "Plants",
+    "locations": []
+  },
+  {
+    "name": "Mustard",
+    "category": "Plants",
+    "locations": []
+  },
+  {
+    "category": "Plants",
+    "name": "Datura",
+    "locations": []
+  },
+  {
+    "name": "Amanita",
+    "category": "Mushrooms",
+    "locations": [
+    
+    ]
+  },
+  {
+    "name": "Divine",
+    "category": "Mushrooms",
+    "locations": [
+     
+    ]
+  },
+  {
+    "name": "Deathcap",
+    "category": "Mushrooms",
+    "locations": [
+     
+    ]
+  },
+  {
+    "name": "Berserker",
+    "category": "Mushrooms",
+    "locations": [
+     
+    ]
+  },
+  {
+    "name": "Daisy",
+    "category": "Flowers",
+    "locations": [
+
+    ]
+  },
+  {
+    "name": "Periwinkle",
+    "category": "Flowers",
+    "locations": [
+      
+    ]
+  },
+  {
+    "name": "Rain Lily",
+    "category": "Flowers",
+    "locations": []
+  },
+  {
+    "name": "Gneiss Deposit",
+    "category": "Stone",
+    "locations": [
+     
+    ]
+  },
+  {
+    "name": "Iron Deposit",
+    "category": "Stone",
+    "locations": [
+      
+    ]
+  },
+  {
+    "name": "Impure Iron Deposit",
+    "category": "Stone",
+    "locations": [
+      
+      {
+        "lat": -399.386,
+        "lng": 307.801
+      },
+      {
+        "lat": -398.772,
+        "lng": 320.464
+      },
+      {
+        "lat": -396.313,
+        "lng": 322.474
+      },
+      {
+        "lat": -394.402,
+        "lng": 322.379
+      }
+    ]
+  },
+  {
+    "name": "Flint Stones",
+    "category": "Stone",
+    "locations": [
+     
+    ]
+  },
+  {
+    "name": "Clay",
+    "category": "Stone",
+    "locations": [
+
+      {
+        "lat": -402.099,
+        "lng": 303.101
+      },
+      {
+        "lat": -399.57,
+        "lng": 319.89
+      },
+      {
+        "lat": -393.125,
+        "lng": 324.995
+      }
+    ]
+  },
+  {
+    "name": "Tin Deposit",
+    "category": "Stone",
+    "locations": [
+      
+    ]
+  },
+  {
+    "name": "Copper Deposit",
+    "category": "Stone",
+    "locations": [
+     
+    ]
+  },
+  {
+    "name": "Pennybun",
+    "category": "Mushrooms",
+    "locations": [       
+      {
+        "lat": -400.198,
+        "lng": 302.571
+      }
+    ]
+  },
+  {
+    "name": "Badger",
+    "category": "Animals",
+    "locations": [
+     
+    ]
+  },
+  {
+    "name": "Granite Deposit",
+    "category": "Stone",
+    "locations": [
+      
+    ]
+  },
+  {
+    "name": "Fox",
+    "category": "Animals",
+    "locations": [
+      
+    ]
+  },
+  {
+    "name": "Limestone Deposit",
+    "category": "Stone",
+    "locations": [
+      
+    ]
+  },
+  {
+    "name": "Apple",
+    "category": "Fruit",
+    "locations": [
+      {
+        "lat": -398.966,
+        "lng": 317.494
+      }
+    ]
+  },
+  {
+    "name": "Barley",
+    "category": "Plants",
+    "locations": [
+      {
+        "lat": -391.265,
+        "lng": 326.829
+      }
+    ]
+  }
+]

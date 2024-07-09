@@ -19,6 +19,7 @@
 	}
 }
 
+
 .legend-box lock-pinned {
 	display: none !important;
 }
@@ -183,6 +184,10 @@
 	align-items: center;
 }
 
+.li {
+	width: 40px;
+}
+
 .sidebar .nav-links li i {
 	height: 40px;
 	min-width: 78px;
@@ -206,6 +211,7 @@
 	display: flex;
 	align-items: center;
 	text-decoration: none;
+	width: 78px !important;
 }
 
 .sidebar .nav-links li a .link_name {
@@ -443,6 +449,7 @@ hr.solid {
 	height: 40px !important;
 	text-align: center;
 }
+
 
 .ag-header-cell-label {
 	justify-content: center;
