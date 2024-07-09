@@ -484,7 +484,7 @@ const corruptedBoarIcon = L.icon({
         zoomHome.addTo(map);
         
         const clearResourcesButton = document.querySelector(".clear-resources-button");
-        clearResourcesButton.addEventListener("click", clearAllMarkers);
+        clearResourcesButton.addEventListener("click", clearAllMarkers,);
 
         var imageOverlay = L.imageOverlay(
             "map_assets/map.webp", [
@@ -930,19 +930,26 @@ function toggleDropdown(category) {
   function updateDropdownAppearance() {
     const dropdownOptions = document.querySelectorAll(".option");
     const dropdownTitle = document.querySelector(".dropdown-title");
-  
+
     dropdownOptions.forEach((option) => {
         const name = option.textContent;
-        const category = name === "Fruit" ? "fruit" : "animals";
-  
-        if (selectedPlayers.includes(name)) {
+
+        if (selectedFruits.includes(name) || 
+            selectedAnimals.includes(name) ||
+            selectedPlants.includes(name) ||
+            selectedMushrooms.includes(name) ||
+            selectedFlowers.includes(name) ||
+            selectedStone.includes(name) ||
+            selectedSpecial.includes(name)) {
             option.style.backgroundColor = "orange";
             option.style.color = "black";
         } else {
             option.style.backgroundColor = "white";
-            option.style.color = category === "fruit" ? "green" : "blue";
+            option.style.color = "initial";
         }
     });
+
+
   
     // Check if selectedPlayers array is empty to remove orange highlight from menu
     const allDeselected = dropdownOptions.length === selectedPlayers.length;
@@ -981,10 +988,7 @@ function onOptionSelect(event, category, name, lat, lng, rarity, iconUrl) {
         selectedPlayers.push(selectedOption);
     }
   
-    //Call updateMarkers() after selection to update the map markers
     updateMarkers();
-  
-    // Update the dropdown menu appearance to highlight orange
     updateDropdownAppearance();
   }
   
@@ -1105,7 +1109,6 @@ function onOptionSelect(event, category, name, lat, lng, rarity, iconUrl) {
     selectedPlants = [];
     selectedMushrooms = [];
     selectedFlowers = [];
-    //selectedPlayers = [];
     selectedStone = [];
     selectedSpecial = [];
     tempMarkers = [];
@@ -1113,7 +1116,7 @@ function onOptionSelect(event, category, name, lat, lng, rarity, iconUrl) {
     map.setView([0, 0], 0, {
         animate: true
     });
-  }
+}
   
   
 document.addEventListener("DOMContentLoaded", function() {
