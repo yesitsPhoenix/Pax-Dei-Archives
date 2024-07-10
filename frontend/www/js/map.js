@@ -1,19 +1,43 @@
-async function fetchData(fileName) {
+// async function fetchData(fileName) {
+//     try {
+//         const response = await fetch(fileName);
+//         if (!response.ok) {
+//             throw new Error(`Failed to fetch data from ${fileName}.`);
+//         }
+//         return await response.json();
+//     } catch (error) {
+//         console.error(error);
+//         return [];
+//     }
+//   }
+//   async function fetchResourceLocations() {
+//     return fetchData("https://yesitsphoenix.github.io/Pax-Dei-Archives/backend/data/resources.json");
+// }
+
+//Supabase setup
+
+const supabaseUrl = 'https://jrjgbnopmfovxwvtbivh.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impyamdibm9wbWZvdnh3dnRiaXZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDgxOTg1MjYsImV4cCI6MjAyMzc3NDUyNn0.za7oUzFhNmBdtcCRBmxwW5FSTFRWVAY6_rsRwlr3iqY';
+const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+
+async function fetchResourceLocations() {
     try {
-        const response = await fetch(fileName);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch data from ${fileName}.`);
-        }
-        return await response.json();
+      const { data, error } = await supabaseClient
+        .from('locations')
+        .select('resource_id, lat, lng');
+  
+      if (error) {
+        throw new Error(`Supabase error: ${error.message}`);
+      }
+  
+      return data; // Array of resource location objects
     } catch (error) {
-        console.error(error);
-        return [];
+      console.error('Error fetching resource locations:', error.message);
+      throw error; // Throw error to handle in calling function
     }
   }
-  async function fetchResourceLocations() {
-    return fetchData("https://yesitsphoenix.github.io/Pax-Dei-Archives/backend/data/resources.json");
-}
-  
+
 
 let map;
 let selectedFruits = [];
@@ -256,7 +280,7 @@ const grapesIcon = L.icon({
 });
 const tempMarkerIcon = L.icon({
   iconUrl: 'https://i.postimg.cc/5t1dwrLM/red.png',
-  iconSize: [41, 41],
+  iconSize: [72, 72],
   iconAnchor: [18, 41],
   popupAnchor: [1, -34],
 });
@@ -904,16 +928,6 @@ function toggleAndCloseSidebar() {
   
   }
 
-  
-function toggleDropdown(category) {
-    const dropdownOptions = document.getElementById(`${category}-dropdown`);
-  
-    if (dropdownOptions) {
-        dropdownOptions.classList.toggle("open");
-    } else {
-        console.error(`Dropdown options with ID '${category}' not found.`);
-    }
-  }
   
   function toggleDropdown(category) {
     const dropdownOptions = document.getElementById(`${category}-dropdown`);
