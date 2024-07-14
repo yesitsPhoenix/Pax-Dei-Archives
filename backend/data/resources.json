@@ -2,9 +2,7 @@
   {
     "category": "Fruit",
     "name": "Blueberry",
-    "locations": [
-
-    ]
+    "locations": []
   },
   {
     "category": "Fruit",
@@ -32,6 +30,10 @@
       {
         "lat": -400.772,
         "lng": 302.411
+      },
+      {
+        "lat": -395.81,
+        "lng": 326.045
       }
     ]
   },
@@ -42,15 +44,17 @@
       {
         "lat": -396.09,
         "lng": 323.463
+      },
+      {
+        "lat": -396.09,
+        "lng": 323.463
       }
     ]
   },
   {
     "category": "Animals",
     "name": "Bear",
-    "locations": [
-
-    ]
+    "locations": []
   },
   {
     "category": "Animals",
@@ -60,9 +64,7 @@
   {
     "category": "Animals",
     "name": "Rabbit",
-    "locations": [
-
-    ]
+    "locations": []
   },
   {
     "name": "Garlic",
@@ -73,40 +75,108 @@
     "name": "Reeds",
     "category": "Plants",
     "locations": [
-
       {
         "lat": -402.738,
         "lng": 303.612
+      },
+      {
+        "lat": -399.123,
+        "lng": 320.336
+      },
+      {
+        "lat": -401.171,
+        "lng": 319.92
       }
     ]
   },
   {
     "name": "Sage",
     "category": "Plants",
-    "locations": [
-
-    ]
+    "locations": []
   },
   {
     "name": "Loios Tears",
     "category": "Plants",
-    "locations": [
-
-    ]
+    "locations": []
   },
   {
     "name": "Flax",
     "category": "Plants",
     "locations": [
-      
+      {
+        "lat": -400.818,
+        "lng": 328.249
+      },
+      {
+        "lat": -398.323,
+        "lng": 307.801
+      },
+      {
+        "lat": -398.135,
+        "lng": 309.863
+      },
+      {
+        "lat": -399.57,
+        "lng": 319.89
+      },
+      {
+        "lat": -395.962,
+        "lng": 322.633
+      },
+      {
+        "lat": -402.059,
+        "lng": 326.908
+      },
+      {
+        "lat": -401.134,
+        "lng": 326.685
+      },
+      {
+        "lat": -402.059,
+        "lng": 327.546
+      },
+      {
+        "lat": -400.818,
+        "lng": 328.249
+      },
+      {
+        "lat": -401.873,
+        "lng": 320.877
+      },
+      {
+        "lat": -401.714,
+        "lng": 324.355
+      },
+      {
+        "lat": -401.458,
+        "lng": 325.152
+      },
+      {
+        "lat": -401.044,
+        "lng": 324.514
+      },
+      {
+        "lat": -400.852,
+        "lng": 324.099
+      },
+      {
+        "lat": -399.512,
+        "lng": 326.492
+      },
+      {
+        "lat": -393.256,
+        "lng": 325.918
+      },
+      {
+        "lat": -392.395,
+        "lng": 326.301
+      }
     ]
   },
   {
     "name": "Nightshade",
     "category": "Plants",
-    "locations": [
-
-    ]
+    "locations": []
   },
   {
     "name": "Batflower",
@@ -121,49 +191,47 @@
   {
     "category": "Plants",
     "name": "Datura",
-    "locations": []
+    "locations": [
+      {
+        "lat": -401.458,
+        "lng": 320.813
+      }
+    ]
   },
   {
     "name": "Amanita",
     "category": "Mushrooms",
-    "locations": [
-    
-    ]
+    "locations": []
   },
   {
     "name": "Divine",
     "category": "Mushrooms",
-    "locations": [
-     
-    ]
+    "locations": []
   },
   {
     "name": "Deathcap",
     "category": "Mushrooms",
-    "locations": [
-     
-    ]
+    "locations": []
   },
   {
     "name": "Berserker",
     "category": "Mushrooms",
-    "locations": [
-     
-    ]
+    "locations": []
   },
   {
     "name": "Daisy",
     "category": "Flowers",
     "locations": [
-
+      {
+        "lat": -397.385,
+        "lng": 308.613
+      }
     ]
   },
   {
     "name": "Periwinkle",
     "category": "Flowers",
-    "locations": [
-      
-    ]
+    "locations": []
   },
   {
     "name": "Rain Lily",
@@ -174,21 +242,21 @@
     "name": "Gneiss Deposit",
     "category": "Stone",
     "locations": [
-     
+      {
+        "lat": -399.346,
+        "lng": 322.665
+      }
     ]
   },
   {
     "name": "Iron Deposit",
     "category": "Stone",
-    "locations": [
-      
-    ]
+    "locations": []
   },
   {
     "name": "Impure Iron Deposit",
     "category": "Stone",
     "locations": [
-      
       {
         "lat": -399.386,
         "lng": 307.801
@@ -204,21 +272,30 @@
       {
         "lat": -394.402,
         "lng": 322.379
+      },
+      {
+        "lat": -399.386,
+        "lng": 307.801
+      },
+      {
+        "lat": -398.772,
+        "lng": 320.464
+      },
+      {
+        "lat": -396.313,
+        "lng": 322.474
       }
     ]
   },
   {
     "name": "Flint Stones",
     "category": "Stone",
-    "locations": [
-     
-    ]
+    "locations": []
   },
   {
     "name": "Clay",
     "category": "Stone",
     "locations": [
-
       {
         "lat": -402.099,
         "lng": 303.101
@@ -230,60 +307,56 @@
       {
         "lat": -393.125,
         "lng": 324.995
+      },
+      {
+        "lat": -399.57,
+        "lng": 319.89
       }
     ]
   },
   {
     "name": "Tin Deposit",
     "category": "Stone",
-    "locations": [
-      
-    ]
+    "locations": []
   },
   {
     "name": "Copper Deposit",
     "category": "Stone",
-    "locations": [
-     
-    ]
+    "locations": []
   },
   {
     "name": "Pennybun",
     "category": "Mushrooms",
-    "locations": [       
+    "locations": [
       {
         "lat": -400.198,
         "lng": 302.571
+      },
+      {
+        "lat": -400.823,
+        "lng": 304.697
       }
     ]
   },
   {
     "name": "Badger",
     "category": "Animals",
-    "locations": [
-     
-    ]
+    "locations": []
   },
   {
     "name": "Granite Deposit",
     "category": "Stone",
-    "locations": [
-      
-    ]
+    "locations": []
   },
   {
     "name": "Fox",
     "category": "Animals",
-    "locations": [
-      
-    ]
+    "locations": []
   },
   {
     "name": "Limestone Deposit",
     "category": "Stone",
-    "locations": [
-      
-    ]
+    "locations": []
   },
   {
     "name": "Apple",
@@ -292,6 +365,14 @@
       {
         "lat": -398.966,
         "lng": 317.494
+      },
+      {
+        "lat": -396.129,
+        "lng": 319.505
+      },
+      {
+        "lat": -401.107,
+        "lng": 319.442
       }
     ]
   },
@@ -302,6 +383,26 @@
       {
         "lat": -391.265,
         "lng": 326.829
+      },
+      {
+        "lat": -402.512,
+        "lng": 321.132
+      },
+      {
+        "lat": -396.384,
+        "lng": 326.332
+      },
+      {
+        "lat": -394.182,
+        "lng": 325.822
+      },
+      {
+        "lat": -394.629,
+        "lng": 326.141
+      },
+      {
+        "lat": -391.501,
+        "lng": 326.811
       }
     ]
   }
