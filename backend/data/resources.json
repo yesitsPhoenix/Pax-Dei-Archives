@@ -2,7 +2,16 @@
   {
     "category": "Fruit",
     "name": "Blueberry",
-    "locations": []
+    "locations": [
+      {
+        "lat": -400.912,
+        "lng": 318.326
+      },
+      {
+        "lat": -401.135,
+        "lng": 307.894
+      }
+    ]
   },
   {
     "category": "Fruit",
@@ -15,6 +24,14 @@
       {
         "lat": -393.636,
         "lng": 324.549
+      },
+      {
+        "lat": -403.497,
+        "lng": 313.924
+      },
+      {
+        "lat": -400.784,
+        "lng": 308.979
       }
     ]
   },
@@ -64,7 +81,12 @@
   {
     "category": "Animals",
     "name": "Rabbit",
-    "locations": []
+    "locations": [
+      {
+        "lat": -396.922,
+        "lng": 303.077
+      }
+    ]
   },
   {
     "name": "Garlic",
@@ -403,6 +425,30 @@
       {
         "lat": -391.501,
         "lng": 326.811
+      }
+    ]
+  },
+  {
+    "name": "blackberry",
+    "category": "Fruit",
+    "locations": [
+      {
+        "lat": -402.189,
+        "lng": 315.136
+      },
+      {
+        "lat": -397.624,
+        "lng": 308.628
+      }
+    ]
+  },
+  {
+    "name": "hawthorne",
+    "category": "Fruit",
+    "locations": [
+      {
+        "lat": -401.71,
+        "lng": 312.073
       }
     ]
   }
