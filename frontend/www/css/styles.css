@@ -93,6 +93,10 @@
 	width: 78px;
 }
 
+.name-job{
+	padding-left: 15px;
+}
+
 .logo-details {
 	height: 60px;
 	width: 325px;
@@ -406,6 +410,7 @@ hr.solid {
 	z-index: 150;
 	margin-left: 20px;
 }
+
 
 .bx-menu {
 	color: white !important
