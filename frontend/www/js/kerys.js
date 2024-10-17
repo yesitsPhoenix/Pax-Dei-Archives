@@ -154,7 +154,7 @@ async function fetchData(fileName) {
   
   
         var imageOverlay = L.imageOverlay(
-            "assets/kerys.webp", [
+            "assets/kerys.jpg", [
                 [-202, 0], // North West
                 [-678, -480], // South East
             ]

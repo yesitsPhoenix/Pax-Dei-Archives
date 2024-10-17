@@ -487,7 +487,7 @@ const corruptedBoarIcon = L.icon({
         clearResourcesButton.addEventListener("click", clearAllMarkers,);
 
         var imageOverlay = L.imageOverlay(
-            "map_assets/map.webp", [
+            "map_assets/combined.jpg", [
                 [680, -480], // North West
                 [-680, 480], // South East
             ]

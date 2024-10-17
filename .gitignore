@@ -4,3 +4,5 @@ __pycache__
 backend/paxdeimaps/migrations
 backend/assets/
 /media
+frontend/www/.DS_Store
+frontend/www/assets/.DS_Store
