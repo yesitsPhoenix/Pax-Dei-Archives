@@ -79,29 +79,38 @@ document.addEventListener('DOMContentLoaded', function() {
 	});
 });
 
-
 const quickFilterInput = document.getElementById('quickFilterInput');
 let gridApi;
+
 // Hide the quickFilterInput initially
 quickFilterInput.style.display = 'none';
+
 // Event listener for input field changes
 quickFilterInput.addEventListener('input', function(event) {
-	const searchText = event.target.value.toLowerCase();
-	if (gridApi) {
-		gridApi.updateGridOptions({
-			quickFilterText: searchText
-		});
-	}
+    const searchText = event.target.value.toLowerCase();
+    if (gridApi) {
+        gridApi.updateGridOptions({
+            quickFilterText: searchText
+        });
+    }
 });
 
 // Event listener for opening the sidebar and showing the quickFilterInput
 document.addEventListener('DOMContentLoaded', function() {
-	const menuItems = document.querySelectorAll('.sub-menu-item');
-	menuItems.forEach(item => {
-		item.addEventListener('click', () => {
-			quickFilterInput.style.display = 'block';
-		});
-	});
+    const menuItems = document.querySelectorAll('.sub-menu-item');
+    menuItems.forEach(item => {
+        item.addEventListener('click', () => {
+            quickFilterInput.style.display = 'block';
+        });
+    });
+
+    // Hide quickFilterInput when specific classes are clicked
+    const mapItems = document.querySelectorAll('.sub-menu-item-map, .sub-menu-map');
+    mapItems.forEach(item => {
+        item.addEventListener('click', () => {
+            quickFilterInput.style.display = 'none';
+        });
+    });
 });
 
 
@@ -562,7 +571,7 @@ document.addEventListener("DOMContentLoaded", function() {
     function closeSidebarAfterDelay() {
         timeout = setTimeout(() => {
             sidebar.classList.add("close");
-        }, 4000);
+        }, 1250);
     }
 
     function resetSidebarTimeout() {
@@ -682,174 +691,3 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 });
 
-
-// document.addEventListener("DOMContentLoaded", function() {
-// 	// Select the sidebar and menu toggle buttons
-// 	let sidebar = document.querySelector(".sidebar");
-// 	//let sidebarBtn = document.querySelector(".bx-menu");
-// 	let mainMenus = document.querySelectorAll(".sub-menu-item");
-// 	// Function to close the sidebar after 5 seconds of inactivity
-// 	let timeout;
-
-// 	function closeSidebarAfterDelay() {
-// 		timeout = setTimeout(() => {
-// 			sidebar.classList.add("close");
-// 		}, 4000);
-// 	}
-// 	// Function to reset the timeout for closing the sidebar
-// 	function resetSidebarTimeout() {
-// 		clearTimeout(timeout);
-// 		closeSidebarAfterDelay();
-// 	}
-// 	// Add event listener to mouseover event on the sidebar and main-menu buttons
-// 	sidebar.addEventListener("mouseover", () => {
-// 		resetSidebarTimeout(); // Reset the timeout for closing the sidebar
-// 	});
-// 	mainMenus.forEach(menu => {
-// 		menu.addEventListener("mouseover", () => {
-// 			resetSidebarTimeout(); // Reset the timeout for closing the sidebar
-// 		});
-// 	});
-// 	// Add event listener to mouseout event on the sidebar
-// 	sidebar.addEventListener("mouseout", () => {
-// 		resetSidebarTimeout(); // Reset the timeout for closing the sidebar
-// 	});
-// 	// Add event listener to mouseover event on the main menu buttons
-// 	mainMenus.forEach(menu => {
-// 		menu.addEventListener("mouseover", () => {
-// 			resetSidebarTimeout(); // Reset the timeout for closing the sidebar
-// 		});
-// 	});
-	
-// 	// Start the initial timeout to close the sidebar after 5 seconds of inactivity
-// 	closeSidebarAfterDelay();
-
-
-// 	// Select all list items in the navigation menu
-// 	let links = document.querySelectorAll(".nav-links li");
-// 	// Iterate over each list item
-// 	for (let link of links) {
-// 		// Select the link text, arrow icon, and submenu for each list item
-// 		let linkName = link.querySelector("span.link_name");
-// 		let arrow = link.querySelector(".arrow");
-// 		let subMenu = link.querySelector(".icon-link");
-// 		// Add click event listener to the arrow icon
-// 		if (arrow) {
-// 			arrow.addEventListener("click", (e) => {
-// 				e.stopPropagation(); 
-// 				let arrowParent = e.target.parentElement.parentElement;
-// 				arrowParent.classList.toggle("showMenu");
-// 			});
-// 		}
-// 		// Add click event listener to the link text
-// 		if (linkName && subMenu) {
-// 			linkName.addEventListener("click", (e) => {
-// 				e.preventDefault(); // Prevent default behavior of link
-// 				let linkParent = e.target.parentElement;
-// 				linkParent.classList.toggle("showMenu");
-// 			});
-// 		}
-// 		// Add click event listener to the parent link as well
-// 		link.addEventListener("click", (e) => {
-// 			// Check if the clicked element is a submenu item or the main menu item itself
-// 			if (e.target.classList.contains("link_name") && e.currentTarget === link) {
-// 				let linkParent = e.currentTarget;
-// 				linkParent.classList.toggle("showMenu");
-// 			}
-// 		});
-// 	}
-// 	// Select submenu items
-// 	let submenuItems = document.querySelectorAll(".sub-menu-item");
-// 	let submenuMaps = document.querySelectorAll(".sub-menu-map");
-// 	let submenuItemMaps = document.querySelectorAll(".sub-menu-item-map");
-
-// 	// Combine submenu items, submenu maps, and submenu item maps into a single array
-// 	const combinedSubmenuItems = [...submenuItems, ...submenuMaps, ...submenuItemMaps];
-
-// 	// Add click event listener to combined submenu items
-// 	combinedSubmenuItems.forEach((item) => {
-// 		item.addEventListener("click", (e) => {
-// 			// Remove 'highlight' class from all combined submenu items
-// 			combinedSubmenuItems.forEach((item) => {
-// 				item.classList.remove("highlight");
-// 			});
-// 			// Add 'highlight' class to the clicked submenu item
-// 			e.currentTarget.classList.add("highlight");
-// 			resetSidebarTimeout();
-// 		});
-
-
-// 	});
-	
-// 	// Display the banner image initially
-// 	var gridContainer = document.getElementById('grid-container');
-// 	gridContainer.innerHTML = '<img src="frontend/www/assets/banner.jpg" alt="Banner" class="banner-image">'
-// 	const openSidebarLink = document.getElementById("openSidebarLink");
-// 	openSidebarLink.addEventListener("click", function(event) {
-// 		event.preventDefault();
-// 		sidebar.classList.toggle("close");
-// 	});
-  
-// });
-
-
-// document.addEventListener("DOMContentLoaded", function() {
-//     var mapsMenuItem = document.querySelector('#mapsSubMenu .sub-menu-item-map');
-//     var mapsSubMenuItems = document.querySelectorAll('#mapsSubMenu .sub-menu-map');
-//     var mapsSubMenu = document.getElementById('mapsSubMenu');
-//     var gridContainer = document.getElementById('grid-container');
-//     var mapIframe = document.getElementById('mapIframe');
-
-//     if (mapsMenuItem && mapsSubMenuItems.length > 0 && mapsSubMenu && gridContainer && mapIframe) {
-//         // Hide the iframe initially
-//         mapIframe.style.display = 'none';
-
-//         // Add click event listener to the Maps main menu item
-//         mapsMenuItem.addEventListener('click', function(event) {
-//             event.preventDefault();
-//             // Show the iframe
-//             mapIframe.style.display = 'block';
-//             // Hide the grid container
-//             gridContainer.style.display = 'none';
-//             // Hide the Maps sub-menu
-//             mapsSubMenu.classList.remove('active');
-//             // Load map.html into the iframe
-//             mapIframe.src = 'frontend/www/map.html';
-//         });
-
-//         // Add click event listeners to each Maps sub-menu item
-//         mapsSubMenuItems.forEach(function(item) {
-//             item.addEventListener('click', function(event) {
-//                 event.preventDefault();
-//                 // Show the iframe
-//                 mapIframe.style.display = 'block';
-//                 // Hide the grid container
-//                 gridContainer.style.display = 'none';
-//                 // Hide the Maps sub-menu
-//                 mapsSubMenu.classList.remove('active');
-//                 // Load map.html into the iframe based on the clicked map
-//                 mapIframe.src = 'frontend/www/' + item.textContent.trim().toLowerCase().replace(/\s/g, '_') + '.html';
-//             });
-//         });
-
-//         // Add event listener to close the iframe and show the grid container when clicking outside the Maps sub-menu
-//         document.addEventListener('click', function(event) {
-//             var isSubMenuClick = false;
-//             mapsSubMenuItems.forEach(function(item) {
-//                 if (item.contains(event.target)) {
-//                     isSubMenuClick = true;
-//                 }
-//             });
-//             if (!mapsSubMenu.contains(event.target) && !isSubMenuClick && event.target !== mapsMenuItem) {
-//                 // Show the grid container
-//                 gridContainer.style.display = 'block';
-//                 // Hide the iframe
-//                 mapIframe.style.display = 'none';
-//                 // Reset iframe src
-//                 mapIframe.src = '';
-//             }
-//         });
-//     } else {
-//         console.error('One or more elements not found in the document.');
-//     }
-// });
