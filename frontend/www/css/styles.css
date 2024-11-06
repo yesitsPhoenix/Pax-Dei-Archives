@@ -25,7 +25,7 @@
 }
 
 .top-bar {
-	background-color: #111111;
+	background-color: #000000;
 	height: 45px;
 	width: 100%;
 	display: flex;
@@ -78,19 +78,19 @@
 	left: 0;
 	height: 100%;
 	width: 300px;
-	background: #111111;
+	background: #000000;
 	z-index: 100;
 	transition: all 0.5s ease;
 }
 
 .book-icon {
 	align-items: center;
-	padding: 25px 12px 12px 25px;
-	width: 72px;
+	padding: 15px 5px 10px 15px;
+	width: 50px;
 }
 
 .sidebar.close {
-	width: 78px;
+	width: 60px;
 }
 
 .name-job{
@@ -109,7 +109,7 @@
 	font-size: 30px;
 	color: #fff;
 	height: 50px;
-	min-width: 78px;
+	min-width: 60px;
 	text-align: center;
 	line-height: 50px;
 	z-index: 210;
@@ -129,7 +129,7 @@
 }
 
 .logo-details a {
-	width: 78px;
+	width: 60px;
 }
 
 
@@ -194,7 +194,7 @@
 
 .sidebar .nav-links li i {
 	height: 40px;
-	min-width: 78px;
+	min-width: 60px;
 	text-align: center;
 	line-height: 40px;
 	color: #fff;
@@ -215,7 +215,7 @@
 	display: flex;
 	align-items: center;
 	text-decoration: none;
-	width: 78px !important;
+	width: 60px !important;
 }
 
 .sidebar .nav-links li a .link_name {
@@ -231,7 +231,7 @@
 }
 
 .sidebar .nav-links li .main-menu {
-	background: #111111;
+	background: #000000;
 	display: none;
 }
 
@@ -303,17 +303,20 @@
 	width: 260px;
 	display: flex;
 	align-items: center;
-	background: #111111;
-	padding: 12px 0;
+	background: #000000;
+	padding-left: 5px;
+	padding-bottom: 10px;
 	transition: all 0.5s ease;
+	pointer-events: none;
 }
 
 .sidebar.close .profile-details {
 	background: none;
+	pointer-events: none;
 }
 
 .sidebar.close .profile-details {
-	width: 78px;
+	width: 60px;
 }
 
 .sidebar .profile-details .profile-content {
@@ -326,12 +329,12 @@
 	width: 52px;
 	object-fit: cover;
 	border-radius: 16px;
-	margin: 0 14px 0 12px;
+
 	transition: all 0.5s ease;
 }
 
 .sidebar.close .profile-details img {
-	padding: 10px;
+	padding: 5px;
 }
 
 .sidebar .profile-details .profile_name, .sidebar .profile-details .job {
@@ -350,8 +353,8 @@
 }
 
 .sidebar.close~.home-section {
-	left: 78px;
-	width: calc(100% - 78px);
+	left: 60px;
+	width: calc(100% - 60px);
 }
 
 .home-section .home-content .bx-menu, .home-section .home-content .text {
