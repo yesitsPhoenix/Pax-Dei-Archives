@@ -1,5 +1,6 @@
 # Pax Dei Archives
 
+This project is being moved to an archive state as I have moved on to other projects.
 
 Welcome to the Pax Dei Archives! This is a basic website I put together to document items, mobs, maps, skills, magic, and more.
 Please do not consider this a full/complete project, it's a proof-of-concept for ideas I had while testing. 
