@@ -7,4 +7,4 @@ Please do not consider this a full/complete project, it's a proof-of-concept for
 
 I'm by no means a web developer and barely a programmer. Most of my dev time is spent on Discord-based Bot projects. I used this project to push me out of my comfort zone.
 
-Pax Dei Archives - 2024 Phoenix
+Pax Dei Archives - 2025 Phoenix
