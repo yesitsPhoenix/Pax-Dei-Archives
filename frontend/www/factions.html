@@ -1,0 +1,61 @@
+<!-- factions.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factions - Pax Dei Archives</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="assets/book.png" rel="icon" type="image/png">
+</head>
+<body style="background: url('assets/home.jpeg') repeat center center fixed; background-size: cover;backdrop-filter: blur(3em);">
+    <div class="background-home"></div>
+    
+    <header class="top-bar">
+        <div class="logo-section">
+            <a href="/index.html"><img alt="Book Icon" class="site-icon" src="assets/book.png"></a>
+            <span class="site-title">Pax Dei Archives</span>
+        </div>
+        <div class="search-section">
+            <input type="text" id="searchInput" placeholder="Search the Archives..." />
+            <div id="searchResults" class="search-results-dropdown">
+                <!-- Search results will be injected here -->
+            </div>
+        </div>
+        
+        <nav class="nav-links">
+            <a href="world.html">World</a>
+            <a href="factions.html">Factions</a>
+            <a href="creatures.html">Creatures</a>
+            <a href="resources.html">Resources</a>
+            <a href="clans.html">Clans</a>
+        </nav>
+    </header>
+
+    <div class="content">
+        <div class="card-grid" id="factionCards">
+            <a href="inquisition.html" class="card" data-name="inquisition">
+                <h2>Inquisition</h2>
+                <p>The ever-watchful eyes of order and purification.</p>
+            </a>
+            <a href="zebians.html" class="card" data-name="zebians">
+                <h2>Zebians</h2>
+                <p>Wielders of storm and wave, attuned to the tides.</p>
+            </a>
+            <a href="scions.html" class="card" data-name="scions">
+                <h2>Scions</h2>
+                <p>Ancient inheritors of secrets buried beneath time.</p>
+            </a>
+        </div>
+    </div>
+
+    <div class="corner-credit">
+        <img src="https://i.postimg.cc/7L1M8TDf/phoenix.png" alt="Phoenix" class="profile-image" />
+        <span class="nav-text-profile">Made by Phoenix ✨</span>
+    </div>
+
+    <script src="js/factions.js"></script>
+    <script src="js/search.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,37 @@
+[
+    {
+        "title": "Inquisition",
+        "description": "The ever-watchful eyes of order and purification.",
+        "url": "frontend/www/inquisition.html"
+    },
+    {
+        "title": "Zebians",
+        "description": "Wielders of storm and wave, attuned to the tides.",
+        "url": "frontend/www/zebians.html"
+    },
+    {
+        "title": "Scions",
+        "description": "Ancient inheritors of secrets buried beneath time.",
+        "url": "frontend/www/scions.html"
+    },
+    {
+        "title": "World",
+        "description": "The entire world of Pax Dei.",
+        "url": "frontend/www/world.html"
+    },
+    {
+        "title": "Creatures",
+        "description": "The fantastic creatures of Pax Dei.",
+        "url": "frontend/www/creatures.html"
+    },
+    {
+        "title": "Resources",
+        "description": "The essential resources within Pax Dei.",
+        "url": "frontend/www/resources.html"
+    },
+    {
+        "title": "Clans",
+        "description": "The various clans that roam Pax Dei.",
+        "url": "frontend/www/clans.html"
+    }
+]
