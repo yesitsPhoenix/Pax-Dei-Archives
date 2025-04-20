@@ -9,7 +9,7 @@ document.getElementById('searchInput').addEventListener('input', function() {
 
     // Check if there is input and the query is valid
     if (query.length > 0) {
-        fetch("/backend/data/search-index.json")
+        fetch("backend/data/search-index.json")
             .then(response => response.json())
             .then(data => {
                 // Filter the results based on the query

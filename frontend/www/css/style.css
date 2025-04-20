@@ -18,7 +18,7 @@ html, body {
 body {
     background: url('frontend/www/assets/banner.jpg') no-repeat center center fixed;
     background-size: cover;
-    height: 100vh;
+    height: 100vh;  /* Ensure the background covers the entire viewport */
 }
 
 /* Top bar styles */
