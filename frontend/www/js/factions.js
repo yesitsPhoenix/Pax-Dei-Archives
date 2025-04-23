@@ -13,12 +13,12 @@ const supabase = createClient(
 async function loadFactions() {
     const container = document.getElementById('factionCards');
   
-    const factionSlugs = ['inquisition', 'zebians', 'scions'];
+    const factions = ['inquisition', 'zebians', 'scions'];
   
     const { data, error } = await supabase
       .from('pages')
-      .select('title, slug, description')
-      .in('slug', factionSlugs);
+      .select('title, a, description')
+      .in('a', factions);
   
     if (error) {
       console.error('Failed to fetch factions:', error);
@@ -27,7 +27,7 @@ async function loadFactions() {
     }
   
     container.innerHTML = data.map(entry => `
-      <a href="entry.html?slug=${entry.slug}" class="card" data-name="${entry.slug.toLowerCase()}">
+      <a href="entry.html?a=${entry.a}" class="card" data-name="${entry.a.toLowerCase()}">
         <h2>${entry.title}</h2>
         <p>${entry.description}</p>
       </a>
