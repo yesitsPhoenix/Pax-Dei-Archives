@@ -483,8 +483,8 @@ const corruptedBoarIcon = L.icon({
         var zoomHome = new L.Control.zoomHome();
         zoomHome.addTo(map);
         
-        const clearResourcesButton = document.querySelector(".clear-resources-button");
-        clearResourcesButton.addEventListener("click", clearAllMarkers,);
+        // const clearResourcesButton = document.querySelector(".clear-resources-button");
+        // clearResourcesButton.addEventListener("click", clearAllMarkers,);
 
         var imageOverlay = L.imageOverlay(
             "map_assets/combined.jpg", [
