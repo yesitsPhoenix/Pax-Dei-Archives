@@ -166,7 +166,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- THIS IS THE CORRECTED FUNCTION ---
     function parseComment(text) {
         const regex = /^(.*?)\s*\|\s*(.*?)\s*—\s*(.*?)\n([\s\S]*)$/;
         const match = text.match(regex);
@@ -188,7 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     finalSource = extractedUrl;
                 }
 
-                let parsedDate = new Date(); // Start with a new date object
+                let parsedDate = new Date();
                 let timePart = timestampStr;
 
                 // Handle "Yesterday at" and "Today at"
@@ -216,11 +215,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (ampm === 'pm' && hours < 12) {
                         hours += 12;
                     }
-                    if (ampm === 'am' && hours === 12) { // Midnight case
+                    if (ampm === 'am' && hours === 12) {
                         hours = 0;
                     }
                     
-                    parsedDate.setHours(hours, minutes, 0, 0); // Set hours and minutes, reset seconds
+                    parsedDate.setHours(hours, minutes, 0, 0);
                 }
 
                 // Format for the datetime-local input field
