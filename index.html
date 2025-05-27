@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pax Dei Archives - News & Developer Comments</title>
+    <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+</head>
+<body>
+    <header class="header-area">
+        <div class="container">
+            <nav class="main-nav">
+                <a href="index.html" class="logo">
+                    <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
+                    <h1>Pax Dei Archives</h1>
+                </a>
+                <div class="search-input">
+                    <form id="search" action="#">
+                        <input type="text" placeholder="Search the Archives" id='searchText' name="searchKeyword" />
+                        <button type="submit" class="search-button"><i class="fa fa-search"></i></button>
+                    </form>
+                    <div id="searchResultsDropdown" class="search-results-dropdown">
+                        </div>
+                </div>
+                <ul class="nav">
+                    <li><a href="index.html" class="active">Home</a></li>
+                    <li><a href="news-updates.html">News & Updates</a></li>
+                    <li><a href="developer-comments.html">Developer Comments</a></li>
+                    <li><a href="about.html">About</a></li>
+                </ul>
+                <a class='menu-trigger'>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </a>
+            </nav>
+        </div>
+    </header>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="page-content">
+                    <div class="main-banner">
+                        <div class="header-text">
+                            <h6>Welcome to the Pax Dei Archives</h6>
+                            <h4>Your Hub for <em>Pax Dei</em> News & Developer Insights</h4>
+                            <div class="main-button">
+                                <a href="#feature-cards">Explore</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="feature-cards-section" id="feature-cards">
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <div class="heading-section">
+                                    <h4><em>Quick</em> Links</h4>
+                                </div>
+                            </div>
+                            <div class="col-lg-2 col-md-4 col-sm-6">
+                                <div class="feature-card">
+                                    <a href="#recent-comments-home">
+                                        <i class="fa-solid fa-comments"></i>
+                                        <h5>Recent Dev Comments</h5>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-lg-2 col-md-4 col-sm-6">
+                                <div class="feature-card">
+                                    <a href="developer-comments.html">
+                                        <i class="fa-solid fa-code"></i>
+                                        <h5>Dev Insights</h5>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-lg-2 col-md-4 col-sm-6">
+                                <div class="feature-card">
+                                        <a href="https://playpaxdei.com/en-us/news" target="_blank">
+                                        <i class="fa-solid fa-newspaper"></i>
+                                        <h5>Official News
+                                            (external)</h5>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-lg-2 col-md-4 col-sm-6">
+                                <div class="feature-card">
+                                    <a href="#" id="roadmapLink">
+                                        <i class="fa-solid fa-map-marked-alt"></i>
+                                        <h5>Latest Roadmap</h5>
+                                    </a>
+                                </div>
+
+                            </div>
+                            <div class="col-lg-2 col-md-4 col-sm-6">
+                                <div class="feature-card">
+                                <a href="#community">
+                                        <i class="fa-solid fa-users"></i>
+                                        <h5>Clan Spotlights</h5>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-lg-2 col-md-4 col-sm-6">
+                                <div class="feature-card">
+                                    <a href="#">
+                                        <i class="fas fa-users"></i>
+                                        <h5>Factions</h5>
+                                    </a>
+                                </div>
+                            </div>
+                            <!-- <div class="col-lg-2 col-md-4 col-sm-6">
+                                <div class="feature-card">
+                                    <a href="#">
+                                        <i class="fas fa-hammer"></i>
+                                        <h5>Crafting</h5>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-lg-2 col-md-4 col-sm-6">
+                                <div class="feature-card">
+                                    <a href="#">
+                                        <i class="fas fa-shield-alt"></i>
+                                        <h5>Combat</h5>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-lg-2 col-md-4 col-sm-6">
+                                <div class="feature-card">
+                                    <a href="#">
+                                        <i class="fas fa-tree"></i>
+                                        <h5>Gathering</h5>
+                                    </a>
+                                </div>
+                            </div> -->
+                            <div class="col-lg-2 col-md-4 col-sm-6">
+                                <div class="feature-card">
+                                    <a href="#">
+                                        <i class="fas fa-map-marked-alt"></i>
+                                        <h5>Exploration</h5>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-lg-2 col-md-4 col-sm-6">
+                                <div class="feature-card">
+                                    <a href="#wiki">
+                                        <i class="fa-solid fa-book"></i>
+                                        <h5>Player Resources</h5>
+                                    </a>
+                                </div>
+                            </div>
+                            <!-- <div class="col-lg-2 col-md-4 col-sm-6">
+                                <div class="feature-card">
+                                    <a href="#">
+                                        <i class="fas fa-dragon"></i>
+                                        <h5>Creatures</h5>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-lg-2 col-md-4 col-sm-6">
+                                <div class="feature-card">
+                                    <a href="#media">
+                                        <i class="fa-solid fa-photo-video"></i>
+                                        <h5>Screenshots & Videos</h5>
+                                    </a>
+                                </div>
+                            </div> -->
+                            <div class="col-lg-2 col-md-4 col-sm-6">
+                                <div class="feature-card">
+                                    <a href="#support">
+                                        <i class="fa-solid fa-life-ring"></i>
+                                        <h5>Support & Help</h5>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-lg-2 col-md-4 col-sm-6">
+                                <div class="feature-card">
+                                    <a href="about.html">
+                                        <i class="fa-solid fa-info-circle"></i>
+                                        <h5>About Pax Dei Archives</h5>
+                                    </a>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                    <div class="recent-comments">
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <div class="heading-section">
+                                    <h4><em>Recent</em> Comments</h4>
+                                </div>
+                            </div>
+                            <div class="col-lg-12">
+                                <div id="recent-comments-home" class="row">
+                                    <div class="loading-indicator">Loading recent comments...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="news-updates">
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <div class="heading-section">
+                                    <h4><em>Latest</em> News</h4>
+                                </div>
+                            </div>
+                            <div class="col-lg-12">
+                                <div id="news-updates-home" class="row">
+                                    <div class="loading-indicator">Loading latest news...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12">
+                    <p>Copyright © 2025 Pax Dei Archives. All rights reserved.</p>
+                    <a href="admin.html">Admin</a>
+                </div>
+            </div>
+        </div>
+        <div class="corner-credit">
+            <img src="https://i.postimg.cc/7L1M8TDf/phoenix.png" alt="Phoenix profile image" class="profile-image" />
+            <span class="nav-text-profile">Made by Phoenix ✨</span>
+        </div>
+    </footer>
+
+    <div class="modal-overlay" id="roadmapModalOverlay">
+        <div class="roadmap-modal-content">
+            <button class="modal-close-button" id="closeRoadmapModal">&times;</button>
+            <img src="frontend/www/assets/latest_roadmap.jpg" alt="Latest Game Roadmap">
+        </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script type="module" src="frontend/www/js/main.js"></script>
+</body>
+</html>

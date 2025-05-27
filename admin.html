@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pax Dei Archives Admin - Add Content</title>
+    <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" href="https://i.postimg.cc/V6RRHPcZ/Haven-2.png" type="image/png">
+</head>
+<body>
+    <header class="header-area">
+        <div class="container">
+            <nav class="main-nav">
+                <a href="index.html" class="logo">
+                    <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
+                    <h1>Pax Dei Archives</h1>
+                </a>
+                <div class="search-input">
+                    <form id="search" action="#">
+                        <input type="text" placeholder="Search the Archives" id='searchText' name="searchKeyword" />
+                        <button type="submit" class="search-button"><i class="fa fa-search"></i></button>
+                    </form>
+                </div>
+                <ul class="nav">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="news-updates.html">News & Updates</a></li>
+                    <li><a href="developer-comments.html">Developer Comments</a></li>
+                    <li><a href="about.html">About</a></li>
+                    <li><a href="admin.html" class="active">Admin</a></li>
+                </ul>
+                <a class='menu-trigger'>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="page-content">
+
+                    <div class="heading-section" id="loginHeading">
+                        <h4>Admin <em>Login</em></h4>
+                    </div>
+                    <div id="loginFormContainer" class="admin-form-container">
+                        <p>Please log in using your Discord account.</p>
+                        <button id="discordLoginButton" class="discord-button">
+                            <i class="fab fa-discord"></i> Login with Discord
+                        </button>
+                        <p id="loginError" style="color: red; display: none;"></p>
+                    </div>
+
+                    <div id="adminDashboardAndForm" style="display: none;">
+                        <div class="heading-section" style="margin-top: 50px;">
+                            <h4>Admin <em>Dashboard</em></h4>
+                        </div>
+                        <div id="dashboardSection" class="row">
+                            <div class="col-lg-3 col-md-6 col-sm-12">
+                                <div class="dashboard-card">
+                                    <h6>Total Dev Comments</h6>
+                                    <p id="totalCommentsCount">--</p>
+                                    <i class="fas fa-comments"></i>
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-md-6 col-sm-12">
+                                <div class="dashboard-card">
+                                    <h6>Total News Updates</h6>
+                                    <p id="totalNewsCount">--</p>
+                                    <i class="fas fa-newspaper"></i>
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-md-6 col-sm-12">
+                                <div class="dashboard-card">
+                                    <h6>Comments This Month</h6>
+                                    <p id="commentsMonthCount">--</p>
+                                    <i class="fas fa-calendar-alt"></i>
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-md-6 col-sm-12">
+                                <div class="dashboard-card">
+                                    <h6>News This Month</h6>
+                                    <p id="newsMonthCount">--</p>
+                                    <i class="fas fa-calendar-check"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-6">
+                                <div class="heading-section" style="margin-top: 50px;">
+                                    <h4>Add New <em>Developer Comment</em></h4>
+                                </div>
+                                <div id="commentFormSection" class="admin-form-container">
+                                    <p>Paste the developer comment block below, and the form will attempt to parse it.</p>
+                                    <textarea id="commentInput" rows="10" placeholder="Paste comment here..."></textarea>
+                                    <button id="parseButton" class="main-button">Parse & Preview</button>
+
+                                    <div id="formMessage" role="alert"></div>
+
+                                    <form id="devCommentForm" style="display: none;">
+                                        <h5>Parsed Data Preview:</h5>
+                                        <label for="author">Author:</label>
+                                        <input type="text" id="author" name="author" readonly>
+
+                                        <label for="source">Source:</label>
+                                        <input type="text" id="source" name="source" readonly>
+
+                                        <label for="timestamp">Timestamp:</label>
+                                        <input type="datetime-local" id="timestamp" name="timestamp" readonly>
+
+                                        <label for="commentContent">Comment Content:</label>
+                                        <textarea id="commentContent" name="content" rows="10" readonly></textarea>
+
+                                        <div class="form-actions">
+                                            <button type="submit" class="main-button submit-button">Add Comment to DB</button>
+                                            <button type="button" id="editButton" class="main-button secondary-button">Edit Raw</button>
+                                        </div>
+                                    </form>
+                                    <p id="parseError" style="color: red; display: none;"></p>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-6">
+                                <div class="heading-section" style="margin-top: 50px;">
+                                    <h4>Add New <em>News Update</em></h4>
+                                </div>
+                                <div class="admin-form-container">
+                                    <p>Use this form to publish new official game news or significant updates.</p>
+                                    <form id="addNewsUpdateForm">
+                                        <label for="news_date">News Date:</label>
+                                        <input type="date" id="news_date" name="news_date" required>
+
+                                        <label for="news_title">Title:</label>
+                                        <input type="text" id="news_title" name="title" required>
+
+                                        <label for="news_summary">Summary:</label>
+                                        <textarea id="news_summary" name="summary" rows="5" required></textarea>
+
+                                        <label for="full_article_link">Full Article Link (URL):</label>
+                                        <input type="url" id="full_article_link" name="full_article_link">
+
+                                        <div class="form-actions">
+                                            <button type="submit" class="main-button submit-button">Add News Update</button>
+                                        </div>
+                                        <div id="addNewsUpdateMessage" class="form-message" style="display:none;"></div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div> </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12">
+                    <p>Copyright © 2025 Pax Dei Archives. All rights reserved.
+                    <br>Design inspired by: <a href="https://templatemo.com/live/templatemo_579_cyborg_gaming" target="_blank">TemplateMo</a></p>
+                </div>
+            </div>
+        </div>
+        <div class="corner-credit">
+            <img src="https://i.postimg.cc/7L1M8TDf/phoenix.png" alt="Phoenix profile image" class="profile-image" />
+            <span class="nav-text-profile">Made by Phoenix ✨</span>
+        </div>
+    </footer>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <!-- <script type="module" src="frontend/www/js/main.js"></script> -->
+    <script type="module" src="frontend/www/js/admin.js"></script>
+</body>
+</html>
