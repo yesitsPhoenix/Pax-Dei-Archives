@@ -154,8 +154,10 @@ document.addEventListener('DOMContentLoaded', () => {
     discordLoginButton.addEventListener('click', async () => {
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'discord',
-            options: {}
-        });
+            options: {
+                redirectTo: 'https://yesitsphoenix.github.io/Pax-Dei-Archives/admin.html'
+        }
+    });
 
         if (error) {
             console.error('Discord login error:', error);
