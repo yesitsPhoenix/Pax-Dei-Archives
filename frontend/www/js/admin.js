@@ -235,7 +235,22 @@ async function populateTagSelect(tagSelectElement) {
         console.warn('tagSelect element not found. Cannot populate tags.');
         return;
     }
-    Array.from(tagSelectElement.options).filter(option => option.value !== "").forEach(option => option.remove());
+    // Clear all existing options
+    tagSelectElement.innerHTML = '';
+
+    // Add a default option if it's the loreCategorySelect
+    if (tagSelectElement.id === 'loreCategory') {
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = 'Select a category';
+        tagSelectElement.appendChild(defaultOption);
+    } else if (tagSelectElement.id === 'tagSelect') {
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = 'Select existing tags (Ctrl/Cmd+Click to select multiple)';
+        tagSelectElement.appendChild(defaultOption);
+    }
+
 
     console.log('Attempting to populate tags...');
 
@@ -364,7 +379,9 @@ $(document).ready(async function() {
 
         checkAuth();
         supabase.auth.onAuthStateChange((event, session) => {
-            if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+            // Only re-check auth and populate selects if the user's session status actually changes
+            // This helps prevent excessive calls on page focus.
+            if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'INITIAL_SESSION') {
                 checkAuth();
             }
         });
