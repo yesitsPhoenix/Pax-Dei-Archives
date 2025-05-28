@@ -137,7 +137,7 @@ $(document).ready(async function() {
 
         // --- Populate Categories in Sidebar ---
         const categories = await fetchLoreCategories();
-        loreCategoryList.empty();
+        loreCategoryList.empty(); // Ensure the list is cleared before appending
         if (categories.length > 0) {
             categories.forEach(cat => {
                 const li = `<li><a href="lore.html?category=${encodeURIComponent(cat)}" class="${selectedCategory === cat ? 'active-lore-category' : ''}">${cat}</a></li>`;
@@ -149,7 +149,7 @@ $(document).ready(async function() {
 
 
         // --- Populate Items in Sidebar for the selected category ---
-        loreItemList.empty();
+        loreItemList.empty(); // Ensure the list is cleared before appending
         if (selectedCategory) {
             const items = await fetchLoreItems(selectedCategory);
             if (items.length > 0) {
@@ -178,10 +178,12 @@ $(document).ready(async function() {
                 dynamicLoreMainContent.html('<div class="lore-no-content-message">Lore item not found.</div>');
             }
         } else if (selectedCategory) {
+            // If only category is selected, try to load the first item in that category
             const items = await fetchLoreItems(selectedCategory);
             if (items.length > 0) {
-                updateUrl(selectedCategory, items[0].slug);
-                displayLoreContent(selectedCategory, items[0].slug);
+                // Automatically load the first item in the category if no specific item is chosen
+                updateUrl(selectedCategory, items[0].slug); // Update URL to reflect the item
+                displayLoreContent(selectedCategory, items[0].slug); // Recursively call to display the item
             } else {
                 dynamicLoreMainContent.html('<div class="lore-no-content-message">No lore items found for this category.</div>');
             }
@@ -203,19 +205,35 @@ $(document).ready(async function() {
     }
 
     // --- Event Listeners ---
+
+    // Handle clicks on initial feature cards to prevent full page reload
+    $(document).on('click', '#lore-categories-section .feature-card a', function(e) {
+        e.preventDefault(); // Prevent default link behavior (full page reload)
+        const href = $(this).attr('href');
+        const url = new URL(href, window.location.origin);
+        const newCategory = url.searchParams.get('category');
+
+        updateUrl(newCategory); // Update URL with just the category
+        displayLoreContent(newCategory); // Display content for the selected category
+    });
+
+    // Handle clicks on sidebar links (using event delegation for dynamically added elements)
     $(document).on('click', '#lore-category-list a, #lore-item-list a', function(e) {
-        e.preventDefault();
+        e.preventDefault(); // Prevent default link behavior
         const href = $(this).attr('href');
         const url = new URL(href, window.location.origin);
         const newCategory = url.searchParams.get('category');
         const newItemSlug = url.searchParams.get('item');
 
+        // Update URL and display content
         updateUrl(newCategory, newItemSlug);
         displayLoreContent(newCategory, newItemSlug);
     });
 
+    // Handle browser back/forward buttons
     window.onpopstate = function(event) {
         const params = getQueryParams();
+        // If coming back to the base lore.html without params, show categories
         if (!params.category && !params.item) {
             loreCategoriesSection.show();
             dynamicLoreContentWrapper.hide();
