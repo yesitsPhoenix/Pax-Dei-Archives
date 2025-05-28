@@ -91,77 +91,95 @@ function parseComment(text) {
     const match = text.match(mainRegex);
 
     if (!match) {
-        console.error("Main regex did not match the input text.");
+        console.error("Main regex did not match the input text. Ensure it has 'Author — Content'.");
         return null;
     }
 
     try {
         const author = match[1].trim();
-        let rawContentWithTimestamp = match[2].trim();
+        let fullContentAndPotentialTimestamp = match[2].trim();
         const url = match[3] ? match[3].trim() : '';
         const finalSource = url;
 
         let parsedDate = new Date(); // Default to current date/time
-        let content = rawContentWithTimestamp; // Default to raw content if no timestamp found
+        let content = fullContentAndPotentialTimestamp; // Default if no timestamp found
+
+        // Split the content into lines to check the first line for a timestamp
+        const lines = fullContentAndPotentialTimestamp.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+        let firstLine = lines.length > 0 ? lines[0] : '';
+
+        let timestampMatchFound = false;
 
         // 1. Full Date and Time (e.g., 05/28/2025, 1:00 PM)
         const fullDateTimePattern = /^(\d{1,2}\/\d{1,2}\/\d{2,4}),\s*(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
-        let timestampMatch = rawContentWithTimestamp.match(fullDateTimePattern);
+        let timestampMatch = firstLine.match(fullDateTimePattern);
 
         if (timestampMatch) {
             const datePart = timestampMatch[1];
             const timePart = timestampMatch[2];
-            content = timestampMatch[3].trim();
+            content = timestampMatch[3].trim(); // Get content from first line
+            lines[0] = content; // Update first line with remaining content
+            content = lines.join('\n').trim(); // Reassemble content with remaining lines
 
             let [month, day, year] = datePart.split('/').map(Number);
             if (year < 100) {
                 year += (year > 50) ? 1900 : 2000;
             }
             parsedDate = new Date(year, month - 1, day);
-
-            parseTimeIntoDate(timePart, parsedDate); // Helper for time parsing
+            parseTimeIntoDate(timePart, parsedDate);
+            timestampMatchFound = true;
         } else {
             // 2. "yesterday at HH:MM AM/PM"
             const yesterdayPattern = /^yesterday at\s*(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
-            timestampMatch = rawContentWithTimestamp.match(yesterdayPattern);
+            timestampMatch = firstLine.match(yesterdayPattern);
 
             if (timestampMatch) {
                 const timePart = timestampMatch[1];
                 content = timestampMatch[2].trim();
+                lines[0] = content;
+                content = lines.join('\n').trim();
+
                 parsedDate = new Date();
                 parsedDate.setDate(parsedDate.getDate() - 1); // Set to yesterday
-
                 parseTimeIntoDate(timePart, parsedDate);
+                timestampMatchFound = true;
             } else {
-                // 3. "today at HH:MM AM/PM" (NEW ADDITION)
+                // 3. "today at HH:MM AM/PM"
                 const todayPattern = /^today at\s*(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
-                timestampMatch = rawContentWithTimestamp.match(todayPattern);
+                timestampMatch = firstLine.match(todayPattern);
 
                 if (timestampMatch) {
                     const timePart = timestampMatch[1];
                     content = timestampMatch[2].trim();
-                    parsedDate = new Date(); // Already today by default
+                    lines[0] = content;
+                    content = lines.join('\n').trim();
 
+                    parsedDate = new Date(); // Already today by default
                     parseTimeIntoDate(timePart, parsedDate);
+                    timestampMatchFound = true;
                 } else {
                     // 4. "HH:MM AM/PM" (time only, assumes today)
                     const timeOnlyPattern = /^(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
-                    timestampMatch = rawContentWithTimestamp.match(timeOnlyPattern);
+                    timestampMatch = firstLine.match(timeOnlyPattern);
 
                     if (timestampMatch) {
                         const timePart = timestampMatch[1];
                         content = timestampMatch[2].trim();
-                        parsedDate = new Date(); // Already today by default
+                        lines[0] = content;
+                        content = lines.join('\n').trim();
 
+                        parsedDate = new Date(); // Already today by default
                         parseTimeIntoDate(timePart, parsedDate);
-                    } else {
-                        // 5. No specific timestamp format found (uses current date/time)
-                        console.warn("No specific timestamp format recognized. Assuming content is the full string and using current date/time.");
-                        content = rawContentWithTimestamp;
-                        parsedDate = new Date(); // Ensure parsedDate is current if nothing else matches
+                        timestampMatchFound = true;
                     }
                 }
             }
+        }
+
+        if (!timestampMatchFound) {
+            console.warn("No specific timestamp format recognized from the first line. Assuming content is the full string and using current date/time.");
+            // Content already defaults to fullContentAndPotentialTimestamp
+            parsedDate = new Date();
         }
 
         // Helper function for time parsing to reduce redundancy
@@ -174,22 +192,13 @@ function parseComment(text) {
                 const minutes = parseInt(timeMatchResult[2]);
                 const ampm = timeMatchResult[3].toLowerCase();
                 if (ampm === 'pm' && hours < 12) { hours += 12; }
-                if (ampm === 'am' && hours === 12) { hours = 0; }
+                if (ampm === 'am' && hours === 12) { hours = 0; } // 12 AM (midnight) is hour 0
                 dateObject.setHours(hours, minutes, 0, 0);
             } else {
                 console.warn(`Could not parse time part for timestamp: ${timePart}`);
                 dateObject.setHours(0, 0, 0, 0); // Default to start of day if time fails
             }
         }
-
-        // This part handles the case where content might be empty but there was a timestampMatch
-        if (content === '' && timestampMatch && rawContentWithTimestamp.length > timestampMatch[0].length) {
-            const potentialContentAfterTimestamp = rawContentWithTimestamp.substring(timestampMatch[0].length).trim();
-            if (potentialContentAfterTimestamp) {
-                content = potentialContentAfterTimestamp;
-            }
-        }
-
 
         const yearFormatted = parsedDate.getFullYear();
         const monthFormatted = (parsedDate.getMonth() + 1).toString().padStart(2, '0');
@@ -206,6 +215,7 @@ function parseComment(text) {
         return null;
     }
 }
+
 
 async function populateTagSelect(tagSelectElement) {
     if (!tagSelectElement) {
