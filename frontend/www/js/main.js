@@ -1,7 +1,3 @@
-// This script combines functionalities from main.js, admin.js, and developerCommentsFilters.js
-// It handles Supabase interactions, UI rendering, search, admin-specific tasks, and comment filtering.
-
-// Supabase Client Initialization
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
 const SUPABASE_URL = 'https://jrjgbnopmfovxwvtbivh.supabase.co';
@@ -9,13 +5,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// --- General Helper Functions (from main.js) ---
 
-/**
- * Formats a date string into a localized date and time string.
- * @param {string} dateString - The date string to format.
- * @returns {string} The formatted date and time string, or an empty string if input is invalid.
- */
 function formatCommentDateTime(dateString) {
   const options = {
     year: 'numeric',
@@ -34,11 +24,7 @@ function formatCommentDateTime(dateString) {
   }
 }
 
-/**
- * Formats a date string into a localized date string (without time).
- * @param {string} dateString - The date string to format.
- * @returns {string} The formatted date string, or an empty string if input is invalid.
- */
+
 function formatNewsDate(dateString) {
   const options = {
     year: 'numeric',
@@ -56,14 +42,7 @@ function formatNewsDate(dateString) {
   }
 }
 
-/**
- * Fetches and renders developer comments from Supabase.
- * Can filter by limit and search term.
- * @param {string} containerId - The ID of the HTML element to render comments into.
- * @param {number} [limit=null] - The maximum number of comments to fetch.
- * @param {string} [searchTerm=null] - A term to search for in title, content, or author.
- * @returns {Promise<Array>} A promise that resolves to an array of fetched comments.
- */
+
 async function fetchAndRenderDeveloperComments(containerId, limit = null, searchTerm = null) {
     const container = document.getElementById(containerId);
     // If no container and no search term (meaning it's not a search-only call), exit.
@@ -126,7 +105,7 @@ async function fetchAndRenderDeveloperComments(containerId, limit = null, search
                 if (comment.comment_date) {
                     try {
                         const dateObj = new Date(comment.comment_date);
-                        // Extract ISO, MM, DD ensuring two digits for month/day
+                        // Extract YYYY, MM, DD ensuring two digits for month/day
                         const year = dateObj.getFullYear();
                         const month = String(dateObj.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
                         const day = String(dateObj.getDate()).padStart(2, '0');
@@ -164,14 +143,6 @@ async function fetchAndRenderDeveloperComments(containerId, limit = null, search
     }
 }
 
-/**
- * Fetches and renders news updates from Supabase.
- * Can filter by limit and search term.
- * @param {string} containerId - The ID of the HTML element to render news into.
- * @param {number} [limit=null] - The maximum number of news items to fetch.
- * @param {string} [searchTerm=null] - A term to search for in title, summary, or link.
- * @returns {Promise<Array>} A promise that resolves to an array of fetched news items.
- */
 async function fetchAndRenderNewsUpdates(containerId, limit = null, searchTerm = null) {
     const container = document.getElementById(containerId);
     // If no container and no search term, exit.
@@ -240,10 +211,7 @@ async function fetchAndRenderNewsUpdates(containerId, limit = null, searchTerm =
     }
 }
 
-/**
- * Performs a search across developer comments and news updates.
- * @param {string} searchTerm - The term to search for.
- */
+
 async function performSearch(searchTerm) {
     const searchResultsDropdown = $('#searchResultsDropdown');
     searchResultsDropdown.html('<div class="search-loading-indicator">Searching...</div>');
@@ -251,8 +219,8 @@ async function performSearch(searchTerm) {
 
     try {
         const [comments, newsUpdates] = await Promise.all([
-            fetchAndRenderDeveloperComments(null, null, searchTerm), // Pass null for containerId as we just want data
-            fetchAndRenderNewsUpdates(null, null, searchTerm) // Pass null for containerId as we just want data
+            fetchAndRenderDeveloperComments(null, null, searchTerm),
+            fetchAndRenderNewsUpdates(null, null, searchTerm)
         ]);
 
         const allResults = [];
@@ -265,7 +233,7 @@ async function performSearch(searchTerm) {
                 date: comment.comment_date,
                 author: comment.author,
                 source: comment.source,
-                link: null // Developer comments don't have a direct 'read more' link
+                link: null
             });
         });
 
@@ -275,7 +243,7 @@ async function performSearch(searchTerm) {
                 title: newsItem.title,
                 content: newsItem.summary,
                 date: newsItem.news_date,
-                author: null, // News updates don't have an author in this context
+                author: null,
                 source: newsItem.full_article_link,
                 link: newsItem.full_article_link
             });
@@ -327,7 +295,6 @@ async function performSearch(searchTerm) {
     }
 }
 
-// --- Admin Helper Functions (from admin.js) ---
 
 // Helper function to show messages for forms
 function showFormMessage(messageElement, message, type) {
@@ -349,11 +316,7 @@ function showFormMessage(messageElement, message, type) {
     }
 }
 
-/**
- * Checks if the current user is an authorized admin.
- * @param {string} userId - The ID of the user to check.
- * @returns {Promise<boolean>} True if the user is an authorized admin, false otherwise.
- */
+
 async function isAuthorizedAdmin(userId) {
     if (!userId) return false;
     try {
@@ -361,10 +324,10 @@ async function isAuthorizedAdmin(userId) {
             .from('admin_users')
             .select('user_id')
             .eq('user_id', userId)
-            .eq('role', 'comment_adder') // Assuming 'comment_adder' role for admin access
+            .eq('role', 'comment_adder')
             .single();
 
-        return !!data; // Returns true if data exists, false otherwise
+        return !!data;
     } catch (error) {
         console.error('Error checking admin authorization:', error.message);
         return false;
@@ -417,12 +380,7 @@ async function fetchDashboardStats() {
     }
 }
 
-/**
- * Handles parsing a raw comment string into structured data (author, source, timestamp, content).
- * This function has been significantly improved to handle various date/time formats.
- * @param {string} text - The raw comment string.
- * @returns {object|null} An object containing parsed data, or null if parsing fails.
- */
+
 function parseComment(text) {
     // Regex to capture author, content/timestamp, and optional URL at the end.
     // This regex is designed to be flexible with the separator.
@@ -576,8 +534,6 @@ function parseComment(text) {
 }
 
 
-// --- Main Document Ready / Initialization Logic ---
-
 $(document).ready(async function() {
     // --- UI Navigation and Modals (from main.js) ---
     $('.menu-trigger').on('click', function() {
@@ -680,8 +636,7 @@ $(document).ready(async function() {
 
         // Function to populate tags from Supabase for filtering
         async function populateTagsFromSupabase() {
-            filterTagSelect.find('option:not(:first)').remove(); // Clear existing options except the first
-
+            filterTagSelect.find('option:not(:first)').remove();
             try {
                 const { data, error } = await supabase
                     .from('tag_list')
@@ -832,7 +787,7 @@ $(document).ready(async function() {
          * Shows/hides login form, dashboard, and displays authorization messages.
          */
         async function checkAuth() {
-            const { data: { user } = {} } = await supabase.auth.getUser(); // Destructure with default empty object
+            const { data: { user } } = await supabase.auth.getUser();
 
             if (user) {
                 const authorized = await isAuthorizedAdmin(user.id);
@@ -860,41 +815,28 @@ $(document).ready(async function() {
             }
         }
 
-        /**
-         * Populates the tag selection dropdown in the admin form from Supabase.
-         */
+
         async function populateTagSelect() {
-            if (!tagSelect) {
-                console.warn('tagSelect element not found. Cannot populate tags.');
-                return;
-            }
-            tagSelect.innerHTML = '<option value="">Select existing tags (Ctrl/Cmd+Click to select multiple)</option>'; // Clear and add default option
-            console.log('Attempting to populate tags...');
+            if (!tagSelect) return;
+            tagSelect.innerHTML = '';
 
             try {
                 const { data, error } = await supabase
                     .from('tag_list')
                     .select('tag_name')
-                    .order('tag_name', { ascending: true }); // Order alphabetically
+                    .order('tag_name', { ascending: true });
 
                 if (error) {
                     console.error('Error fetching tags for admin form:', error.message);
                     return;
                 }
 
-                console.log('Fetched tags data:', data); // Log the fetched data
-
-                if (data && data.length > 0) {
-                    data.forEach(tag => {
-                        console.log('Adding tag:', tag.tag_name); // Log each tag being added
-                        const option = document.createElement('option');
-                        option.value = tag.tag_name;
-                        option.textContent = tag.tag_name;
-                        tagSelect.appendChild(option);
-                    });
-                } else {
-                    console.log('No tags found in Supabase tag_list table.');
-                }
+                data.forEach(tag => {
+                    const option = document.createElement('option');
+                    option.value = tag.tag_name;
+                    option.textContent = tag.tag_name;
+                    tagSelect.appendChild(option);
+                });
             } catch (e) {
                 console.error('Unexpected error populating tags for admin form:', e);
             }
@@ -1037,9 +979,7 @@ $(document).ready(async function() {
                     commentInput.style.display = 'block';
                     parseButton.style.display = 'block';
                     parseError.style.display = 'none';
-                    // tagSelect.value = ''; // Clearing selected tags in a multiple select is done by setting selectedOptions or iterating.
-                    // For a multi-select, you might want to deselect all or reset to default.
-                    Array.from(tagSelect.options).forEach(option => option.selected = false); // Deselect all options
+                    tagSelect.value = ''; // Clear selected tags
                     fetchDashboardStats(); // Refresh dashboard stats after adding comment
                 }
             });
