@@ -1,6 +1,4 @@
 // main.js
-// Handles general site-wide functionalities, search, and page-specific content loading
-// for index.html, news-updates.html, and developer-comments.html.
 
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
@@ -9,11 +7,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-/**
- * Formats a date string into a localized date and time string.
- * @param {string} dateString - The date string to format.
- * @returns {string} The formatted date and time string, or an empty string if input is invalid.
- */
+
 function formatCommentDateTime(dateString) {
   const options = {
     year: 'numeric',
@@ -32,11 +26,7 @@ function formatCommentDateTime(dateString) {
   }
 }
 
-/**
- * Formats a date string into a localized date string (without time).
- * @param {string} dateString - The date string to format.
- * @returns {string} The formatted date string, or an empty string if input is invalid.
- */
+
 function formatNewsDate(dateString) {
   const options = {
     year: 'numeric',
@@ -54,14 +44,7 @@ function formatNewsDate(dateString) {
   }
 }
 
-/**
- * Fetches and renders developer comments from Supabase.
- * Can filter by limit and search term.
- * @param {string} containerId - The ID of the HTML element to render comments into.
- * @param {number} [limit=null] - The maximum number of comments to fetch.
- * @param {string} [searchTerm=null] - A term to search for in title, content, or author.
- * @returns {Promise<Array>} A promise that resolves to an array of fetched comments.
- */
+
 async function fetchAndRenderDeveloperComments(containerId, limit = null, searchTerm = null) {
     const container = document.getElementById(containerId);
     if (!container && !searchTerm) return [];
@@ -157,13 +140,6 @@ async function fetchAndRenderDeveloperComments(containerId, limit = null, search
     }
 }
 
-/**
- * Fetches and renders news updates from Supabase.
- * @param {string} containerId - The ID of the HTML element to render news into.
- * @param {number} [limit=null] - The maximum number of news items to fetch.
- * @param {string} [searchTerm=null] - A term to search for in title, summary, or link.
- * @returns {Promise<Array>} A promise that resolves to an array of fetched news items.
- */
 async function fetchAndRenderNewsUpdates(containerId, limit = null, searchTerm = null) {
     const container = document.getElementById(containerId);
     if (!container && !searchTerm) return [];
@@ -228,10 +204,6 @@ async function fetchAndRenderNewsUpdates(containerId, limit = null, searchTerm =
     }
 }
 
-/**
- * Performs a search across developer comments and news updates.
- * @param {string} searchTerm - The term to search for.
- */
 async function performSearch(searchTerm) {
     const searchResultsDropdown = $('#searchResultsDropdown');
     searchResultsDropdown.html('<div class="search-loading-indicator">Searching...</div>');

@@ -101,9 +101,10 @@ function parseComment(text) {
         const url = match[3] ? match[3].trim() : '';
         const finalSource = url;
 
-        let parsedDate = new Date();
-        let content = rawContentWithTimestamp;
+        let parsedDate = new Date(); // Default to current date/time
+        let content = rawContentWithTimestamp; // Default to raw content if no timestamp found
 
+        // 1. Full Date and Time (e.g., 05/28/2025, 1:00 PM)
         const fullDateTimePattern = /^(\d{1,2}\/\d{1,2}\/\d{2,4}),\s*(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
         let timestampMatch = rawContentWithTimestamp.match(fullDateTimePattern);
 
@@ -118,6 +119,53 @@ function parseComment(text) {
             }
             parsedDate = new Date(year, month - 1, day);
 
+            parseTimeIntoDate(timePart, parsedDate); // Helper for time parsing
+        } else {
+            // 2. "yesterday at HH:MM AM/PM"
+            const yesterdayPattern = /^yesterday at\s*(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
+            timestampMatch = rawContentWithTimestamp.match(yesterdayPattern);
+
+            if (timestampMatch) {
+                const timePart = timestampMatch[1];
+                content = timestampMatch[2].trim();
+                parsedDate = new Date();
+                parsedDate.setDate(parsedDate.getDate() - 1); // Set to yesterday
+
+                parseTimeIntoDate(timePart, parsedDate);
+            } else {
+                // 3. "today at HH:MM AM/PM" (NEW ADDITION)
+                const todayPattern = /^today at\s*(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
+                timestampMatch = rawContentWithTimestamp.match(todayPattern);
+
+                if (timestampMatch) {
+                    const timePart = timestampMatch[1];
+                    content = timestampMatch[2].trim();
+                    parsedDate = new Date(); // Already today by default
+
+                    parseTimeIntoDate(timePart, parsedDate);
+                } else {
+                    // 4. "HH:MM AM/PM" (time only, assumes today)
+                    const timeOnlyPattern = /^(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
+                    timestampMatch = rawContentWithTimestamp.match(timeOnlyPattern);
+
+                    if (timestampMatch) {
+                        const timePart = timestampMatch[1];
+                        content = timestampMatch[2].trim();
+                        parsedDate = new Date(); // Already today by default
+
+                        parseTimeIntoDate(timePart, parsedDate);
+                    } else {
+                        // 5. No specific timestamp format found (uses current date/time)
+                        console.warn("No specific timestamp format recognized. Assuming content is the full string and using current date/time.");
+                        content = rawContentWithTimestamp;
+                        parsedDate = new Date(); // Ensure parsedDate is current if nothing else matches
+                    }
+                }
+            }
+        }
+
+        // Helper function for time parsing to reduce redundancy
+        function parseTimeIntoDate(timePart, dateObject) {
             const timeRegex = /(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)/i;
             const timeMatchResult = timePart.match(timeRegex);
 
@@ -127,71 +175,21 @@ function parseComment(text) {
                 const ampm = timeMatchResult[3].toLowerCase();
                 if (ampm === 'pm' && hours < 12) { hours += 12; }
                 if (ampm === 'am' && hours === 12) { hours = 0; }
-                parsedDate.setHours(hours, minutes, 0, 0);
+                dateObject.setHours(hours, minutes, 0, 0);
             } else {
-                console.warn("Could not parse time part for full date format:", timePart);
-                parsedDate.setHours(0, 0, 0, 0);
-            }
-        } else {
-            const yesterdayPattern = /^yesterday at\s*(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
-            timestampMatch = rawContentWithTimestamp.match(yesterdayPattern);
-
-            if (timestampMatch) {
-                const timePart = timestampMatch[1];
-                content = timestampMatch[2].trim();
-                parsedDate = new Date();
-                parsedDate.setDate(parsedDate.getDate() - 1);
-
-                const timeRegex = /(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)/i;
-                const timeMatchResult = timePart.match(timeRegex);
-                if (timeMatchResult) {
-                    let hours = parseInt(timeMatchResult[1]);
-                    const minutes = parseInt(timeMatchResult[2]);
-                    const ampm = timeMatchResult[3].toLowerCase();
-                    if (ampm === 'pm' && hours < 12) { hours += 12; }
-                    if (ampm === 'am' && hours === 12) { hours = 0; }
-                    parsedDate.setHours(hours, minutes, 0, 0);
-                } else {
-                    console.warn("Could not parse time part for 'Yesterday at' format:", timePart);
-                    parsedDate.setHours(0,0,0,0);
-                }
-            } else {
-                const timeOnlyPattern = /^(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
-                timestampMatch = rawContentWithTimestamp.match(timeOnlyPattern);
-
-                if (timestampMatch) {
-                    const timePart = timestampMatch[1];
-                    content = timestampMatch[2].trim();
-                    parsedDate = new Date();
-
-                    const timeRegex = /(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)/i;
-                    const timeMatchResult = timePart.match(timeRegex);
-
-                    if (timeMatchResult) {
-                        let hours = parseInt(timeMatchResult[1]);
-                        const minutes = parseInt(timeMatchResult[2]);
-                        const ampm = timeMatchResult[3].toLowerCase();
-                        if (ampm === 'pm' && hours < 12) { hours += 12; }
-                        if (ampm === 'am' && hours === 12) { hours = 0; }
-                        parsedDate.setHours(hours, minutes, 0, 0);
-                    } else {
-                        console.warn("Could not parse time part for time-only format:", timePart);
-                        parsedDate.setHours(0,0,0,0);
-                    }
-                } else {
-                    console.warn("No specific timestamp format recognized. Assuming content is the full string and using current date/time.");
-                    content = rawContentWithTimestamp;
-                    parsedDate = new Date();
-                }
+                console.warn(`Could not parse time part for timestamp: ${timePart}`);
+                dateObject.setHours(0, 0, 0, 0); // Default to start of day if time fails
             }
         }
 
+        // This part handles the case where content might be empty but there was a timestampMatch
         if (content === '' && timestampMatch && rawContentWithTimestamp.length > timestampMatch[0].length) {
-             const potentialContentAfterTimestamp = rawContentWithTimestamp.substring(timestampMatch[0].length).trim();
-             if (potentialContentAfterTimestamp) {
-                 content = potentialContentAfterTimestamp;
-             }
+            const potentialContentAfterTimestamp = rawContentWithTimestamp.substring(timestampMatch[0].length).trim();
+            if (potentialContentAfterTimestamp) {
+                content = potentialContentAfterTimestamp;
+            }
         }
+
 
         const yearFormatted = parsedDate.getFullYear();
         const monthFormatted = (parsedDate.getMonth() + 1).toString().padStart(2, '0');
@@ -209,7 +207,6 @@ function parseComment(text) {
     }
 }
 
-
 async function populateTagSelect(tagSelectElement) {
     if (!tagSelectElement) {
         console.warn('tagSelect element not found. Cannot populate tags.');
@@ -224,13 +221,7 @@ async function populateTagSelect(tagSelectElement) {
         defaultOption.value = '';
         defaultOption.textContent = 'Select a category';
         tagSelectElement.appendChild(defaultOption);
-    } else if (tagSelectElement.id === 'tagSelect') {
-        const defaultOption = document.createElement('option');
-        defaultOption.value = '';
-        defaultOption.textContent = 'Select existing tags (Ctrl/Cmd+Click to select multiple)';
-        tagSelectElement.appendChild(defaultOption);
     }
-
 
     try {
         const { data, error } = await supabase
