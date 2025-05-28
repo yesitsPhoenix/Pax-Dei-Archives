@@ -238,7 +238,7 @@ async function populateTagSelect(tagSelectElement) {
     // Clear all existing options
     tagSelectElement.innerHTML = '';
 
-    // Add a default option if it's the loreCategorySelect
+    // Add a default option based on the select element's ID
     if (tagSelectElement.id === 'loreCategory') {
         const defaultOption = document.createElement('option');
         defaultOption.value = '';
@@ -252,7 +252,7 @@ async function populateTagSelect(tagSelectElement) {
     }
 
 
-    console.log('Attempting to populate tags...');
+    console.log('Attempting to populate tags for:', tagSelectElement.id); // More specific log
 
     try {
         const { data, error } = await supabase
@@ -265,18 +265,18 @@ async function populateTagSelect(tagSelectElement) {
             return;
         }
 
-        console.log('Fetched tags data:', data);
+        console.log('Fetched tags data for', tagSelectElement.id, ':', data); // More specific log
 
         if (data && data.length > 0) {
             data.forEach(tag => {
-                console.log('Adding tag:', tag.tag_name);
+                console.log('Adding tag:', tag.tag_name, 'to', tagSelectElement.id); // More specific log
                 const option = document.createElement('option');
                 option.value = tag.tag_name;
                 option.textContent = tag.tag_name;
                 tagSelectElement.appendChild(option);
             });
         } else {
-            console.log('No tags found in Supabase tag_list table.');
+            console.log('No tags found in Supabase tag_list table for', tagSelectElement.id); // More specific log
         }
     } catch (e) {
         console.error('Unexpected error populating tags for admin form:', e);
@@ -302,313 +302,319 @@ function slugify(text) {
 
 
 $(document).ready(async function() {
+    // Check if we are on the admin page
     const currentPage = window.location.pathname.split('/').pop();
+    if (currentPage !== 'admin.html') {
+        return; // Exit if not on admin page
+    }
 
-    if (currentPage === 'admin.html') {
-        const discordLoginButton = document.getElementById('discordLoginButton');
-        const loginError = document.getElementById('loginError');
-        const loginFormContainer = document.getElementById('loginFormContainer');
-        const loginHeading = document.getElementById('loginHeading');
-        const adminDashboardAndForm = document.getElementById('adminDashboardAndForm');
+    const discordLoginButton = document.getElementById('discordLoginButton');
+    const loginError = document.getElementById('loginError');
+    const loginFormContainer = document.getElementById('loginFormContainer');
+    const loginHeading = document.getElementById('loginHeading');
+    const adminDashboardAndForm = document.getElementById('adminDashboardAndForm');
 
-        // Dev Comment Parser elements
-        const commentInput = document.getElementById('commentInput');
-        const parseButton = document.getElementById('parseButton');
-        const devCommentForm = document.getElementById('devCommentForm');
-        const parseError = document.getElementById('parseError');
-        const formMessage = document.getElementById('formMessage');
+    // Dev Comment Parser elements
+    const commentInput = document.getElementById('commentInput');
+    const parseButton = document.getElementById('parseButton');
+    const devCommentForm = document.getElementById('devCommentForm');
+    const parseError = document.getElementById('parseError');
+    const formMessage = document.getElementById('formMessage');
 
-        // Dev Comment Form fields
-        const authorField = document.getElementById('author');
-        const sourceField = document.getElementById('source');
-        const timestampField = document.getElementById('timestamp');
-        const commentContentField = document.getElementById('commentContent');
-        const editButton = document.getElementById('editButton');
-        const tagSelect = document.getElementById('tagSelect');
-        const newTagInput = document.getElementById('newTagInput');
-        const addNewTagButton = document.getElementById('addNewTagButton');
+    // Dev Comment Form fields
+    const authorField = document.getElementById('author');
+    const sourceField = document.getElementById('source');
+    const timestampField = document.getElementById('timestamp');
+    const commentContentField = document.getElementById('commentContent');
+    const editButton = document.getElementById('editButton');
+    const tagSelect = document.getElementById('tagSelect');
+    const newTagInput = document.getElementById('newTagInput');
+    const addNewTagButton = document.getElementById('addNewTagButton');
 
-        // News Update Form elements
-        const addNewsUpdateForm = document.getElementById('addNewsUpdateForm');
-        const newsDateInput = document.getElementById('news_date');
-        const newsTitleInput = document.getElementById('news_title');
-        const newsSummaryInput = document.getElementById('news_summary');
-        const fullArticleLinkInput = document.getElementById('full_article_link');
-        const addNewsUpdateMessage = document.getElementById('addNewsUpdateMessage');
+    // News Update Form elements
+    const addNewsUpdateForm = document.getElementById('addNewsUpdateForm');
+    const newsDateInput = document.getElementById('news_date');
+    const newsTitleInput = document.getElementById('news_title');
+    const newsSummaryInput = document.getElementById('news_summary');
+    const fullArticleLinkInput = document.getElementById('full_article_link');
+    const addNewsUpdateMessage = document.getElementById('addNewsUpdateMessage');
 
-        // Lore Item Form elements
-        const addLoreItemForm = document.getElementById('addLoreItemForm');
-        const loreTitleInput = document.getElementById('loreTitle');
-        const loreSlugInput = document.getElementById('loreSlug');
-        const loreCategorySelect = document.getElementById('loreCategory');
-        const newLoreCategoryInput = document.getElementById('newLoreCategoryInput');
-        const addNewLoreCategoryButton = document.getElementById('addNewLoreCategoryButton');
-        const loreContentInput = document.getElementById('loreContent');
-        const addLoreItemMessage = document.getElementById('addLoreItemMessage');
+    // Lore Item Form elements
+    const addLoreItemForm = document.getElementById('addLoreItemForm');
+    const loreTitleInput = document.getElementById('loreTitle');
+    const loreSlugInput = document.getElementById('loreSlug');
+    const loreCategorySelect = document.getElementById('loreCategory');
+    const newLoreCategoryInput = document.getElementById('newLoreCategoryInput');
+    const addNewLoreCategoryButton = document.getElementById('addNewLoreCategoryButton');
+    const loreContentInput = document.getElementById('loreContent');
+    const addLoreItemMessage = document.getElementById('addLoreItemMessage');
 
 
-        async function checkAuth() {
-            const { data: { user } = {} } = await supabase.auth.getUser();
+    async function checkAuth() {
+        const { data: { user } = {} } = await supabase.auth.getUser();
 
-            if (user) {
-                const authorized = await isAuthorizedAdmin(user.id);
+        if (user) {
+            const authorized = await isAuthorizedAdmin(user.id);
 
-                if (authorized) {
-                    if (loginFormContainer) loginFormContainer.style.display = 'none';
-                    if (loginHeading) loginHeading.style.display = 'none';
-                    if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'block';
-                    fetchDashboardStats();
-                    populateTagSelect(tagSelect); // Populate tags for dev comment form
-                    populateTagSelect(loreCategorySelect); // Populate categories for lore form (using same tag_list table)
-                } else {
-                    if (loginFormContainer) loginFormContainer.style.display = 'block';
-                    if (loginHeading) loginHeading.style.display = 'none';
-                    if (loginError) {
-                        loginError.textContent = 'You are logged in but not authorized to add comments.';
-                        loginError.style.display = 'block';
-                    }
-                    if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none';
-                }
+            if (authorized) {
+                if (loginFormContainer) loginFormContainer.style.display = 'none';
+                if (loginHeading) loginHeading.style.display = 'none';
+                if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'block';
+                fetchDashboardStats();
+                // Populate selects only once after successful authorization and UI display
+                populateTagSelect(tagSelect);
+                populateTagSelect(loreCategorySelect);
             } else {
                 if (loginFormContainer) loginFormContainer.style.display = 'block';
-                if (loginHeading) loginHeading.style.display = 'block';
+                if (loginHeading) loginHeading.style.display = 'none';
+                if (loginError) {
+                    loginError.textContent = 'You are logged in but not authorized to add comments.';
+                    loginError.style.display = 'block';
+                }
                 if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none';
-                if (loginError) loginError.style.display = 'none';
             }
+        } else {
+            if (loginFormContainer) loginFormContainer.style.display = 'block';
+            if (loginHeading) loginHeading.style.display = 'block';
+            if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none';
+            if (loginError) loginError.style.display = 'none';
         }
+    }
 
-        checkAuth();
-        supabase.auth.onAuthStateChange((event, session) => {
-            // Only re-check auth and populate selects if the user's session status actually changes
-            // This helps prevent excessive calls on page focus.
-            if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'INITIAL_SESSION') {
-                checkAuth();
+    // Initial auth check
+    checkAuth();
+
+    // Listen for auth state changes, but be careful not to trigger excessive re-populations
+    // The 'INITIAL_SESSION' event covers the initial load. Subsequent 'SIGNED_IN'/'SIGNED_OUT'
+    // events will handle explicit login/logout. This should prevent re-populating on just focus.
+    supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'INITIAL_SESSION') {
+            checkAuth();
+        }
+    });
+
+    if (discordLoginButton) {
+        discordLoginButton.addEventListener('click', async () => {
+            const { data, error } = await supabase.auth.signInWithOAuth({
+                provider: 'discord',
+                options: {
+                    redirectTo: 'https://yesitsphoenix.github.io/Pax-Dei-Archives/admin.html'
+                }
+            });
+
+            if (error) {
+                console.error('Discord login error:', error);
+                if (loginError) {
+                    loginError.textContent = 'Login failed: ' + error.message;
+                    loginError.style.display = 'block';
+                }
             }
         });
+    }
 
-        if (discordLoginButton) {
-            discordLoginButton.addEventListener('click', async () => {
-                const { data, error } = await supabase.auth.signInWithOAuth({
-                    provider: 'discord',
-                    options: {
-                        redirectTo: 'https://yesitsphoenix.github.io/Pax-Dei-Archives/admin.html'
+    if (parseButton && commentInput && devCommentForm && parseError) {
+        parseButton.addEventListener('click', () => {
+            showFormMessage(formMessage, '', '');
+            const inputText = commentInput.value;
+            const parsedData = parseComment(inputText);
+
+            if (parsedData) {
+                if (authorField) authorField.value = parsedData.author;
+                if (sourceField) sourceField.value = parsedData.source;
+                if (timestampField) timestampField.value = parsedData.timestamp;
+                if (commentContentField) commentContentField.value = parsedData.content;
+
+                devCommentForm.style.display = 'block';
+                commentInput.style.display = 'none';
+                parseButton.style.display = 'none';
+                parseError.style.display = 'none';
+            } else {
+                parseError.textContent = 'Could not parse the input. Please ensure it matches one of the expected formats: "Author — Timestamp Content [Optional URL]" or "Author — Content [Optional URL]"';
+                parseError.style.display = 'block';
+                devCommentForm.style.display = 'none';
+                commentInput.style.display = 'block';
+                parseButton.style.display = 'block';
+            }
+        });
+    }
+
+    if (editButton && devCommentForm && commentInput && parseButton && parseError) {
+        editButton.addEventListener('click', () => {
+            showFormMessage(formMessage, '', '');
+            devCommentForm.style.display = 'none';
+            commentInput.style.display = 'block';
+            parseButton.style.display = 'block';
+            parseError.style.display = 'none';
+        });
+    }
+
+    if (addNewTagButton && newTagInput && tagSelect) {
+        addNewTagButton.addEventListener('click', async () => {
+            const newTag = newTagInput.value.trim();
+            if (newTag) {
+                try {
+                    const { data, error } = await supabase
+                        .from('tag_list')
+                        .insert([{ tag_name: newTag }]);
+
+                    if (error && error.code !== '23505') {
+                        console.error('Error adding new tag:', error.message);
+                        showFormMessage(formMessage, 'Error adding tag: ' + error.message, 'error');
+                    } else {
+                        if (error && error.code === '23505') {
+                            showFormMessage(formMessage, `Tag '${newTag}' already exists.`, 'warning');
+                        } else {
+                            showFormMessage(formMessage, `Tag '${newTag}' added successfully!`, 'success');
+                        }
+                        newTagInput.value = '';
+                        populateTagSelect(tagSelect); // Refresh the tag dropdown
+                        populateTagSelect(loreCategorySelect); // Also refresh lore categories
                     }
-                });
-
-                if (error) {
-                    console.error('Discord login error:', error);
-                    if (loginError) {
-                        loginError.textContent = 'Login failed: ' + error.message;
-                        loginError.style.display = 'block';
-                    }
+                } catch (e) {
+                    console.error('Unexpected error adding new tag:', e);
+                    showFormMessage(formMessage, 'An unexpected error occurred while adding tag.', 'error');
                 }
-            });
-        }
+            } else {
+                showFormMessage(formMessage, 'Please enter a tag name.', 'warning');
+            }
+        });
+    }
 
-        if (parseButton && commentInput && devCommentForm && parseError) {
-            parseButton.addEventListener('click', () => {
-                showFormMessage(formMessage, '', '');
-                const inputText = commentInput.value;
-                const parsedData = parseComment(inputText);
+    if (devCommentForm && commentInput && parseButton && parseError) {
+        devCommentForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            showFormMessage(formMessage, '', '');
 
-                if (parsedData) {
-                    if (authorField) authorField.value = parsedData.author;
-                    if (sourceField) sourceField.value = parsedData.source;
-                    if (timestampField) timestampField.value = parsedData.timestamp;
-                    if (commentContentField) commentContentField.value = parsedData.content;
+            const selectedTags = Array.from(tagSelect.selectedOptions).map(option => option.value);
 
-                    devCommentForm.style.display = 'block';
-                    commentInput.style.display = 'none';
-                    parseButton.style.display = 'none';
-                    parseError.style.display = 'none';
-                } else {
-                    parseError.textContent = 'Could not parse the input. Please ensure it matches one of the expected formats: "Author — Timestamp Content [Optional URL]" or "Author — Content [Optional URL]"';
-                    parseError.style.display = 'block';
-                    devCommentForm.style.display = 'none';
-                    commentInput.style.display = 'block';
-                    parseButton.style.display = 'block';
-                }
-            });
-        }
+            const newComment = {
+                author: authorField.value,
+                source: sourceField.value,
+                comment_date: new Date(timestampField.value).toISOString(),
+                content: commentContentField.value,
+                title: commentContentField.value.substring(0, 45) + (commentContentField.value.length > 45 ? '...' : ''),
+                tag: selectedTags.length > 0 ? selectedTags : null
+            };
 
-        if (editButton && devCommentForm && commentInput && parseButton && parseError) {
-            editButton.addEventListener('click', () => {
-                showFormMessage(formMessage, '', '');
+            const { data, error } = await supabase
+                .from('developer_comments')
+                .insert([newComment]);
+
+            if (error) {
+                console.error('Error inserting comment:', error);
+                showFormMessage(formMessage, 'Error adding comment: ' + error.message, 'error');
+            } else {
+                showFormMessage(formMessage, 'Developer comment added successfully!', 'success');
+                console.log('Developer comment added:', data);
+                commentInput.value = '';
                 devCommentForm.style.display = 'none';
                 commentInput.style.display = 'block';
                 parseButton.style.display = 'block';
                 parseError.style.display = 'none';
-            });
-        }
+                Array.from(tagSelect.options).forEach(option => option.selected = false);
+                fetchDashboardStats();
+            }
+        });
+    }
 
-        if (addNewTagButton && newTagInput && tagSelect) {
-            addNewTagButton.addEventListener('click', async () => {
-                const newTag = newTagInput.value.trim();
-                if (newTag) {
-                    try {
-                        const { data, error } = await supabase
-                            .from('tag_list')
-                            .insert([{ tag_name: newTag }]);
+    if (addNewsUpdateForm) {
+        addNewsUpdateForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            showFormMessage(addNewsUpdateMessage, '', '');
 
-                        if (error && error.code !== '23505') {
-                            console.error('Error adding new tag:', error.message);
-                            showFormMessage(formMessage, 'Error adding tag: ' + error.message, 'error');
+            const newNewsUpdate = {
+                news_date: newsDateInput.value,
+                title: newsTitleInput.value,
+                summary: newsSummaryInput.value,
+                full_article_link: fullArticleLinkInput.value || null
+            };
+
+            const { data, error } = await supabase
+                .from('news_updates')
+                .insert([newNewsUpdate]);
+
+            if (error) {
+                console.error('Error inserting news update:', error);
+                showFormMessage(addNewsUpdateMessage, 'Error adding news update: ' + error.message, 'error');
+            } else {
+                showFormMessage(addNewsUpdateMessage, 'News update added successfully!', 'success');
+                console.log('News update added:', data);
+                newsDateInput.value = '';
+                newsTitleInput.value = '';
+                newsSummaryInput.value = '';
+                fullArticleLinkInput.value = '';
+                fetchDashboardStats();
+            }
+        });
+    }
+
+    // --- Lore Item Form Logic ---
+    if (loreTitleInput && loreSlugInput && addLoreItemForm) {
+        loreTitleInput.addEventListener('input', () => {
+            loreSlugInput.value = slugify(loreTitleInput.value);
+        });
+    }
+
+    if (addNewLoreCategoryButton && newLoreCategoryInput && loreCategorySelect) {
+        addNewLoreCategoryButton.addEventListener('click', async () => {
+            const newCategory = newLoreCategoryInput.value.trim();
+            if (newCategory) {
+                try {
+                    const { data, error } = await supabase
+                        .from('tag_list') // Assuming lore categories are also stored in tag_list
+                        .insert([{ tag_name: newCategory }]);
+
+                    if (error && error.code !== '23505') {
+                        console.error('Error adding new lore category:', error.message);
+                        showFormMessage(addLoreItemMessage, 'Error adding category: ' + error.message, 'error');
+                    } else {
+                        if (error && error.code === '23505') {
+                            showFormMessage(addLoreItemMessage, `Category '${newCategory}' already exists.`, 'warning');
                         } else {
-                            if (error && error.code === '23505') {
-                                showFormMessage(formMessage, `Tag '${newTag}' already exists.`, 'warning');
-                            } else {
-                                showFormMessage(formMessage, `Tag '${newTag}' added successfully!`, 'success');
-                            }
-                            newTagInput.value = '';
-                            populateTagSelect(tagSelect); // Refresh the tag dropdown
-                            populateTagSelect(loreCategorySelect); // Also refresh lore categories
+                            showFormMessage(addLoreItemMessage, `Category '${newCategory}' added successfully!`, 'success');
                         }
-                    } catch (e) {
-                        console.error('Unexpected error adding new tag:', e);
-                        showFormMessage(formMessage, 'An unexpected error occurred while adding tag.', 'error');
+                        newLoreCategoryInput.value = '';
+                        populateTagSelect(loreCategorySelect); // Refresh lore categories dropdown
+                        populateTagSelect(tagSelect); // Also refresh dev comment tags
                     }
-                } else {
-                    showFormMessage(formMessage, 'Please enter a tag name.', 'warning');
+                } catch (e) {
+                    console.error('Unexpected error adding new lore category:', e);
+                    showFormMessage(addLoreItemMessage, 'An unexpected error occurred while adding category.', 'error');
                 }
-            });
-        }
+            } else {
+                showFormMessage(addLoreItemMessage, 'Please enter a category name.', 'warning');
+            }
+        });
+    }
 
-        if (devCommentForm && commentInput && parseButton && parseError) {
-            devCommentForm.addEventListener('submit', async (event) => {
-                event.preventDefault();
-                showFormMessage(formMessage, '', '');
+    if (addLoreItemForm) {
+        addLoreItemForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            showFormMessage(addLoreItemMessage, '', '');
 
-                const selectedTags = Array.from(tagSelect.selectedOptions).map(option => option.value);
+            const newLoreItem = {
+                title: loreTitleInput.value,
+                slug: loreSlugInput.value,
+                category: loreCategorySelect.value,
+                content: loreContentInput.value
+            };
 
-                const newComment = {
-                    author: authorField.value,
-                    source: sourceField.value,
-                    comment_date: new Date(timestampField.value).toISOString(),
-                    content: commentContentField.value,
-                    title: commentContentField.value.substring(0, 45) + (commentContentField.value.length > 45 ? '...' : ''),
-                    tag: selectedTags.length > 0 ? selectedTags : null
-                };
+            const { data, error } = await supabase
+                .from('lore_items')
+                .insert([newLoreItem]);
 
-                const { data, error } = await supabase
-                    .from('developer_comments')
-                    .insert([newComment]);
-
-                if (error) {
-                    console.error('Error inserting comment:', error);
-                    showFormMessage(formMessage, 'Error adding comment: ' + error.message, 'error');
-                } else {
-                    showFormMessage(formMessage, 'Developer comment added successfully!', 'success');
-                    console.log('Developer comment added:', data);
-                    commentInput.value = '';
-                    devCommentForm.style.display = 'none';
-                    commentInput.style.display = 'block';
-                    parseButton.style.display = 'block';
-                    parseError.style.display = 'none';
-                    Array.from(tagSelect.options).forEach(option => option.selected = false);
-                    fetchDashboardStats();
-                }
-            });
-        }
-
-        if (addNewsUpdateForm) {
-            addNewsUpdateForm.addEventListener('submit', async (event) => {
-                event.preventDefault();
-                showFormMessage(addNewsUpdateMessage, '', '');
-
-                const newNewsUpdate = {
-                    news_date: newsDateInput.value,
-                    title: newsTitleInput.value,
-                    summary: newsSummaryInput.value,
-                    full_article_link: fullArticleLinkInput.value || null
-                };
-
-                const { data, error } = await supabase
-                    .from('news_updates')
-                    .insert([newNewsUpdate]);
-
-                if (error) {
-                    console.error('Error inserting news update:', error);
-                    showFormMessage(addNewsUpdateMessage, 'Error adding news update: ' + error.message, 'error');
-                } else {
-                    showFormMessage(addNewsUpdateMessage, 'News update added successfully!', 'success');
-                    console.log('News update added:', data);
-                    newsDateInput.value = '';
-                    newsTitleInput.value = '';
-                    newsSummaryInput.value = '';
-                    fullArticleLinkInput.value = '';
-                    fetchDashboardStats();
-                }
-            });
-        }
-
-        // --- Lore Item Form Logic ---
-        if (loreTitleInput && loreSlugInput && addLoreItemForm) {
-            loreTitleInput.addEventListener('input', () => {
-                loreSlugInput.value = slugify(loreTitleInput.value);
-            });
-        }
-
-        if (addNewLoreCategoryButton && newLoreCategoryInput && loreCategorySelect) {
-            addNewLoreCategoryButton.addEventListener('click', async () => {
-                const newCategory = newLoreCategoryInput.value.trim();
-                if (newCategory) {
-                    try {
-                        const { data, error } = await supabase
-                            .from('tag_list') // Assuming lore categories are also stored in tag_list
-                            .insert([{ tag_name: newCategory }]);
-
-                        if (error && error.code !== '23505') {
-                            console.error('Error adding new lore category:', error.message);
-                            showFormMessage(addLoreItemMessage, 'Error adding category: ' + error.message, 'error');
-                        } else {
-                            if (error && error.code === '23505') {
-                                showFormMessage(addLoreItemMessage, `Category '${newCategory}' already exists.`, 'warning');
-                            } else {
-                                showFormMessage(addLoreItemMessage, `Category '${newCategory}' added successfully!`, 'success');
-                            }
-                            newLoreCategoryInput.value = '';
-                            populateTagSelect(loreCategorySelect); // Refresh lore categories dropdown
-                            populateTagSelect(tagSelect); // Also refresh dev comment tags
-                        }
-                    } catch (e) {
-                        console.error('Unexpected error adding new lore category:', e);
-                        showFormMessage(addLoreItemMessage, 'An unexpected error occurred while adding category.', 'error');
-                    }
-                } else {
-                    showFormMessage(addLoreItemMessage, 'Please enter a category name.', 'warning');
-                }
-            });
-        }
-
-        if (addLoreItemForm) {
-            addLoreItemForm.addEventListener('submit', async (event) => {
-                event.preventDefault();
-                showFormMessage(addLoreItemMessage, '', '');
-
-                const newLoreItem = {
-                    title: loreTitleInput.value,
-                    slug: loreSlugInput.value,
-                    category: loreCategorySelect.value,
-                    content: loreContentInput.value
-                };
-
-                const { data, error } = await supabase
-                    .from('lore_items')
-                    .insert([newLoreItem]);
-
-                if (error) {
-                    console.error('Error inserting lore item:', error);
-                    showFormMessage(addLoreItemMessage, 'Error adding lore item: ' + error.message, 'error');
-                } else {
-                    showFormMessage(addLoreItemMessage, 'Lore item added successfully!', 'success');
-                    console.log('Lore item added:', data);
-                    // Clear form fields
-                    loreTitleInput.value = '';
-                    loreSlugInput.value = '';
-                    loreCategorySelect.value = ''; // Reset dropdown
-                    loreContentInput.value = '';
-                }
-            });
-        }
+            if (error) {
+                console.error('Error inserting lore item:', error);
+                showFormMessage(addLoreItemMessage, 'Error adding lore item: ' + error.message, 'error');
+            } else {
+                showFormMessage(addLoreItemMessage, 'Lore item added successfully!', 'success');
+                console.log('Lore item added:', data);
+                // Clear form fields
+                loreTitleInput.value = '';
+                loreSlugInput.value = '';
+                loreCategorySelect.value = ''; // Reset dropdown
+                loreContentInput.value = '';
+            }
+        });
     }
 });
