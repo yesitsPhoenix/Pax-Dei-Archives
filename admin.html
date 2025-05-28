@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pax Dei Archives - News & Developer Comments</title>
+    <title>Pax Dei Archives Admin - Add Content</title>
     <link rel="stylesheet" href="frontend/www/css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
 </head>
 <body>
@@ -22,7 +22,7 @@
                     <span></span>
                 </a>
                 <div class="nav-and-search-wrapper"> <ul class="nav">
-                        <li><a href="index.html" class="active">Home</a></li>
+                        <li><a href="index.html">Home</a></li>
                         <li><a href="news-updates.html">News & Updates</a></li>
                         <li><a href="developer-comments.html">Developer Comments</a></li>
                         <li><a href="lore.html">Lore</a></li>
@@ -44,149 +44,135 @@
         <div class="row">
             <div class="col-lg-12">
                 <div class="page-content">
-                    <div class="main-banner">
-                        <div class="header-text">
-                            <h6>Welcome to the Pax Dei Archives</h6>
-                            <h4>Your Hub for <em>Pax Dei</em> News & Developer Insights</h4>
-                            <div class="main-button">
-                                <a href="#feature-cards">Explore</a>
-                            </div>
+
+                    <div class="heading-section" id="loginHeading">
+                        <h4>Admin <em>Login</em></h4>
+                    </div>
+                    <div id="loginFormContainer" class="admin-form-container">
+                        <p>Please log in using your Discord account.</p>
+                        <button id="discordLoginButton" class="discord-button">
+                            <i class="fab fa-discord"></i> Login with Discord
+                        </button>
+                        <p id="loginError" style="color: red; display: none;"></p>
+                    </div>
+
+                    <div id="adminDashboardAndForm" style="display: none;">
+                        <div class="heading-section" style="margin-top: 50px;">
+                            <h4>Admin <em>Dashboard</em></h4>
                         </div>
-                    </div>
-
-                    <div class="feature-cards-section" id="feature-cards">
-                        <div class="row">
-                            <div class="col-lg-12">
-                                <div class="heading-section">
-                                    <h4><em>Quick</em> Links</h4>
+                        <div id="dashboardSection" class="row">
+                            <div class="col-lg-3 col-md-6 col-sm-12">
+                                <div class="dashboard-card">
+                                    <h6>Total Dev Comments</h6>
+                                    <p id="totalCommentsCount">--</p>
+                                    <i class="fas fa-comments"></i>
                                 </div>
                             </div>
-                            <div class="feature-cards-container">
-                                <div class="col-lg-2 col-md-4 col-sm-6">
-                                    <div class="feature-card">
-                                        <a href="#recent-comments-home">
-                                            <i class="fa-solid fa-comments"></i>
-                                            <h5>Recent Dev Comments</h5>
-                                        </a>
-                                    </div>
-                                </div>
-                                <div class="col-lg-2 col-md-4 col-sm-6">
-                                    <div class="feature-card">
-                                        <a href="developer-comments.html">
-                                            <i class="fa-solid fa-code"></i>
-                                            <h5>Dev Insights</h5>
-                                        </a>
-                                    </div>
-                                </div>
-                                <div class="col-lg-2 col-md-4 col-sm-6">
-                                    <div class="feature-card">
-                                        <a href="https://playpaxdei.com/en-us/news" target="_blank">
-                                            <i class="fa-solid fa-newspaper"></i>
-                                            <h5>Official News
-                                                (external)</h5>
-                                        </a>
-                                    </div>
-                                </div>
-                                <div class="col-lg-2 col-md-4 col-sm-6">
-                                    <div class="feature-card">
-                                        <a href="#" id="roadmapLink">
-                                            <i class="fa-solid fa-map-marked-alt"></i>
-                                            <h5>Latest Roadmap</h5>
-                                        </a>
-                                    </div>
-
-                                </div>
-                                <div class="col-lg-2 col-md-4 col-sm-6">
-                                    <div class="feature-card">
-                                        <a href="#community">
-                                            <i class="fa-solid fa-users"></i>
-                                            <h5>Clan Spotlights</h5>
-                                        </a>
-                                    </div>
-                                </div>
-                                <div class="col-lg-2 col-md-4 col-sm-6">
-                                    <div class="feature-card">
-                                        <a href="#">
-                                            <i class="fa-solid fa-dragon"></i>
-                                            <h5>Lore</h5>
-                                        </a>
-                                    </div>
-                                </div>
-                                <div class="col-lg-2 col-md-4 col-sm-6">
-                                    <div class="feature-card">
-                                        <a href="#">
-                                            <i class="fas fa-map-marked-alt"></i>
-                                            <h5>Exploration</h5>
-                                        </a>
-                                    </div>
-                                </div>
-                                <div class="col-lg-2 col-md-4 col-sm-6">
-                                    <div class="feature-card">
-                                        <a href="#wiki">
-                                            <i class="fa-solid fa-book"></i>
-                                            <h5>Player Resources</h5>
-                                        </a>
-                                    </div>
-                                </div>
-                                <div class="col-lg-2 col-md-4 col-sm-6">
-                                    <div class="feature-card">
-                                        <a href="#support">
-                                            <i class="fa-solid fa-life-ring"></i>
-                                            <h5>Support & Help</h5>
-                                        </a>
-                                    </div>
-                                </div>
-                                <div class="col-lg-2 col-md-4 col-sm-6">
-                                    <div class="feature-card">
-                                        <a href="about.html">
-                                            <i class="fa-solid fa-info-circle"></i>
-                                            <h5>About Pax Dei Archives</h5>
-                                        </a>
-                                    </div>
+                            <div class="col-lg-3 col-md-6 col-sm-12">
+                                <div class="dashboard-card">
+                                    <h6>Total News Updates</h6>
+                                    <p id="totalNewsCount">--</p>
+                                    <i class="fas fa-newspaper"></i>
                                 </div>
                             </div>
-                            </div>
-                    </div>
-                    <div class="recent-comments">
-                        <div class="row">
-                            <div class="col-lg-12">
-                                <div class="heading-section">
-                                    <h4><em>Recent</em> Comments</h4>
+                            <div class="col-lg-3 col-md-6 col-sm-12">
+                                <div class="dashboard-card">
+                                    <h6>Comments This Month</h6>
+                                    <p id="commentsMonthCount">--</p>
+                                    <i class="fas fa-calendar-alt"></i>
                                 </div>
                             </div>
-                            <div class="col-lg-12">
-                                <div id="recent-comments-home" class="row">
-                                    <div class="loading-indicator">Loading recent comments...</div>
+                            <div class="col-lg-3 col-md-6 col-sm-12">
+                                <div class="dashboard-card">
+                                    <h6>News This Month</h6>
+                                    <p id="newsMonthCount">--</p>
+                                    <i class="fas fa-calendar-check"></i>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="news-updates">
                         <div class="row">
-                            <div class="col-lg-12">
-                                <div class="heading-section">
-                                    <h4><em>Latest</em> News</h4>
+                            <div class="col-lg-6">
+                                <div class="heading-section" style="margin-top: 50px;">
+                                    <h4>Add New <em>Developer Comment</em></h4>
+                                </div>
+                                <div id="commentFormSection" class="admin-form-container">
+                                    <p>Paste the developer comment block below, and the form will attempt to parse it.</p>
+                                    <textarea id="commentInput" rows="10" placeholder="Paste comment here..."></textarea>
+                                    <button id="parseButton" class="main-button">Parse & Preview</button>
+
+                                    <div id="formMessage" role="alert"></div>
+
+                                    <form id="devCommentForm" style="display: none;">
+                                        <h5>Parsed Data Preview:</h5>
+                                        <label for="author">Author:</label>
+                                        <input type="text" id="author" name="author" readonly>
+
+                                        <label for="source">Source:</label>
+                                        <input type="text" id="source" name="source" readonly>
+
+                                        <label for="timestamp">Timestamp:</label>
+                                        <input type="datetime-local" id="timestamp" name="timestamp" readonly>
+
+                                        <label for="commentContent">Comment Content:</label>
+                                        <textarea id="commentContent" name="content" rows="10" readonly></textarea>
+
+                                        <label for="tagSelect">Tag:</label>
+                                        <select id="tagSelect" name="tag" multiple size="5">
+                                            <option value="">Select existing tags (Ctrl/Cmd+Click to select multiple)</option>
+                                        </select>
+                                        <div style="margin-top: 10px;">
+                                            <input type="text" id="newTagInput" placeholder="Or add a new tag" style="width: calc(100% - 70px); margin-right: 5px;">
+                                            <button type="button" id="addNewTagButton" class="main-button" style="padding: 10px 15px; font-size: 0.9em;">Add Tag</button>
+                                        </div>
+
+                                        <div class="form-actions">
+                                            <button type="submit" class="main-button submit-button">Add Comment to DB</button>
+                                            <button type="button" id="editButton" class="main-button secondary-button">Edit Raw</button>
+                                        </div>
+                                    </form>
+                                    <p id="parseError" style="color: red; display: none;"></p>
                                 </div>
                             </div>
-                            <div class="col-lg-12">
-                                <div id="news-updates-home" class="row">
-                                    <div class="loading-indicator">Loading latest news...</div>
+
+                            <div class="col-lg-6">
+                                <div class="heading-section" style="margin-top: 50px;">
+                                    <h4>Add New <em>News Update</em></h4>
+                                </div>
+                                <div class="admin-form-container">
+                                    <p>Use this form to publish new official game news or significant updates.</p>
+                                    <form id="addNewsUpdateForm">
+                                        <label for="news_date">News Date:</label>
+                                        <input type="date" id="news_date" name="news_date" required>
+
+                                        <label for="news_title">Title:</label>
+                                        <input type="text" id="news_title" name="title" required>
+
+                                        <label for="news_summary">Summary:</label>
+                                        <textarea id="news_summary" name="summary" rows="5" required></textarea>
+
+                                        <label for="full_article_link">Full Article Link (URL):</label>
+                                        <input type="url" id="full_article_link" name="full_article_link">
+
+                                        <div class="form-actions">
+                                            <button type="submit" class="main-button submit-button">Add News Update</button>
+                                        </div>
+                                        <div id="addNewsUpdateMessage" class="form-message" style="display:none;"></div>
+                                    </form>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                </div>
+                    </div> </div>
             </div>
         </div>
     </div>
+
     <footer>
         <div class="container">
             <div class="row">
                 <div class="col-lg-12">
-                    <p>Copyright © 2025 Pax Dei Archives. All rights reserved.</p>
-                    <a href="admin.html">Admin</a>
+                    <p>Copyright © 2025 Pax Dei Archives. All rights reserved.
                 </div>
             </div>
         </div>
@@ -196,14 +182,7 @@
         </div>
     </footer>
 
-    <div class="modal-overlay" id="roadmapModalOverlay">
-        <div class="roadmap-modal-content">
-            <button class="modal-close-button" id="closeRoadmapModal">&times;</button>
-            <img src="frontend/www/assets/latest_roadmap.jpg" alt="Latest Game Roadmap">
-        </div>
-    </div>
-
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script type="module" src="frontend/www/js/main.js"></script>
+    <script type="module" src="frontend/www/js/admin.js"></script>
 </body>
 </html>
