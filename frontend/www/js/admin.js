@@ -545,8 +545,8 @@ $(document).ready(async function() {
                             showFormMessage(addLoreItemMessage, `Category '${newCategory}' added successfully!`, 'success');
                         }
                         newLoreCategoryInput.value = '';
-                        populateTagSelect(loreCategorySelect); // Refresh lore categories dropdown
-                        populateTagSelect(tagSelect); // Also refresh dev comment tags
+                        populateTagSelect(loreCategorySelect);
+                        populateTagSelect(tagSelect);
                     }
                 } catch (e) {
                     console.error('Unexpected error adding new lore category:', e);
