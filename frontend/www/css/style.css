@@ -68,7 +68,7 @@ display: flex;
 align-items: center;
 }
 .header-area .logo .site-icon {
-height: 55px;
+height: 75px;
 width: auto;
 margin-right: 10px;
 }
@@ -88,7 +88,7 @@ background-color: #383737;
 border: none;
 outline: none;
 height: 40px;
-width: 50em;
+width: 55vw;
 border-radius: 20px;
 padding: 0 45px 0 20px;
 color: #fff;

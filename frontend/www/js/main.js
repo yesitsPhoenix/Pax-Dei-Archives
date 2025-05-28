@@ -361,7 +361,7 @@ $(document).ready(function() {
     const currentPage = window.location.pathname.split('/').pop();
 
     if (currentPage === 'index.html' || currentPage === '') {
-        fetchAndRenderDeveloperComments('recent-comments-home', 4);
+        fetchAndRenderDeveloperComments('recent-comments-home', 6);
         fetchAndRenderNewsUpdates('news-updates-home', 3);
     } else if (currentPage === 'developer-comments.html') {
         fetchAndRenderDeveloperComments('dev-comments-container');
