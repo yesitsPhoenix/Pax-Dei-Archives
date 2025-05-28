@@ -1132,3 +1132,105 @@ box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     background-color: #d14a7a;
     transform: translateY(-2px);
 }
+
+.lore-content-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.lore-sidebar {
+    flex: 0 0 250px;
+    background-color: #1a1a2e;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
+    color: #fff;
+    display: none;
+    height: fit-content;
+}
+
+.lore-sidebar h5 {
+    color: #fcfcfc;
+    margin-bottom: 15px;
+    font-size: 1.2em;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    padding-bottom: 10px;
+}
+
+.lore-sidebar ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.lore-sidebar ul li {
+    margin-bottom: 10px;
+}
+
+.lore-sidebar ul li a {
+    color: #a0c0ff;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.lore-sidebar ul li a:hover,
+.lore-sidebar ul li a.active-lore-item,
+.lore-sidebar ul li a.active-lore-category {
+    color: #fff;
+    text-decoration: underline;
+}
+
+.dynamic-lore-main-content {
+    flex: 1;
+    min-width: 300px;
+    background-color: #1a1a2e;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
+    color: #fff;
+}
+
+.dynamic-lore-main-content h3,
+.dynamic-lore-main-content h4 {
+    color: var(--dark-gold-color);
+    margin-top: 20px;
+    margin-bottom: 15px;
+}
+
+.dynamic-lore-main-content p {
+    color: #ccc;
+    line-height: 1.6;
+    margin-bottom: 15px;
+}
+
+.dynamic-lore-main-content ul,
+.dynamic-lore-main-content ol {
+    color: #ccc;
+    margin-left: 20px;
+    margin-bottom: 15px;
+}
+
+.dynamic-lore-main-content ul li,
+.dynamic-lore-main-content ol li {
+    margin-bottom: 5px;
+}
+
+.lore-loading-indicator, .lore-error-message, .lore-no-content-message {
+    text-align: center;
+    color: #fff;
+    padding: 20px;
+    font-size: 1.2em;
+}
+
+
+@media (max-width: 768px) {
+    .lore-sidebar {
+        flex: 0 0 100%;
+        margin-bottom: 20px;
+    }
+    .dynamic-lore-main-content {
+        flex: 0 0 100%;
+    }
+}
