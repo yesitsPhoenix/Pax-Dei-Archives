@@ -7,6 +7,111 @@
     <link rel="stylesheet" href="frontend/www/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+    <style>
+        /* Basic styles for the dynamic lore content and sidebar */
+        /* These can be moved to style.css for better organization */
+        .lore-content-wrapper {
+            display: flex;
+            flex-wrap: wrap; /* Allows content and sidebar to wrap on smaller screens */
+            gap: 20px; /* Space between sidebar and main content */
+        }
+
+        .lore-sidebar {
+            flex: 0 0 250px; /* Fixed width for sidebar */
+            background-color: #1a1a2e; /* Darker background for sidebar */
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
+            color: #fff;
+            display: none; /* Hidden by default, shown when dynamic content is loaded */
+            height: fit-content; /* Adjust height to content */
+        }
+
+        .lore-sidebar h5 {
+            color: #e0b0ff; /* Light purple for sidebar headings */
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding-bottom: 10px;
+        }
+
+        .lore-sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .lore-sidebar ul li {
+            margin-bottom: 10px;
+        }
+
+        .lore-sidebar ul li a {
+            color: #a0c0ff; /* Light blue for sidebar links */
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .lore-sidebar ul li a:hover,
+        .lore-sidebar ul li a.active-lore-item,
+        .lore-sidebar ul li a.active-lore-category { /* Added active-lore-category */
+            color: #fff;
+            text-decoration: underline;
+        }
+
+        .dynamic-lore-main-content {
+            flex: 1; /* Takes up remaining space */
+            min-width: 300px; /* Minimum width before wrapping */
+            background-color: #1a1a2e;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
+            color: #fff;
+        }
+
+        .dynamic-lore-main-content h3,
+        .dynamic-lore-main-content h4 {
+            color: #e0b0ff; /* Light purple for headings */
+            margin-top: 20px;
+            margin-bottom: 15px;
+        }
+
+        .dynamic-lore-main-content p {
+            color: #ccc;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .dynamic-lore-main-content ul,
+        .dynamic-lore-main-content ol {
+            color: #ccc;
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        .dynamic-lore-main-content ul li,
+        .dynamic-lore-main-content ol li {
+            margin-bottom: 5px;
+        }
+
+        .lore-loading-indicator, .lore-error-message, .lore-no-content-message {
+            text-align: center;
+            color: #fff;
+            padding: 20px;
+            font-size: 1.2em;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .lore-sidebar {
+                flex: 0 0 100%; /* Sidebar takes full width on small screens */
+                margin-bottom: 20px;
+            }
+            .dynamic-lore-main-content {
+                flex: 0 0 100%; /* Main content takes full width on small screens */
+            }
+        }
+    </style>
 </head>
 <body>
     <header class="header-area">
@@ -21,7 +126,8 @@
                     <span></span>
                     <span></span>
                 </a>
-                <div class="nav-and-search-wrapper"> <ul class="nav">
+                <div class="nav-and-search-wrapper">
+                    <ul class="nav">
                         <li><a href="index.html">Home</a></li>
                         <li><a href="news-updates.html">News & Updates</a></li>
                         <li><a href="developer-comments.html">Developer Comments</a></li>
@@ -40,11 +146,12 @@
             </nav>
         </div>
     </header>
+
     <div class="container">
         <div class="row">
             <div class="col-lg-12">
                 <div class="page-content">
-                    <div class="feature-cards-section" id="feature-cards">
+                    <div class="feature-cards-section" id="lore-categories-section">
                         <div class="row">
                             <div class="col-lg-12">
                                 <div class="heading-section">
@@ -53,7 +160,7 @@
                             </div>
                             <div class="col-lg-2 col-md-4 col-sm-6">
                                 <div class="feature-card">
-                                    <a href="#">
+                                    <a href="lore.html?category=World">
                                         <i class="fa-solid fa-earth-americas"></i>
                                         <h5>World</h5>
                                     </a>
@@ -61,7 +168,7 @@
                             </div>
                             <div class="col-lg-2 col-md-4 col-sm-6">
                                 <div class="feature-card">
-                                    <a href="#">
+                                    <a href="lore.html?category=Creation">
                                         <i class="fa-solid fa-scroll"></i>
                                         <h5>Creation</h5>
                                     </a>
@@ -69,7 +176,7 @@
                             </div>
                             <div class="col-lg-2 col-md-4 col-sm-6">
                                 <div class="feature-card">
-                                    <a href="#">
+                                    <a href="lore.html?category=Divine">
                                         <i class="fa-solid fa-star"></i>
                                         <h5>Divine</h5>
                                     </a>
@@ -77,7 +184,7 @@
                             </div>
                             <div class="col-lg-2 col-md-4 col-sm-6">
                                 <div class="feature-card">
-                                    <a href="#">
+                                    <a href="lore.html?category=Factions">
                                         <i class="fa-solid fa-users-gear"></i>
                                         <h5>Factions</h5>
                                     </a>
@@ -85,7 +192,7 @@
                             </div>
                             <div class="col-lg-2 col-md-4 col-sm-6">
                                 <div class="feature-card">
-                                    <a href="#">
+                                    <a href="lore.html?category=Known Figures">
                                         <i class="fa-solid fa-user-tie"></i>
                                         <h5>Known Figures</h5>
                                     </a>
@@ -93,7 +200,7 @@
                             </div>
                             <div class="col-lg-2 col-md-4 col-sm-6">
                                 <div class="feature-card">
-                                    <a href="#">
+                                    <a href="lore.html?category=Placeholder 1">
                                         <i class="fa-solid fa-book"></i>
                                         <h5>Placeholder 1</h5>
                                     </a>
@@ -101,7 +208,7 @@
                             </div>
                              <div class="col-lg-2 col-md-4 col-sm-6">
                                 <div class="feature-card">
-                                    <a href="#">
+                                    <a href="lore.html?category=Placeholder 2">
                                         <i class="fa-solid fa-dragon"></i>
                                         <h5>Placeholder 2</h5>
                                     </a>
@@ -109,7 +216,7 @@
                             </div>
                              <div class="col-lg-2 col-md-4 col-sm-6">
                                 <div class="feature-card">
-                                    <a href="#">
+                                    <a href="lore.html?category=Placeholder 3">
                                         <i class="fa-solid fa-flask"></i>
                                         <h5>Placeholder 3</h5>
                                     </a>
@@ -117,7 +224,7 @@
                             </div>
                              <div class="col-lg-2 col-md-4 col-sm-6">
                                 <div class="feature-card">
-                                    <a href="#">
+                                    <a href="lore.html?category=Placeholder 4">
                                         <i class="fa-solid fa-gavel"></i>
                                         <h5>Placeholder 4</h5>
                                     </a>
@@ -125,7 +232,7 @@
                             </div>
                              <div class="col-lg-2 col-md-4 col-sm-6">
                                 <div class="feature-card">
-                                    <a href="#">
+                                    <a href="lore.html?category=Placeholder 5">
                                         <i class="fa-solid fa-cloud"></i>
                                         <h5>Placeholder 5</h5>
                                     </a>
@@ -133,33 +240,18 @@
                             </div>
                         </div>
                     </div>
-                    <div class="recent-comments">
-                        <div class="row">
-                            <div class="col-lg-12">
-                                <div class="heading-section">
-                                    <h4><em>Recent</em> Comments</h4>
-                                </div>
-                            </div>
-                            <div class="col-lg-12">
-                                <div id="recent-comments-home" class="row">
-                                    <div class="loading-indicator">Loading recent comments...</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    <div class="news-updates">
-                        <div class="row">
-                            <div class="col-lg-12">
-                                <div class="heading-section">
-                                    <h4><em>Latest</em> News</h4>
-                                </div>
-                            </div>
-                            <div class="col-lg-12">
-                                <div id="news-updates-home" class="row">
-                                    <div class="loading-indicator">Loading latest news...</div>
-                                </div>
-                            </div>
+                    <div class="lore-content-wrapper" id="dynamic-lore-content-wrapper" style="display: none;">
+                        <div class="lore-sidebar" id="lore-sidebar">
+                            <h5>Lore Categories</h5>
+                            <ul id="lore-category-list">
+                                </ul>
+                            <h5 style="margin-top: 20px;">Lore Items</h5>
+                            <ul id="lore-item-list">
+                                </ul>
+                        </div>
+                        <div class="dynamic-lore-main-content" id="dynamic-lore-main-content">
+                            <div class="lore-loading-indicator">Loading lore...</div>
                         </div>
                     </div>
 
@@ -167,6 +259,7 @@
             </div>
         </div>
     </div>
+
     <footer>
         <div class="container">
             <div class="row">
@@ -188,8 +281,7 @@
             <img src="frontend/www/assets/latest_roadmap.jpg" alt="Latest Game Roadmap">
         </div>
     </div>
-
+    <script src="frontend/www/js/lore.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script type="module" src="frontend/www/js/main.js"></script>
-</body>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script> <script type="module" src="frontend/www/js/lore.js"></script> </body>
 </html>
