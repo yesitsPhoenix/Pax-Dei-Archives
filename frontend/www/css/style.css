@@ -1080,19 +1080,19 @@ box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 .dev-comments-home-container {
     display: flex;
     flex-wrap: wrap;
-    gap: 30px; /* This creates the space between cards horizontally and vertically */
-    margin: 0 -15px; /* Counters the 15px padding from the parent .col-lg-12 */
+    gap: 30px;
+    margin: 0 -15px;
 }
 
-/* Adjust .dev-comment-item specifically when it's inside the home container */
+
 .dev-comments-home-container .dev-comment-item {
-    flex: 1 1 calc(50% - 30px); /* 50% width minus the total gap (15px left + 15px right) */
-    max-width: calc(50% - 30px); /* Ensures proper sizing */
-    box-sizing: border-box; /* Ensures padding/border are included in the width */
-    margin-bottom: 0; /* Gap handles vertical spacing */
+    flex: 1 1 calc(50% - 30px);
+    max-width: calc(50% - 30px);
+    box-sizing: border-box;
+    margin-bottom: 2em;
 }
 
-/* Ensure the .dev-comment-item itself is still styled correctly */
+
 .dev-comment-item {
     background-color: #27292a;
     border-radius: 23px;
