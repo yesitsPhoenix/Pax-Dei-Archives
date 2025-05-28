@@ -1,9 +1,9 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+// import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-const SUPABASE_URL = 'https://jrjgbnopmfovxwvtbivh.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impyamdibm9wbWZvdnh3dnRiaXZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDgxOTg1MjYsImV4cCI6MjAyMzc3NDUyNn0.za7oUzFhNmBdtcCRBmxwW5FSTFRWVAY6_rsRwlr3iqY';
+// const SUPABASE_URL = 'https://jrjgbnopmfovxwvtbivh.supabase.co';
+// const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impyamdibm9wbWZvdnh3dnRiaXZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDgxOTg1MjYsImV4cCI6MjAyMzc3NDUyNn0.za7oUzFhNmBdtcCRBmxwW5FSTFRWVAY6_rsRwlr3iqY';
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let initialAuthCheckComplete = false;
 
@@ -456,7 +456,7 @@ $(document).ready(async function() {
             event.preventDefault();
             showFormMessage(formMessage, '', '');
 
-            const selectedTags = Array.from(tagSelect.selectedOptions).map(option => option.value);
+            const selectedTag = tagSelect.value;
 
             const newComment = {
                 author: authorField.value,
@@ -464,7 +464,7 @@ $(document).ready(async function() {
                 comment_date: new Date(timestampField.value).toISOString(),
                 content: commentContentField.value,
                 title: commentContentField.value.substring(0, 45) + (commentContentField.value.length > 45 ? '...' : ''),
-                tag: selectedTags.length > 0 ? selectedTags : null
+                tag: selectedTag || null
             };
 
             const { data, error } = await supabase
