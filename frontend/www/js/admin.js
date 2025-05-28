@@ -87,6 +87,8 @@ async function fetchDashboardStats() {
 
 
 function parseComment(text) {
+    // This regex correctly separates Author, the main content block, and the final URL.
+    // It should NOT be capturing the URL within match[2].
     const mainRegex = /^(.*?)\s*—\s*([\s\S]*?)(https?:\/\/[^\s]+)?$/;
     const match = text.match(mainRegex);
 
@@ -97,37 +99,43 @@ function parseComment(text) {
 
     try {
         const author = match[1].trim();
-        let fullContentAndPotentialTimestamp = match[2].trim();
-        const url = match[3] ? match[3].trim() : '';
+        let fullContentAndPotentialTimestamp = match[2].trim(); // This should NOT contain the URL
+        const url = match[3] ? match[3].trim() : ''; // This correctly captures the URL
         const finalSource = url;
 
         let parsedDate = new Date(); // Default to current date/time
-        let content = fullContentAndPotentialTimestamp; // Default if no timestamp found
+        let content = fullContentAndPotentialTimestamp; // Will be refined if timestamp found
 
         // Split the content into lines to check the first line for a timestamp
-        const lines = fullContentAndPotentialTimestamp.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+        // Filtering Boolean removes any empty lines that might result from split (e.g., if input ends with \n)
+        const lines = fullContentAndPotentialTimestamp.split('\n').map(line => line.trim()).filter(Boolean);
         let firstLine = lines.length > 0 ? lines[0] : '';
-
         let timestampMatchFound = false;
 
-        // 1. Full Date and Time (e.g., 05/28/2025, 1:00 PM)
+        let timestampMatch; // Declare once for all blocks
+
+        // 1. Full Date and Time (e.g., 05/28/2025 1:00 PM) - NO COMMA
+        // The `\s+` ensures at least one space between date and time.
+        // The last `(.*)` captures the rest of the line *after* the time.
         const fullDateTimePattern = /^(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
-        let timestampMatch = firstLine.match(fullDateTimePattern);
+        timestampMatch = firstLine.match(fullDateTimePattern);
 
         if (timestampMatch) {
             const datePart = timestampMatch[1];
             const timePart = timestampMatch[2];
-            content = timestampMatch[3].trim(); // Get content from first line
-            lines[0] = content; // Update first line with remaining content
-            content = lines.join('\n').trim(); // Reassemble content with remaining lines
+            const remainingFirstLineContent = timestampMatch[3].trim(); // Content *after* timestamp on same line
 
             let [month, day, year] = datePart.split('/').map(Number);
-            if (year < 100) {
+            if (year < 100) { // Handle 2-digit years
                 year += (year > 50) ? 1900 : 2000;
             }
             parsedDate = new Date(year, month - 1, day);
             parseTimeIntoDate(timePart, parsedDate);
             timestampMatchFound = true;
+
+            // Reconstruct content: remaining from first line + all subsequent lines
+            content = [remainingFirstLineContent, ...lines.slice(1)].filter(Boolean).join('\n').trim();
+
         } else {
             // 2. "yesterday at HH:MM AM/PM"
             const yesterdayPattern = /^yesterday at\s*(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
@@ -135,14 +143,15 @@ function parseComment(text) {
 
             if (timestampMatch) {
                 const timePart = timestampMatch[1];
-                content = timestampMatch[2].trim();
-                lines[0] = content;
-                content = lines.join('\n').trim();
+                const remainingFirstLineContent = timestampMatch[2].trim();
 
                 parsedDate = new Date();
                 parsedDate.setDate(parsedDate.getDate() - 1); // Set to yesterday
                 parseTimeIntoDate(timePart, parsedDate);
                 timestampMatchFound = true;
+
+                content = [remainingFirstLineContent, ...lines.slice(1)].filter(Boolean).join('\n').trim();
+
             } else {
                 // 3. "today at HH:MM AM/PM"
                 const todayPattern = /^today at\s*(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
@@ -150,13 +159,14 @@ function parseComment(text) {
 
                 if (timestampMatch) {
                     const timePart = timestampMatch[1];
-                    content = timestampMatch[2].trim();
-                    lines[0] = content;
-                    content = lines.join('\n').trim();
+                    const remainingFirstLineContent = timestampMatch[2].trim();
 
                     parsedDate = new Date(); // Already today by default
                     parseTimeIntoDate(timePart, parsedDate);
                     timestampMatchFound = true;
+
+                    content = [remainingFirstLineContent, ...lines.slice(1)].filter(Boolean).join('\n').trim();
+
                 } else {
                     // 4. "HH:MM AM/PM" (time only, assumes today)
                     const timeOnlyPattern = /^(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
@@ -164,13 +174,13 @@ function parseComment(text) {
 
                     if (timestampMatch) {
                         const timePart = timestampMatch[1];
-                        content = timestampMatch[2].trim();
-                        lines[0] = content;
-                        content = lines.join('\n').trim();
+                        const remainingFirstLineContent = timestampMatch[2].trim();
 
                         parsedDate = new Date(); // Already today by default
                         parseTimeIntoDate(timePart, parsedDate);
                         timestampMatchFound = true;
+
+                        content = [remainingFirstLineContent, ...lines.slice(1)].filter(Boolean).join('\n').trim();
                     }
                 }
             }
@@ -178,8 +188,8 @@ function parseComment(text) {
 
         if (!timestampMatchFound) {
             console.warn("No specific timestamp format recognized from the first line. Assuming content is the full string and using current date/time.");
-            // Content already defaults to fullContentAndPotentialTimestamp
-            parsedDate = new Date();
+            // If no timestamp was found, 'content' remains the full original content as initially set.
+            // parsedDate remains the current date/time as defaulted at the start.
         }
 
         // Helper function for time parsing to reduce redundancy
@@ -200,6 +210,7 @@ function parseComment(text) {
             }
         }
 
+        // Format the date for the datetime-local input field
         const yearFormatted = parsedDate.getFullYear();
         const monthFormatted = (parsedDate.getMonth() + 1).toString().padStart(2, '0');
         const dayFormatted = parsedDate.getDate().toString().padStart(2, '0');
