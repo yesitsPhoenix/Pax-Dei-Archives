@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        tagSelect.innerHTML = '<option value="">Select an existing tag</option>';
+        tagSelect.innerHTML = '<option value="">Select existing tags (Ctrl/Cmd+Click to select multiple)</option>';
         data.forEach(tag => {
             const option = document.createElement('option');
             option.value = tag.tag_name;
@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .select();
 
         if (error) {
-            if (error.code === '23505') { // Duplicate key error
+            if (error.code === '23505') {
                 showFormMessage(formMessage, `Tag '${tagName}' already exists.`, 'error');
             } else {
                 console.error('Error adding new tag:', error.message);
@@ -101,7 +101,12 @@ document.addEventListener('DOMContentLoaded', () => {
             showFormMessage(formMessage, `Tag '${tagName}' added successfully!`, 'success');
             newTagInput.value = '';
             await fetchTags();
-            tagSelect.value = tagName; // Select the newly added tag
+            for (const option of tagSelect.options) {
+                if (option.value === tagName) {
+                    option.selected = true;
+                    break;
+                }
+            }
         }
     }
 
@@ -172,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 loginHeading.style.display = 'none';
                 adminDashboardAndForm.style.display = 'block';
                 fetchDashboardStats();
-                fetchTags(); // Fetch tags on successful auth
+                fetchTags();
             } else {
                 loginFormContainer.style.display = 'block';
                 loginHeading.style.display = 'none';
@@ -211,46 +216,67 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function parseComment(text) {
+        // Updated regex to correctly capture source and timestamp
         const regex = /^(.*?)\s*\|\s*(.*?)\s*—\s*(.*?)\n([\s\S]*)$/;
         const match = text.match(regex);
 
         if (match) {
             try {
                 const author = match[1].trim();
-                let originalSource = match[2].trim();
-                const timestampStr = match[3].trim();
+                let sourceAndTimestamp = match[2].trim() + ' — ' + match[3].trim(); // Reconstruct for robust parsing
                 let content = match[4].trim();
 
+                // Split source and timestamp more robustly
+                const lastDashIndex = sourceAndTimestamp.lastIndexOf('—');
+                let originalSource = sourceAndTimestamp.substring(0, lastDashIndex).trim();
+                let timestampStr = sourceAndTimestamp.substring(lastDashIndex + 1).trim();
+
+                // Handle URL at the end of the content
                 const urlRegex = /(https?:\/\/[^\s]+)$/;
                 const urlMatch = content.match(urlRegex);
                 let finalSource = originalSource;
                 if (urlMatch) {
                     const extractedUrl = urlMatch[1];
                     content = content.replace(urlRegex, '').trim();
-                    finalSource = extractedUrl;
+                    // If original source was just "Discord", update it to the URL.
+                    // Otherwise, prefer the URL from content if it's not already set.
+                    if (originalSource === "Discord" || !finalSource) {
+                        finalSource = extractedUrl;
+                    } else if (extractedUrl) {
+                        // If there's an original source and a URL in content, prefer the content URL
+                        finalSource = extractedUrl;
+                    }
                 }
-
+                
                 let parsedDate = new Date();
                 let timePart = timestampStr;
 
+                // Handle "Yesterday at" and "Today at"
                 if (timestampStr.toLowerCase().startsWith('yesterday at ')) {
                     parsedDate.setDate(parsedDate.getDate() - 1);
                     timePart = timestampStr.substring('yesterday at '.length);
                 } else if (timestampStr.toLowerCase().startsWith('today at ')) {
                     timePart = timestampStr.substring('today at '.length);
                 } else {
+                    // Handle full dates like "05/26/2025 4:30 PM"
                     const dateMatch = timestampStr.match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
                     if (dateMatch) {
-                        parsedDate = new Date(dateMatch[1]);
+                        // Create date based on MM/DD/YYYY to avoid timezone issues when parsing
+                        parsedDate = new Date(dateMatch[1] + ' ' + new Date().getFullYear()); // Append current year for robust parsing
+                        // Re-evaluate the parsedDate after setting the full year if year was missing
+                        if (parsedDate.getFullYear() !== parseInt(dateMatch[1].split('/')[2])) {
+                            parsedDate = new Date(`${dateMatch[1].split('/')[0]}/${dateMatch[1].split('/')[1]}/${dateMatch[1].split('/')[2]}`);
+                        }
                         timePart = timestampStr.replace(dateMatch[1], '').trim();
                     }
                 }
                 
-                const timeMatch = timePart.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+                // Now, reliably parse the time part (e.g., "4:30 PM", "4:19 AM", "1:30")
+                const timeMatch = timePart.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i); // AM/PM is optional
                 if (timeMatch) {
                     let hours = parseInt(timeMatch[1]);
                     const minutes = parseInt(timeMatch[2]);
-                    const ampm = timeMatch[3].toLowerCase();
+                    const ampm = timeMatch[3] ? timeMatch[3].toLowerCase() : null;
 
                     if (ampm === 'pm' && hours < 12) {
                         hours += 12;
@@ -258,10 +284,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (ampm === 'am' && hours === 12) {
                         hours = 0;
                     }
+                    // If no AM/PM, assume 24-hour format or current day's AM/PM context if applicable
+                    // For simplicity, we'll assume 24-hour if no AM/PM, or handle based on typical Discord timestamps (which often include AM/PM)
                     
                     parsedDate.setHours(hours, minutes, 0, 0);
+                } else {
+                    // Fallback for cases where time part might be missing or in an unexpected format
+                    console.warn("Could not parse time part:", timePart);
+                    // You might want to default to 00:00 or current time here
+                    parsedDate.setHours(0, 0, 0, 0); 
                 }
 
+                // Format for the datetime-local input field
                 const year = parsedDate.getFullYear();
                 const month = (parsedDate.getMonth() + 1).toString().padStart(2, '0');
                 const day = parsedDate.getDate().toString().padStart(2, '0');
@@ -272,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return { author, source: finalSource, timestamp: formattedTimestamp, content };
 
             } catch (e) {
-                console.error("Timestamp parsing error:", e);
+                console.error("Error during parsing or timestamp conversion:", e);
                 return null;
             }
         }
@@ -289,7 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sourceField.value = parsedData.source;
             timestampField.value = parsedData.timestamp;
             commentContentField.value = parsedData.content;
-            tagSelect.value = ""; // Reset tag selection
+            Array.from(tagSelect.options).forEach(option => option.selected = false);
 
             devCommentForm.style.display = 'block';
             commentInput.style.display = 'none';
@@ -318,9 +352,10 @@ document.addEventListener('DOMContentLoaded', () => {
         event.preventDefault();
         showFormMessage(formMessage, '', '');
 
-        let selectedTag = tagSelect.value;
-        if (selectedTag === "") {
-            showFormMessage(formMessage, 'Please select a tag or add a new one.', 'error');
+        const selectedTags = Array.from(tagSelect.selectedOptions).map(option => option.value);
+
+        if (selectedTags.length === 0) {
+            showFormMessage(formMessage, 'Please select at least one tag.', 'error');
             return;
         }
 
@@ -330,7 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
             comment_date: new Date(timestampField.value).toISOString(),
             content: commentContentField.value,
             title: commentContentField.value.substring(0, 45) + (commentContentField.value.length > 45 ? '...' : ''),
-            tag: selectedTag
+            tag: selectedTags
         };
 
         const { data, error } = await supabase
@@ -348,7 +383,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sourceField.value = '';
             timestampField.value = '';
             commentContentField.value = '';
-            tagSelect.value = '';
+            Array.from(tagSelect.options).forEach(option => option.selected = false);
             newTagInput.value = '';
             devCommentForm.style.display = 'none';
             commentInput.style.display = 'block';
