@@ -1,9 +1,11 @@
+// admin.js
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
 const SUPABASE_URL = 'https://jrjgbnopmfovxwvtbivh.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impyamdibm9wbWZvdnh3dnRiaXZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDgxOTg1MjYsImV4cCI6MjAyMzc3NDUyNn0.za7oUzFhNmBdtcCRBmxwW5FSTFRWVAY6_rsRwlr3iqY';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 
 document.addEventListener('DOMContentLoaded', () => {
     const discordLoginButton = document.getElementById('discordLoginButton');
@@ -12,26 +14,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginHeading = document.getElementById('loginHeading');
     const adminDashboardAndForm = document.getElementById('adminDashboardAndForm');
 
+    // Dev Comment Parser elements
     const commentInput = document.getElementById('commentInput');
     const parseButton = document.getElementById('parseButton');
     const devCommentForm = document.getElementById('devCommentForm');
     const parseError = document.getElementById('parseError');
     const formMessage = document.getElementById('formMessage');
 
+    // Dev Comment Form fields (from the parsed content)
     const authorField = document.getElementById('author');
     const sourceField = document.getElementById('source');
     const timestampField = document.getElementById('timestamp');
     const commentContentField = document.getElementById('commentContent');
-    const tagSelect = document.getElementById('tagSelect');
-    const newTagInput = document.getElementById('newTagInput');
-    const addNewTagButton = document.getElementById('addNewTagButton');
     const editButton = document.getElementById('editButton');
 
+    // Dashboard elements
     const totalCommentsCount = document.getElementById('totalCommentsCount');
     const totalNewsCount = document.getElementById('totalNewsCount');
     const commentsMonthCount = document.getElementById('commentsMonthCount');
     const newsMonthCount = document.getElementById('newsMonthCount');
 
+    // News Update Form elements
     const addNewsUpdateForm = document.getElementById('addNewsUpdateForm');
     const newsDateInput = document.getElementById('news_date');
     const newsTitleInput = document.getElementById('news_title');
@@ -39,9 +42,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const fullArticleLinkInput = document.getElementById('full_article_link');
     const addNewsUpdateMessage = document.getElementById('addNewsUpdateMessage');
 
+    // Helper function to show messages
     function showFormMessage(messageElement, message, type) {
         messageElement.textContent = message;
-        messageElement.className = '';
+        messageElement.className = ''; // Reset classes
         if (type) {
             messageElement.classList.add('form-message', type);
             messageElement.style.display = 'block';
@@ -50,63 +54,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(() => {
                     messageElement.style.display = 'none';
                     messageElement.textContent = '';
-                }, 5000);
+                }, 5000); // Hide after 5 seconds
             }
         } else {
             messageElement.style.display = 'none';
             messageElement.textContent = '';
-        }
-    }
-
-    async function fetchTags() {
-        const { data, error } = await supabase
-            .from('tag_list')
-            .select('tag_name')
-            .order('tag_name', { ascending: true });
-
-        if (error) {
-            console.error('Error fetching tags:', error.message);
-            return;
-        }
-
-        tagSelect.innerHTML = '<option value="">Select existing tags (Ctrl/Cmd+Click to select multiple)</option>';
-        data.forEach(tag => {
-            const option = document.createElement('option');
-            option.value = tag.tag_name;
-            option.textContent = tag.tag_name;
-            tagSelect.appendChild(option);
-        });
-    }
-
-    async function addNewTag() {
-        const tagName = newTagInput.value.trim();
-        if (!tagName) {
-            showFormMessage(formMessage, 'Tag name cannot be empty.', 'error');
-            return;
-        }
-
-        const { data, error } = await supabase
-            .from('tag_list')
-            .insert([{ tag_name: tagName }])
-            .select();
-
-        if (error) {
-            if (error.code === '23505') {
-                showFormMessage(formMessage, `Tag '${tagName}' already exists.`, 'error');
-            } else {
-                console.error('Error adding new tag:', error.message);
-                showFormMessage(formMessage, 'Error adding tag: ' + error.message, 'error');
-            }
-        } else {
-            showFormMessage(formMessage, `Tag '${tagName}' added successfully!`, 'success');
-            newTagInput.value = '';
-            await fetchTags();
-            for (const option of tagSelect.options) {
-                if (option.value === tagName) {
-                    option.selected = true;
-                    break;
-                }
-            }
         }
     }
 
@@ -177,7 +129,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 loginHeading.style.display = 'none';
                 adminDashboardAndForm.style.display = 'block';
                 fetchDashboardStats();
-                fetchTags();
             } else {
                 loginFormContainer.style.display = 'block';
                 loginHeading.style.display = 'none';
@@ -205,8 +156,8 @@ document.addEventListener('DOMContentLoaded', () => {
             provider: 'discord',
             options: {
                 redirectTo: 'https://yesitsphoenix.github.io/Pax-Dei-Archives/admin.html'
-            }
-        });
+        }
+    });
 
         if (error) {
             console.error('Discord login error:', error);
@@ -216,102 +167,90 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function parseComment(text) {
-        // Updated regex to correctly capture source and timestamp
-        const regex = /^(.*?)\s*\|\s*(.*?)\s*—\s*(.*?)\n([\s\S]*)$/;
-        const match = text.match(regex);
+    // New regex to match: Author — Timestamp Content [Optional URL at end]
+    // It captures: (Author) — (Timestamp) (Content before URL) (Optional URL)
+    const regex = /^(.*?)—\s*(.*?)\s*([\s\S]*?)(https?:\/\/[^\s]+)?$/;
+    const match = text.match(regex);
 
-        if (match) {
-            try {
-                const author = match[1].trim();
-                let sourceAndTimestamp = match[2].trim() + ' — ' + match[3].trim(); // Reconstruct for robust parsing
-                let content = match[4].trim();
+    if (match) {
+        try {
+            const author = match[1].trim();
+            const timestampStr = match[2].trim();
+            let contentAndOptionalUrl = match[3] ? match[3].trim() : ''; // Get content and potential URL
+            const url = match[4] ? match[4].trim() : ''; // Directly capture the URL if it exists
 
-                // Split source and timestamp more robustly
-                const lastDashIndex = sourceAndTimestamp.lastIndexOf('—');
-                let originalSource = sourceAndTimestamp.substring(0, lastDashIndex).trim();
-                let timestampStr = sourceAndTimestamp.substring(lastDashIndex + 1).trim();
-
-                // Handle URL at the end of the content
-                const urlRegex = /(https?:\/\/[^\s]+)$/;
-                const urlMatch = content.match(urlRegex);
-                let finalSource = originalSource;
-                if (urlMatch) {
-                    const extractedUrl = urlMatch[1];
-                    content = content.replace(urlRegex, '').trim();
-                    // If original source was just "Discord", update it to the URL.
-                    // Otherwise, prefer the URL from content if it's not already set.
-                    if (originalSource === "Discord" || !finalSource) {
-                        finalSource = extractedUrl;
-                    } else if (extractedUrl) {
-                        // If there's an original source and a URL in content, prefer the content URL
-                        finalSource = extractedUrl;
-                    }
-                }
-                
-                let parsedDate = new Date();
-                let timePart = timestampStr;
-
-                // Handle "Yesterday at" and "Today at"
-                if (timestampStr.toLowerCase().startsWith('yesterday at ')) {
-                    parsedDate.setDate(parsedDate.getDate() - 1);
-                    timePart = timestampStr.substring('yesterday at '.length);
-                } else if (timestampStr.toLowerCase().startsWith('today at ')) {
-                    timePart = timestampStr.substring('today at '.length);
-                } else {
-                    // Handle full dates like "05/26/2025 4:30 PM"
-                    const dateMatch = timestampStr.match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
-                    if (dateMatch) {
-                        // Create date based on MM/DD/YYYY to avoid timezone issues when parsing
-                        parsedDate = new Date(dateMatch[1] + ' ' + new Date().getFullYear()); // Append current year for robust parsing
-                        // Re-evaluate the parsedDate after setting the full year if year was missing
-                        if (parsedDate.getFullYear() !== parseInt(dateMatch[1].split('/')[2])) {
-                            parsedDate = new Date(`${dateMatch[1].split('/')[0]}/${dateMatch[1].split('/')[1]}/${dateMatch[1].split('/')[2]}`);
-                        }
-                        timePart = timestampStr.replace(dateMatch[1], '').trim();
-                    }
-                }
-                
-                // Now, reliably parse the time part (e.g., "4:30 PM", "4:19 AM", "1:30")
-                const timeMatch = timePart.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i); // AM/PM is optional
-                if (timeMatch) {
-                    let hours = parseInt(timeMatch[1]);
-                    const minutes = parseInt(timeMatch[2]);
-                    const ampm = timeMatch[3] ? timeMatch[3].toLowerCase() : null;
-
-                    if (ampm === 'pm' && hours < 12) {
-                        hours += 12;
-                    }
-                    if (ampm === 'am' && hours === 12) {
-                        hours = 0;
-                    }
-                    // If no AM/PM, assume 24-hour format or current day's AM/PM context if applicable
-                    // For simplicity, we'll assume 24-hour if no AM/PM, or handle based on typical Discord timestamps (which often include AM/PM)
-                    
-                    parsedDate.setHours(hours, minutes, 0, 0);
-                } else {
-                    // Fallback for cases where time part might be missing or in an unexpected format
-                    console.warn("Could not parse time part:", timePart);
-                    // You might want to default to 00:00 or current time here
-                    parsedDate.setHours(0, 0, 0, 0); 
-                }
-
-                // Format for the datetime-local input field
-                const year = parsedDate.getFullYear();
-                const month = (parsedDate.getMonth() + 1).toString().padStart(2, '0');
-                const day = parsedDate.getDate().toString().padStart(2, '0');
-                const hours = parsedDate.getHours().toString().padStart(2, '0');
-                const minutes = parsedDate.getMinutes().toString().padStart(2, '0');
-                const formattedTimestamp = `${year}-${month}-${day}T${hours}:${minutes}`;
-
-                return { author, source: finalSource, timestamp: formattedTimestamp, content };
-
-            } catch (e) {
-                console.error("Error during parsing or timestamp conversion:", e);
-                return null;
+            let content = contentAndOptionalUrl;
+            // If a URL was captured by the regex, ensure it's removed from the content string if it was part of it
+            if (url && content.endsWith(url)) {
+                content = content.substring(0, content.length - url.length).trim();
             }
+            
+            // The 'source' property will now directly be the URL if present, otherwise empty
+            let finalSource = url;
+
+            let parsedDate = new Date(); // Initialize with current date
+            let timePart = timestampStr;
+
+            // Handle "Yesterday at" and "Today at"
+            if (timestampStr.toLowerCase().startsWith('yesterday at ')) {
+                parsedDate.setDate(parsedDate.getDate() - 1);
+                timePart = timestampStr.substring('yesterday at '.length);
+            } else if (timestampStr.toLowerCase().startsWith('today at ')) {
+                timePart = timestampStr.substring('today at '.length);
+            } else {
+                // Handle full dates like "05/26/2025, 4:30 PM" or "5/26/25, 11:05 AM"
+                const dateMatch = timestampStr.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})/);
+                if (dateMatch) {
+                    // Create date from "MM/DD/YYYY" or "MM/DD/YY" format
+                    let dateParts = dateMatch[1].split('/');
+                    let year = parseInt(dateParts[2]);
+                    // Handle 2-digit year (e.g., 25 for 2025)
+                    if (year < 100) {
+                        year += (year > (parsedDate.getFullYear() % 100)) ? 1900 : 2000;
+                    }
+                    parsedDate = new Date(year, parseInt(dateParts[0]) - 1, parseInt(dateParts[1]));
+                    timePart = timestampStr.replace(dateMatch[1], '').replace(/^,\s*/, '').trim();
+                }
+            }
+            
+            // Now, parse the time part (e.g., "4:30 PM" or "11:05 AM")
+            const timeMatch = timePart.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+            if (timeMatch) {
+                let hours = parseInt(timeMatch[1]);
+                const minutes = parseInt(timeMatch[2]);
+                const ampm = timeMatch[3].toLowerCase();
+
+                if (ampm === 'pm' && hours < 12) {
+                    hours += 12;
+                }
+                if (ampm === 'am' && hours === 12) {
+                    hours = 0;
+                }
+                
+                parsedDate.setHours(hours, minutes, 0, 0);
+            } else {
+                 // If no time part, try to set to a default for the given date, or flag an error
+                 // For now, let's assume valid time part or set to 00:00
+                 parsedDate.setHours(0, 0, 0, 0); // Default to start of day if time isn't found
+            }
+
+            // Format for the datetime-local input field (YYYY-MM-DDTHH:MM)
+            const year = parsedDate.getFullYear();
+            const month = (parsedDate.getMonth() + 1).toString().padStart(2, '0');
+            const day = parsedDate.getDate().toString().padStart(2, '0');
+            const hours = parsedDate.getHours().toString().padStart(2, '0');
+            const minutes = parsedDate.getMinutes().toString().padStart(2, '0');
+            const formattedTimestamp = `${year}-${month}-${day}T${hours}:${minutes}`;
+
+            return { author, source: finalSource, timestamp: formattedTimestamp, content };
+
+        } catch (e) {
+            console.error("Timestamp parsing error:", e);
+            return null;
         }
-        return null;
     }
+    return null;
+}
 
     parseButton.addEventListener('click', () => {
         showFormMessage(formMessage, '', '');
@@ -323,7 +262,6 @@ document.addEventListener('DOMContentLoaded', () => {
             sourceField.value = parsedData.source;
             timestampField.value = parsedData.timestamp;
             commentContentField.value = parsedData.content;
-            Array.from(tagSelect.options).forEach(option => option.selected = false);
 
             devCommentForm.style.display = 'block';
             commentInput.style.display = 'none';
@@ -346,26 +284,16 @@ document.addEventListener('DOMContentLoaded', () => {
         parseError.style.display = 'none';
     });
 
-    addNewTagButton.addEventListener('click', addNewTag);
-
     devCommentForm.addEventListener('submit', async (event) => {
         event.preventDefault();
         showFormMessage(formMessage, '', '');
-
-        const selectedTags = Array.from(tagSelect.selectedOptions).map(option => option.value);
-
-        if (selectedTags.length === 0) {
-            showFormMessage(formMessage, 'Please select at least one tag.', 'error');
-            return;
-        }
 
         const newComment = {
             author: authorField.value,
             source: sourceField.value,
             comment_date: new Date(timestampField.value).toISOString(),
             content: commentContentField.value,
-            title: commentContentField.value.substring(0, 45) + (commentContentField.value.length > 45 ? '...' : ''),
-            tag: selectedTags
+            title: commentContentField.value.substring(0, 45) + (commentContentField.value.length > 45 ? '...' : '')
         };
 
         const { data, error } = await supabase
@@ -379,18 +307,11 @@ document.addEventListener('DOMContentLoaded', () => {
             showFormMessage(formMessage, 'Developer comment added successfully!', 'success');
             console.log('Developer comment added:', data);
             commentInput.value = '';
-            authorField.value = '';
-            sourceField.value = '';
-            timestampField.value = '';
-            commentContentField.value = '';
-            Array.from(tagSelect.options).forEach(option => option.selected = false);
-            newTagInput.value = '';
             devCommentForm.style.display = 'none';
             commentInput.style.display = 'block';
             parseButton.style.display = 'block';
             parseError.style.display = 'none';
             fetchDashboardStats();
-            fetchTags();
         }
     });
 

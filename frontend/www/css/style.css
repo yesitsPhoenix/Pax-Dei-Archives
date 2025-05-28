@@ -25,8 +25,7 @@ padding: 0 15px;
 .row {
 display: flex;
 flex-wrap: wrap;
-margin-left: -15px;
-margin-right: -15px;
+
 }
 .col-lg-12, .col-lg-7, .col-lg-6, .col-lg-4, .col-lg-2, .col-md-6 {
 position: relative;
@@ -285,6 +284,8 @@ transition: all 0.3s ease;
 .main-button a:hover {
 background-color: var(--light-gold-color);
 }
+
+
 .feature-cards-section {
 margin-bottom: 60px;
 }
@@ -295,7 +296,7 @@ border-radius: 20px;
 margin-bottom: 30px;
 box-shadow: 0 4px 8px var(--dark-shadow-color);
 transition: all 0.3s ease;
-border: 1px solid rgba(255, 255, 255, 0.1);
+box-shadow: 0 1px 5px rgba(255, 255, 255, 0.4);
 text-align: center;
 display: flex;
 flex-direction: column;
@@ -962,37 +963,38 @@ box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 /* Custom styles for the filter section */
 .filters-section {
     display: flex;
-    flex-direction: column; /* Stack filters vertically */
-    gap: 15px; /* Space between filter groups */
+    flex-direction: column;
+    gap: 15px;
     padding: 20px;
-    background-color: #1a202c; /* Dark background for the filter section */
+    background-color: #1a202c;
     border-radius: 8px;
     margin-bottom: 30px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3);
     border: 1px solid #2d3748;
-    color: #e2e8f0; /* Light text color */
+    color: #e2e8f0;
 }
 
 .filter-group {
     display: flex;
-    flex-direction: column; /* Label and input/select stacked */
+    flex-direction: column;
     gap: 8px;
+    margin-right: 30px;
 }
 
 .filters-section label {
     font-weight: bold;
-    color: #a0aec0; /* Slightly lighter label color */
+    color: #a0aec0;
     font-size: 0.95rem;
 }
 
 .filters-section select,
 .filters-section input[type="date"] {
-    width: 100%; /* Full width for inputs/selects */
+    width: 100%;
     padding: 10px 12px;
     border-radius: 6px;
-    border: 1px solid #4a5568; /* Darker border */
-    background-color: #2d3748; /* Darker input background */
-    color: #e2e8f0; /* Light text color */
+    border: 1px solid #4a5568;
+    background-color: #2d3748;
+    color: #e2e8f0;
     font-size: 1rem;
     outline: none;
     transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
@@ -1000,20 +1002,20 @@ box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 
 .filters-section select:focus,
 .filters-section input[type="date"]:focus {
-    border-color: #63b3ed; /* Highlight on focus */
+    border-color: #63b3ed;
     box-shadow: 0 0 0 3px rgba(99, 179, 237, 0.5);
 }
 
 .filters-section option {
-    background-color: #2d3748; /* Darker background for options */
+    background-color: #2d3748;
     color: #e2e8f0;
 }
 
 .filter-buttons {
     display: flex;
-    justify-content: flex-end; /* Align buttons to the far right */
-    gap: 10px; /* Space between buttons */
-    margin-top: 10px; /* Space above buttons */
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 10px;
 }
 
 .filters-section button {
@@ -1028,7 +1030,7 @@ box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 #applyFilters {
-    background-color: #48bb78; /* Green for apply */
+    background-color: #48bb78;
     color: white;
 }
 
@@ -1038,7 +1040,7 @@ box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 #clearFilters {
-    background-color: #e53e3e; /* Red for clear */
+    background-color: #e53e3e;
     color: white;
 }
 
@@ -1050,62 +1052,82 @@ box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 /* Responsive adjustments */
 @media (min-width: 768px) {
     .filters-section {
-        flex-direction: row; /* Arrange filters horizontally on larger screens */
-        flex-wrap: wrap; /* Allow wrapping if space is tight */
-        justify-content: space-between; /* Distribute items */
-        align-items: flex-end; /* Align items to the bottom */
+        flex-direction: row; 
+        flex-wrap: wrap; 
+        justify-content: space-between; 
+        align-items: flex-end; 
     }
 
     .filter-group {
-        flex: 1; /* Allow filter groups to take equal space */
-        min-width: 180px; /* Minimum width for each group */
-        max-width: 30%; /* Max width to prevent them from getting too wide */
+        flex: 1; 
+        min-width: 180px; 
+        max-width: 30%; 
     }
 
     .filter-buttons {
-        flex-basis: 100%; /* Buttons take full width on their own row */
-        justify-content: flex-end; /* Align buttons to the far right */
-        margin-top: 0; /* Reset margin */
+        flex-basis: 100%;
+        justify-content: flex-end; 
+        margin-top: 0;
     }
 }
 
 @media (min-width: 1024px) {
     .filter-group {
-        max-width: 20%; /* Even smaller max width for more columns */
+        max-width: 20%;
     }
 }
 
+.dev-comments-home-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px; /* This creates the space between cards horizontally and vertically */
+    margin: 0 -15px; /* Counters the 15px padding from the parent .col-lg-12 */
+}
 
+/* Adjust .dev-comment-item specifically when it's inside the home container */
+.dev-comments-home-container .dev-comment-item {
+    flex: 1 1 calc(50% - 30px); /* 50% width minus the total gap (15px left + 15px right) */
+    max-width: calc(50% - 30px); /* Ensures proper sizing */
+    box-sizing: border-box; /* Ensures padding/border are included in the width */
+    margin-bottom: 0; /* Gap handles vertical spacing */
+}
+
+/* Ensure the .dev-comment-item itself is still styled correctly */
 .dev-comment-item {
-    background-color: #2d3748;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    color: #e2e8f0;
+    background-color: #27292a;
+    border-radius: 23px;
+    padding: 25px 30px;
+    box-shadow: 0 4px 15px rgba(255, 255, 255, 0.4);
+    color: #a1a1a1;
 }
 .dev-comment-item h4 {
-    color: #63b3ed; /* Header color */
+    color: #ffffff;
+    font-size: 1.25rem;
     margin-bottom: 10px;
+    font-weight: 700;
 }
 .dev-comment-item .author-tag {
-    font-size: 0.9rem;
-    color: #a0aec0;
+    font-size: 0.95rem;
+    color: #e75e8d;
     margin-bottom: 15px;
     display: block;
+    font-weight: 500;
 }
 .dev-comment-item p {
-    line-height: 1.6;
-    margin-bottom: 15px;
+    line-height: 1.7;
+    margin-bottom: 20px;
+    color: #e1e1e1;
 }
 .dev-comment-item .text-button a {
-    background-color: #4c51bf;
+    background-color: #e75e8d;
     color: white;
-    padding: 8px 15px;
-    border-radius: 5px;
+    padding: 10px 20px;
+    border-radius: 23px;
     text-decoration: none;
-    transition: background-color 0.2s ease;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    display: inline-block;
 }
 .dev-comment-item .text-button a:hover {
-    background-color: #3b439c;
+    background-color: #d14a7a;
+    transform: translateY(-2px);
 }
