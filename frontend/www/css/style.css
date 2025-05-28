@@ -1151,7 +1151,7 @@ box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .lore-sidebar h5 {
-    color: #fcfcfc;
+    color: var(--gold-color);
     margin-bottom: 15px;
     font-size: 1.2em;
     border-bottom: 1px solid rgba(255, 255, 255, 0.2);
@@ -1194,7 +1194,7 @@ box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 
 .dynamic-lore-main-content h3,
 .dynamic-lore-main-content h4 {
-    color: var(--dark-gold-color);
+    color: --;
     margin-top: 20px;
     margin-bottom: 15px;
 }
