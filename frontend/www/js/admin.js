@@ -7,6 +7,10 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let initialAuthCheckComplete = false;
 
+let dashboardStatsCache = null;
+let lastStatsFetchTime = 0;
+const STATS_CACHE_DURATION = 60 * 5000; 
+
 
 function showFormMessage(messageElement, message, type) {
     messageElement.textContent = message;
@@ -57,14 +61,29 @@ async function fetchDashboardStats() {
         return;
     }
 
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).toISOString();
+    const now = Date.now();
+    // Check if we have cached data and if it's still fresh
+    if (dashboardStatsCache && (now - lastStatsFetchTime < STATS_CACHE_DURATION)) {
+        // Use cached data
+        totalCommentsCount.textContent = dashboardStatsCache.commentsTotal;
+        totalNewsCount.textContent = dashboardStatsCache.newsTotal;
+        commentsMonthCount.textContent = dashboardStatsCache.commentsThisMonth;
+        newsMonthCount.textContent = dashboardStatsCache.newsThisMonth;
+        console.log('Dashboard stats loaded from cache.'); // For debugging
+        return; // Exit without making new API calls
+    }
+
+    // If cache is expired or not available, fetch fresh data
+    console.log('Fetching fresh dashboard stats...'); // For debugging
+
+    // Your existing date range calculation is correct for the current month
+    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+    const endOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59, 999).toISOString();
 
     const [{ count: commentsTotal, error: commentsTotalError },
-           { count: newsTotal, error: newsTotalError },
-           { count: commentsThisMonth, error: commentsMonthError },
-           { count: newsThisMonth, error: newsMonthError }] = await Promise.all([
+            { count: newsTotal, error: newsTotalError },
+            { count: commentsThisMonth, error: commentsMonthError },
+            { count: newsThisMonth, error: newsMonthError }] = await Promise.all([
         supabase.from('developer_comments').select('*', { count: 'exact', head: true }),
         supabase.from('news_updates').select('*', { count: 'exact', head: true }),
         supabase.from('developer_comments').select('*', { count: 'exact', head: true }).gte('comment_date', startOfMonth).lte('comment_date', endOfMonth),
@@ -77,14 +96,23 @@ async function fetchDashboardStats() {
         totalNewsCount.textContent = 'Error';
         commentsMonthCount.textContent = 'Error';
         newsMonthCount.textContent = 'Error';
+        dashboardStatsCache = null;
     } else {
+
+        dashboardStatsCache = {
+            commentsTotal,
+            newsTotal,
+            commentsThisMonth,
+            newsThisMonth
+        };
+        lastStatsFetchTime = now;
+
         totalCommentsCount.textContent = commentsTotal;
         totalNewsCount.textContent = newsTotal;
         commentsMonthCount.textContent = commentsThisMonth;
         newsMonthCount.textContent = newsThisMonth;
     }
 }
-
 
 function parseComment(text) {
     // This regex correctly separates Author, the main content block, and the final URL.
