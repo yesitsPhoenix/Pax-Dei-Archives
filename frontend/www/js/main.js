@@ -111,7 +111,7 @@ async function fetchAndRenderDeveloperComments(containerId, limit = null, search
                          data-author="${comment.author || ''}"
                          data-tag="${comment.tag ? (Array.isArray(comment.tag) ? comment.tag.join(',') : comment.tag) : ''}"
                          data-date="${formattedDateForData}">
-                        <div class="${containerId === 'recent-comments-home' ? 'item' : 'comment-full-item'}">
+                        <div class="${containerId === 'recent-comments-home'}">
                             <div class="down-content">
                                 <h6>${comment.author} <span class="date">${formatCommentDateTime(comment.comment_date)}</span></h6>
                                 <h4>${comment.title}</h4>
