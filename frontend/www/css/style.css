@@ -1296,6 +1296,7 @@ body.modal-open {
 	box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
 	color: #a1a1a1;
 	margin-bottom: .75em;
+    transition: all 0.3s ease;
 }
 
 .dev-comment-item h6 {
