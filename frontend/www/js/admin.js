@@ -1,11 +1,9 @@
-// admin.js
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
 const SUPABASE_URL = 'https://jrjgbnopmfovxwvtbivh.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impyamdibm9wbWZvdnh3dnRiaXZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDgxOTg1MjYsImV4cCI6MjAyMzc3NDUyNn0.za7oUzFhNmBdtcCRBmxwW5FSTFRWVAY6_rsRwlr3iqY';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
 
 document.addEventListener('DOMContentLoaded', () => {
     const discordLoginButton = document.getElementById('discordLoginButton');
@@ -14,27 +12,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginHeading = document.getElementById('loginHeading');
     const adminDashboardAndForm = document.getElementById('adminDashboardAndForm');
 
-    // Dev Comment Parser elements
     const commentInput = document.getElementById('commentInput');
     const parseButton = document.getElementById('parseButton');
     const devCommentForm = document.getElementById('devCommentForm');
     const parseError = document.getElementById('parseError');
     const formMessage = document.getElementById('formMessage');
 
-    // Dev Comment Form fields (from the parsed content)
     const authorField = document.getElementById('author');
     const sourceField = document.getElementById('source');
     const timestampField = document.getElementById('timestamp');
     const commentContentField = document.getElementById('commentContent');
+    const tagSelect = document.getElementById('tagSelect');
+    const newTagInput = document.getElementById('newTagInput');
+    const addNewTagButton = document.getElementById('addNewTagButton');
     const editButton = document.getElementById('editButton');
 
-    // Dashboard elements
     const totalCommentsCount = document.getElementById('totalCommentsCount');
     const totalNewsCount = document.getElementById('totalNewsCount');
     const commentsMonthCount = document.getElementById('commentsMonthCount');
     const newsMonthCount = document.getElementById('newsMonthCount');
 
-    // News Update Form elements
     const addNewsUpdateForm = document.getElementById('addNewsUpdateForm');
     const newsDateInput = document.getElementById('news_date');
     const newsTitleInput = document.getElementById('news_title');
@@ -42,10 +39,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const fullArticleLinkInput = document.getElementById('full_article_link');
     const addNewsUpdateMessage = document.getElementById('addNewsUpdateMessage');
 
-    // Helper function to show messages
     function showFormMessage(messageElement, message, type) {
         messageElement.textContent = message;
-        messageElement.className = ''; // Reset classes
+        messageElement.className = '';
         if (type) {
             messageElement.classList.add('form-message', type);
             messageElement.style.display = 'block';
@@ -54,11 +50,58 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(() => {
                     messageElement.style.display = 'none';
                     messageElement.textContent = '';
-                }, 5000); // Hide after 5 seconds
+                }, 5000);
             }
         } else {
             messageElement.style.display = 'none';
             messageElement.textContent = '';
+        }
+    }
+
+    async function fetchTags() {
+        const { data, error } = await supabase
+            .from('tag_list')
+            .select('tag_name')
+            .order('tag_name', { ascending: true });
+
+        if (error) {
+            console.error('Error fetching tags:', error.message);
+            return;
+        }
+
+        tagSelect.innerHTML = '<option value="">Select an existing tag</option>';
+        data.forEach(tag => {
+            const option = document.createElement('option');
+            option.value = tag.tag_name;
+            option.textContent = tag.tag_name;
+            tagSelect.appendChild(option);
+        });
+    }
+
+    async function addNewTag() {
+        const tagName = newTagInput.value.trim();
+        if (!tagName) {
+            showFormMessage(formMessage, 'Tag name cannot be empty.', 'error');
+            return;
+        }
+
+        const { data, error } = await supabase
+            .from('tag_list')
+            .insert([{ tag_name: tagName }])
+            .select();
+
+        if (error) {
+            if (error.code === '23505') { // Duplicate key error
+                showFormMessage(formMessage, `Tag '${tagName}' already exists.`, 'error');
+            } else {
+                console.error('Error adding new tag:', error.message);
+                showFormMessage(formMessage, 'Error adding tag: ' + error.message, 'error');
+            }
+        } else {
+            showFormMessage(formMessage, `Tag '${tagName}' added successfully!`, 'success');
+            newTagInput.value = '';
+            await fetchTags();
+            tagSelect.value = tagName; // Select the newly added tag
         }
     }
 
@@ -129,6 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 loginHeading.style.display = 'none';
                 adminDashboardAndForm.style.display = 'block';
                 fetchDashboardStats();
+                fetchTags(); // Fetch tags on successful auth
             } else {
                 loginFormContainer.style.display = 'block';
                 loginHeading.style.display = 'none';
@@ -156,8 +200,8 @@ document.addEventListener('DOMContentLoaded', () => {
             provider: 'discord',
             options: {
                 redirectTo: 'https://yesitsphoenix.github.io/Pax-Dei-Archives/admin.html'
-        }
-    });
+            }
+        });
 
         if (error) {
             console.error('Discord login error:', error);
@@ -174,10 +218,9 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const author = match[1].trim();
                 let originalSource = match[2].trim();
-                const timestampStr = match[3].trim(); // e.g., "Yesterday at 4:30 PM" or "05/26/2025 4:30 PM"
+                const timestampStr = match[3].trim();
                 let content = match[4].trim();
 
-                // Handle URL at the end of the content
                 const urlRegex = /(https?:\/\/[^\s]+)$/;
                 const urlMatch = content.match(urlRegex);
                 let finalSource = originalSource;
@@ -190,14 +233,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 let parsedDate = new Date();
                 let timePart = timestampStr;
 
-                // Handle "Yesterday at" and "Today at"
                 if (timestampStr.toLowerCase().startsWith('yesterday at ')) {
                     parsedDate.setDate(parsedDate.getDate() - 1);
                     timePart = timestampStr.substring('yesterday at '.length);
                 } else if (timestampStr.toLowerCase().startsWith('today at ')) {
                     timePart = timestampStr.substring('today at '.length);
                 } else {
-                    // Handle full dates like "05/26/2025 4:30 PM"
                     const dateMatch = timestampStr.match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
                     if (dateMatch) {
                         parsedDate = new Date(dateMatch[1]);
@@ -205,7 +246,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
                 
-                // Now, reliably parse the time part (e.g., "4:30 PM")
                 const timeMatch = timePart.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
                 if (timeMatch) {
                     let hours = parseInt(timeMatch[1]);
@@ -222,7 +262,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     parsedDate.setHours(hours, minutes, 0, 0);
                 }
 
-                // Format for the datetime-local input field
                 const year = parsedDate.getFullYear();
                 const month = (parsedDate.getMonth() + 1).toString().padStart(2, '0');
                 const day = parsedDate.getDate().toString().padStart(2, '0');
@@ -250,6 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sourceField.value = parsedData.source;
             timestampField.value = parsedData.timestamp;
             commentContentField.value = parsedData.content;
+            tagSelect.value = ""; // Reset tag selection
 
             devCommentForm.style.display = 'block';
             commentInput.style.display = 'none';
@@ -272,16 +312,25 @@ document.addEventListener('DOMContentLoaded', () => {
         parseError.style.display = 'none';
     });
 
+    addNewTagButton.addEventListener('click', addNewTag);
+
     devCommentForm.addEventListener('submit', async (event) => {
         event.preventDefault();
         showFormMessage(formMessage, '', '');
+
+        let selectedTag = tagSelect.value;
+        if (selectedTag === "") {
+            showFormMessage(formMessage, 'Please select a tag or add a new one.', 'error');
+            return;
+        }
 
         const newComment = {
             author: authorField.value,
             source: sourceField.value,
             comment_date: new Date(timestampField.value).toISOString(),
             content: commentContentField.value,
-            title: commentContentField.value.substring(0, 45) + (commentContentField.value.length > 45 ? '...' : '')
+            title: commentContentField.value.substring(0, 45) + (commentContentField.value.length > 45 ? '...' : ''),
+            tag: selectedTag
         };
 
         const { data, error } = await supabase
@@ -295,11 +344,18 @@ document.addEventListener('DOMContentLoaded', () => {
             showFormMessage(formMessage, 'Developer comment added successfully!', 'success');
             console.log('Developer comment added:', data);
             commentInput.value = '';
+            authorField.value = '';
+            sourceField.value = '';
+            timestampField.value = '';
+            commentContentField.value = '';
+            tagSelect.value = '';
+            newTagInput.value = '';
             devCommentForm.style.display = 'none';
             commentInput.style.display = 'block';
             parseButton.style.display = 'block';
             parseError.style.display = 'none';
             fetchDashboardStats();
+            fetchTags();
         }
     });
 

@@ -117,6 +117,15 @@
                                         <label for="commentContent">Comment Content:</label>
                                         <textarea id="commentContent" name="content" rows="10" readonly></textarea>
 
+                                        <label for="tagSelect">Tag:</label>
+                                        <select id="tagSelect" name="tag">
+                                            <option value="">Select an existing tag</option>
+                                        </select>
+                                        <div style="margin-top: 10px;">
+                                            <input type="text" id="newTagInput" placeholder="Or add a new tag" style="width: calc(100% - 70px); margin-right: 5px;">
+                                            <button type="button" id="addNewTagButton" class="main-button" style="padding: 10px 15px; font-size: 0.9em;">Add Tag</button>
+                                        </div>
+
                                         <div class="form-actions">
                                             <button type="submit" class="main-button submit-button">Add Comment to DB</button>
                                             <button type="button" id="editButton" class="main-button secondary-button">Edit Raw</button>
@@ -164,7 +173,6 @@
             <div class="row">
                 <div class="col-lg-12">
                     <p>Copyright © 2025 Pax Dei Archives. All rights reserved.
-                    <br>Design inspired by: <a href="https://templatemo.com/live/templatemo_579_cyborg_gaming" target="_blank">TemplateMo</a></p>
                 </div>
             </div>
         </div>
@@ -175,7 +183,6 @@
     </footer>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <!-- <script type="module" src="frontend/www/js/main.js"></script> -->
     <script type="module" src="frontend/www/js/admin.js"></script>
 </body>
 </html>
