@@ -126,7 +126,7 @@ async function fetchAndRenderDeveloperComments(containerId, limit = null, search
                 if (comment.comment_date) {
                     try {
                         const dateObj = new Date(comment.comment_date);
-                        // Extract YYYY, MM, DD ensuring two digits for month/day
+                        // Extract ISO, MM, DD ensuring two digits for month/day
                         const year = dateObj.getFullYear();
                         const month = String(dateObj.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
                         const day = String(dateObj.getDate()).padStart(2, '0');
@@ -832,7 +832,7 @@ $(document).ready(async function() {
          * Shows/hides login form, dashboard, and displays authorization messages.
          */
         async function checkAuth() {
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: { user } = {} } = await supabase.auth.getUser(); // Destructure with default empty object
 
             if (user) {
                 const authorized = await isAuthorizedAdmin(user.id);
@@ -864,8 +864,12 @@ $(document).ready(async function() {
          * Populates the tag selection dropdown in the admin form from Supabase.
          */
         async function populateTagSelect() {
-            if (!tagSelect) return;
+            if (!tagSelect) {
+                console.warn('tagSelect element not found. Cannot populate tags.');
+                return;
+            }
             tagSelect.innerHTML = '<option value="">Select existing tags (Ctrl/Cmd+Click to select multiple)</option>'; // Clear and add default option
+            console.log('Attempting to populate tags...');
 
             try {
                 const { data, error } = await supabase
@@ -878,12 +882,19 @@ $(document).ready(async function() {
                     return;
                 }
 
-                data.forEach(tag => {
-                    const option = document.createElement('option');
-                    option.value = tag.tag_name;
-                    option.textContent = tag.tag_name;
-                    tagSelect.appendChild(option);
-                });
+                console.log('Fetched tags data:', data); // Log the fetched data
+
+                if (data && data.length > 0) {
+                    data.forEach(tag => {
+                        console.log('Adding tag:', tag.tag_name); // Log each tag being added
+                        const option = document.createElement('option');
+                        option.value = tag.tag_name;
+                        option.textContent = tag.tag_name;
+                        tagSelect.appendChild(option);
+                    });
+                } else {
+                    console.log('No tags found in Supabase tag_list table.');
+                }
             } catch (e) {
                 console.error('Unexpected error populating tags for admin form:', e);
             }
@@ -1026,7 +1037,9 @@ $(document).ready(async function() {
                     commentInput.style.display = 'block';
                     parseButton.style.display = 'block';
                     parseError.style.display = 'none';
-                    tagSelect.value = ''; // Clear selected tags
+                    // tagSelect.value = ''; // Clearing selected tags in a multiple select is done by setting selectedOptions or iterating.
+                    // For a multi-select, you might want to deselect all or reset to default.
+                    Array.from(tagSelect.options).forEach(option => option.selected = false); // Deselect all options
                     fetchDashboardStats(); // Refresh dashboard stats after adding comment
                 }
             });
