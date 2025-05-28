@@ -1,7 +1,3 @@
-// admin.js
-// Handles admin panel functionalities: Discord login, dashboard stats,
-// and forms for adding developer comments and lore items.
-
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
 const SUPABASE_URL = 'https://jrjgbnopmfovxwvtbivh.supabase.co';
@@ -9,12 +5,9 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-/**
- * Helper function to show messages for forms.
- * @param {HTMLElement} messageElement - The DOM element to display the message.
- * @param {string} message - The message text.
- * @param {string} type - The type of message ('success', 'error', 'warning').
- */
+let initialAuthCheckComplete = false;
+
+
 function showFormMessage(messageElement, message, type) {
     messageElement.textContent = message;
     messageElement.className = ''; // Reset classes
@@ -34,11 +27,7 @@ function showFormMessage(messageElement, message, type) {
     }
 }
 
-/**
- * Checks if the current user is an authorized admin.
- * @param {string} userId - The ID of the user to check.
- * @returns {Promise<boolean>} True if the user is an authorized admin, false otherwise.
- */
+
 async function isAuthorizedAdmin(userId) {
     if (!userId) return false;
     try {
@@ -56,9 +45,7 @@ async function isAuthorizedAdmin(userId) {
     }
 }
 
-/**
- * Fetches and updates dashboard statistics (total comments, news, and monthly counts).
- */
+
 async function fetchDashboardStats() {
     const totalCommentsCount = document.getElementById('totalCommentsCount');
     const totalNewsCount = document.getElementById('totalNewsCount');
@@ -98,11 +85,7 @@ async function fetchDashboardStats() {
     }
 }
 
-/**
- * Handles parsing a raw comment string into structured data (author, source, timestamp, content).
- * @param {string} text - The raw comment string.
- * @returns {object|null} An object containing parsed data, or null if parsing fails.
- */
+
 function parseComment(text) {
     const mainRegex = /^(.*?)\s*—\s*([\s\S]*?)(https?:\/\/[^\s]+)?$/;
     const match = text.match(mainRegex);
@@ -226,10 +209,7 @@ function parseComment(text) {
     }
 }
 
-/**
- * Populates the tag selection dropdown in the admin form from Supabase.
- * @param {HTMLElement} tagSelectElement - The select element to populate.
- */
+
 async function populateTagSelect(tagSelectElement) {
     if (!tagSelectElement) {
         console.warn('tagSelect element not found. Cannot populate tags.');
@@ -252,8 +232,6 @@ async function populateTagSelect(tagSelectElement) {
     }
 
 
-    console.log('Attempting to populate tags for:', tagSelectElement.id); // More specific log
-
     try {
         const { data, error } = await supabase
             .from('tag_list')
@@ -265,29 +243,20 @@ async function populateTagSelect(tagSelectElement) {
             return;
         }
 
-        console.log('Fetched tags data for', tagSelectElement.id, ':', data); // More specific log
-
         if (data && data.length > 0) {
             data.forEach(tag => {
-                console.log('Adding tag:', tag.tag_name, 'to', tagSelectElement.id); // More specific log
                 const option = document.createElement('option');
                 option.value = tag.tag_name;
                 option.textContent = tag.tag_name;
                 tagSelectElement.appendChild(option);
             });
-        } else {
-            console.log('No tags found in Supabase tag_list table for', tagSelectElement.id); // More specific log
         }
     } catch (e) {
         console.error('Unexpected error populating tags for admin form:', e);
     }
 }
 
-/**
- * Converts a string to a URL-friendly slug.
- * @param {string} text - The input string.
- * @returns {string} The slugified string.
- */
+
 function slugify(text) {
     return text
         .toString()
@@ -362,8 +331,11 @@ $(document).ready(async function() {
                 if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'block';
                 fetchDashboardStats();
                 // Populate selects only once after successful authorization and UI display
-                populateTagSelect(tagSelect);
-                populateTagSelect(loreCategorySelect);
+                if (!initialAuthCheckComplete) {
+                    populateTagSelect(tagSelect);
+                    populateTagSelect(loreCategorySelect);
+                    initialAuthCheckComplete = true;
+                }
             } else {
                 if (loginFormContainer) loginFormContainer.style.display = 'block';
                 if (loginHeading) loginHeading.style.display = 'none';
@@ -384,11 +356,10 @@ $(document).ready(async function() {
     // Initial auth check
     checkAuth();
 
-    // Listen for auth state changes, but be careful not to trigger excessive re-populations
-    // The 'INITIAL_SESSION' event covers the initial load. Subsequent 'SIGNED_IN'/'SIGNED_OUT'
-    // events will handle explicit login/logout. This should prevent re-populating on just focus.
     supabase.auth.onAuthStateChange((event, session) => {
-        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'INITIAL_SESSION') {
+        // Only trigger checkAuth if the event is a significant change, not just focus
+        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') { // INITIAL_SESSION is handled by initial checkAuth() call
+            initialAuthCheckComplete = false; // Reset flag to allow repopulation if session changes
             checkAuth();
         }
     });
@@ -609,10 +580,9 @@ $(document).ready(async function() {
             } else {
                 showFormMessage(addLoreItemMessage, 'Lore item added successfully!', 'success');
                 console.log('Lore item added:', data);
-                // Clear form fields
                 loreTitleInput.value = '';
                 loreSlugInput.value = '';
-                loreCategorySelect.value = ''; // Reset dropdown
+                loreCategorySelect.value = '';
                 loreContentInput.value = '';
             }
         });
