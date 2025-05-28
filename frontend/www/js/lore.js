@@ -17,10 +17,7 @@ const renderMarkdown = (markdownText) => {
     return marked.parse(markdownText);
 };
 
-/**
- * Parses URL query parameters.
- * @returns {object} An object containing key-value pairs of query parameters.
- */
+
 function getQueryParams() {
     const params = {};
     const queryString = window.location.search.substring(1);
@@ -32,28 +29,24 @@ function getQueryParams() {
     return params;
 }
 
-/**
- * Fetches distinct lore categories from the 'lore_items' table.
- * @returns {Promise<Array<string>>} A promise that resolves to an array of category names.
- */
+
 async function fetchLoreCategories() {
     const { data, error } = await supabase
         .from('lore_items')
-        .select('category', { distinct: true })
+        .select('category')
         .order('category', { ascending: true });
 
     if (error) {
         console.error('Error fetching lore categories:', error.message);
         return [];
     }
-    return data.map(item => item.category);
+
+    // Use a Set to ensure unique categories
+    const uniqueCategories = [...new Set(data.map(item => item.category))];
+    return uniqueCategories;
 }
 
-/**
- * Fetches lore items, optionally filtered by category.
- * @param {string} [category=null] - The category to filter by. If null, fetches all items.
- * @returns {Promise<Array<object>>} A promise that resolves to an array of lore item objects.
- */
+
 async function fetchLoreItems(category = null) {
     let query = supabase
         .from('lore_items')
@@ -73,11 +66,7 @@ async function fetchLoreItems(category = null) {
     return data;
 }
 
-/**
- * Fetches the detailed content of a single lore item by its slug.
- * @param {string} slug - The unique slug of the lore item.
- * @returns {Promise<object|null>} A promise that resolves to the lore item object, or null if not found.
- */
+
 async function fetchLoreItemDetail(slug) {
     const { data, error } = await supabase
         .from('lore_items')
@@ -103,11 +92,7 @@ $(document).ready(async function() {
     const loreItemList = $('#lore-item-list');
     const dynamicLoreMainContent = $('#dynamic-lore-main-content');
 
-    /**
-     * Updates the URL in the browser's history without a full page reload.
-     * @param {string} newCategory - The category to set in the URL.
-     * @param {string} [newItemSlug=null] - The item slug to set in the URL.
-     */
+
     function updateUrl(newCategory, newItemSlug = null) {
         let newUrl = 'lore.html';
         const queryParts = [];
@@ -123,12 +108,7 @@ $(document).ready(async function() {
         window.history.pushState({ category: newCategory, item: newItemSlug }, '', newUrl);
     }
 
-    /**
-     * Displays the dynamic lore content based on selected category and item slug.
-     * Manages visibility of sections and populates sidebar/main content.
-     * @param {string} selectedCategory - The category to display.
-     * @param {string} [selectedItemSlug=null] - The specific lore item slug to display.
-     */
+
     async function displayLoreContent(selectedCategory, selectedItemSlug = null) {
         loreCategoriesSection.hide();
         dynamicLoreContentWrapper.show();
