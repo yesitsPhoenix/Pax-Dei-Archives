@@ -35,7 +35,6 @@ async function fetchLoreCategories() {
         return [];
     }
 
-    // Use a Set to ensure unique categories and then convert back to array
     const uniqueCategories = [...new Set(data.map(item => item.category))];
     return uniqueCategories;
 }
@@ -69,7 +68,6 @@ async function fetchLoreItemDetail(slug) {
         .single();
 
     if (error) {
-        // PGRST116 is the Supabase code for "no rows found" - not a critical error if expected
         if (error.code !== 'PGRST116') {
             console.error('Error fetching lore item detail:', error.message);
         }
@@ -80,7 +78,6 @@ async function fetchLoreItemDetail(slug) {
 
 // Main logic for the lore page
 $(document).ready(async function() {
-    // Cache jQuery selectors for performance
     const loreCategoriesSection = $('#lore-categories-section');
     const dynamicLoreContentWrapper = $('#dynamic-lore-content-wrapper');
     const loreSidebar = $('#lore-sidebar');
@@ -88,7 +85,6 @@ $(document).ready(async function() {
     const loreItemList = $('#lore-item-list');
     const dynamicLoreMainContent = $('#dynamic-lore-main-content');
 
-    // Function to update the browser's URL and history state
     function updateUrl(newCategory, newItemSlug = null) {
         let newUrl = 'lore.html';
         const queryParts = [];
@@ -104,17 +100,14 @@ $(document).ready(async function() {
         window.history.pushState({ category: newCategory, item: newItemSlug }, '', newUrl);
     }
 
-    // Function to display lore content based on selected category and item slug
-    async function displayLoreContent(selectedCategory, selectedItemSlug = null) {
-        // Show loading state and hide initial category cards
+    async function displayLoreContent(selectedCategory, selectedItemSlug = null, itemsData = null) {
         loreCategoriesSection.hide();
         dynamicLoreContentWrapper.show();
         loreSidebar.show();
         dynamicLoreMainContent.html('<div class="lore-loading-indicator">Loading lore...</div>');
 
-        // --- Populate Categories in Sidebar ---
         const categories = await fetchLoreCategories();
-        loreCategoryList.empty(); // Clear existing list items
+        loreCategoryList.empty();
         if (categories.length > 0) {
             categories.forEach(cat => {
                 const li = `<li><a href="lore.html?category=${encodeURIComponent(cat)}" class="${selectedCategory === cat ? 'active-lore-category' : ''}">${cat}</a></li>`;
@@ -124,10 +117,15 @@ $(document).ready(async function() {
             loreCategoryList.append('<li>No lore categories found.</li>');
         }
 
-        // --- Populate Items in Sidebar for the selected category ---
-        loreItemList.empty(); // Clear existing list items
+        loreItemList.empty();
         if (selectedCategory) {
-            const items = await fetchLoreItems(selectedCategory);
+            let items;
+            if (itemsData) {
+                items = itemsData;
+            } else {
+                items = await fetchLoreItems(selectedCategory);
+            }
+
             if (items.length > 0) {
                 items.forEach(item => {
                     const li = `<li><a href="lore.html?category=${encodeURIComponent(selectedCategory)}&item=${encodeURIComponent(item.slug)}" class="${selectedItemSlug === item.slug ? 'active-lore-item' : ''}">${item.title}</a></li>`;
@@ -140,9 +138,7 @@ $(document).ready(async function() {
             loreItemList.append('<li>Select a category to see items.</li>');
         }
 
-        // --- Display Main Content ---
         if (selectedItemSlug) {
-            // If a specific item slug is provided, fetch and display its details
             const loreItem = await fetchLoreItemDetail(selectedItemSlug);
             if (loreItem) {
                 dynamicLoreMainContent.html(`
@@ -155,13 +151,8 @@ $(document).ready(async function() {
                 dynamicLoreMainContent.html('<div class="lore-no-content-message">Lore item not found.</div>');
             }
         } else if (selectedCategory) {
-            // If only a category is selected (and no item slug was provided to displayLoreContent),
-            // it means the URL was updated to include the first item.
-            // This path should ideally only be hit if there are no items in the category,
-            // or if the URL was somehow malformed after a category selection.
             dynamicLoreMainContent.html('<div class="lore-no-content-message">Select an item from the sidebar to view content.</div>');
         } else {
-            // Default message if no category or item is selected
             dynamicLoreMainContent.html('<div class="lore-no-content-message">Select a lore category or item to view content.</div>');
         }
     }
@@ -169,86 +160,89 @@ $(document).ready(async function() {
     // --- Initial Page Load Logic ---
     const initialParams = getQueryParams();
     const initialCategory = initialParams.category;
-    let initialItemSlug = initialParams.item; // Use 'let' because it might be updated
+    let initialItemSlug = initialParams.item;
+    let fetchedInitialItems = null;
 
     if (initialCategory || initialItemSlug) {
-        // If only a category is present in the initial URL (e.g., lore.html?category=World),
-        // we need to automatically select the first item and update the URL accordingly.
+
         if (initialCategory && !initialItemSlug) {
             const items = await fetchLoreItems(initialCategory);
+            fetchedInitialItems = items;
             if (items.length > 0) {
-                initialItemSlug = items[0].slug; // Set the first item's slug
-                updateUrl(initialCategory, initialItemSlug); // Update URL in browser history
+                initialItemSlug = items[0].slug;
+                updateUrl(initialCategory, initialItemSlug);
             }
-            // If no items in the category, initialItemSlug remains null, and displayLoreContent will handle it.
         }
-        // Now, call displayLoreContent with the (potentially updated) item slug
-        displayLoreContent(initialCategory, initialItemSlug);
+
+        displayLoreContent(initialCategory, initialItemSlug, fetchedInitialItems);
     } else {
-        // If no category or item in URL, show the initial category cards
         loreCategoriesSection.show();
         dynamicLoreContentWrapper.hide();
     }
 
     // --- Event Listeners ---
 
-    // Handle clicks on the initial category feature cards
     $(document).on('click', '#lore-categories-section .feature-card a', async function(e) {
-        e.preventDefault(); // Prevent the default full page reload
+        e.preventDefault();
         const href = $(this).attr('href');
         const url = new URL(href, window.location.origin);
         const newCategory = url.searchParams.get('category');
-        let newItemSlug = null; // Will store the slug of the first item in the new category
+        let newItemSlug = null;
+        let fetchedItemsForCardClick = null;
 
-        // Fetch items for the clicked category to get the first item's slug
         const items = await fetchLoreItems(newCategory);
+        fetchedItemsForCardClick = items;
         if (items.length > 0) {
             newItemSlug = items[0].slug;
         }
 
-        // Update the URL with the selected category and the first item (if found)
         updateUrl(newCategory, newItemSlug);
-        // Display the content for the selected category and its first item
-        displayLoreContent(newCategory, newItemSlug);
+        displayLoreContent(newCategory, newItemSlug, fetchedItemsForCardClick);
     });
 
-    // Handle clicks on sidebar links (both categories and individual lore items)
-    // Using event delegation as these elements are dynamically added
-    $(document).on('click', '#lore-category-list a, #lore-item-list a', function(e) {
-        e.preventDefault(); // Prevent default link behavior (full page reload)
+
+    $(document).on('click', '#lore-category-list a, #lore-item-list a', async function(e) {
+        e.preventDefault();
         const href = $(this).attr('href');
         const url = new URL(href, window.location.origin);
         const newCategory = url.searchParams.get('category');
-        const newItemSlug = url.searchParams.get('item');
+        let newItemSlug = url.searchParams.get('item');
+        let fetchedItemsForSidebarClick = null;
 
-        // Update URL and display content based on the clicked link
+        if (newCategory && !newItemSlug) {
+            const items = await fetchLoreItems(newCategory);
+            fetchedItemsForSidebarClick = items;
+            if (items.length > 0) {
+                newItemSlug = items[0].slug;
+            }
+        }
+
         updateUrl(newCategory, newItemSlug);
-        displayLoreContent(newCategory, newItemSlug);
+        displayLoreContent(newCategory, newItemSlug, fetchedItemsForSidebarClick);
     });
 
-    // Handle browser back/forward button clicks using the History API
+
     window.onpopstate = function(event) {
         const params = getQueryParams();
-        // If navigating back to the base lore.html (no category/item in URL)
+
         if (!params.category && !params.item) {
             loreCategoriesSection.show();
             dynamicLoreContentWrapper.hide();
         } else {
-            // If navigating back to a category-only URL, find the first item
-            if (params.category && !params.item) {
-                // Asynchronously fetch items to get the first one for the category
-                (async () => {
+            (async () => {
+                let fetchedItemsForPopstate = null;
+                if (params.category && !params.item) {
                     const items = await fetchLoreItems(params.category);
+                    fetchedItemsForPopstate = items;
                     if (items.length > 0) {
-                        displayLoreContent(params.category, items[0].slug);
+                        displayLoreContent(params.category, items[0].slug, fetchedItemsForPopstate);
                     } else {
-                        displayLoreContent(params.category); // Show "no items" if category is empty
+                        displayLoreContent(params.category, null, fetchedItemsForPopstate);
                     }
-                })();
-            } else {
-                // Navigate back to a specific item
-                displayLoreContent(params.category, params.item);
-            }
+                } else {
+                    displayLoreContent(params.category, params.item);
+                }
+            })();
         }
     };
 });
