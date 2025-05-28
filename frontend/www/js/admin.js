@@ -1,9 +1,4 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-
-const SUPABASE_URL = 'https://jrjgbnopmfovxwvtbivh.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impyamdibm9wbWZvdnh3dnRiaXZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDgxOTg1MjYsImV4cCI6MjAyMzc3NDUyNn0.za7oUzFhNmBdtcCRBmxwW5FSTFRWVAY6_rsRwlr3iqY';
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+import { supabase } from './supabaseClient.js';
 
 let initialAuthCheckComplete = false;
 
@@ -14,7 +9,7 @@ const STATS_CACHE_DURATION = 60 * 5000;
 
 function showFormMessage(messageElement, message, type) {
     messageElement.textContent = message;
-    messageElement.className = ''; // Reset classes
+    messageElement.className = '';
     if (type) {
         messageElement.classList.add('form-message', type);
         messageElement.style.display = 'block';
@@ -23,7 +18,7 @@ function showFormMessage(messageElement, message, type) {
             setTimeout(() => {
                 messageElement.style.display = 'none';
                 messageElement.textContent = '';
-            }, 5000); // Hide after 5 seconds
+            }, 5000);
         }
     } else {
         messageElement.style.display = 'none';
