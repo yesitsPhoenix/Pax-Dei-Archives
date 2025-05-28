@@ -4,7 +4,6 @@ const SUPABASE_URL = 'https://jrjgbnopmfovxwvtbivh.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impyamdibm9wbWZvdnh3dnRiaXZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDgxOTg1MjYsImV4cCI6MjAyMzc3NDUyNn0.za7oUzFhNmBdtcCRBmxwW5FSTFRWVAY6_rsRwlr3iqY';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-// ---------------------------------------------------------------
 
 function formatCommentDateTime(dateString) {
   const options = {
@@ -16,11 +15,9 @@ function formatCommentDateTime(dateString) {
     hour12: true
   };
   if (!dateString) return '';
-  // Ensures the date is treated in UTC to avoid local time zone shifts during display
   return new Date(dateString).toLocaleString(undefined, options);
 }
 
-// Helper function to format ONLY the date for news updates
 function formatNewsDate(dateString) {
   const options = {
     year: 'numeric',
@@ -28,20 +25,14 @@ function formatNewsDate(dateString) {
     day: 'numeric'
   };
   if (!dateString) return '';
-  // Create a Date object from the date string, then format it to just the date part.
-  // Using 'en-US' or a specific locale can give you consistent month names (e.g., 'May 27, 2025')
-  return new Date(dateString + 'T00:00:00').toLocaleDateString('en-US', options); 
-  // Adding 'T00:00:00' ensures the date string is parsed correctly without timezone issues,
-  // then toLocaleDateString formats it without the time.
+  return new Date(dateString + 'T00:00:00').toLocaleDateString('en-US', options);
 }
 
-
-// Function to fetch and render Developer Comments
 async function fetchAndRenderDeveloperComments(containerId, limit = null, searchTerm = null) {
     const container = document.getElementById(containerId);
-    if (!container && !searchTerm) return; 
+    if (!container && !searchTerm) return [];
 
-    if (!searchTerm && container) { 
+    if (!searchTerm && container) {
         container.innerHTML = '<div class="loading-indicator">Loading comments...</div>';
     }
 
@@ -54,7 +45,6 @@ async function fetchAndRenderDeveloperComments(containerId, limit = null, search
             query = query.or(`title.ilike.%${searchTerm}%,content.ilike.%${searchTerm}%,author.ilike.%${searchTerm}%`);
         }
 
-        // This correctly sorts by most recent first.
         query = query.order('comment_date', { ascending: false });
 
         if (limit) {
@@ -65,7 +55,7 @@ async function fetchAndRenderDeveloperComments(containerId, limit = null, search
 
         if (error) {
             console.error('Error fetching developer comments:', error.message);
-            if (!searchTerm && container) { 
+            if (!searchTerm && container) {
                 container.innerHTML = '<div class="error-message">Failed to load comments. Please try again later.</div>';
             }
             return [];
@@ -92,9 +82,28 @@ async function fetchAndRenderDeveloperComments(containerId, limit = null, search
                     sourceDisplay = comment.source;
                 }
 
+                // --- CRITICAL FIX START: Ensure formattedDateForData uses the actual calendar date ---
+                let formattedDateForData = '';
+                if (comment.comment_date) {
+                    try {
+                        const dateObj = new Date(comment.comment_date);
+                        // Extract YYYY, MM, DD ensuring two digits for month/day
+                        const year = dateObj.getFullYear();
+                        const month = String(dateObj.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+                        const day = String(dateObj.getDate()).padStart(2, '0');
+                        formattedDateForData = `${year}-${month}-${day}`;
+                    } catch (e) {
+                        console.warn('Could not parse comment_date for data attribute:', comment.comment_date, e);
+                    }
+                }
+                // --- CRITICAL FIX END ---
+
                 const commentHtml = `
-                    <div class="${containerId === 'recent-comments-home' ? 'col-lg-6 col-md-6' : 'col-lg-12'}">
-                        <div class="${containerId === 'recent-comments-home' ? 'comment-item' : 'comment-full-item'}">
+                    <div class="${containerId === 'recent-comments-home' ? 'col-lg-6 col-md-6' : 'col-lg-12'} mb-4 dev-comment-item"
+                         data-author="${comment.author || ''}"
+                         data-tag="${comment.tag || ''}"
+                         data-date="${formattedDateForData}">
+                        <div class="${containerId === 'recent-comments-home' ? 'item' : 'comment-full-item'}">
                             <div class="down-content">
                                 <h6>${comment.author} <span class="date">${formatCommentDateTime(comment.comment_date)}</span></h6>
                                 <h4>${comment.title}</h4>
@@ -107,7 +116,7 @@ async function fetchAndRenderDeveloperComments(containerId, limit = null, search
                 container.insertAdjacentHTML('beforeend', commentHtml);
             });
         }
-        return data; 
+        return data;
     } catch (error) {
         console.error('Unexpected error in fetchAndRenderDeveloperComments:', error);
         if (!searchTerm && container) {
@@ -117,10 +126,9 @@ async function fetchAndRenderDeveloperComments(containerId, limit = null, search
     }
 }
 
-// Function to fetch and render News Updates (now accepts searchTerm)
 async function fetchAndRenderNewsUpdates(containerId, limit = null, searchTerm = null) {
     const container = document.getElementById(containerId);
-    if (!container && !searchTerm) return;
+    if (!container && !searchTerm) return [];
 
     if (!searchTerm && container) {
         container.innerHTML = '<div class="loading-indicator">Loading news...</div>';
@@ -132,7 +140,6 @@ async function fetchAndRenderNewsUpdates(containerId, limit = null, searchTerm =
             .select('*');
 
         if (searchTerm) {
-            // Case-insensitive search across title, summary, and full_article_link
             query = query.or(`title.ilike.%${searchTerm}%,summary.ilike.%${searchTerm}%,full_article_link.ilike.%${searchTerm}%`);
         }
 
@@ -183,8 +190,6 @@ async function fetchAndRenderNewsUpdates(containerId, limit = null, searchTerm =
     }
 }
 
-
-// This function combines and renders search results from both tables
 async function performSearch(searchTerm) {
     const searchResultsDropdown = $('#searchResultsDropdown');
     searchResultsDropdown.html('<div class="search-loading-indicator">Searching...</div>');
@@ -193,38 +198,35 @@ async function performSearch(searchTerm) {
     try {
         const [comments, newsUpdates] = await Promise.all([
             fetchAndRenderDeveloperComments(null, null, searchTerm),
-            fetchAndRenderNewsUpdates(null, null, searchTerm) 
+            fetchAndRenderNewsUpdates(null, null, searchTerm)
         ]);
 
         const allResults = [];
 
-        // Add comments to results
         comments.forEach(comment => {
             allResults.push({
                 type: 'Developer Comment',
                 title: comment.title,
                 content: comment.content,
-                date: comment.comment_date, // Keep full date for sorting
+                date: comment.comment_date,
                 author: comment.author,
                 source: comment.source,
                 link: null
             });
         });
 
-        // Add news updates to results
         newsUpdates.forEach(newsItem => {
             allResults.push({
                 type: 'News Update',
                 title: newsItem.title,
                 content: newsItem.summary,
-                date: newsItem.news_date, // Keep full date for sorting
+                date: newsItem.news_date,
                 author: null,
                 source: newsItem.full_article_link,
                 link: newsItem.full_article_link
             });
         });
 
-        // Sort results by date (most recent first)
         allResults.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         if (allResults.length === 0) {
@@ -246,9 +248,8 @@ async function performSearch(searchTerm) {
                     }
                 }
 
-                // Determine which formatting function to use based on item type
-                const formattedDateForDisplay = item.type === 'Developer Comment' 
-                                            ? formatCommentDateTime(item.date) 
+                const formattedDateForDisplay = item.type === 'Developer Comment'
+                                            ? formatCommentDateTime(item.date)
                                             : formatNewsDate(item.date);
 
                 const resultHtml = `
@@ -271,8 +272,7 @@ async function performSearch(searchTerm) {
     }
 }
 
-
-$(document).ready(function() {
+$(document).ready(async function() {
     $('.menu-trigger').on('click', function() {
         $(this).toggleClass('active');
         $('.header-area .nav').toggleClass('active');
@@ -291,7 +291,6 @@ $(document).ready(function() {
         }
     });
 
-    // Roadmap Modal Logic
     const roadmapLink = $('#roadmapLink');
     const roadmapModalOverlay = $('#roadmapModalOverlay');
     const closeRoadmapModalButton = $('#closeRoadmapModal');
@@ -305,7 +304,7 @@ $(document).ready(function() {
 
         closeRoadmapModalButton.on('click', function(event) {
             event.preventDefault();
-            event.stopPropagation(); 
+            event.stopPropagation();
             roadmapModalOverlay.removeClass('active');
             $('body').removeClass('modal-open');
         });
@@ -326,7 +325,6 @@ $(document).ready(function() {
         });
     }
 
-    // Search form submission handler
     const searchInput = $('#searchText');
     const searchResultsDropdown = $('#searchResultsDropdown');
 
@@ -341,7 +339,6 @@ $(document).ready(function() {
         }
     });
 
-    // Hide search results dropdown when clicking outside
     $(document).on('click', function(event) {
         if (!$(event.target).closest('.header-area .search-input').length &&
             !$(event.target).closest('#searchResultsDropdown').length) {
@@ -349,22 +346,20 @@ $(document).ready(function() {
         }
     });
 
-    // Handle pressing Escape key to hide dropdown
     $(document).on('keydown', function(event) {
         if (event.key === 'Escape' && searchResultsDropdown.hasClass('active')) {
             searchResultsDropdown.removeClass('active');
         }
     });
 
-
-    // --- Dynamic Content Loading based on current page ---
     const currentPage = window.location.pathname.split('/').pop();
 
     if (currentPage === 'index.html' || currentPage === '') {
         fetchAndRenderDeveloperComments('recent-comments-home', 6);
         fetchAndRenderNewsUpdates('news-updates-home', 3);
     } else if (currentPage === 'developer-comments.html') {
-        fetchAndRenderDeveloperComments('dev-comments-container');
+        await fetchAndRenderDeveloperComments('dev-comments-container');
+        $('#dev-comments-container').trigger('commentsRendered');
     } else if (currentPage === 'news-updates.html') {
         fetchAndRenderNewsUpdates('news-updates-container');
     }

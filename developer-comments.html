@@ -6,7 +6,7 @@
     <title>Pax Dei Archives - Developer Comments</title>
     <link rel="stylesheet" href="frontend/www/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-        <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
 </head>
 <body>
     <header class="header-area">
@@ -25,6 +25,7 @@
                         <li><a href="index.html">Home</a></li>
                         <li><a href="news-updates.html">News & Updates</a></li>
                         <li><a href="developer-comments.html" class="active">Developer Comments</a></li>
+                        <li><a href="lore.html">Lore</a></li>
                         <li><a href="about.html">About</a></li>
                     </ul>
                     <div class="search-input">
@@ -51,9 +52,33 @@
                                 </div>
                             </div>
                             <div class="col-lg-12">
+                                <div class="filters-section">
+                                    <div class="filter-group">
+                                        <label for="filterAuthor">Author:</label>
+                                        <select id="filterAuthor">
+                                            <option value="">All Authors</option>
+                                            </select>
+                                    </div>
+                                    <div class="filter-group">
+                                        <label for="filterTag">Tag:</label>
+                                        <select id="filterTag">
+                                            <option value="">All Tags</option>
+                                            </select>
+                                    </div>
+                                    <div class="filter-group">
+                                        <label for="filterDate">Date:</label>
+                                        <input type="date" id="filterDate">
+                                    </div>
+                                    <div class="filter-buttons">
+                                        <button id="applyFilters">Apply Filters</button>
+                                        <button id="clearFilters">Clear Filters</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-12">
                                 <div id="dev-comments-container" class="row">
                                     <div class="loading-indicator">Loading developer comments...</div>
-                                </div>
+                                    </div>
                             </div>
                         </div>
                     </div>
@@ -75,5 +100,6 @@
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script type="module" src="frontend/www/js/main.js"></script>
+    <script type="module" src="frontend/www/js/developerCommentsFilters.js"></script>
 </body>
 </html>

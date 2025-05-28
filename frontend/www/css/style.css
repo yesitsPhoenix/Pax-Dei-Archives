@@ -958,3 +958,154 @@ border: none;
 box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 }
+
+/* Custom styles for the filter section */
+.filters-section {
+    display: flex;
+    flex-direction: column; /* Stack filters vertically */
+    gap: 15px; /* Space between filter groups */
+    padding: 20px;
+    background-color: #1a202c; /* Dark background for the filter section */
+    border-radius: 8px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    border: 1px solid #2d3748;
+    color: #e2e8f0; /* Light text color */
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column; /* Label and input/select stacked */
+    gap: 8px;
+}
+
+.filters-section label {
+    font-weight: bold;
+    color: #a0aec0; /* Slightly lighter label color */
+    font-size: 0.95rem;
+}
+
+.filters-section select,
+.filters-section input[type="date"] {
+    width: 100%; /* Full width for inputs/selects */
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid #4a5568; /* Darker border */
+    background-color: #2d3748; /* Darker input background */
+    color: #e2e8f0; /* Light text color */
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.filters-section select:focus,
+.filters-section input[type="date"]:focus {
+    border-color: #63b3ed; /* Highlight on focus */
+    box-shadow: 0 0 0 3px rgba(99, 179, 237, 0.5);
+}
+
+.filters-section option {
+    background-color: #2d3748; /* Darker background for options */
+    color: #e2e8f0;
+}
+
+.filter-buttons {
+    display: flex;
+    justify-content: flex-end; /* Align buttons to the far right */
+    gap: 10px; /* Space between buttons */
+    margin-top: 10px; /* Space above buttons */
+}
+
+.filters-section button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: bold;
+    transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+#applyFilters {
+    background-color: #48bb78; /* Green for apply */
+    color: white;
+}
+
+#applyFilters:hover {
+    background-color: #38a169;
+    transform: translateY(-1px);
+}
+
+#clearFilters {
+    background-color: #e53e3e; /* Red for clear */
+    color: white;
+}
+
+#clearFilters:hover {
+    background-color: #c53030;
+    transform: translateY(-1px);
+}
+
+/* Responsive adjustments */
+@media (min-width: 768px) {
+    .filters-section {
+        flex-direction: row; /* Arrange filters horizontally on larger screens */
+        flex-wrap: wrap; /* Allow wrapping if space is tight */
+        justify-content: space-between; /* Distribute items */
+        align-items: flex-end; /* Align items to the bottom */
+    }
+
+    .filter-group {
+        flex: 1; /* Allow filter groups to take equal space */
+        min-width: 180px; /* Minimum width for each group */
+        max-width: 30%; /* Max width to prevent them from getting too wide */
+    }
+
+    .filter-buttons {
+        flex-basis: 100%; /* Buttons take full width on their own row */
+        justify-content: flex-end; /* Align buttons to the far right */
+        margin-top: 0; /* Reset margin */
+    }
+}
+
+@media (min-width: 1024px) {
+    .filter-group {
+        max-width: 20%; /* Even smaller max width for more columns */
+    }
+}
+
+
+.dev-comment-item {
+    background-color: #2d3748;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    color: #e2e8f0;
+}
+.dev-comment-item h4 {
+    color: #63b3ed; /* Header color */
+    margin-bottom: 10px;
+}
+.dev-comment-item .author-tag {
+    font-size: 0.9rem;
+    color: #a0aec0;
+    margin-bottom: 15px;
+    display: block;
+}
+.dev-comment-item p {
+    line-height: 1.6;
+    margin-bottom: 15px;
+}
+.dev-comment-item .text-button a {
+    background-color: #4c51bf;
+    color: white;
+    padding: 8px 15px;
+    border-radius: 5px;
+    text-decoration: none;
+    transition: background-color 0.2s ease;
+}
+.dev-comment-item .text-button a:hover {
+    background-color: #3b439c;
+}
