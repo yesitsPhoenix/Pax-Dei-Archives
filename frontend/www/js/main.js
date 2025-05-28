@@ -1,5 +1,5 @@
-// This script combines functionalities from main.js and admin.js
-// It handles Supabase interactions, UI rendering, search, and admin-specific tasks.
+// This script combines functionalities from main.js, admin.js, and developerCommentsFilters.js
+// It handles Supabase interactions, UI rendering, search, admin-specific tasks, and comment filtering.
 
 // Supabase Client Initialization
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
@@ -139,7 +139,7 @@ async function fetchAndRenderDeveloperComments(containerId, limit = null, search
                 const commentHtml = `
                     <div class="${containerId === 'recent-comments-home' ? 'col-lg-6 col-md-6' : 'col-lg-12'} mb-4 dev-comment-item"
                          data-author="${comment.author || ''}"
-                         data-tag="${comment.tag || ''}"
+                         data-tag="${comment.tag ? (Array.isArray(comment.tag) ? comment.tag.join(',') : comment.tag) : ''}"
                          data-date="${formattedDateForData}">
                         <div class="${containerId === 'recent-comments-home' ? 'item' : 'comment-full-item'}">
                             <div class="down-content">
@@ -512,6 +512,7 @@ function parseComment(text) {
                 }
             } else {
                 // 3. "HH:MM AM/PM" (assuming "Today at" or just time)
+                // This pattern should be last as it's the most general time-only pattern.
                 const timeOnlyPattern = /^(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
                 timestampMatch = rawContentWithTimestamp.match(timeOnlyPattern);
 
@@ -546,10 +547,10 @@ function parseComment(text) {
         }
 
         // Ensure content is not just an empty string if the timestamp consumed everything
-        if (content === '' && rawContentWithTimestamp.length > (timestampMatch ? timestampMatch[1].length + timestampMatch[2].length : 0)) {
-             // This attempts to recover content if it was incorrectly stripped,
-             // assuming the remaining part of rawContentWithTimestamp is the actual content.
-             // This is a heuristic and might need fine-tuning based on actual input patterns.
+        // This attempts to recover content if it was incorrectly stripped,
+        // assuming the remaining part of rawContentWithTimestamp is the actual content.
+        // This is a heuristic and might need fine-tuning based on actual input patterns.
+        if (content === '' && timestampMatch && rawContentWithTimestamp.length > timestampMatch[0].length) {
              const potentialContentAfterTimestamp = rawContentWithTimestamp.substring(timestampMatch[0].length).trim();
              if (potentialContentAfterTimestamp) {
                  content = potentialContentAfterTimestamp;
@@ -663,16 +664,132 @@ $(document).ready(async function() {
         }
     });
 
-    // --- Page-specific Content Loading (from main.js) ---
+    // --- Page-specific Content Loading ---
     const currentPage = window.location.pathname.split('/').pop();
 
     if (currentPage === 'index.html' || currentPage === '') {
         fetchAndRenderDeveloperComments('recent-comments-home', 6);
         fetchAndRenderNewsUpdates('news-updates-home', 3);
     } else if (currentPage === 'developer-comments.html') {
+        const devCommentsContainer = $('#dev-comments-container');
+        const filterAuthorSelect = $('#filterAuthor');
+        const filterTagSelect = $('#filterTag');
+        const filterDateInput = $('#filterDate');
+        const applyFiltersButton = $('#applyFilters');
+        const clearFiltersButton = $('#clearFilters');
+
+        // Function to populate tags from Supabase for filtering
+        async function populateTagsFromSupabase() {
+            filterTagSelect.find('option:not(:first)').remove(); // Clear existing options except the first
+
+            try {
+                const { data, error } = await supabase
+                    .from('tag_list')
+                    .select('tag_name');
+
+                if (error) {
+                    console.error('Error fetching tags from Supabase for filters:', error.message);
+                    return;
+                }
+
+                data.forEach(tag => {
+                    filterTagSelect.append(`<option value="${tag.tag_name}">${tag.tag_name}</option>`);
+                });
+
+            } catch (e) {
+                console.error('Unexpected error during Supabase tag fetch for filters:', e);
+            }
+        }
+
+        // Function to populate authors from currently rendered comments
+        function populateAuthorsFromComments() {
+            filterAuthorSelect.find('option:not(:first)').remove(); // Clear existing options except the first
+            const authors = new Set();
+
+            devCommentsContainer.children('.dev-comment-item').each(function() {
+                const author = $(this).data('author');
+                if (author) authors.add(author);
+            });
+
+            Array.from(authors).sort().forEach(author => {
+                filterAuthorSelect.append(`<option value="${author}">${author}</option>`);
+            });
+        }
+
+        // Function to apply filters to comments
+        function applyFilters() {
+            const selectedAuthor = filterAuthorSelect.val();
+            const selectedTag = filterTagSelect.val();
+            const selectedDate = filterDateInput.val();
+
+            let commentsFound = false;
+
+            devCommentsContainer.children('.dev-comment-item').each(function() {
+                const commentAuthor = $(this).data('author');
+                // For tags, if it's an array in data-tag, it will be a comma-separated string
+                const commentTags = $(this).data('tag') ? $(this).data('tag').split(',') : [];
+                const commentDate = $(this).data('date'); // YYYY-MM-DD format
+
+                const matchesAuthor = selectedAuthor === "" || commentAuthor === selectedAuthor;
+                // Check if the selectedTag is empty or if any of the commentTags include the selectedTag
+                const matchesTag = selectedTag === "" || commentTags.includes(selectedTag);
+                const matchesDate = selectedDate === "" || commentDate === selectedDate;
+
+                if (matchesAuthor && matchesTag && matchesDate) {
+                    $(this).show();
+                    commentsFound = true;
+                } else {
+                    $(this).hide();
+                }
+            });
+
+            const noCommentsMessage = devCommentsContainer.find('.no-comments-found');
+            if (!commentsFound) {
+                if (noCommentsMessage.length === 0) {
+                    devCommentsContainer.append('<div class="col-lg-12 no-comments-found"><p class="text-center text-white-50">No comments found matching your filters.</p></div>');
+                } else {
+                    noCommentsMessage.show();
+                }
+            } else {
+                noCommentsMessage.hide();
+            }
+        }
+
+        // Function to clear all filters
+        function clearFilters() {
+            filterAuthorSelect.val('');
+            filterTagSelect.val('');
+            filterDateInput.val('');
+
+            devCommentsContainer.children('.dev-comment-item').show(); // Show all comments
+
+            devCommentsContainer.find('.no-comments-found').hide(); // Hide no comments message
+        }
+
+        // Fetch and render comments first
         await fetchAndRenderDeveloperComments('dev-comments-container');
-        // Trigger a custom event after comments are rendered, if needed by other scripts
-        $('#dev-comments-container').trigger('commentsRendered');
+
+        // When comments are rendered (e.g., loaded from DB), populate authors from them
+        // This event is triggered after fetchAndRenderDeveloperComments completes
+        devCommentsContainer.on('commentsRendered', function() {
+            populateAuthorsFromComments();
+            // Apply filters immediately after rendering and populating authors/tags
+            applyFilters();
+        });
+
+        // Initial load: Fetch tags from Supabase directly for the filter dropdown
+        populateTagsFromSupabase();
+
+        // Populate authors if comments are already in DOM on initial load (less common for dynamic content)
+        // This might be redundant if 'commentsRendered' is always triggered, but good for robustness.
+        if (devCommentsContainer.children('.dev-comment-item').length > 0) {
+            populateAuthorsFromComments();
+        }
+
+        // Attach event listeners for filter buttons
+        applyFiltersButton.on('click', applyFilters);
+        clearFiltersButton.on('click', clearFilters);
+
     } else if (currentPage === 'news-updates.html') {
         fetchAndRenderNewsUpdates('news-updates-container');
     }
@@ -698,6 +815,9 @@ $(document).ready(async function() {
         const timestampField = document.getElementById('timestamp');
         const commentContentField = document.getElementById('commentContent');
         const editButton = document.getElementById('editButton');
+        const tagSelect = document.getElementById('tagSelect'); // Tag select dropdown
+        const newTagInput = document.getElementById('newTagInput'); // New tag input field
+        const addNewTagButton = document.getElementById('addNewTagButton'); // Add new tag button
 
         // News Update Form elements
         const addNewsUpdateForm = document.getElementById('addNewsUpdateForm');
@@ -722,6 +842,7 @@ $(document).ready(async function() {
                     if (loginHeading) loginHeading.style.display = 'none';
                     if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'block';
                     fetchDashboardStats(); // Fetch stats only if authorized
+                    populateTagSelect(); // Populate tags for the admin form
                 } else {
                     if (loginFormContainer) loginFormContainer.style.display = 'block';
                     if (loginHeading) loginHeading.style.display = 'none';
@@ -736,6 +857,35 @@ $(document).ready(async function() {
                 if (loginHeading) loginHeading.style.display = 'block';
                 if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none';
                 if (loginError) loginError.style.display = 'none';
+            }
+        }
+
+        /**
+         * Populates the tag selection dropdown in the admin form from Supabase.
+         */
+        async function populateTagSelect() {
+            if (!tagSelect) return;
+            tagSelect.innerHTML = '<option value="">Select existing tags (Ctrl/Cmd+Click to select multiple)</option>'; // Clear and add default option
+
+            try {
+                const { data, error } = await supabase
+                    .from('tag_list')
+                    .select('tag_name')
+                    .order('tag_name', { ascending: true }); // Order alphabetically
+
+                if (error) {
+                    console.error('Error fetching tags for admin form:', error.message);
+                    return;
+                }
+
+                data.forEach(tag => {
+                    const option = document.createElement('option');
+                    option.value = tag.tag_name;
+                    option.textContent = tag.tag_name;
+                    tagSelect.appendChild(option);
+                });
+            } catch (e) {
+                console.error('Unexpected error populating tags for admin form:', e);
             }
         }
 
@@ -808,11 +958,46 @@ $(document).ready(async function() {
             });
         }
 
+        // Add New Tag Button Event Listener
+        if (addNewTagButton && newTagInput && tagSelect) {
+            addNewTagButton.addEventListener('click', async () => {
+                const newTag = newTagInput.value.trim();
+                if (newTag) {
+                    try {
+                        const { data, error } = await supabase
+                            .from('tag_list')
+                            .insert([{ tag_name: newTag }]);
+
+                        if (error && error.code !== '23505') { // 23505 is unique violation (tag already exists)
+                            console.error('Error adding new tag:', error.message);
+                            showFormMessage(formMessage, 'Error adding tag: ' + error.message, 'error');
+                        } else {
+                            if (error && error.code === '23505') {
+                                showFormMessage(formMessage, `Tag '${newTag}' already exists.`, 'warning');
+                            } else {
+                                showFormMessage(formMessage, `Tag '${newTag}' added successfully!`, 'success');
+                            }
+                            newTagInput.value = ''; // Clear input field
+                            populateTagSelect(); // Refresh the tag dropdown
+                        }
+                    } catch (e) {
+                        console.error('Unexpected error adding new tag:', e);
+                        showFormMessage(formMessage, 'An unexpected error occurred while adding tag.', 'error');
+                    }
+                } else {
+                    showFormMessage(formMessage, 'Please enter a tag name.', 'warning');
+                }
+            });
+        }
+
         // Dev Comment Form Submission
         if (devCommentForm && commentInput && parseButton && parseError) {
             devCommentForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
                 showFormMessage(formMessage, '', ''); // Clear messages
+
+                // Get selected tags from the multiple select dropdown
+                const selectedTags = Array.from(tagSelect.selectedOptions).map(option => option.value);
 
                 const newComment = {
                     author: authorField.value,
@@ -821,7 +1006,8 @@ $(document).ready(async function() {
                     comment_date: new Date(timestampField.value).toISOString(),
                     content: commentContentField.value,
                     // Generate a title from the content, truncated to 45 characters
-                    title: commentContentField.value.substring(0, 45) + (commentContentField.value.length > 45 ? '...' : '')
+                    title: commentContentField.value.substring(0, 45) + (commentContentField.value.length > 45 ? '...' : ''),
+                    tag: selectedTags.length > 0 ? selectedTags : null // Store selected tags as an array
                 };
 
                 const { data, error } = await supabase
@@ -840,13 +1026,13 @@ $(document).ready(async function() {
                     commentInput.style.display = 'block';
                     parseButton.style.display = 'block';
                     parseError.style.display = 'none';
+                    tagSelect.value = ''; // Clear selected tags
                     fetchDashboardStats(); // Refresh dashboard stats after adding comment
                 }
             });
         }
 
         // News Update Form Submission
-        // The original code was cut off here. Assuming similar logic for news updates.
         if (addNewsUpdateForm) {
             addNewsUpdateForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
