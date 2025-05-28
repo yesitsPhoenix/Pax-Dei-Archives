@@ -122,20 +122,18 @@ function parseComment(text) {
 
     try {
         const author = match[1].trim();
-        let fullContentAndPotentialTimestamp = match[2].trim(); // This should NOT contain the URL
-        const url = match[3] ? match[3].trim() : ''; // This correctly captures the URL
+        let fullContentAndPotentialTimestamp = match[2].trim();
+        const url = match[3] ? match[3].trim() : '';
         const finalSource = url;
 
-        let parsedDate = new Date(); // Default to current date/time
-        let content = fullContentAndPotentialTimestamp; // Will be refined if timestamp found
+        let parsedDate = new Date();
+        let content = fullContentAndPotentialTimestamp;
 
-        // Split the content into lines to check the first line for a timestamp
-        // Filtering Boolean removes any empty lines that might result from split (e.g., if input ends with \n)
         const lines = fullContentAndPotentialTimestamp.split('\n').map(line => line.trim()).filter(Boolean);
         let firstLine = lines.length > 0 ? lines[0] : '';
         let timestampMatchFound = false;
 
-        let timestampMatch; // Declare once for all blocks
+        let timestampMatch;
 
         // 1. Full Date and Time (e.g., 05/28/2025 1:00 PM) - NO COMMA
         // The `\s+` ensures at least one space between date and time.
@@ -393,8 +391,8 @@ $(document).ready(async function() {
 
     supabase.auth.onAuthStateChange((event, session) => {
         // Only trigger checkAuth if the event is a significant change, not just focus
-        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') { // INITIAL_SESSION is handled by initial checkAuth() call
-            initialAuthCheckComplete = false; // Reset flag to allow repopulation if session changes
+        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+            initialAuthCheckComplete = false;
             checkAuth();
         }
     });
