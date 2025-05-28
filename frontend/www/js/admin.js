@@ -167,85 +167,114 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function parseComment(text) {
-    // New regex to match: Author — Timestamp Content [Optional URL at end]
-    // It captures: (Author) — (Timestamp) (Content before URL) (Optional URL)
-    const regex = /^(.*?)—\s*(.*?)\s*([\s\S]*?)(https?:\/\/[^\s]+)?$/;
+    const regex = /^(.*?)—\s*([\s\S]*?)(https?:\/\/[^\s]+)?$/;
     const match = text.match(regex);
 
     if (match) {
         try {
             const author = match[1].trim();
-            const timestampStr = match[2].trim();
-            let contentAndOptionalUrl = match[3] ? match[3].trim() : ''; // Get content and potential URL
-            const url = match[4] ? match[4].trim() : ''; // Directly capture the URL if it exists
+            let rawContentWithTimestamp = match[2].trim();
+            const url = match[3] ? match[3].trim() : '';
 
-            let content = contentAndOptionalUrl;
-            // If a URL was captured by the regex, ensure it's removed from the content string if it was part of it
-            if (url && content.endsWith(url)) {
-                content = content.substring(0, content.length - url.length).trim();
-            }
-            
-            // The 'source' property will now directly be the URL if present, otherwise empty
-            let finalSource = url;
+            const finalSource = url;
 
-            let parsedDate = new Date(); // Initialize with current date
-            let timePart = timestampStr;
 
-            // Handle "Yesterday at" and "Today at"
-            if (timestampStr.toLowerCase().startsWith('yesterday at ')) {
-                parsedDate.setDate(parsedDate.getDate() - 1);
-                timePart = timestampStr.substring('yesterday at '.length);
-            } else if (timestampStr.toLowerCase().startsWith('today at ')) {
-                timePart = timestampStr.substring('today at '.length);
-            } else {
-                // Handle full dates like "05/26/2025, 4:30 PM" or "5/26/25, 11:05 AM"
-                const dateMatch = timestampStr.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})/);
-                if (dateMatch) {
-                    // Create date from "MM/DD/YYYY" or "MM/DD/YY" format
-                    let dateParts = dateMatch[1].split('/');
-                    let year = parseInt(dateParts[2]);
-                    // Handle 2-digit year (e.g., 25 for 2025)
-                    if (year < 100) {
-                        year += (year > (parsedDate.getFullYear() % 100)) ? 1900 : 2000;
+            const timestampPattern = /^(\d{1,2}\/\d{1,2}\/\d{2,4}),\s*(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
+            let timestampMatch = rawContentWithTimestamp.match(timestampPattern);
+
+            let timestampStr = '';
+            let content = '';
+            let parsedDate = new Date();
+
+            if (timestampMatch) {
+                const datePart = timestampMatch[1]; // e.g., "5/26/25"
+                const timePart = timestampMatch[2]; // e.g., "11:05 AM"
+                content = timestampMatch[3].trim(); // Rest is the actual content
+
+                // Parse the date part
+                let [month, day, year] = datePart.split('/').map(Number);
+
+                if (year < 100) { // Handle 2-digit years
+                    year += (year > 50) ? 1900 : 2000;
+                }
+                parsedDate.setFullYear(year, month - 1, day); // Month is 0-indexed
+
+                // Parse the time part
+                const timeRegex = /(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)/i;
+                const timeMatchResult = timePart.match(timeRegex);
+
+                if (timeMatchResult) {
+                    let hours = parseInt(timeMatchResult[1]);
+                    const minutes = parseInt(timeMatchResult[2]);
+                    const ampm = timeMatchResult[3].toLowerCase();
+
+                    if (ampm === 'pm' && hours < 12) {
+                        hours += 12;
                     }
-                    parsedDate = new Date(year, parseInt(dateParts[0]) - 1, parseInt(dateParts[1]));
-                    timePart = timestampStr.replace(dateMatch[1], '').replace(/^,\s*/, '').trim();
+                    if (ampm === 'am' && hours === 12) {
+                        hours = 0;
+                    }
+                    parsedDate.setHours(hours, minutes, 0, 0);
+                } else {
+                    // Default to start of day if time parsing fails
+                    parsedDate.setHours(0, 0, 0, 0);
                 }
-            }
-            
-            // Now, parse the time part (e.g., "4:30 PM" or "11:05 AM")
-            const timeMatch = timePart.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-            if (timeMatch) {
-                let hours = parseInt(timeMatch[1]);
-                const minutes = parseInt(timeMatch[2]);
-                const ampm = timeMatch[3].toLowerCase();
-
-                if (ampm === 'pm' && hours < 12) {
-                    hours += 12;
-                }
-                if (ampm === 'am' && hours === 12) {
-                    hours = 0;
-                }
-                
-                parsedDate.setHours(hours, minutes, 0, 0);
             } else {
-                 // If no time part, try to set to a default for the given date, or flag an error
-                 // For now, let's assume valid time part or set to 00:00
-                 parsedDate.setHours(0, 0, 0, 0); // Default to start of day if time isn't found
+                // Handle "Yesterday at" and "Today at" as fallback if full date not found
+                if (rawContentWithTimestamp.toLowerCase().startsWith('yesterday at ')) {
+                    parsedDate.setDate(parsedDate.getDate() - 1);
+                    const timePart = rawContentWithTimestamp.substring('yesterday at '.length).trim();
+                    const timeRegex = /(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)/i;
+                    const timeMatchResult = timePart.match(timeRegex);
+                    if (timeMatchResult) {
+                        let hours = parseInt(timeMatchResult[1]);
+                        const minutes = parseInt(timeMatchResult[2]);
+                        const ampm = timeMatchResult[3].toLowerCase();
+                        if (ampm === 'pm' && hours < 12) { hours += 12; }
+                        if (ampm === 'am' && hours === 12) { hours = 0; }
+                        parsedDate.setHours(hours, minutes, 0, 0);
+                        content = ''; // No content if only 'Yesterday at X' is matched
+                    } else {
+                        parsedDate.setHours(0,0,0,0);
+                        content = rawContentWithTimestamp; // Treat whole thing as content if no time found
+                    }
+                } else if (rawContentWithTimestamp.toLowerCase().startsWith('today at ')) {
+                    const timePart = rawContentWithTimestamp.substring('today at '.length).trim();
+                    const timeRegex = /(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)/i;
+                    const timeMatchResult = timePart.match(timeRegex);
+                    if (timeMatchResult) {
+                        let hours = parseInt(timeMatchResult[1]);
+                        const minutes = parseInt(timeMatchResult[2]);
+                        const ampm = timeMatchResult[3].toLowerCase();
+                        if (ampm === 'pm' && hours < 12) { hours += 12; }
+                        if (ampm === 'am' && hours === 12) { hours = 0; }
+                        parsedDate.setHours(hours, minutes, 0, 0);
+                        content = ''; // No content if only 'Today at X' is matched
+                    } else {
+                        parsedDate.setHours(0,0,0,0);
+                        content = rawContentWithTimestamp; // Treat whole thing as content if no time found
+                    }
+                } else {
+                     // If no specific timestamp format matched, assume the whole rawContentWithTimestamp is content
+                    content = rawContentWithTimestamp;
+                    // Default timestamp to current date/time or throw error depending on strictness
+                    parsedDate = new Date(); // Or set to a default if parsing failed
+                    console.warn("Timestamp format not fully recognized at the beginning of the string:", rawContentWithTimestamp);
+                }
             }
 
-            // Format for the datetime-local input field (YYYY-MM-DDTHH:MM)
-            const year = parsedDate.getFullYear();
-            const month = (parsedDate.getMonth() + 1).toString().padStart(2, '0');
-            const day = parsedDate.getDate().toString().padStart(2, '0');
-            const hours = parsedDate.getHours().toString().padStart(2, '0');
-            const minutes = parsedDate.getMinutes().toString().padStart(2, '0');
-            const formattedTimestamp = `${year}-${month}-${day}T${hours}:${minutes}`;
+            const yearFormatted = parsedDate.getFullYear();
+            const monthFormatted = (parsedDate.getMonth() + 1).toString().padStart(2, '0');
+            const dayFormatted = parsedDate.getDate().toString().padStart(2, '0');
+            const hoursFormatted = parsedDate.getHours().toString().padStart(2, '0');
+            const minutesFormatted = parsedDate.getMinutes().toString().padStart(2, '0');
+            
+            const formattedTimestamp = `${yearFormatted}-${monthFormatted}-${dayFormatted}T${hoursFormatted}:${minutesFormatted}`;
 
             return { author, source: finalSource, timestamp: formattedTimestamp, content };
 
         } catch (e) {
-            console.error("Timestamp parsing error:", e);
+            console.error("Error during timestamp parsing:", e);
             return null;
         }
     }

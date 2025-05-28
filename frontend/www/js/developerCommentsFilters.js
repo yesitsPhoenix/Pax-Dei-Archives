@@ -1,4 +1,12 @@
-// frontend/www/js/developerCommentsFilters.js
+
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+const SUPABASE_URL = 'https://jrjgbnopmfovxwvtbivh.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impyamdibm9wbWZvdnh3dnRiaXZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDgxOTg1MjYsImV4cCI6MjAyMzc3NDUyNn0.za7oUzFhNmBdtcCRBmxwW5FSTFRWVAY6_rsRwlr3iqY';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+
 
 $(document).ready(function() {
     const devCommentsContainer = $('#dev-comments-container');
@@ -8,26 +16,40 @@ $(document).ready(function() {
     const applyFiltersButton = $('#applyFilters');
     const clearFiltersButton = $('#clearFilters');
 
-    function populateFilters() {
-        filterAuthorSelect.find('option:not(:first)').remove();
+    // Function to populate tags from Supabase
+    async function populateTagsFromSupabase() {
         filterTagSelect.find('option:not(:first)').remove();
 
+        try {
+            const { data, error } = await supabase
+                .from('tag_list')
+                .select('tag_name');
+
+            if (error) {
+                console.error('Error fetching tags from Supabase:', error.message);
+                return;
+            }
+
+            data.forEach(tag => {
+                filterTagSelect.append(`<option value="${tag.tag_name}">${tag.tag_name}</option>`);
+            });
+
+        } catch (e) {
+            console.error('Unexpected error during Supabase tag fetch:', e);
+        }
+    }
+
+    function populateAuthorsFromComments() {
+        filterAuthorSelect.find('option:not(:first)').remove();
         const authors = new Set();
-        const tags = new Set();
 
         devCommentsContainer.children('.dev-comment-item').each(function() {
             const author = $(this).data('author');
-            const tag = $(this).data('tag');
             if (author) authors.add(author);
-            if (tag) tags.add(tag);
         });
 
         Array.from(authors).sort().forEach(author => {
             filterAuthorSelect.append(`<option value="${author}">${author}</option>`);
-        });
-
-        Array.from(tags).sort().forEach(tag => {
-            filterTagSelect.append(`<option value="${tag}">${tag}</option>`);
         });
     }
 
@@ -77,14 +99,18 @@ $(document).ready(function() {
         devCommentsContainer.find('.no-comments-found').hide();
     }
 
+    // When comments are rendered (e.g., loaded from DB), populate authors from them
     devCommentsContainer.on('commentsRendered', function() {
-        populateFilters();
+        populateAuthorsFromComments();
         applyFilters();
     });
 
+    // Initial load: Fetch tags from Supabase directly
+    populateTagsFromSupabase();
+
+    // Populate authors if comments are already in DOM on initial load (less common for dynamic content)
     if (devCommentsContainer.children('.dev-comment-item').length > 0) {
-        populateFilters();
-        applyFilters();
+        populateAuthorsFromComments();
     }
 
     applyFiltersButton.on('click', applyFilters);
