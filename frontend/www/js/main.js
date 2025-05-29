@@ -54,7 +54,7 @@ async function fetchAndRenderDeveloperComments(containerId, limit = null, search
       .select('*');
 
     if (searchTerm) {
-      query = query.or(`title.ilike.%${searchTerm}%,content.ilike.%${searchTerm}%,author.ilike.%${searchTerm}%`);
+      query = query.or(`content.ilike.%${searchTerm}%,author.ilike.%${searchTerm}%`);
     }
 
     query = query.order('comment_date', { ascending: false });
@@ -86,10 +86,10 @@ async function fetchAndRenderDeveloperComments(containerId, limit = null, search
 
         if (comment.source && urlPattern.test(comment.source)) {
           sourceDisplay = `
-                        <a href="${comment.source}" target="_blank" rel="noopener noreferrer" class="source-link-button">
-                            <i class="fas fa-external-link-alt"></i> Source
-                        </a>
-                    `;
+                            <a href="${comment.source}" target="_blank" rel="noopener noreferrer" class="source-link-button">
+                                <i class="fas fa-external-link-alt"></i> Source
+                            </a>
+                        `;
         } else if (comment.source) {
           sourceDisplay = comment.source;
         }
@@ -110,11 +110,11 @@ async function fetchAndRenderDeveloperComments(containerId, limit = null, search
         const authorColor = authorRoleColors[authorType] || authorRoleColors['default'];
 
         const commentHtml = `
-                    <div class="${containerId === 'recent-comments-home' ? 'col-lg-6 col-md-6 item' : 'col-lg-12 mb-4 dev-comment-item'}"
-                        data-author="${comment.author || ''}"
-                        data-tag="${comment.tag ? (Array.isArray(comment.tag) ? comment.tag.join(',') : comment.tag) : ''}"
-                        data-date="${formattedDateForData}">
-                        <div class="${containerId === 'recent-comments-home' ? 'item' : ''}"> <div class="down-content">
+                        <div class="${containerId === 'recent-comments-home' ? 'col-lg-6 col-md-6 item' : 'col-lg-12 mb-4 dev-comment-item'}"
+                            data-author="${comment.author || ''}"
+                            data-tag="${comment.tag ? (Array.isArray(comment.tag) ? comment.tag.join(',') : comment.tag) : ''}"
+                            data-date="${formattedDateForData}">
+                            <div class="${containerId === 'recent-comments-home' ? 'item' : ''}"> <div class="down-content">
                                 <h6>
                                     <span class="comment-author-name" style="color: ${authorColor};">${comment.author}</span> - 
                                     <span class="comment-date">${formatCommentDateTime(comment.comment_date)}</span>
@@ -122,7 +122,6 @@ async function fetchAndRenderDeveloperComments(containerId, limit = null, search
                                 <p class="comment-content-text">${comment.content}</p>
                                 ${sourceDisplay ? `<span class="comment-source">${sourceDisplay}</span>` : ''} </div>
                         </div>
-                    </div>
                 `;
         container.insertAdjacentHTML('beforeend', commentHtml);
       });
@@ -179,14 +178,14 @@ async function fetchAndRenderNewsUpdates(containerId, limit = null, searchTerm =
       container.innerHTML = '';
       data.forEach(newsItem => {
         const newsHtml = `
-                    <div class="${containerId === 'news-updates-home' ? 'col-lg-4 col-md-6' : 'col-lg-12'}">
-                        <div class="news-item">
-                            <h6>${newsItem.title}</h6>
-                            <span>${formatNewsDate(newsItem.news_date)}</span>
-                            <p>${newsItem.summary}</p>
-                            ${newsItem.full_article_link ? `<div class="main-button"><a href="${newsItem.full_article_link}" target="_blank">Read More</a></div>` : ''}
+                        <div class="${containerId === 'news-updates-home' ? 'col-lg-4 col-md-6' : 'col-lg-12'}">
+                            <div class="news-item">
+                                <h6>${newsItem.title}</h6>
+                                <span>${formatNewsDate(newsItem.news_date)}</span>
+                                <p>${newsItem.summary}</p>
+                                ${newsItem.full_article_link ? `<div class="main-button"><a href="${newsItem.full_article_link}" target="_blank">Read More</a></div>` : ''}
+                            </div>
                         </div>
-                    </div>
                 `;
         container.insertAdjacentHTML('beforeend', newsHtml);
       });
@@ -218,7 +217,7 @@ async function performSearch(searchTerm) {
     comments.forEach(comment => {
       allResults.push({
         type: 'Developer Comment',
-        title: comment.title,
+        title: null,
         content: comment.content,
         date: comment.comment_date,
         author: comment.author,
@@ -245,14 +244,18 @@ async function performSearch(searchTerm) {
         type: 'Lore Post',
         title: post.title,
         content: post.content,
-        date: post.created_at,
+        date: null,
         author: null,
         source: null,
         link: loreItemLink
       });
     });
 
-    allResults.sort((a, b) => new Date(b.date) - new Date(a.date));
+    allResults.sort((a, b) => {
+      const dateA = a.date ? new Date(a.date) : new Date(0);
+      const dateB = b.date ? new Date(b.date) : new Date(0);
+      return dateB - dateA;
+    });
 
     if (allResults.length === 0) {
       searchResultsDropdown.html('<div class="no-results-message">No results found for your search.</div>');
@@ -264,18 +267,18 @@ async function performSearch(searchTerm) {
           const urlPattern = /^(https?:\/\/[^\s]+)$/i;
           if (urlPattern.test(item.source)) {
             sourceDisplay = `
-                            <a href="${item.source}" target="_blank" rel="noopener noreferrer" class="source-link-button">
-                                <i class="fas fa-external-link-alt"></i> Source
-                            </a>
-                        `;
+                                <a href="${item.source}" target="_blank" rel="noopener noreferrer" class="source-link-button">
+                                    <i class="fas fa-external-link-alt"></i> Source
+                                </a>
+                            `;
           } else {
             sourceDisplay = `<span class="comment-source">Source: ${item.source}</span>`;
           }
         }
 
-        const formattedDateForDisplay = item.type === 'Developer Comment' ?
-          formatCommentDateTime(item.date) :
-          (item.type === 'News Update' ? formatNewsDate(item.date) : formatCommentDateTime(item.date));
+        const formattedDateForDisplay = item.date ? 
+          (item.type === 'Developer Comment' ? formatCommentDateTime(item.date) :
+          (item.type === 'News Update' ? formatNewsDate(item.date) : formatCommentDateTime(item.date))) : '';
 
         const mainLink = item.link ? item.link : '#';
 
@@ -296,14 +299,18 @@ async function performSearch(searchTerm) {
           displayedContent = snippet;
         }
 
+        const titleDisplay = item.title ? item.title : '';
+        const authorPrefix = item.type === 'Developer Comment' && item.author ? item.author + ' - ' : '';
+        const dateSuffix = formattedDateForDisplay ? `<span class="date">${formattedDateForDisplay}</span>` : '';
+
         const resultHtml = `
-                    <div class="search-result-item ${item.type.toLowerCase().replace(/\s/g, '-')}-item">
-                        <div class="down-content">
-                            ${item.link ? `<h6><a href="${mainLink}">${item.type === 'Developer Comment' ? item.author + ' - ' : ''}${item.title} <span class="date">${formattedDateForDisplay}</span></a></h6>` : `<h6>${item.type === 'Developer Comment' ? item.author + ' - ' : ''}${item.title} <span class="date">${formattedDateForDisplay}</span></h6>`}
-                            <p>${displayedContent}</p> ${sourceDisplay ? sourceDisplay : ''}
-                            ${item.link && (item.type === 'News Update' || item.type === 'Lore Post') ? `<div class="main-button"><a href="${mainLink}" ${item.type === 'News Update' ? 'target="_blank"' : ''}>Read More</a></div>` : ''}
+                        <div class="search-result-item ${item.type.toLowerCase().replace(/\s/g, '-')}-item">
+                            <div class="down-content">
+                                ${item.link ? `<h6><a href="${mainLink}">${authorPrefix}${titleDisplay} ${dateSuffix}</a></h6>` : `<h6>${authorPrefix}${titleDisplay} ${dateSuffix}</h6>`}
+                                <p>${displayedContent}</p> ${sourceDisplay ? sourceDisplay : ''}
+                                ${item.link && (item.type === 'News Update' || item.type === 'Lore Post') ? `<div class="main-button"><a href="${mainLink}" ${item.type === 'News Update' ? 'target="_blank"' : ''}>Read More</a></div>` : ''}
+                            </div>
                         </div>
-                    </div>
                 `;
         searchResultsDropdown.append(resultHtml);
       });
@@ -334,11 +341,9 @@ $(document).ready(async function() {
     }
   });
 
-
     const authorTypeDropdown = document.getElementById('author_type');
     const formMessage = document.getElementById('formMessage');
 
-    // 1. Populate the author_type dropdown
     if (authorTypeDropdown) {
         const defaultOption = document.createElement('option');
         defaultOption.value = ""; 
@@ -356,7 +361,6 @@ $(document).ready(async function() {
         }
     }
 
-    // 2. Handle form submission for devCommentForm
     const devCommentForm = document.getElementById('devCommentForm');
     if (devCommentForm) {
         devCommentForm.addEventListener('submit', async function(event) {
@@ -367,7 +371,6 @@ $(document).ready(async function() {
                 formMessage.className = '';
             }
 
-            // Get form data
             const author = document.getElementById('author').value;
             const source = document.getElementById('source').value;
             const timestamp = document.getElementById('timestamp').value;
@@ -375,20 +378,17 @@ $(document).ready(async function() {
             const tag = document.getElementById('tagSelect').value; 
             const author_type = authorTypeDropdown ? authorTypeDropdown.value : '';
 
-            // Basic validation for author_type
             if (!author_type) {
                 if (formMessage) {
                     formMessage.textContent = 'Please select an Author Type.';
                     formMessage.className = 'error-message';
                 }
-                // Highlight the dropdown or set focus
                 if (authorTypeDropdown) {
                     authorTypeDropdown.focus();
                 }
                 return;
             }
             
-            // Construct the data object for Supabase
             const commentData = {
                 author: author,
                 source: source,
@@ -483,7 +483,6 @@ $(document).ready(async function() {
   const searchResultsDropdown = $('#searchResultsDropdown');
   const searchForm = $('#search');
 
-  // Universal search input listener for live search
   if (searchInput.length) {
     searchInput.on('input', function() {
       const searchTerm = $(this).val().trim();
@@ -495,7 +494,6 @@ $(document).ready(async function() {
     });
   }
 
-  // Universal form submission listener for the search form
   if (searchForm.length) {
     searchForm.on('submit', function(event) {
       event.preventDefault();
@@ -681,14 +679,14 @@ async function fetchAndRenderLorePosts(containerId, limit = null, searchTerm = n
       container.innerHTML = '';
       data.forEach(post => {
         const postHtml = `
-                    <div class="col-lg-12 mb-4 lore-post-item">
-                        <div class="lore-post-content">
-                            <h4>${post.title}</h4>
-                            <p>${post.content}</p>
-                            ${post.tags ? `<p><strong>Tags:</strong> ${Array.isArray(post.tags) ? post.tags.join(', ') : post.tags}</p>` : ''}
-                            <span>Published: ${formatCommentDateTime(post.created_at)}</span>
+                        <div class="col-lg-12 mb-4 lore-post-item">
+                            <div class="lore-post-content">
+                                <h4>${post.title}</h4>
+                                <p>${post.content}</p>
+                                ${post.tags ? `<p><strong>Tags:</strong> ${Array.isArray(post.tags) ? post.tags.join(', ') : post.tags}</p>` : ''}
+                                <span>Published: ${formatCommentDateTime(post.created_at)}</span>
+                            </div>
                         </div>
-                    </div>
                 `;
         container.insertAdjacentHTML('beforeend', postHtml);
       });
