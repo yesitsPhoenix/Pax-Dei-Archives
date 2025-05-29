@@ -1,10 +1,10 @@
 import { supabase } from './supabaseClient.js';
+import { authorRoleColors } from './utils.js';
 
 let initialAuthCheckComplete = false;
-
 let dashboardStatsCache = null;
 let lastStatsFetchTime = 0;
-const STATS_CACHE_DURATION = 60 * 5000; 
+const STATS_CACHE_DURATION = 60 * 5000;
 
 
 function showFormMessage(messageElement, message, type) {
@@ -26,6 +26,125 @@ function showFormMessage(messageElement, message, type) {
     }
 }
 
+const authorTypeDropdown = document.getElementById('author_type');
+const formMessage = document.getElementById('formMessage');
+
+if (authorTypeDropdown) {
+    const defaultOption = document.createElement('option');
+    defaultOption.value = "";
+    defaultOption.textContent = "Select Author Type";
+    defaultOption.selected = true;
+    authorTypeDropdown.appendChild(defaultOption);
+
+    for (const type in authorRoleColors) {
+        if (authorRoleColors.hasOwnProperty(type) && type !== 'default') {
+            const option = document.createElement('option');
+            option.value = type;
+            option.textContent = type;
+            authorTypeDropdown.appendChild(option);
+        }
+    }
+}
+
+const devCommentForm = document.getElementById('devCommentForm');
+const tagSelect = document.getElementById('tagSelect');
+
+if (devCommentForm) {
+    devCommentForm.addEventListener('submit', async function(event) {
+        event.preventDefault();
+
+        if (formMessage) {
+            formMessage.textContent = '';
+            formMessage.className = '';
+        }
+
+        const author = document.getElementById('author').value;
+        const source = document.getElementById('source').value;
+        const timestamp = document.getElementById('timestamp').value;
+        const content = document.getElementById('commentContent').value;
+        const tag = document.getElementById('tagSelect').value;
+        const author_type = authorTypeDropdown ? authorTypeDropdown.value : '';
+
+        let utcTimestamp = null;
+        if (timestamp) {
+            const localDate = new Date(timestamp);
+            utcTimestamp = localDate.toISOString();
+        }
+
+        const submitButton = devCommentForm.querySelector('button[type="submit"]');
+        if (submitButton) {
+            submitButton.disabled = true;
+            submitButton.textContent = 'Submitting...';
+        }
+
+        if (!author_type) {
+            showFormMessage(formMessage, 'Please select an Author Type.', 'error');
+            if (authorTypeDropdown) {
+                authorTypeDropdown.focus();
+            }
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Add Comment to DB';
+            }
+            return;
+        }
+
+        const commentData = {
+            author: author,
+            source: source,
+            comment_date: utcTimestamp,
+            content: content,
+            tag: tag || null,
+            author_type: author_type,
+        };
+
+        showFormMessage(formMessage, 'Submitting comment...', 'info');
+
+        try {
+            const { data, error, status } = await supabase
+                .from('developer_comments')
+                .insert([commentData])
+                .select();
+
+            if (error) {
+                console.error('Error inserting comment:', error);
+                showFormMessage(formMessage, `Error saving comment: ${error.message}`, 'error');
+            } else {
+                showFormMessage(formMessage, 'Developer comment added successfully!', 'success');
+
+                devCommentForm.reset();
+                if (authorTypeDropdown) {
+                    authorTypeDropdown.value = "";
+                }
+                if (tagSelect) {
+                    Array.from(tagSelect.options).forEach(option => option.selected = false);
+                    tagSelect.value = "";
+                }
+
+                document.getElementById('devCommentForm').style.display = 'none';
+                document.getElementById('commentInput').style.display = 'block';
+                document.getElementById('parseButton').style.display = 'block';
+                document.getElementById('parseError').style.display = 'none';
+
+                const currentPage = window.location.pathname.split('/').pop();
+                if (currentPage === 'developer-comments.html' && typeof fetchAndRenderDeveloperComments === 'function' && document.getElementById('dev-comments-container')) {
+                    fetchAndRenderDeveloperComments('dev-comments-container');
+                } else if ((currentPage === 'index.html' || currentPage === '') && typeof fetchAndRenderDeveloperComments === 'function' && document.getElementById('recent-comments-home')) {
+                    fetchAndRenderDeveloperComments('recent-comments-home', 6);
+                }
+                fetchDashboardStats();
+            }
+        } catch (err) {
+            console.error('Unexpected error submitting comment:', err);
+            showFormMessage(formMessage, 'An unexpected error occurred. Please try again.', 'error');
+        } finally {
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Add Comment to DB';
+            }
+        }
+    });
+}
 
 async function isAuthorizedAdmin(userId) {
     if (!userId) return false;
@@ -57,21 +176,14 @@ async function fetchDashboardStats() {
     }
 
     const now = Date.now();
-    // Check if we have cached data and if it's still fresh
     if (dashboardStatsCache && (now - lastStatsFetchTime < STATS_CACHE_DURATION)) {
-        // Use cached data
         totalCommentsCount.textContent = dashboardStatsCache.commentsTotal;
         totalNewsCount.textContent = dashboardStatsCache.newsTotal;
         commentsMonthCount.textContent = dashboardStatsCache.commentsThisMonth;
         newsMonthCount.textContent = dashboardStatsCache.newsThisMonth;
-        console.log('Dashboard stats loaded from cache.'); // For debugging
-        return; // Exit without making new API calls
+        return;
     }
 
-    // If cache is expired or not available, fetch fresh data
-    console.log('Fetching fresh dashboard stats...'); // For debugging
-
-    // Your existing date range calculation is correct for the current month
     const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
     const endOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59, 999).toISOString();
 
@@ -109,132 +221,132 @@ async function fetchDashboardStats() {
     }
 }
 
-// function parseComment(text) {
-//     const mainRegex = /^(.*?)\s*—\s*([\s\S]*?)(https?:\/\/[^\s]+)?$/;
-//     const match = text.match(mainRegex);
+function parseComment(text) {
+    const mainRegex = /^(.*?)\s*—\s*([\s\S]*?)(https?:\/\/[^\s]+)?$/;
+    const match = text.match(mainRegex);
 
-//     if (!match) {
-//         console.error("Main regex did not match the input text. Ensure it has 'Author — Content'.");
-//         return null;
-//     }
+    if (!match) {
+        console.error("Main regex did not match the input text. Ensure it has 'Author — Content'.");
+        return null;
+    }
 
-//     try {
-//         const author = match[1].trim();
-//         let fullContentAndPotentialTimestamp = match[2].trim();
-//         const url = match[3] ? match[3].trim() : '';
-//         const finalSource = url;
+    try {
+        const author = match[1].trim();
+        let fullContentAndPotentialTimestamp = match[2].trim();
+        const url = match[3] ? match[3].trim() : '';
+        const finalSource = url;
 
-//         let parsedDate = new Date();
-//         let content = fullContentAndPotentialTimestamp;
+        let parsedDate = new Date();
+        let content = fullContentAndPotentialTimestamp;
 
-//         const lines = fullContentAndPotentialTimestamp.split('\n').map(line => line.trim()).filter(Boolean);
-//         let firstLine = lines.length > 0 ? lines[0] : '';
-//         let timestampMatchFound = false;
+        const lines = fullContentAndPotentialTimestamp.split('\n').map(line => line.trim()).filter(Boolean);
+        let firstLine = lines.length > 0 ? lines[0] : '';
+        let timestampMatchFound = false;
 
-//         let timestampMatch;
+        let timestampMatch;
 
-//         const fullDateTimePattern = /^(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
-//         timestampMatch = firstLine.match(fullDateTimePattern);
+        const fullDateTimePattern = /^(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
+        timestampMatch = firstLine.match(fullDateTimePattern);
 
-//         if (timestampMatch) {
-//             const datePart = timestampMatch[1];
-//             const timePart = timestampMatch[2];
-//             const remainingFirstLineContent = timestampMatch[3].trim();
+        if (timestampMatch) {
+            const datePart = timestampMatch[1];
+            const timePart = timestampMatch[2];
+            const remainingFirstLineContent = timestampMatch[3].trim();
 
-//             let [month, day, year] = datePart.split('/').map(Number);
-//             if (year < 100) {
-//                 year += (year > 50) ? 1900 : 2000;
-//             }
-//             parsedDate = new Date(year, month - 1, day);
-//             parseTimeIntoDate(timePart, parsedDate);
-//             timestampMatchFound = true;
+            let [month, day, year] = datePart.split('/').map(Number);
+            if (year < 100) {
+                year += (year > 50) ? 1900 : 2000;
+            }
+            parsedDate = new Date(year, month - 1, day);
+            parseTimeIntoDate(timePart, parsedDate);
+            timestampMatchFound = true;
 
-//             content = [remainingFirstLineContent, ...lines.slice(1)].filter(Boolean).join('\n').trim();
+            content = [remainingFirstLineContent, ...lines.slice(1)].filter(Boolean).join('\n').trim();
 
-//         } else {
-//             const yesterdayPattern = /^yesterday at\s*(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
-//             timestampMatch = firstLine.match(yesterdayPattern);
+        } else {
+            const yesterdayPattern = /^yesterday at\s*(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
+            timestampMatch = firstLine.match(yesterdayPattern);
 
-//             if (timestampMatch) {
-//                 const timePart = timestampMatch[1];
-//                 const remainingFirstLineContent = timestampMatch[2].trim();
+            if (timestampMatch) {
+                const timePart = timestampMatch[1];
+                const remainingFirstLineContent = timestampMatch[2].trim();
 
-//                 parsedDate = new Date();
-//                 parsedDate.setDate(parsedDate.getDate() - 1);
-//                 parseTimeIntoDate(timePart, parsedDate);
-//                 timestampMatchFound = true;
+                parsedDate = new Date();
+                parsedDate.setDate(parsedDate.getDate() - 1);
+                parseTimeIntoDate(timePart, parsedDate);
+                timestampMatchFound = true;
 
-//                 content = [remainingFirstLineContent, ...lines.slice(1)].filter(Boolean).join('\n').trim();
+                content = [remainingFirstLineContent, ...lines.slice(1)].filter(Boolean).join('\n').trim();
 
-//             } else {
-//                 const todayPattern = /^today at\s*(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
-//                 timestampMatch = firstLine.match(todayPattern);
+            } else {
+                const todayPattern = /^today at\s*(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
+                timestampMatch = firstLine.match(todayPattern);
 
-//                 if (timestampMatch) {
-//                     const timePart = timestampMatch[1];
-//                     const remainingFirstLineContent = timestampMatch[2].trim();
+                if (timestampMatch) {
+                    const timePart = timestampMatch[1];
+                    const remainingFirstLineContent = timestampMatch[2].trim();
 
-//                     parsedDate = new Date();
-//                     parseTimeIntoDate(timePart, parsedDate);
-//                     timestampMatchFound = true;
+                    parsedDate = new Date();
+                    parseTimeIntoDate(timePart, parsedDate);
+                    timestampMatchFound = true;
 
-//                     content = [remainingFirstLineContent, ...lines.slice(1)].filter(Boolean).join('\n').trim();
+                    content = [remainingFirstLineContent, ...lines.slice(1)].filter(Boolean).join('\n').trim();
 
-//                 } else {
+                } else {
 
-//                     const timeOnlyPattern = /^(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
-//                     timestampMatch = firstLine.match(timeOnlyPattern);
+                    const timeOnlyPattern = /^(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
+                    timestampMatch = firstLine.match(timeOnlyPattern);
 
-//                     if (timestampMatch) {
-//                         const timePart = timestampMatch[1];
-//                         const remainingFirstLineContent = timestampMatch[2].trim();
+                    if (timestampMatch) {
+                        const timePart = timestampMatch[1];
+                        const remainingFirstLineContent = timestampMatch[2].trim();
 
-//                         parsedDate = new Date();
-//                         parseTimeIntoDate(timePart, parsedDate);
-//                         timestampMatchFound = true;
+                        parsedDate = new Date();
+                        parseTimeIntoDate(timePart, parsedDate);
+                        timestampMatchFound = true;
 
-//                         content = [remainingFirstLineContent, ...lines.slice(1)].filter(Boolean).join('\n').trim();
-//                     }
-//                 }
-//             }
-//         }
+                        content = [remainingFirstLineContent, ...lines.slice(1)].filter(Boolean).join('\n').trim();
+                    }
+                }
+            }
+        }
 
-//         if (!timestampMatchFound) {
-//             console.warn("No specific timestamp format recognized from the first line. Assuming content is the full string and using current date/time.");
-//         }
+        if (!timestampMatchFound) {
+            console.warn("No specific timestamp format recognized from the first line. Assuming content is the full string and using current date/time.");
+        }
 
-//         function parseTimeIntoDate(timePart, dateObject) {
-//             const timeRegex = /(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)/i;
-//             const timeMatchResult = timePart.match(timeRegex);
+        function parseTimeIntoDate(timePart, dateObject) {
+            const timeRegex = /(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)/i;
+            const timeMatchResult = timePart.match(timeRegex);
 
-//             if (timeMatchResult) {
-//                 let hours = parseInt(timeMatchResult[1]);
-//                 const minutes = parseInt(timeMatchResult[2]);
-//                 const ampm = timeMatchResult[3].toLowerCase();
-//                 if (ampm === 'pm' && hours < 12) { hours += 12; }
-//                 if (ampm === 'am' && hours === 12) { hours = 0; }
-//                 dateObject.setHours(hours, minutes, 0, 0);
-//             } else {
-//                 console.warn(`Could not parse time part for timestamp: ${timePart}`);
-//                 dateObject.setHours(0, 0, 0, 0);
-//             }
-//         }
+            if (timeMatchResult) {
+                let hours = parseInt(timeMatchResult[1]);
+                const minutes = parseInt(timeMatchResult[2]);
+                const ampm = timeMatchResult[3].toLowerCase();
+                if (ampm === 'pm' && hours < 12) { hours += 12; }
+                if (ampm === 'am' && hours === 12) { hours = 0; }
+                dateObject.setHours(hours, minutes, 0, 0);
+            } else {
+                console.warn(`Could not parse time part for timestamp: ${timePart}`);
+                dateObject.setHours(0, 0, 0, 0);
+            }
+        }
 
-//         const yearFormatted = parsedDate.getFullYear();
-//         const monthFormatted = (parsedDate.getMonth() + 1).toString().padStart(2, '0');
-//         const dayFormatted = parsedDate.getDate().toString().padStart(2, '0');
-//         const hoursFormatted = parsedDate.getHours().toString().padStart(2, '0');
-//         const minutesFormatted = parsedDate.getMinutes().toString().padStart(2, '0');
+        const yearFormatted = parsedDate.getFullYear();
+        const monthFormatted = (parsedDate.getMonth() + 1).toString().padStart(2, '0');
+        const dayFormatted = parsedDate.getDate().toString().padStart(2, '0');
+        const hoursFormatted = parsedDate.getHours().toString().padStart(2, '0');
+        const minutesFormatted = parsedDate.getMinutes().toString().padStart(2, '0');
 
-//         const formattedTimestamp = `${yearFormatted}-${monthFormatted}-${dayFormatted}T${hoursFormatted}:${minutesFormatted}`;
+        const formattedTimestamp = `${yearFormatted}-${monthFormatted}-${dayFormatted}T${hoursFormatted}:${minutesFormatted}`;
 
-//         return { author, source: finalSource, timestamp: formattedTimestamp, content };
+        return { author, source: finalSource, timestamp: formattedTimestamp, content };
 
-//     } catch (e) {
-//         console.error("Error during comment parsing:", e);
-//         return null;
-//     }
-// }
+    } catch (e) {
+        console.error("Error during comment parsing:", e);
+        return null;
+    }
+}
 
 
 async function populateTagSelect(tagSelectElement) {
@@ -242,10 +354,8 @@ async function populateTagSelect(tagSelectElement) {
         console.warn('tagSelect element not found. Cannot populate tags.');
         return;
     }
-    // Clear all existing options
     tagSelectElement.innerHTML = '';
 
-    // Add a default option based on the select element's ID
     if (tagSelectElement.id === 'loreCategory') {
         const defaultOption = document.createElement('option');
         defaultOption.value = '';
@@ -292,10 +402,9 @@ function slugify(text) {
 
 
 $(document).ready(async function() {
-    // Check if we are on the admin page
     const currentPage = window.location.pathname.split('/').pop();
     if (currentPage !== 'admin.html') {
-        return; // Exit if not on admin page
+        return;
     }
 
     const discordLoginButton = document.getElementById('discordLoginButton');
@@ -304,14 +413,12 @@ $(document).ready(async function() {
     const loginHeading = document.getElementById('loginHeading');
     const adminDashboardAndForm = document.getElementById('adminDashboardAndForm');
 
-    // Dev Comment Parser elements
     const commentInput = document.getElementById('commentInput');
     const parseButton = document.getElementById('parseButton');
     const devCommentForm = document.getElementById('devCommentForm');
     const parseError = document.getElementById('parseError');
     const formMessage = document.getElementById('formMessage');
 
-    // Dev Comment Form fields
     const authorField = document.getElementById('author');
     const sourceField = document.getElementById('source');
     const timestampField = document.getElementById('timestamp');
@@ -321,7 +428,6 @@ $(document).ready(async function() {
     const newTagInput = document.getElementById('newTagInput');
     const addNewTagButton = document.getElementById('addNewTagButton');
 
-    // News Update Form elements
     const addNewsUpdateForm = document.getElementById('addNewsUpdateForm');
     const newsDateInput = document.getElementById('news_date');
     const newsTitleInput = document.getElementById('news_title');
@@ -329,7 +435,6 @@ $(document).ready(async function() {
     const fullArticleLinkInput = document.getElementById('full_article_link');
     const addNewsUpdateMessage = document.getElementById('addNewsUpdateMessage');
 
-    // Lore Item Form elements
     const addLoreItemForm = document.getElementById('addLoreItemForm');
     const loreTitleInput = document.getElementById('loreTitle');
     const loreSlugInput = document.getElementById('loreSlug');
@@ -351,7 +456,6 @@ $(document).ready(async function() {
                 if (loginHeading) loginHeading.style.display = 'none';
                 if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'block';
                 fetchDashboardStats();
-                // Populate selects only once after successful authorization and UI display
                 if (!initialAuthCheckComplete) {
                     populateTagSelect(tagSelect);
                     populateTagSelect(loreCategorySelect);
@@ -374,11 +478,9 @@ $(document).ready(async function() {
         }
     }
 
-    // Initial auth check
     checkAuth();
 
     supabase.auth.onAuthStateChange((event, session) => {
-        // Only trigger checkAuth if the event is a significant change, not just focus
         if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
             initialAuthCheckComplete = false;
             checkAuth();
@@ -426,6 +528,7 @@ $(document).ready(async function() {
                 devCommentForm.style.display = 'none';
                 commentInput.style.display = 'block';
                 parseButton.style.display = 'block';
+                parseError.style.display = 'none';
             }
         });
     }
@@ -472,43 +575,6 @@ $(document).ready(async function() {
         });
     }
 
-    // if (devCommentForm && commentInput && parseButton && parseError) {
-    //     devCommentForm.addEventListener('submit', async (event) => {
-    //         event.preventDefault();
-    //         showFormMessage(formMessage, '', '');
-
-    //         const selectedTag = tagSelect.value;
-
-    //         const newComment = {
-    //             author: authorField.value,
-    //             source: sourceField.value,
-    //             comment_date: new Date(timestampField.value).toISOString(),
-    //             content: commentContentField.value,
-    //             title: commentContentField.value.substring(0, 45) + (commentContentField.value.length > 45 ? '...' : ''),
-    //             tag: selectedTag || null
-    //         };
-
-    //         const { data, error } = await supabase
-    //             .from('developer_comments')
-    //             .insert([newComment]);
-
-    //         if (error) {
-    //             console.error('Error inserting comment:', error);
-    //             showFormMessage(formMessage, 'Error adding comment: ' + error.message, 'error');
-    //         } else {
-    //             showFormMessage(formMessage, 'Developer comment added successfully!', 'success');
-    //             console.log('Developer comment added:', data);
-    //             commentInput.value = '';
-    //             devCommentForm.style.display = 'none';
-    //             commentInput.style.display = 'block';
-    //             parseButton.style.display = 'block';
-    //             parseError.style.display = 'none';
-    //             Array.from(tagSelect.options).forEach(option => option.selected = false);
-    //             fetchDashboardStats();
-    //         }
-    //     });
-    // }
-
     if (addNewsUpdateForm) {
         addNewsUpdateForm.addEventListener('submit', async (event) => {
             event.preventDefault();
@@ -540,7 +606,6 @@ $(document).ready(async function() {
         });
     }
 
-    // --- Lore Item Form Logic ---
     if (loreTitleInput && loreSlugInput && addLoreItemForm) {
         loreTitleInput.addEventListener('input', () => {
             loreSlugInput.value = slugify(loreTitleInput.value);

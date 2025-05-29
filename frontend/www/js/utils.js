@@ -14,7 +14,6 @@ export function formatCommentDateTime(dateString) {
         hour: 'numeric',
         minute: '2-digit',
         hour12: true,
-        timeZone: 'UTC'
     };
     if (!dateString) return '';
     try {
