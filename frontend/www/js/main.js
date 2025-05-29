@@ -332,7 +332,125 @@ $(document).ready(async function() {
       }
     }
   });
+   const authorRoleColors = { // Assuming this is defined globally or accessible here
+      "Developer": "#19d36a",
+      "Community Dev": "#00BFFF",
+      "default": "#E0E0E0" // Used for display, not typically a selectable role
+    };
 
+    const authorTypeDropdown = document.getElementById('author_type');
+    const formMessage = document.getElementById('formMessage'); // For displaying submission status
+
+    // 1. Populate the author_type dropdown
+    if (authorTypeDropdown) {
+        // Add a default, placeholder option
+        const defaultOption = document.createElement('option');
+        defaultOption.value = ""; // Important for the 'required' attribute to work
+        defaultOption.textContent = "Select Author Type";
+        defaultOption.selected = true;
+        // defaultOption.disabled = true; // Optional: if you don't want it to be re-selectable
+        authorTypeDropdown.appendChild(defaultOption);
+
+        // Populate with types from authorRoleColors (excluding 'default' as a selectable option)
+        for (const type in authorRoleColors) {
+            if (authorRoleColors.hasOwnProperty(type) && type !== 'default') {
+                const option = document.createElement('option');
+                option.value = type;
+                option.textContent = type;
+                authorTypeDropdown.appendChild(option);
+            }
+        }
+    }
+
+    // 2. Handle form submission for devCommentForm
+    const devCommentForm = document.getElementById('devCommentForm');
+    if (devCommentForm) {
+        devCommentForm.addEventListener('submit', async function(event) {
+            event.preventDefault(); // Prevent default form submission
+            
+            if (formMessage) {
+                formMessage.textContent = ''; // Clear previous messages
+                formMessage.className = '';   // Clear previous message styling
+            }
+
+            // Get form data
+            const author = document.getElementById('author').value;
+            const source = document.getElementById('source').value;
+            const timestamp = document.getElementById('timestamp').value; // This is datetime-local
+            const content = document.getElementById('commentContent').value;
+            const tag = document.getElementById('tagSelect').value; 
+            const author_type = authorTypeDropdown ? authorTypeDropdown.value : ''; // Get selected author_type
+
+            // Basic validation for author_type
+            if (!author_type) {
+                if (formMessage) {
+                    formMessage.textContent = 'Please select an Author Type.';
+                    formMessage.className = 'error-message'; // Ensure .error-message is styled in your CSS
+                }
+                // Highlight the dropdown or set focus
+                if (authorTypeDropdown) {
+                    authorTypeDropdown.focus();
+                }
+                return; // Stop submission if author_type is not selected
+            }
+            
+            // Construct the data object for Supabase
+            const commentData = {
+                author: author,
+                source: source,
+                comment_date: timestamp,
+                content: content,
+                tag: tag || null,
+                author_type: author_type,
+            };
+
+            if (formMessage) {
+                formMessage.textContent = 'Submitting comment...';
+                formMessage.className = 'info-message'; 
+            }
+
+            try {
+                const { data, error, status } = await supabase
+                    .from('developer_comments')
+                    .insert([commentData])
+                    .select();
+
+                if (error) {
+                    console.error('Error inserting comment:', error);
+                    if (formMessage) {
+                        formMessage.textContent = `Error saving comment: ${error.message}`;
+                        formMessage.className = 'error-message';
+                    }
+                } else {
+                    if (formMessage) {
+                        formMessage.textContent = 'Comment added successfully!';
+                        formMessage.className = 'success-message';
+                    }
+                    devCommentForm.reset();
+                    if (authorTypeDropdown) {
+                        authorTypeDropdown.value = ""; 
+                    }
+                    
+                    document.getElementById('commentInput').value = '';
+                    $('#devCommentForm').slideUp();
+
+
+                    const currentPage = window.location.pathname.split('/').pop();
+                    if (currentPage === 'developer-comments.html' && typeof fetchAndRenderDeveloperComments === 'function' && document.getElementById('dev-comments-container')) {
+                        fetchAndRenderDeveloperComments('dev-comments-container');
+                    } else if ((currentPage === 'index.html' || currentPage === '') && typeof fetchAndRenderDeveloperComments === 'function' && document.getElementById('recent-comments-home')) {
+                        fetchAndRenderDeveloperComments('recent-comments-home', 6);
+                    }
+                }
+            } catch (err) {
+                console.error('Unexpected error submitting comment:', err);
+                if (formMessage) {
+                    formMessage.textContent = 'An unexpected error occurred. Please try again.';
+                    formMessage.className = 'error-message';
+                }
+            }
+        });
+    }
   const roadmapLink = $('#roadmapLink');
   const roadmapModalOverlay = $('#roadmapModalOverlay');
   const closeRoadmapModalButton = $('#closeRoadmapModal');

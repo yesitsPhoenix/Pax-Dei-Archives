@@ -1182,3 +1182,29 @@ body.modal-open {
 .comment-author-name{
 	font-size: 1.2em;
 }
+#formMessage.error-message {
+    color: red;
+    background-color: #ffebee; /* Light red background */
+    border: 1px solid red;
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 4px;
+}
+
+#formMessage.success-message {
+    color: green;
+    background-color: #e8f5e9; /* Light green background */
+    border: 1px solid green;
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 4px;
+}
+
+#formMessage.info-message {
+    color: #00529B; /* Dark blue */
+    background-color: #BDE5F8; /* Light blue background */
+    border: 1px solid #00529B;
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 4px;
+}
