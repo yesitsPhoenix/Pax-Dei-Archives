@@ -118,7 +118,6 @@ async function fetchAndRenderDeveloperComments(containerId, limit = null, search
                                     <span class="comment-author-name" style="color: ${authorColor};">${comment.author}</span> - 
                                     <span class="comment-date">${formatCommentDateTime(comment.comment_date)}</span>
                                 </h6>
-                                <h4>${comment.title}</h4>
                                 <p class="comment-content-text">${comment.content}</p>
                                 ${sourceDisplay ? `<span class="comment-source">${sourceDisplay}</span>` : ''} </div>
                         </div>
