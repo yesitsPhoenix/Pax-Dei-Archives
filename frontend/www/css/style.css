@@ -22,7 +22,7 @@ ul {
 }
 
 .container {
-	max-width: 1320px;
+	max-width: 1500px;
 	margin: 0 auto;
 	padding: 0 15px;
 }
@@ -1352,7 +1352,7 @@ body.modal-open {
 }
 
 .lore-sidebar {
-	flex: 0 0 250px;
+	flex: 0 0 300px;
 	background-color: #1a1a2e;
 	padding: 20px;
 	border-radius: 15px;
@@ -1453,4 +1453,121 @@ body.modal-open {
 .comment-content-text {
     white-space: pre-wrap;
     word-break: break-word;
+}
+
+
+
+
+
+.lore-content-wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
+.lore-flex-container {
+    display: flex;
+    flex-wrap: wrap;
+    margin-top: 20px;
+}
+
+/* Responsive adjustments for sidebar and main content */
+@media (max-width: 991px) {
+    .lore-flex-container {
+        flex-direction: column;
+    }
+    .lore-sidebar {
+        width: 100%;
+        padding-right: 0;
+        margin-bottom: 20px;
+    }
+    .dynamic-lore-main-content {
+        padding-left: 0;
+    }
+}
+
+
+.dynamic-lore-main-content {
+    flex-grow: 1;
+    padding-left: 30px;
+	margin-left: 20px;
+}
+
+
+.small-feature-cards-section {
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.small-feature-cards-section .row {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.small-feature-cards-section .col-auto {
+    padding: 0;
+}
+
+.feature-card.small-feature-card {
+    background-color: #2a2a2a;
+    border-radius: 10px;
+    padding: 10px 20px;
+    text-align: center;
+    transition: all 0.3s;
+    margin-bottom: 0;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
+
+    /* Flex properties to keep icon and text on one line and centered */
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    min-width: 60px;
+	min-height: 45px !important;
+    height: 45px;
+}
+
+.feature-card.small-feature-card i {
+    font-size: 20px;
+    margin-bottom: 0;
+    margin-right: 8px;
+    color: var(--dark-gold-color);
+}
+
+.feature-card.small-feature-card h5 {
+    font-size: 15px;
+    margin-top: 0;
+    color: #fff;
+}
+
+
+.feature-card.small-feature-card:hover {
+    background-color: var(--dark-hover-shadow-color);
+}
+
+.feature-card.small-feature-card:hover i,
+.feature-card.small-feature-card:hover h5 {
+    color: #fff;
+}
+
+.feature-card.small-feature-card.active-small-card {
+    background-color: var(--gold-color);
+    box-shadow: 0 0 10px --dark-shadow-color;
+	color: #000;
+}
+
+.feature-card.small-feature-card.active-small-card i,
+.feature-card.small-feature-card.active-small-card h5 {
+    color: #000000;
+}
+
+
+/* Adjustments for the main lore content loading indicator */
+.dynamic-lore-main-content .lore-loading-indicator,
+.dynamic-lore-main-content .lore-no-content-message {
+    padding: 20px;
+    text-align: center;
+    color: #ccc;
 }

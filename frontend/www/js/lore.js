@@ -76,6 +76,50 @@ async function fetchLoreItemDetail(slug) {
     return data;
 }
 
+// Function to get icon based on category name (extend as needed)
+function getCategoryIcon(category) {
+    switch (category) {
+        case 'World': return 'fa-earth-americas';
+        case 'Creation': return 'fa-scroll';
+        case 'Divine': return 'fa-star';
+        case 'Factions': return 'fa-users-gear';
+        case 'Known Figures': return 'fa-user-tie';
+        case 'Placeholder 1': return 'fa-book';
+        case 'Placeholder 2': return 'fa-dragon';
+        case 'Placeholder 3': return 'fa-flask';
+        case 'Placeholder 4': return 'fa-gavel';
+        case 'Placeholder 5': return 'fa-cloud';
+        default: return 'fa-book'; // Default icon
+    }
+}
+
+// Function to render smaller category cards
+async function renderSmallCategoryCards(selectedCategory = null) { // Added selectedCategory parameter
+    const categories = await fetchLoreCategories();
+    const smallLoreCategoryCards = $('#small-lore-category-cards');
+    smallLoreCategoryCards.empty(); // Clear existing cards
+
+    if (categories.length > 0) {
+        categories.forEach(cat => {
+            const iconClass = getCategoryIcon(cat);
+            const isActive = selectedCategory === cat ? 'active-small-card' : ''; // New active class
+            const cardHtml = `
+                <div class="col-auto"> <div class="feature-card small-feature-card ${isActive}">
+                        <a href="lore.html?category=${encodeURIComponent(cat)}">
+                            <i class="fa-solid ${iconClass}"></i>
+                            <h5>${cat}</h5>
+                        </a>
+                    </div>
+                </div>
+            `;
+            smallLoreCategoryCards.append(cardHtml);
+        });
+    } else {
+        smallLoreCategoryCards.append('<div class="col-lg-12"><p>No lore categories found.</p></div>');
+    }
+}
+
+
 // Main logic for the lore page
 $(document).ready(async function() {
     const loreCategoriesSection = $('#lore-categories-section');
@@ -104,7 +148,10 @@ $(document).ready(async function() {
         loreCategoriesSection.hide();
         dynamicLoreContentWrapper.show();
         loreSidebar.show();
-        dynamicLoreMainContent.html('<div class="lore-loading-indicator">Loading lore...</div>');
+
+        // Clear only the specific content area of the main content, not the small cards section
+        dynamicLoreMainContent.empty(); // Clear previous lore item content
+
 
         const categories = await fetchLoreCategories();
         loreCategoryList.empty();
@@ -155,6 +202,9 @@ $(document).ready(async function() {
         } else {
             dynamicLoreMainContent.html('<div class="lore-no-content-message">Select a lore category or item to view content.</div>');
         }
+
+        // Render small category cards whenever dynamic content is displayed, passing the selected category
+        await renderSmallCategoryCards(selectedCategory);
     }
 
     // --- Initial Page Load Logic ---
@@ -178,6 +228,8 @@ $(document).ready(async function() {
     } else {
         loreCategoriesSection.show();
         dynamicLoreContentWrapper.hide();
+        // If no category/item selected, ensure small cards are not shown
+        $('#small-lore-category-cards').empty();
     }
 
     // --- Event Listeners ---
@@ -200,6 +252,24 @@ $(document).ready(async function() {
         displayLoreContent(newCategory, newItemSlug, fetchedItemsForCardClick);
     });
 
+    // Event listener for the new small cards
+    $(document).on('click', '#small-lore-category-cards .feature-card a', async function(e) {
+        e.preventDefault();
+        const href = $(this).attr('href');
+        const url = new URL(href, window.location.origin);
+        const newCategory = url.searchParams.get('category');
+        let newItemSlug = null;
+        let fetchedItemsForSmallCardClick = null;
+
+        const items = await fetchLoreItems(newCategory);
+        fetchedItemsForSmallCardClick = items;
+        if (items.length > 0) {
+            newItemSlug = items[0].slug;
+        }
+
+        updateUrl(newCategory, newItemSlug);
+        displayLoreContent(newCategory, newItemSlug, fetchedItemsForSmallCardClick);
+    });
 
     $(document).on('click', '#lore-category-list a, #lore-item-list a', async function(e) {
         e.preventDefault();
@@ -228,6 +298,8 @@ $(document).ready(async function() {
         if (!params.category && !params.item) {
             loreCategoriesSection.show();
             dynamicLoreContentWrapper.hide();
+            // Clear small cards if returning to initial state
+            $('#small-lore-category-cards').empty();
         } else {
             (async () => {
                 let fetchedItemsForPopstate = null;

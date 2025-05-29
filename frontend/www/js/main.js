@@ -2,6 +2,14 @@
 
 import { supabase } from './supabaseClient.js';
 
+// Author coloring
+const authorRoleColors = {
+"Developer": "#19d36a",       // A bright green for developers
+"Community Dev": "#00BFFF",   // Deep Sky Blue for community developers
+"default": "#E0E0E0"          // A light grey for any undefined roles
+};
+
+
 function formatCommentDateTime(dateString) {
   const options = {
     year: 'numeric',
@@ -105,19 +113,22 @@ async function fetchAndRenderDeveloperComments(containerId, limit = null, search
                         console.warn('Could not parse comment_date for data attribute:', comment.comment_date, e);
                     }
                 }
+                const authorType = comment.author_type || 'default'; // Use 'default' if author_type is missing
+                const authorColor = authorRoleColors[authorType] || authorRoleColors['default'];
 
                 const commentHtml = `
-                    <div class="${containerId === 'recent-comments-home' ? 'col-lg-6 col-md-6' : 'col-lg-12'} mb-4 dev-comment-item"
-                         data-author="${comment.author || ''}"
-                         data-tag="${comment.tag ? (Array.isArray(comment.tag) ? comment.tag.join(',') : comment.tag) : ''}"
-                         data-date="${formattedDateForData}">
-                        <div class="${containerId === 'recent-comments-home'}">
-                            <div class="down-content">
-                                <h6>${comment.author} <span class="date">${formatCommentDateTime(comment.comment_date)}</span></h6>
+                    <div class="${containerId === 'recent-comments-home' ? 'col-lg-6 col-md-6 item' : 'col-lg-12 mb-4 dev-comment-item'}"
+                        data-author="${comment.author || ''}"
+                        data-tag="${comment.tag ? (Array.isArray(comment.tag) ? comment.tag.join(',') : comment.tag) : ''}"
+                        data-date="${formattedDateForData}">
+                        <div class="${containerId === 'recent-comments-home' ? 'item' : ''}"> <div class="down-content">
+                                <h6>
+                                    <span class="comment-author-name" style="color: ${authorColor};">${comment.author}</span> - 
+                                    <span class="comment-date">${formatCommentDateTime(comment.comment_date)}</span>
+                                </h6>
                                 <h4>${comment.title}</h4>
                                 <p class="comment-content-text">${comment.content}</p>
-                                ${sourceDisplay ? `<span class="comment-source">${sourceDisplay}</span>` : ''}
-                            </div>
+                                ${sourceDisplay ? `<span class="comment-source">${sourceDisplay}</span>` : ''} </div>
                         </div>
                     </div>
                 `;
@@ -301,6 +312,7 @@ $(document).ready(async function() {
             }
         }
     });
+
 
     // Roadmap Modal functionality
     const roadmapLink = $('#roadmapLink');
