@@ -1,10 +1,8 @@
-// main.js
 import { supabase } from './supabaseClient.js';
 import { authorRoleColors, formatCommentDateTime, formatNewsDate } from './utils.js';
 import { fetchAndRenderDeveloperComments } from './devComments.js';
 import { fetchAndRenderNewsUpdates } from './newsUpdates.js';
 import { fetchAndRenderLorePosts } from './lorePosts.js';
-
 
 function showFormMessage(messageElement, message, type) {
     messageElement.textContent = message;
@@ -196,9 +194,6 @@ $(document).ready(async function() {
     }
 
     const devCommentForm = document.getElementById('devCommentForm');
-    const commentInput = document.getElementById('commentInput'); 
-    const parseButton = document.getElementById('parseCommentButton'); 
-    const parseError = document.getElementById('parseError'); 
     const tagSelect = document.getElementById('tagSelect');
 
     if (devCommentForm) {
@@ -233,7 +228,7 @@ $(document).ready(async function() {
                 }
                 if (submitButton) {
                     submitButton.disabled = false;
-                    submitButton.textContent = 'Submit Comment';
+                    submitButton.textContent = 'Add Comment to DB';
                 }
                 return;
             }
@@ -265,22 +260,17 @@ $(document).ready(async function() {
                         formMessage.className = 'error-message';
                     }
                 } else {
-                    //console.log('Comment inserted successfully:', data);
                     showFormMessage(formMessage, 'Developer comment added successfully!', 'success');
                     
                     devCommentForm.reset();
                     if (authorTypeDropdown) {
                         authorTypeDropdown.value = ""; 
                     }
-                    if (commentInput) {
-                        commentInput.value = '';
-                    }
                     
-                    $('#devCommentForm').slideUp();
+                    // Removed the line that was hiding the form: $('#devCommentForm').slideUp();
                     
-                    if (commentInput) commentInput.style.display = 'block';
-                    if (parseButton) parseButton.style.display = 'block';
-                    if (parseError) parseError.style.display = 'none';
+                    // Removed the lines that were showing/hiding parse-related elements
+                    // as they are no longer part of the simplified HTML structure.
                     
                     if (tagSelect) {
                         Array.from(tagSelect.options).forEach(option => option.selected = false);
@@ -303,7 +293,7 @@ $(document).ready(async function() {
             } finally {
                 if (submitButton) {
                     submitButton.disabled = false;
-                    submitButton.textContent = 'Submit Comment';
+                    submitButton.textContent = 'Add Comment to DB';
                 }
             }
         });
