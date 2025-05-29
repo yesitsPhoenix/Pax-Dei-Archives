@@ -207,10 +207,21 @@ $(document).ready(async function() {
 
             const author = document.getElementById('author').value;
             const source = document.getElementById('source').value;
-            const timestamp = document.getElementById('timestamp').value;
+            const timestamp = document.getElementById('timestamp').value; // This value is in the user's local time (CT for you)
             const content = document.getElementById('commentContent').value;
             const tag = document.getElementById('tagSelect').value; 
             const author_type = authorTypeDropdown ? authorTypeDropdown.value : '';
+
+            // --- START OF NEW/MODIFIED LOGIC FOR UTC CONVERSION ---
+            let utcTimestamp = null;
+            if (timestamp) {
+                // Create a Date object from the local time string.
+                // JavaScript's Date constructor will interpret 'YYYY-MM-DDTHH:MM' as local time.
+                const localDate = new Date(timestamp); 
+                // Convert this Date object to an ISO 8601 string, which is always in UTC.
+                utcTimestamp = localDate.toISOString(); 
+            }
+            // --- END OF NEW/MODIFIED LOGIC ---
 
             const submitButton = devCommentForm.querySelector('button[type="submit"]');
             if (submitButton) {
@@ -236,7 +247,7 @@ $(document).ready(async function() {
             const commentData = {
                 author: author,
                 source: source,
-                comment_date: timestamp,
+                comment_date: utcTimestamp, // Now sending the UTC converted timestamp
                 content: content,
                 tag: tag || null,
                 author_type: author_type, 
@@ -267,11 +278,6 @@ $(document).ready(async function() {
                         authorTypeDropdown.value = ""; 
                     }
                     
-                    // Removed the line that was hiding the form: $('#devCommentForm').slideUp();
-                    
-                    // Removed the lines that were showing/hiding parse-related elements
-                    // as they are no longer part of the simplified HTML structure.
-                    
                     if (tagSelect) {
                         Array.from(tagSelect.options).forEach(option => option.selected = false);
                         tagSelect.value = "";
@@ -298,6 +304,7 @@ $(document).ready(async function() {
             }
         });
     }
+
 
     const roadmapLink = $('#roadmapLink');
     const roadmapModalOverlay = $('#roadmapModalOverlay');

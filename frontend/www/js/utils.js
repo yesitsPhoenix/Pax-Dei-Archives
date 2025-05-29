@@ -6,7 +6,6 @@ export const authorRoleColors = {
   "default": "#E0E0E0"
 };
 
-
 export function formatCommentDateTime(dateString) {
     const options = {
         year: 'numeric',
@@ -15,11 +14,10 @@ export function formatCommentDateTime(dateString) {
         hour: 'numeric',
         minute: '2-digit',
         hour12: true,
-        timeZone: 'America/Chicago'
+        timeZone: 'UTC'
     };
     if (!dateString) return '';
     try {
-
         return new Date(dateString).toLocaleString('en-US', options);
     } catch (e) {
         console.error('Error formatting comment date time:', dateString, e);
@@ -35,8 +33,6 @@ export function formatNewsDate(dateString) {
     };
     if (!dateString) return '';
     try {
-        // Assuming news_date is a simple date string (e.g., 'YYYY-MM-DD')
-        // We don't need a specific timezone for just date formatting usually.
         return new Date(dateString).toLocaleDateString(undefined, options);
     } catch (e) {
         console.error('Error formatting news date:', dateString, e);
