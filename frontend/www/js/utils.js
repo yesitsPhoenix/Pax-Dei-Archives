@@ -6,35 +6,52 @@ export const authorRoleColors = {
   "default": "#E0E0E0"
 };
 
+
 export function formatCommentDateTime(dateString) {
-  const options = {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
-  };
-  if (!dateString) return '';
-  try {
-    return new Date(dateString).toLocaleString(undefined, options);
-  } catch (e) {
-    console.error('Error formatting comment date time:', dateString, e);
-    return '';
-  }
+    const options = {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: 'America/Chicago'
+    };
+    if (!dateString) return '';
+    try {
+
+        return new Date(dateString).toLocaleString('en-US', options);
+    } catch (e) {
+        console.error('Error formatting comment date time:', dateString, e);
+        return '';
+    }
 }
 
 export function formatNewsDate(dateString) {
-  const options = {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  };
-  if (!dateString) return '';
-  try {
-    return new Date(dateString + 'T00:00:00').toLocaleDateString('en-US', options);
-  } catch (e) {
-    console.error('Error formatting news date:', dateString, e);
-    return '';
-  }
+    const options = {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    };
+    if (!dateString) return '';
+    try {
+        // Assuming news_date is a simple date string (e.g., 'YYYY-MM-DD')
+        // We don't need a specific timezone for just date formatting usually.
+        return new Date(dateString).toLocaleDateString(undefined, options);
+    } catch (e) {
+        console.error('Error formatting news date:', dateString, e);
+        return '';
+    }
+}
+
+export function slugify(text) {
+    return text
+        .toString()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/[^\w-]+/g, '')
+        .replace(/--+/g, '-');
 }
