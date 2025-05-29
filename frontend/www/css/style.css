@@ -1148,6 +1148,7 @@ body.modal-open {
 @media (min-width: 1024px) {
 	.filter-group {
 		max-width: 22%;
+		margin-right: 30px;
 	}
 }
 @media (max-width: 991px) {
