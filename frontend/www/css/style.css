@@ -1449,3 +1449,8 @@ body.modal-open {
 		flex: 0 0 100%;
 	}
 }
+
+.comment-content-text {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
