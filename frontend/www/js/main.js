@@ -1,204 +1,9 @@
+// main.js
 import { supabase } from './supabaseClient.js';
-
-const authorRoleColors = {
-  "Developer": "#19d36a",
-  "Community Dev": "#00BFFF",
-  "Admin": "#347fbf",
-  "default": "#E0E0E0"
-};
-
-function formatCommentDateTime(dateString) {
-  const options = {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
-  };
-  if (!dateString) return '';
-  try {
-    return new Date(dateString).toLocaleString(undefined, options);
-  } catch (e) {
-    console.error('Error formatting comment date time:', dateString, e);
-    return '';
-  }
-}
-
-function formatNewsDate(dateString) {
-  const options = {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  };
-  if (!dateString) return '';
-  try {
-    return new Date(dateString + 'T00:00:00').toLocaleDateString('en-US', options);
-  } catch (e) {
-    console.error('Error formatting news date:', dateString, e);
-    return '';
-  }
-}
-
-async function fetchAndRenderDeveloperComments(containerId, limit = null, searchTerm = null) {
-  const container = document.getElementById(containerId);
-  if (!container && !searchTerm) return [];
-
-  if (!searchTerm && container) {
-    container.innerHTML = '<div class="loading-indicator">Loading comments...</div>';
-  }
-
-  try {
-    let query = supabase
-      .from('developer_comments')
-      .select('*');
-
-    if (searchTerm) {
-      query = query.or(`content.ilike.%${searchTerm}%,author.ilike.%${searchTerm}%`);
-    }
-
-    query = query.order('comment_date', { ascending: false });
-
-    if (limit) {
-      query = query.limit(limit);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('Error fetching developer comments:', error.message);
-      if (!searchTerm && container) {
-        container.innerHTML = '<div class="error-message">Failed to load comments. Please try again later.</div>';
-      }
-      return [];
-    }
-
-    if (data.length === 0 && !searchTerm && container) {
-      container.innerHTML = '<div class="no-content-message">No developer comments found.</div>';
-      return [];
-    }
-
-    if (!searchTerm && container) {
-      container.innerHTML = '';
-      data.forEach(comment => {
-        let sourceDisplay = '';
-        const urlPattern = /^(https?:\/\/[^\s]+)$/i;
-
-        if (comment.source && urlPattern.test(comment.source)) {
-          sourceDisplay = `
-                            <a href="${comment.source}" target="_blank" rel="noopener noreferrer" class="source-link-button">
-                                <i class="fas fa-external-link-alt"></i> Source
-                            </a>
-                        `;
-        } else if (comment.source) {
-          sourceDisplay = comment.source;
-        }
-
-        let formattedDateForData = '';
-        if (comment.comment_date) {
-          try {
-            const dateObj = new Date(comment.comment_date);
-            const year = dateObj.getFullYear();
-            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-            const day = String(dateObj.getDate()).padStart(2, '0');
-            formattedDateForData = `${year}-${month}-${day}`;
-          } catch (e) {
-            console.warn('Could not parse comment_date for data attribute:', comment.comment_date, e);
-          }
-        }
-        const authorType = comment.author_type || 'default';
-        const authorColor = authorRoleColors[authorType] || authorRoleColors['default'];
-
-        const commentHtml = `
-                        <div class="${containerId === 'recent-comments-home' ? 'col-lg-6 col-md-6 item' : 'col-lg-12 mb-4 dev-comment-item'}"
-                            data-author="${comment.author || ''}"
-                            data-tag="${comment.tag ? (Array.isArray(comment.tag) ? comment.tag.join(',') : comment.tag) : ''}"
-                            data-date="${formattedDateForData}">
-                            <div class="${containerId === 'recent-comments-home' ? 'item' : ''}"> <div class="down-content">
-                                <h6>
-                                    <span class="comment-author-name" style="color: ${authorColor};">${comment.author}</span> - 
-                                    <span class="comment-date">${formatCommentDateTime(comment.comment_date)}</span>
-                                </h6>
-                                <p class="comment-content-text">${comment.content}</p>
-                                ${sourceDisplay ? `<span class="comment-source">${sourceDisplay}</span>` : ''} </div>
-                        </div>
-                `;
-        container.insertAdjacentHTML('beforeend', commentHtml);
-      });
-    }
-    return data;
-  } catch (error) {
-    console.error('Unexpected error in fetchAndRenderDeveloperComments:', error);
-    if (!searchTerm && container) {
-      container.innerHTML = '<div class="error-message">An unexpected error occurred.</div>';
-    }
-    return [];
-  }
-}
-
-async function fetchAndRenderNewsUpdates(containerId, limit = null, searchTerm = null) {
-  const container = document.getElementById(containerId);
-  if (!container && !searchTerm) return [];
-
-  if (!searchTerm && container) {
-    container.innerHTML = '<div class="loading-indicator">Loading news...</div>';
-  }
-
-  try {
-    let query = supabase
-      .from('news_updates')
-      .select('*');
-
-    if (searchTerm) {
-      query = query.or(`title.ilike.%${searchTerm}%,summary.ilike.%${searchTerm}%,full_article_link.ilike.%${searchTerm}%`);
-    }
-
-    query = query.order('news_date', { ascending: false });
-
-    if (limit) {
-      query = query.limit(limit);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('Error fetching news updates:', error.message);
-      if (!searchTerm && container) {
-        container.innerHTML = '<div class="error-message">Failed to load news. Please try again later.</div>';
-      }
-      return [];
-    }
-
-    if (data.length === 0 && !searchTerm && container) {
-      container.innerHTML = '<div class="no-content-message">No news updates found.</div>';
-      return [];
-    }
-
-    if (!searchTerm && container) {
-      container.innerHTML = '';
-      data.forEach(newsItem => {
-        const newsHtml = `
-                        <div class="${containerId === 'news-updates-home' ? 'col-lg-4 col-md-6' : 'col-lg-12'}">
-                            <div class="news-item">
-                                <h6>${newsItem.title}</h6>
-                                <span>${formatNewsDate(newsItem.news_date)}</span>
-                                <p>${newsItem.summary}</p>
-                                ${newsItem.full_article_link ? `<div class="main-button"><a href="${newsItem.full_article_link}" target="_blank">Read More</a></div>` : ''}
-                            </div>
-                        </div>
-                `;
-        container.insertAdjacentHTML('beforeend', newsHtml);
-      });
-    }
-    return data;
-  } catch (error) {
-    console.error('Unexpected error in fetchAndRenderNewsUpdates:', error);
-    if (!searchTerm && container) {
-      container.innerHTML = '<div class="error-message">An unexpected error occurred.</div>';
-    }
-    return [];
-  }
-}
+import { authorRoleColors, formatCommentDateTime, formatNewsDate } from './utils.js';
+import { fetchAndRenderDeveloperComments } from './devComments.js';
+import { fetchAndRenderNewsUpdates } from './newsUpdates.js';
+import { fetchAndRenderLorePosts } from './lorePosts.js';
 
 async function performSearch(searchTerm) {
   const searchResultsDropdown = $('#searchResultsDropdown');
@@ -217,7 +22,7 @@ async function performSearch(searchTerm) {
     comments.forEach(comment => {
       allResults.push({
         type: 'Developer Comment',
-        title: null,
+        title: null, // Developer comments should not have a title
         content: comment.content,
         date: comment.comment_date,
         author: comment.author,
@@ -244,13 +49,15 @@ async function performSearch(searchTerm) {
         type: 'Lore Post',
         title: post.title,
         content: post.content,
-        date: null,
+        date: null, // Lore posts should not display a timestamp in search results
         author: null,
         source: null,
         link: loreItemLink
       });
     });
 
+    // We still sort by date to maintain a consistent order in search results,
+    // even if we don't display the lore post dates.
     allResults.sort((a, b) => {
       const dateA = a.date ? new Date(a.date) : new Date(0);
       const dateB = b.date ? new Date(b.date) : new Date(0);
@@ -276,9 +83,11 @@ async function performSearch(searchTerm) {
           }
         }
 
-        const formattedDateForDisplay = item.date ? 
+        // Conditionally format date only if 'item.date' exists and is not for 'Lore Post'
+        const formattedDateForDisplay = item.date && item.type !== 'Lore Post' ?
           (item.type === 'Developer Comment' ? formatCommentDateTime(item.date) :
-          (item.type === 'News Update' ? formatNewsDate(item.date) : formatCommentDateTime(item.date))) : '';
+          (item.type === 'News Update' ? formatNewsDate(item.date) : '')) : '';
+
 
         const mainLink = item.link ? item.link : '#';
 
@@ -303,10 +112,19 @@ async function performSearch(searchTerm) {
         const authorPrefix = item.type === 'Developer Comment' && item.author ? item.author + ' - ' : '';
         const dateSuffix = formattedDateForDisplay ? `<span class="date">${formattedDateForDisplay}</span>` : '';
 
+        let headingContent;
+        if (item.type === 'Developer Comment') {
+            headingContent = `${authorPrefix}${dateSuffix}`;
+        } else {
+            // For News Update and Lore Post, include title and date if available
+            headingContent = `${titleDisplay} ${dateSuffix}`;
+        }
+
+
         const resultHtml = `
                         <div class="search-result-item ${item.type.toLowerCase().replace(/\s/g, '-')}-item">
                             <div class="down-content">
-                                ${item.link ? `<h6><a href="${mainLink}">${authorPrefix}${titleDisplay} ${dateSuffix}</a></h6>` : `<h6>${authorPrefix}${titleDisplay} ${dateSuffix}</h6>`}
+                                ${item.link ? `<h6><a href="${mainLink}">${headingContent}</a></h6>` : `<h6>${headingContent}</h6>`}
                                 <p>${displayedContent}</p> ${sourceDisplay ? sourceDisplay : ''}
                                 ${item.link && (item.type === 'News Update' || item.type === 'Lore Post') ? `<div class="main-button"><a href="${mainLink}" ${item.type === 'News Update' ? 'target="_blank"' : ''}>Read More</a></div>` : ''}
                             </div>
@@ -341,12 +159,13 @@ $(document).ready(async function() {
     }
   });
 
+
     const authorTypeDropdown = document.getElementById('author_type');
     const formMessage = document.getElementById('formMessage');
 
     if (authorTypeDropdown) {
         const defaultOption = document.createElement('option');
-        defaultOption.value = ""; 
+        defaultOption.value = "";
         defaultOption.textContent = "Select Author Type";
         defaultOption.selected = true;
         authorTypeDropdown.appendChild(defaultOption);
@@ -635,68 +454,3 @@ $(document).ready(async function() {
     fetchAndRenderNewsUpdates('news-updates-container');
   }
 });
-
-
-async function fetchAndRenderLorePosts(containerId, limit = null, searchTerm = null) {
-  const container = document.getElementById(containerId);
-  if (!container && !searchTerm) return [];
-
-  if (!searchTerm && container) {
-    container.innerHTML = '<div class="loading-indicator">Loading lore posts...</div>';
-  }
-
-  try {
-    let query = supabase
-      .from('lore_items')
-      .select('*');
-
-    if (searchTerm) {
-      query = query.or(`title.ilike.%${searchTerm}%,content.ilike.%${searchTerm}%,slug.ilike.%${searchTerm}%`);
-    }
-
-    query = query.order('created_at', { ascending: false });
-
-    if (limit) {
-      query = query.limit(limit);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('Error fetching lore posts:', error.message);
-      if (!searchTerm && container) {
-        container.innerHTML = '<div class="error-message">Failed to load lore posts. Please try again later.</div>';
-      }
-      return [];
-    }
-
-    if (data.length === 0 && !searchTerm && container) {
-      container.innerHTML = '<div class="no-content-message">No lore posts found.</div>';
-      return [];
-    }
-
-    if (!searchTerm && container) {
-      container.innerHTML = '';
-      data.forEach(post => {
-        const postHtml = `
-                        <div class="col-lg-12 mb-4 lore-post-item">
-                            <div class="lore-post-content">
-                                <h4>${post.title}</h4>
-                                <p>${post.content}</p>
-                                ${post.tags ? `<p><strong>Tags:</strong> ${Array.isArray(post.tags) ? post.tags.join(', ') : post.tags}</p>` : ''}
-                                <span>Published: ${formatCommentDateTime(post.created_at)}</span>
-                            </div>
-                        </div>
-                `;
-        container.insertAdjacentHTML('beforeend', postHtml);
-      });
-    }
-    return data;
-  } catch (error) {
-    console.error('Unexpected error in fetchAndRenderLorePosts:', error);
-    if (!searchTerm && container) {
-      container.innerHTML = '<div class="error-message">An unexpected error occurred.</div>';
-    }
-    return [];
-  }
-}
