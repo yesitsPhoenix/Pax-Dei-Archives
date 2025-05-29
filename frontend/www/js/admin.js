@@ -267,7 +267,7 @@ async function populateTagSelect(tagSelectElement) {
 
     try {
         const { data, error } = await supabase
-            .from('tag_list')
+            .from('dev_filter_list')
             .select('tag_name')
             .order('tag_name', { ascending: true });
 
@@ -471,8 +471,8 @@ $(document).ready(async function() {
                             showFormMessage(formMessage, `Tag '${newTag}' added successfully!`, 'success');
                         }
                         newTagInput.value = '';
-                        populateTagSelect(tagSelect); // Refresh the tag dropdown
-                        populateTagSelect(loreCategorySelect); // Also refresh lore categories
+                        populateTagSelect(tagSelect);
+                        populateTagSelect(loreCategorySelect);
                     }
                 } catch (e) {
                     console.error('Unexpected error adding new tag:', e);
@@ -565,7 +565,7 @@ $(document).ready(async function() {
             if (newCategory) {
                 try {
                     const { data, error } = await supabase
-                        .from('tag_list') // Assuming lore categories are also stored in tag_list
+                        .from('tag_list')
                         .insert([{ tag_name: newCategory }]);
 
                     if (error && error.code !== '23505') {
