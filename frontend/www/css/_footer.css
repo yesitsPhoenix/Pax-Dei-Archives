@@ -1,0 +1,52 @@
+footer {
+	text-align: center;
+	padding: 40px 0;
+	margin-top: 60px;
+	color: rgba(255, 255, 255, 0.6);
+	font-size: 14px;
+	background-color: #27292a;
+	border-top: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 20px;
+}
+footer a {
+	color: var(--gold-color);
+	transition: all 0.3s ease;
+}
+footer a:hover {
+	color: var(--light-gold-color);
+}
+.corner-credit {
+	position: fixed;
+	bottom: 20px;
+	left: 20px;
+	display: flex;
+	align-items: center;
+	background-color: rgba(0, 0, 0, 0.3);
+	padding: 8px 12px;
+	border-radius: 10px;
+	color: white;
+	z-index: 990;
+}
+.profile-image {
+	height: 30px;
+	width: auto;
+	margin-right: 8px;
+}
+.nav-text-profile {
+	font-size: 1em;
+}
+@media (max-width: 767px) {
+	.corner-credit {
+		bottom: 10px;
+		left: 10px;
+		padding: 5px 8px;
+	}
+	.profile-image {
+		height: 25px;
+		width: auto;
+		margin-right: 5px;
+	}
+	.nav-text-profile {
+		font-size: 0.8em;
+	}
+}

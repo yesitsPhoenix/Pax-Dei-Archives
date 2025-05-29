@@ -1,0 +1,74 @@
+.discord-button {
+	background-color: #5865F2;
+	color: white;
+	padding: 12px 25px;
+	border: none;
+	border-radius: 25px;
+	cursor: pointer;
+	font-size: 16px;
+	font-weight: 600;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	transition: background-color 0.3s ease;
+	width: 25%;
+	/* Consider making this responsive or auto */
+	margin: 20px auto 0;
+	box-sizing: border-box;
+}
+.discord-button:hover {
+	background-color: #454FCF;
+}
+.discord-button i {
+	font-size: 20px;
+}
+#loginFormContainer {
+	/* Specific to login form */
+	background-color: #27292a;
+}
+#formMessage {
+	margin-top: 20px;
+	padding: 10px 15px;
+	border-radius: 5px;
+	font-weight: bold;
+	display: none;
+}
+#formMessage.success {
+	background-color: #28a745;
+	color: white;
+}
+#formMessage.error {
+	background-color: #dc3545;
+	color: white;
+}
+.source-link-button {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	background-color: #294869;
+	color: white;
+	padding: 6px 12px;
+	border-radius: 5px;
+	text-decoration: none;
+	font-size: 14px;
+	font-weight: 500;
+	transition: background-color 0.3s ease;
+	cursor: pointer;
+	white-space: nowrap;
+}
+.source-link-button:hover {
+	background-color: #0056b3;
+	color: white;
+}
+.comment-source {
+	display: block;
+	margin-top: 10px;
+    margin-bottom: 15px;
+    margin-left: 1em;
+	font-size: 0.9em;
+	color: #aaa;
+}
+.comment-source .source-link-button {
+	vertical-align: middle;
+}
