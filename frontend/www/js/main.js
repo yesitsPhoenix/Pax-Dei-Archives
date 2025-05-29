@@ -265,26 +265,29 @@ $(document).ready(async function() {
         const clearFiltersButton = $('#clearFilters');
 
         async function populateTagsFromSupabase() {
-            filterTagSelect.find('option:not(:first)').remove();
+        filterTagSelect.find('option:not(:first)').remove();
 
-            try {
-                const { data, error } = await supabase
-                    .from('tag_list')
-                    .select('tag_name');
+        try {
+            const { data, error } = await supabase
+                .from('tag_list')
+                .select('tag_name');
 
-                if (error) {
-                    console.error('Error fetching tags from Supabase for filters:', error.message);
-                    return;
-                }
-
-                data.forEach(tag => {
-                    filterTagSelect.append(`<option value="${tag.tag_name}">${tag.tag_name}</option>`);
-                });
-
-            } catch (e) {
-                console.error('Unexpected error during Supabase tag fetch for filters:', e);
+            if (error) {
+                console.error('Error fetching tags from Supabase for filters:', error.message);
+                return;
             }
+
+            // Sort the tags alphabetically by tag_name
+            data.sort((a, b) => a.tag_name.localeCompare(b.tag_name));
+
+            data.forEach(tag => {
+                filterTagSelect.append(`<option value="${tag.tag_name}">${tag.tag_name}</option>`);
+            });
+
+        } catch (e) {
+            console.error('Unexpected error during Supabase tag fetch for filters:', e);
         }
+    }
 
         function populateAuthorsFromComments() {
             filterAuthorSelect.find('option:not(:first)').remove();
