@@ -484,42 +484,42 @@ $(document).ready(async function() {
         });
     }
 
-    if (devCommentForm && commentInput && parseButton && parseError) {
-        devCommentForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            showFormMessage(formMessage, '', '');
+    // if (devCommentForm && commentInput && parseButton && parseError) {
+    //     devCommentForm.addEventListener('submit', async (event) => {
+    //         event.preventDefault();
+    //         showFormMessage(formMessage, '', '');
 
-            const selectedTag = tagSelect.value;
+    //         const selectedTag = tagSelect.value;
 
-            const newComment = {
-                author: authorField.value,
-                source: sourceField.value,
-                comment_date: new Date(timestampField.value).toISOString(),
-                content: commentContentField.value,
-                title: commentContentField.value.substring(0, 45) + (commentContentField.value.length > 45 ? '...' : ''),
-                tag: selectedTag || null
-            };
+    //         const newComment = {
+    //             author: authorField.value,
+    //             source: sourceField.value,
+    //             comment_date: new Date(timestampField.value).toISOString(),
+    //             content: commentContentField.value,
+    //             title: commentContentField.value.substring(0, 45) + (commentContentField.value.length > 45 ? '...' : ''),
+    //             tag: selectedTag || null
+    //         };
 
-            const { data, error } = await supabase
-                .from('developer_comments')
-                .insert([newComment]);
+    //         const { data, error } = await supabase
+    //             .from('developer_comments')
+    //             .insert([newComment]);
 
-            if (error) {
-                console.error('Error inserting comment:', error);
-                showFormMessage(formMessage, 'Error adding comment: ' + error.message, 'error');
-            } else {
-                showFormMessage(formMessage, 'Developer comment added successfully!', 'success');
-                console.log('Developer comment added:', data);
-                commentInput.value = '';
-                devCommentForm.style.display = 'none';
-                commentInput.style.display = 'block';
-                parseButton.style.display = 'block';
-                parseError.style.display = 'none';
-                Array.from(tagSelect.options).forEach(option => option.selected = false);
-                fetchDashboardStats();
-            }
-        });
-    }
+    //         if (error) {
+    //             console.error('Error inserting comment:', error);
+    //             showFormMessage(formMessage, 'Error adding comment: ' + error.message, 'error');
+    //         } else {
+    //             showFormMessage(formMessage, 'Developer comment added successfully!', 'success');
+    //             console.log('Developer comment added:', data);
+    //             commentInput.value = '';
+    //             devCommentForm.style.display = 'none';
+    //             commentInput.style.display = 'block';
+    //             parseButton.style.display = 'block';
+    //             parseError.style.display = 'none';
+    //             Array.from(tagSelect.options).forEach(option => option.selected = false);
+    //             fetchDashboardStats();
+    //         }
+    //     });
+    // }
 
     if (addNewsUpdateForm) {
         addNewsUpdateForm.addEventListener('submit', async (event) => {
