@@ -386,7 +386,7 @@ $(document).ready(async function() {
 
             try {
                 const { data, error } = await supabase
-                    .from('dev_filter_list')
+                    .from('tag_list')
                     .select('tag_name');
 
                 if (error) {

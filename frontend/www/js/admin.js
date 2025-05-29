@@ -267,7 +267,7 @@ async function populateTagSelect(tagSelectElement) {
 
     try {
         const { data, error } = await supabase
-            .from('dev_filter_list')
+            .from('tag_list')
             .select('tag_name')
             .order('tag_name', { ascending: true });
 
