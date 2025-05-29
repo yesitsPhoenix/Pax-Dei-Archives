@@ -3,6 +3,7 @@ import { supabase } from './supabaseClient.js';
 const authorRoleColors = {
   "Developer": "#19d36a",
   "Community Dev": "#00BFFF",
+  "Admin": "#347fbf",
   "default": "#E0E0E0"
 };
 
@@ -332,26 +333,19 @@ $(document).ready(async function() {
       }
     }
   });
-   const authorRoleColors = { // Assuming this is defined globally or accessible here
-      "Developer": "#19d36a",
-      "Community Dev": "#00BFFF",
-      "default": "#E0E0E0" // Used for display, not typically a selectable role
-    };
+
 
     const authorTypeDropdown = document.getElementById('author_type');
-    const formMessage = document.getElementById('formMessage'); // For displaying submission status
+    const formMessage = document.getElementById('formMessage');
 
     // 1. Populate the author_type dropdown
     if (authorTypeDropdown) {
-        // Add a default, placeholder option
         const defaultOption = document.createElement('option');
-        defaultOption.value = ""; // Important for the 'required' attribute to work
+        defaultOption.value = ""; 
         defaultOption.textContent = "Select Author Type";
         defaultOption.selected = true;
-        // defaultOption.disabled = true; // Optional: if you don't want it to be re-selectable
         authorTypeDropdown.appendChild(defaultOption);
 
-        // Populate with types from authorRoleColors (excluding 'default' as a selectable option)
         for (const type in authorRoleColors) {
             if (authorRoleColors.hasOwnProperty(type) && type !== 'default') {
                 const option = document.createElement('option');
@@ -366,32 +360,32 @@ $(document).ready(async function() {
     const devCommentForm = document.getElementById('devCommentForm');
     if (devCommentForm) {
         devCommentForm.addEventListener('submit', async function(event) {
-            event.preventDefault(); // Prevent default form submission
+            event.preventDefault();
             
             if (formMessage) {
-                formMessage.textContent = ''; // Clear previous messages
-                formMessage.className = '';   // Clear previous message styling
+                formMessage.textContent = '';
+                formMessage.className = '';
             }
 
             // Get form data
             const author = document.getElementById('author').value;
             const source = document.getElementById('source').value;
-            const timestamp = document.getElementById('timestamp').value; // This is datetime-local
+            const timestamp = document.getElementById('timestamp').value;
             const content = document.getElementById('commentContent').value;
             const tag = document.getElementById('tagSelect').value; 
-            const author_type = authorTypeDropdown ? authorTypeDropdown.value : ''; // Get selected author_type
+            const author_type = authorTypeDropdown ? authorTypeDropdown.value : '';
 
             // Basic validation for author_type
             if (!author_type) {
                 if (formMessage) {
                     formMessage.textContent = 'Please select an Author Type.';
-                    formMessage.className = 'error-message'; // Ensure .error-message is styled in your CSS
+                    formMessage.className = 'error-message';
                 }
                 // Highlight the dropdown or set focus
                 if (authorTypeDropdown) {
                     authorTypeDropdown.focus();
                 }
-                return; // Stop submission if author_type is not selected
+                return;
             }
             
             // Construct the data object for Supabase
