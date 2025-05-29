@@ -196,7 +196,10 @@ $(document).ready(async function() {
             const content = document.getElementById('commentContent').value;
             const tag = document.getElementById('tagSelect').value; 
             const author_type = authorTypeDropdown ? authorTypeDropdown.value : '';
+
+            // --- DIAGNOSTIC LOGS START ---
             console.log('Value of author_type from dropdown:', author_type);
+            // --- DIAGNOSTIC LOGS END ---
 
             if (!author_type) {
                 if (formMessage) {
@@ -218,7 +221,9 @@ $(document).ready(async function() {
                 author_type: author_type, 
             };
 
+            // --- DIAGNOSTIC LOGS START ---
             console.log('Comment data being sent to Supabase:', commentData);
+            // --- DIAGNOSTIC LOGS END ---
 
             if (formMessage) {
                 formMessage.textContent = 'Submitting comment...';
@@ -238,7 +243,7 @@ $(document).ready(async function() {
                         formMessage.className = 'error-message';
                     }
                 } else {
-                    console.log('Comment inserted successfully:', data);
+                    console.log('Comment inserted successfully:', data); // Log success data
                     if (formMessage) {
                         formMessage.textContent = 'Comment added successfully!';
                         formMessage.className = 'success-message';

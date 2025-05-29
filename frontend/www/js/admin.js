@@ -63,8 +63,8 @@ async function fetchDashboardStats() {
         totalNewsCount.textContent = dashboardStatsCache.newsTotal;
         commentsMonthCount.textContent = dashboardStatsCache.commentsThisMonth;
         newsMonthCount.textContent = dashboardStatsCache.newsThisMonth;
-        // console.log('Dashboard stats loaded from cache.');
-        return; 
+        console.log('Dashboard stats loaded from cache.'); // For debugging
+        return; // Exit without making new API calls
     }
 
     // Your existing date range calculation is correct for the current month
