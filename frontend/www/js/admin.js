@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient.js';
 
 let initialAuthCheckComplete = false;
+
 let dashboardStatsCache = null;
 let lastStatsFetchTime = 0;
 const STATS_CACHE_DURATION = 60 * 5000; 
@@ -66,6 +67,9 @@ async function fetchDashboardStats() {
         console.log('Dashboard stats loaded from cache.'); // For debugging
         return; // Exit without making new API calls
     }
+
+    // If cache is expired or not available, fetch fresh data
+    console.log('Fetching fresh dashboard stats...'); // For debugging
 
     // Your existing date range calculation is correct for the current month
     const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
@@ -300,9 +304,10 @@ function slugify(text) {
 
 
 $(document).ready(async function() {
+    // Check if we are on the admin page
     const currentPage = window.location.pathname.split('/').pop();
     if (currentPage !== 'admin.html') {
-        return;
+        return; // Exit if not on admin page
     }
 
     const discordLoginButton = document.getElementById('discordLoginButton');
@@ -491,6 +496,7 @@ $(document).ready(async function() {
                 source: sourceField.value,
                 comment_date: new Date(timestampField.value).toISOString(),
                 content: commentContentField.value,
+                title: commentContentField.value.substring(0, 45) + (commentContentField.value.length > 45 ? '...' : ''),
                 tag: selectedTag || null
             };
 
@@ -503,7 +509,7 @@ $(document).ready(async function() {
                 showFormMessage(formMessage, 'Error adding comment: ' + error.message, 'error');
             } else {
                 showFormMessage(formMessage, 'Developer comment added successfully!', 'success');
-                // console.log('Developer comment added:', data);
+                console.log('Developer comment added:', data);
                 commentInput.value = '';
                 devCommentForm.style.display = 'none';
                 commentInput.style.display = 'block';
