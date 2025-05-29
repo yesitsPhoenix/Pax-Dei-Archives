@@ -177,7 +177,7 @@ ul {
 }
 .search-results-dropdown .search-result-item h6 {
 	font-size: 14px;
-	color: rgba(255, 255, 255, 0.7);
+	color: var(--gold-color);
 	margin-bottom: 5px;
 }
 .search-results-dropdown .search-result-item h4 {
