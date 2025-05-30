@@ -1,6 +1,7 @@
 // devComments.js
 import { supabase } from './supabaseClient.js';
 import { authorRoleColors, formatCommentDateTime } from './utils.js';
+import DOMPurify from 'https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.es.min.js';
 
 export async function fetchAndRenderDeveloperComments(containerId, limit = null, searchTerm = null) {
     const container = document.getElementById(containerId);
@@ -71,14 +72,10 @@ export async function fetchAndRenderDeveloperComments(containerId, limit = null,
                 const authorType = comment.author_type || 'default';
                 const authorColor = authorRoleColors[authorType] || authorRoleColors['default'];
 
-                // --- MARKDOWN INTEGRATION START ---
-                // 1. Render Markdown to HTML
-                const rawCommentContent = comment.content || ''; // Ensure it's not null/undefined
+                const rawCommentContent = comment.content || '';
                 const markdownHtml = marked.parse(rawCommentContent);
 
-                // 2. Sanitize the generated HTML
                 const sanitizedHtmlContent = DOMPurify.sanitize(markdownHtml);
-                // --- MARKDOWN INTEGRATION END ---
 
                 const commentHtml = `
                         <div class="${containerId === 'recent-comments-home' ? 'col-lg-6 col-md-6 item' : 'col-lg-12 mb-4 dev-comment-item'}"
