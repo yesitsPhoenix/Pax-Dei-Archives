@@ -62,7 +62,8 @@ if (devCommentForm) {
         const source = document.getElementById('source').value;
         const timestamp = document.getElementById('timestamp').value;
         const content = document.getElementById('commentContent').value;
-        const tag = document.getElementById('tagSelect').value;
+        // Get selected tags for a multiple select dropdown
+        const selectedTags = Array.from(tagSelect.selectedOptions).map(option => option.value);
         const author_type = authorTypeDropdown ? authorTypeDropdown.value : '';
 
         let utcTimestamp = null;
@@ -94,7 +95,8 @@ if (devCommentForm) {
             source: source,
             comment_date: utcTimestamp,
             content: content,
-            tag: tag || null,
+            // Pass the array of selected tags
+            tag: selectedTags.length > 0 ? selectedTags : null,
             author_type: author_type,
         };
 
@@ -117,8 +119,8 @@ if (devCommentForm) {
                     authorTypeDropdown.value = "";
                 }
                 if (tagSelect) {
+                    // Deselect all options for a multiple select
                     Array.from(tagSelect.options).forEach(option => option.selected = false);
-                    tagSelect.value = "";
                 }
 
                 document.getElementById('devCommentForm').style.display = 'none';
@@ -356,7 +358,9 @@ async function populateTagSelect(tagSelectElement) {
     }
     tagSelectElement.innerHTML = '';
 
-    if (tagSelectElement.id === 'loreCategory') {
+    // Only add the default option if it's not a multiple select (like loreCategory)
+    // For multiple select, a default "Select tags" option is usually not needed.
+    if (!tagSelectElement.multiple && tagSelectElement.id === 'loreCategory') { // Ensure loreCategory is not 'multiple' or handle it separately
         const defaultOption = document.createElement('option');
         defaultOption.value = '';
         defaultOption.textContent = 'Select a category';

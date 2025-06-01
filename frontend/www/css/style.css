@@ -86,8 +86,8 @@ ul {
 	border: none;
 	outline: none;
 	height: 40px;
-	width: 50vw;
-	max-width: 600px;
+	width: 60vw;
+	max-width: 900px;
 	border-radius: 20px;
 	padding: 0 45px 0 20px;
 	color: #fff;
@@ -120,7 +120,13 @@ ul {
 .header-area .nav {
 	display: flex;
 	align-items: center;
+	padding-right: 40px;
 }
+.header-area .nav li:first-child {
+    margin-left: auto;
+
+}
+
 .header-area .nav li {
 	margin-left: 30px;
 }
@@ -130,6 +136,7 @@ ul {
 	color: #fff;
 	transition: all 0.3s ease;
 	padding: 5px 0;
+
 }
 .header-area .nav li a:hover, .header-area .nav li a.active {
 	color: var(--gold-color);
@@ -866,11 +873,13 @@ body.modal-open {
 	box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3);
 	border: 1px solid #2d3748;
 	color: #e2e8f0;
+	
 }
 .filter-group {
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
+
 }
 .filters-section label {
 	font-weight: bold;
@@ -946,6 +955,7 @@ body.modal-open {
 	color: #a1a1a1;
 	margin-bottom: 0.75em;
 	transition: all 0.3s ease;
+	
 }
 .dev-comment-item:hover {
 	transform: translateY(-5px);
@@ -1147,7 +1157,7 @@ body.modal-open {
 }
 @media (min-width: 1024px) {
 	.filter-group {
-		max-width: 22%;
+		max-width: 100%;
 		margin-right: 30px;
 	}
 }
@@ -1209,3 +1219,36 @@ body.modal-open {
     margin-top: 10px;
     border-radius: 4px;
 }
+
+
+
+.tag-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.tag-button {
+    background-color: #333;
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    border: 1px solid transparent;
+}
+
+.tag-button:hover {
+    background-color: var(--gold-color);
+    border-color: var(--gold-color);
+}
+
+.tag-button.selected {
+    background-color: var(--gold-color);
+    color: #000;
+    border-color: var(--gold-color);
+    font-weight: bold;
+}
+

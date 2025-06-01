@@ -77,10 +77,13 @@ export async function fetchAndRenderDeveloperComments(containerId, limit = null,
 
                 const sanitizedHtmlContent = DOMPurify.sanitize(markdownHtml);
 
+                // MODIFICATION HERE: Use JSON.stringify for the 'tag' array
+                const tagDataAttribute = comment.tag ? JSON.stringify(comment.tag) : '[]';
+
                 const commentHtml = `
                         <div class="${containerId === 'recent-comments-home' ? 'col-lg-6 col-md-6 item' : 'col-lg-12 mb-4 dev-comment-item'}"
                             data-author="${comment.author || ''}"
-                            data-tag="${comment.tag ? (Array.isArray(comment.tag) ? comment.tag.join(',') : comment.tag) : ''}"
+                            data-tag='${tagDataAttribute}'
                             data-date="${formattedDateForData}">
                             <div class="${containerId === 'recent-comments-home' ? 'item' : ''}"> <div class="down-content">
                                 <h6>

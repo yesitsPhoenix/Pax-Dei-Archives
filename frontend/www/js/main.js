@@ -101,7 +101,7 @@ async function performSearch(searchTerm) {
 
                 const formattedDateForDisplay = item.date && item.type !== 'Lore Post' ?
                     (item.type === 'Developer Comment' ? formatCommentDateTime(item.date) :
-                    (item.type === 'News Update' ? formatNewsDate(item.date) : '')) : '';
+                        (item.type === 'News Update' ? formatNewsDate(item.date) : '')) : '';
 
 
                 const mainLink = item.link ? item.link : '#';
@@ -114,7 +114,7 @@ async function performSearch(searchTerm) {
                         snippet += '...';
                     }
                     displayedContent = marked.parse(snippet);
-                } else if (item.type === 'News Update' || item.type === 'Developer Comment') {
+                } else if (item.type === 'News Update') {
                     const snippetLength = 200;
                     let snippet = item.content.substring(0, snippetLength);
                     if (item.content.length > snippetLength) {
@@ -172,9 +172,6 @@ $(document).ready(async function() {
             }
         }
     });
-
-    
-
 
     const roadmapLink = $('#roadmapLink');
     const roadmapModalOverlay = $('#roadmapModalOverlay');
@@ -259,35 +256,40 @@ $(document).ready(async function() {
     } else if (currentPage === 'developer-comments.html') {
         const devCommentsContainer = $('#dev-comments-container');
         const filterAuthorSelect = $('#filterAuthor');
-        const filterTagSelect = $('#filterTag');
+
+        const filterTagContainer = $('#filterTagContainer');
         const filterDateInput = $('#filterDate');
         const applyFiltersButton = $('#applyFilters');
         const clearFiltersButton = $('#clearFilters');
 
         async function populateTagsFromSupabase() {
-        filterTagSelect.find('option:not(:first)').remove();
+            filterTagContainer.empty();
 
-        try {
-            const { data, error } = await supabase
-                .from('tag_list')
-                .select('tag_name');
+            try {
+                const { data, error } = await supabase
+                    .from('tag_list')
+                    .select('tag_name');
 
-            if (error) {
-                console.error('Error fetching tags from Supabase for filters:', error.message);
-                return;
+                if (error) {
+                    console.error('Error fetching tags from Supabase for filters:', error.message);
+                    return;
+                }
+
+                data.sort((a, b) => a.tag_name.localeCompare(b.tag_name));
+
+                data.forEach(tag => {
+                    const tagElement = $(`<span class="tag-button">${tag.tag_name}</span>`);
+                    tagElement.on('click', function() {
+                        $(this).toggleClass('selected');
+                        applyFilters();
+                    });
+                    filterTagContainer.append(tagElement);
+                });
+
+            } catch (e) {
+                console.error('Unexpected error during Supabase tag fetch for filters:', e);
             }
-
-            // Sort the tags alphabetically by tag_name
-            data.sort((a, b) => a.tag_name.localeCompare(b.tag_name));
-
-            data.forEach(tag => {
-                filterTagSelect.append(`<option value="${tag.tag_name}">${tag.tag_name}</option>`);
-            });
-
-        } catch (e) {
-            console.error('Unexpected error during Supabase tag fetch for filters:', e);
         }
-    }
 
         function populateAuthorsFromComments() {
             filterAuthorSelect.find('option:not(:first)').remove();
@@ -303,52 +305,66 @@ $(document).ready(async function() {
             });
         }
 
-        function applyFilters() {
-            const selectedAuthor = filterAuthorSelect.val();
-            const selectedTag = filterTagSelect.val();
-            const selectedDate = filterDateInput.val();
+    function applyFilters() {
+    const selectedAuthor = filterAuthorSelect.val();
+    const selectedDate = filterDateInput.val();
+    const selectedTags = [];
+    $('#filterTagContainer .tag-button.selected').each(function() {
+        selectedTags.push($(this).text());
+    });
 
-            let commentsFound = false;
+    let commentsFound = false;
 
-            devCommentsContainer.children('.dev-comment-item').each(function() {
-                const commentAuthor = $(this).data('author');
-                const commentTags = $(this).data('tag') ? $(this).data('tag').split(',') : [];
-                const commentDate = $(this).data('date');
+    devCommentsContainer.children('.dev-comment-item').each(function() {
+        const commentAuthor = $(this).data('author');
+        
+        // jQuery already parsed the data-tag attribute into an array
+        // So, we just retrieve it directly.
+        // If data-tag is not set or parsed incorrectly, default to an empty array.
+        const commentTags = $(this).data('tag') || []; 
+        
+        // Optional: Add a console.log to confirm commentTags is an array
+        // console.log('Final commentTags (after jQuery parsing):', commentTags); 
 
-                const matchesAuthor = selectedAuthor === "" || commentAuthor === selectedAuthor;
-                const matchesTag = selectedTag === "" || commentTags.includes(selectedTag);
-                const matchesDate = selectedDate === "" || commentDate === selectedDate;
+        const commentDate = $(this).data('date');
 
-                if (matchesAuthor && matchesTag && matchesDate) {
-                    $(this).show();
-                    commentsFound = true;
-                } else {
-                    $(this).hide();
-                }
-            });
+        const matchesAuthor = selectedAuthor === "" || commentAuthor === selectedAuthor;
+        const matchesDate = selectedDate === "" || commentDate === selectedDate;
 
-            const noCommentsMessage = devCommentsContainer.find('.no-comments-found');
-            if (!commentsFound) {
-                if (noCommentsMessage.length === 0) {
-                    devCommentsContainer.append('<div class="col-lg-12 no-comments-found"><p class="text-center text-white-50">No comments found matching your filters.</p></div>');
-                } else {
-                    noCommentsMessage.show();
-                }
-            } else {
-                noCommentsMessage.hide();
-            }
+        // Ensure all selected tags are present in the comment's tags
+        const matchesTag = selectedTags.length === 0 || selectedTags.every(tag => commentTags.includes(tag));
+
+        if (matchesAuthor && matchesTag && matchesDate) {
+            $(this).show();
+            commentsFound = true;
+        } else {
+            $(this).hide();
         }
+    });
+
+    const noCommentsMessage = devCommentsContainer.find('.no-comments-found');
+    if (!commentsFound) {
+        if (noCommentsMessage.length === 0) {
+            devCommentsContainer.append('<div class="col-lg-12 no-comments-found"><p class="text-center text-white-50">No comments found matching your filters.</p></div>');
+        } else {
+            noCommentsMessage.show();
+        }
+    } else {
+        noCommentsMessage.hide();
+    }
+}
 
         function clearFilters() {
             filterAuthorSelect.val('');
-            filterTagSelect.val('');
             filterDateInput.val('');
+            $('#filterTagContainer .tag-button').removeClass('selected');
 
             devCommentsContainer.children('.dev-comment-item').show();
             devCommentsContainer.find('.no-comments-found').hide();
         }
 
         await fetchAndRenderDeveloperComments('dev-comments-container');
+
 
         devCommentsContainer.on('commentsRendered', function() {
             populateAuthorsFromComments();

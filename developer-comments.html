@@ -25,7 +25,8 @@
                     <span></span>
                     <span></span>
                 </a>
-                <div class="nav-and-search-wrapper"> <ul class="nav">
+                <div class="nav-and-search-wrapper">
+                    <ul class="nav">
                         <li><a href="index.html">Home</a></li>
                         <li><a href="news-updates.html">News & Updates</a></li>
                         <li><a href="developer-comments.html" class="active">Developer Comments</a></li>
@@ -53,25 +54,27 @@
                             <div class="col-lg-12">
                                 <div class="heading-section">
                                     <h4><em>Recent Developer</em> Comments</h4>
+                                    <p>Click the "View Source" button to open the comment in Discord.</p>
                                 </div>
                             </div>
                             <div class="col-lg-12">
                                 <div class="filters-section">
-                                    <div class="filter-group">
-                                        <label for="filterAuthor">Author:</label>
-                                        <select id="filterAuthor">
-                                            <option value="">All Authors</option>
-                                            </select>
+                                    <div class="filter-row"> <div class="filter-group">
+                                            <label>Tag:</label>
+                                            <div id="filterTagContainer" class="tag-cloud">
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="filter-group">
-                                        <label for="filterTag">Tag:</label>
-                                        <select id="filterTag">
-                                            <option value="">All Tags</option>
+                                    <div class="filter-row"> <div class="filter-group">
+                                            <label for="filterAuthor">Author:</label>
+                                            <select id="filterAuthor">
+                                                <option value="">All Authors</option>
                                             </select>
-                                    </div>
-                                    <div class="filter-group">
-                                        <label for="filterDate">Date:</label>
-                                        <input type="date" id="filterDate">
+                                        </div>
+                                        <div class="filter-group">
+                                            <label for="filterDate">Date:</label>
+                                            <input type="date" id="filterDate">
+                                        </div>
                                     </div>
                                     <div class="filter-buttons">
                                         <button id="applyFilters">Apply Filters</button>
@@ -82,7 +85,7 @@
                             <div class="col-lg-12">
                                 <div id="dev-comments-container" class="row">
                                     <div class="loading-indicator">Loading developer comments...</div>
-                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
