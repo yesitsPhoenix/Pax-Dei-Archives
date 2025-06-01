@@ -245,7 +245,7 @@ function parseComment(text) {
 
         let timestampMatch;
 
-        const fullDateTimePattern = /^(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
+        const fullDateTimePattern = /^(\d{1,2}\/\d{1,2}\/\d{2,4})(?:,\s*|\s+)(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
         timestampMatch = firstLine.match(fullDateTimePattern);
 
         if (timestampMatch) {
