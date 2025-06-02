@@ -104,7 +104,7 @@ if (devCommentForm) {
             const { data: { user }, error: authError } = await supabase.auth.getUser();
             if (authError || !user) {
                 console.error("Auth Error before insert:", authError);
-                console.log("User object before insert:", user);
+                //console.log("User object before insert:", user);
                 showFormMessage(formMessage, 'Please log in to submit comments.', 'error');
                 if (submitButton) {
                     submitButton.disabled = false;
@@ -112,8 +112,8 @@ if (devCommentForm) {
                 }
                 return;
             } else {
-                console.log("User ID from auth.getUser() before insert:", user.id);
-                console.log("User Role from auth.getUser() before insert:", user.role);
+                //console.log("User ID from auth.getUser() before insert:", user.id);
+                //console.log("User Role from auth.getUser() before insert:", user.role);
             }
 
             const { data, error, status } = await supabase
@@ -610,7 +610,7 @@ $(document).ready(async function() {
                 showFormMessage(addNewsUpdateMessage, 'Error adding news update: ' + error.message, 'error');
             } else {
                 showFormMessage(addNewsUpdateMessage, 'News update added successfully!', 'success');
-                console.log('News update added:', data);
+                //console.log('News update added:', data);
                 newsDateInput.value = '';
                 newsTitleInput.value = '';
                 newsSummaryInput.value = '';
@@ -679,7 +679,7 @@ $(document).ready(async function() {
                 showFormMessage(addLoreItemMessage, 'Error adding lore item: ' + error.message, 'error');
             } else {
                 showFormMessage(addLoreItemMessage, 'Lore item added successfully!', 'success');
-                console.log('Lore item added:', data);
+                //console.log('Lore item added:', data);
                 loreTitleInput.value = '';
                 loreSlugInput.value = '';
                 loreCategorySelect.value = '';
