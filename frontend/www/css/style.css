@@ -37,6 +37,7 @@ ul {
 .row {
 	display: flex;
 	flex-wrap: wrap;
+	justify-content: center
 }
 .col-lg-12, .col-lg-7, .col-lg-6, .col-lg-4, .col-lg-2, .col-md-6 {
 	position: relative;
@@ -496,6 +497,8 @@ ul {
 	align-items: center;
 	justify-content: center;
 	min-height: 100px;
+	min-width: 125px;
+	margin: 10px;
 }
 .feature-card:hover {
 	transform: translateY(-5px);
