@@ -119,7 +119,6 @@ if (devCommentForm) {
                     authorTypeDropdown.value = "";
                 }
                 if (tagSelect) {
-                    // Deselect all options for a multiple select
                     Array.from(tagSelect.options).forEach(option => option.selected = false);
                 }
 
@@ -358,9 +357,7 @@ async function populateTagSelect(tagSelectElement) {
     }
     tagSelectElement.innerHTML = '';
 
-    // Only add the default option if it's not a multiple select (like loreCategory)
-    // For multiple select, a default "Select tags" option is usually not needed.
-    if (!tagSelectElement.multiple && tagSelectElement.id === 'loreCategory') { // Ensure loreCategory is not 'multiple' or handle it separately
+    if (!tagSelectElement.multiple && tagSelectElement.id === 'loreCategory') {
         const defaultOption = document.createElement('option');
         defaultOption.value = '';
         defaultOption.textContent = 'Select a category';

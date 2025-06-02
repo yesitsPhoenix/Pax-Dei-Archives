@@ -317,21 +317,13 @@ $(document).ready(async function() {
 
     devCommentsContainer.children('.dev-comment-item').each(function() {
         const commentAuthor = $(this).data('author');
-        
-        // jQuery already parsed the data-tag attribute into an array
-        // So, we just retrieve it directly.
-        // If data-tag is not set or parsed incorrectly, default to an empty array.
         const commentTags = $(this).data('tag') || []; 
-        
-        // Optional: Add a console.log to confirm commentTags is an array
-        // console.log('Final commentTags (after jQuery parsing):', commentTags); 
-
         const commentDate = $(this).data('date');
 
         const matchesAuthor = selectedAuthor === "" || commentAuthor === selectedAuthor;
         const matchesDate = selectedDate === "" || commentDate === selectedDate;
 
-        // Ensure all selected tags are present in the comment's tags
+
         const matchesTag = selectedTags.length === 0 || selectedTags.every(tag => commentTags.includes(tag));
 
         if (matchesAuthor && matchesTag && matchesDate) {

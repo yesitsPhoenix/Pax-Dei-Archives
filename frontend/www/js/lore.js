@@ -2,16 +2,14 @@
 
 import { supabase } from './supabaseClient.js';
 
-// Markdown Renderer (assuming marked.js is loaded via CDN in HTML)
 const renderMarkdown = (markdownText) => {
     if (typeof marked === 'undefined') {
         console.error("marked.js is not loaded. Cannot render Markdown.");
-        return `<p>${markdownText}</p>`; // Fallback to plain text
+        return `<p>${markdownText}</p>`;
     }
     return marked.parse(markdownText);
 };
 
-// Function to parse URL query parameters
 function getQueryParams() {
     const params = {};
     const queryString = window.location.search.substring(1);
@@ -23,7 +21,6 @@ function getQueryParams() {
     return params;
 }
 
-// Function to fetch unique lore categories from Supabase
 async function fetchLoreCategories() {
     const { data, error } = await supabase
         .from('lore_items')
@@ -39,7 +36,6 @@ async function fetchLoreCategories() {
     return uniqueCategories;
 }
 
-// Function to fetch lore items, optionally filtered by category
 async function fetchLoreItems(category = null) {
     let query = supabase
         .from('lore_items')
@@ -59,7 +55,6 @@ async function fetchLoreItems(category = null) {
     return data;
 }
 
-// Function to fetch detailed lore item content by slug
 async function fetchLoreItemDetail(slug) {
     const { data, error } = await supabase
         .from('lore_items')
@@ -76,7 +71,6 @@ async function fetchLoreItemDetail(slug) {
     return data;
 }
 
-// Function to get icon based on category name (extend as needed)
 function getCategoryIcon(category) {
     switch (category) {
         case 'World': return 'fa-earth-americas';
@@ -89,20 +83,19 @@ function getCategoryIcon(category) {
         case 'Placeholder 3': return 'fa-flask';
         case 'Placeholder 4': return 'fa-gavel';
         case 'Placeholder 5': return 'fa-cloud';
-        default: return 'fa-book'; // Default icon
+        default: return 'fa-book';
     }
 }
 
-// Function to render smaller category cards
-async function renderSmallCategoryCards(selectedCategory = null) { // Added selectedCategory parameter
+async function renderSmallCategoryCards(selectedCategory = null) {
     const categories = await fetchLoreCategories();
     const smallLoreCategoryCards = $('#small-lore-category-cards');
-    smallLoreCategoryCards.empty(); // Clear existing cards
+    smallLoreCategoryCards.empty();
 
     if (categories.length > 0) {
         categories.forEach(cat => {
             const iconClass = getCategoryIcon(cat);
-            const isActive = selectedCategory === cat ? 'active-small-card' : ''; // New active class
+            const isActive = selectedCategory === cat ? 'active-small-card' : '';
             const cardHtml = `
                 <div class="col-auto"> <div class="feature-card small-feature-card ${isActive}">
                         <a href="lore.html?category=${encodeURIComponent(cat)}">
@@ -120,7 +113,6 @@ async function renderSmallCategoryCards(selectedCategory = null) { // Added sele
 }
 
 
-// Main logic for the lore page
 $(document).ready(async function() {
     const loreCategoriesSection = $('#lore-categories-section');
     const dynamicLoreContentWrapper = $('#dynamic-lore-content-wrapper');
@@ -149,8 +141,7 @@ $(document).ready(async function() {
         dynamicLoreContentWrapper.show();
         loreSidebar.show();
 
-        // Clear only the specific content area of the main content, not the small cards section
-        dynamicLoreMainContent.empty(); // Clear previous lore item content
+        dynamicLoreMainContent.empty();
 
 
         const categories = await fetchLoreCategories();
@@ -203,11 +194,9 @@ $(document).ready(async function() {
             dynamicLoreMainContent.html('<div class="lore-no-content-message">Select a lore category or item to view content.</div>');
         }
 
-        // Render small category cards whenever dynamic content is displayed, passing the selected category
         await renderSmallCategoryCards(selectedCategory);
     }
 
-    // --- Initial Page Load Logic ---
     const initialParams = getQueryParams();
     const initialCategory = initialParams.category;
     let initialItemSlug = initialParams.item;
@@ -228,11 +217,8 @@ $(document).ready(async function() {
     } else {
         loreCategoriesSection.show();
         dynamicLoreContentWrapper.hide();
-        // If no category/item selected, ensure small cards are not shown
         $('#small-lore-category-cards').empty();
     }
-
-    // --- Event Listeners ---
 
     $(document).on('click', '#lore-categories-section .feature-card a', async function(e) {
         e.preventDefault();
@@ -252,7 +238,6 @@ $(document).ready(async function() {
         displayLoreContent(newCategory, newItemSlug, fetchedItemsForCardClick);
     });
 
-    // Event listener for the new small cards
     $(document).on('click', '#small-lore-category-cards .feature-card a', async function(e) {
         e.preventDefault();
         const href = $(this).attr('href');
@@ -298,7 +283,6 @@ $(document).ready(async function() {
         if (!params.category && !params.item) {
             loreCategoriesSection.show();
             dynamicLoreContentWrapper.hide();
-            // Clear small cards if returning to initial state
             $('#small-lore-category-cards').empty();
         } else {
             (async () => {
