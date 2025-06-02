@@ -1,122 +1,216 @@
+/* _admin.css */
+
 .admin-form-container {
-	background-color: #1f2122;
-	padding: 30px;
-	border-radius: 15px;
-	margin-top: 30px;
-	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    background-color: #1f2122;
+    padding: 30px;
+    border-radius: 15px;
+    margin-top: 30px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
+
 .admin-form-container p {
-	margin-bottom: 20px;
-	line-height: 1.6;
-	color: #a1a1a1;
+    margin-bottom: 20px;
+    line-height: 1.6;
+    color: #a1a1a1;
 }
+
 .admin-form-container label {
-	display: block;
-	color: #e7e7e7;
-	margin-top: 15px;
-	margin-bottom: 5px;
-	font-weight: 500;
+    display: block;
+    color: #e7e7e7;
+    margin-top: 15px;
+    margin-bottom: 5px;
+    font-weight: 500;
 }
+
 .admin-form-container input[type="text"], .admin-form-container input[type="datetime-local"], .admin-form-container textarea {
-	width: 100%;
-	padding: 10px;
-	margin-bottom: 10px;
-	border: 1px solid #666;
-	border-radius: 5px;
-	background-color: #333;
-	color: #e7e7e7;
-	font-size: 14px;
-	box-sizing: border-box;
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #666;
+    border-radius: 5px;
+    background-color: #333;
+    color: #e7e7e7;
+    font-size: 14px;
+    box-sizing: border-box;
 }
+
 .admin-form-container textarea {
-	resize: vertical;
-	min-height: 150px;
+    resize: vertical;
+    min-height: 150px;
 }
+
 .admin-form-container button.main-button, .admin-form-container .main-button {
-	display: inline-block;
-	padding: 10px 20px;
-	background-color: var(--gold-color);
-	color: #000;
-	border: none;
-	border-radius: 25px;
-	font-weight: 600;
-	text-align: center;
-	cursor: pointer;
-	transition: all 0.3s ease;
-	margin-top: 20px;
-	margin-right: 15px;
-	margin-bottom: 20px;
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: var(--gold-color);
+    color: #000;
+    border: none;
+    border-radius: 25px;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 20px;
+    margin-right: 15px;
+    margin-bottom: 20px;
 }
+
 .admin-form-container button.main-button:hover, .admin-form-container .main-button:hover {
-	background-color: var(--light-gold-color);
+    background-color: var(--light-gold-color);
 }
+
 .admin-form-container button.secondary-button, .admin-form-container .secondary-button {
-	background-color: #ffc107;
-	color: #1f2122;
-	display: inline-block;
-	padding: 10px 20px;
-	border: none;
-	border-radius: 25px;
-	font-weight: 600;
-	text-align: center;
-	cursor: pointer;
-	transition: all 0.3s ease;
-	margin-top: 20px;
+    background-color: #ffc107;
+    color: #1f2122;
+    display: inline-block;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 25px;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 20px;
 }
+
 .admin-form-container button.secondary-button:hover, .admin-form-container .secondary-button:hover {
-	background-color: #e0a800;
+    background-color: #e0a800;
 }
+
 .admin-form-container .submit-button {
-	background-color: #28a745;
-	color: white;
-	margin-right: 10px;
+    background-color: #28a745;
+    color: white;
+    margin-right: 10px;
 }
+
 .admin-form-container .submit-button:hover {
-	background-color: #218838;
+    background-color: #218838;
 }
+
 .admin-form-container .form-actions {
-	display: flex;
-	gap: 15px;
-	margin-top: 25px;
-	justify-content: flex-end;
+    display: flex;
+    gap: 15px;
+    margin-top: 25px;
+    justify-content: flex-end;
 }
+
 .admin-form-container .form-actions button {
-	flex-grow: 1;
+    flex-grow: 1;
 }
+
+#parseError {
+    text-align: center;
+    margin-top: 15px;
+    font-weight: 600;
+    color: #dc3545;
+}
+
+#loginFormContainer {
+    background-color: #27292a;
+    padding: 30px;
+    border-radius: 15px;
+    margin-top: 30px;
+}
+
+#formMessage {
+    margin-top: 20px;
+    padding: 10px 15px;
+    border-radius: 5px;
+    font-weight: bold;
+    display: none;
+    text-align: center;
+}
+
+#formMessage.success {
+    background-color: #28a745;
+    color: white;
+    display: block;
+}
+
+#formMessage.error {
+    background-color: #dc3545;
+    color: white;
+    display: block;
+}
+
 .dashboard-card {
-	background-color: #1f2122;
-	padding: 20px;
-	border-radius: 15px;
-	margin-bottom: 20px;
-	text-align: center;
-	position: relative;
-	overflow: hidden;
-	height: 150px;
-	display: flex;
-	flex-direction: column;
-	justify-content: center;
-	align-items: center;
+    background-color: #1f2122;
+    padding: 20px;
+    border-radius: 15px;
+    margin-bottom: 20px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    height: 150px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
+
 .dashboard-card h6 {
-	color: #e7e7e7;
-	font-size: 18px;
-	font-weight: 600;
-	margin-bottom: 10px;
-	z-index: 1;
+    color: #e7e7e7;
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    z-index: 1;
 }
+
 .dashboard-card p {
-	color: #a1a1a1;
-	font-size: 36px;
-	font-weight: 700;
-	margin: 0;
-	line-height: 1;
-	z-index: 1;
+    color: #a1a1a1;
+    font-size: 36px;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1;
+    z-index: 1;
 }
+
 .dashboard-card i {
-	position: absolute;
-	bottom: -10px;
-	right: -10px;
-	font-size: 80px;
-	color: rgba(255, 255, 255, 0.05);
-	z-index: 0;
+    position: absolute;
+    bottom: -10px;
+    right: -10px;
+    font-size: 80px;
+    color: rgba(255, 255, 255, 0.05);
+    z-index: 0;
+}
+
+#formMessage.error-message {
+    color: red;
+    background-color: #ffebee;
+    border: 1px solid red;
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 4px;
+}
+
+#formMessage.success-message {
+    color: green;
+    background-color: #e8f5e9;
+    border: 1px solid green;
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 4px;
+}
+
+#formMessage.info-message {
+    color: #00529B;
+    background-color: #BDE5F8;
+    border: 1px solid #00529B;
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 4px;
+}
+
+@media (max-width: 767px) {
+    .admin-form-container {
+        padding: 20px;
+    }
+    .admin-form-container button.main-button {
+        width: 100%;
+        margin-right: 0;
+    }
+    .admin-form-container .form-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
 }
