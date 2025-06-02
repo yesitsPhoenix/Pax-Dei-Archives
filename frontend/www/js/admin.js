@@ -62,7 +62,6 @@ if (devCommentForm) {
         const source = document.getElementById('source').value;
         const timestamp = document.getElementById('timestamp').value;
         const content = document.getElementById('commentContent').value;
-        // Get selected tags for a multiple select dropdown
         const selectedTags = Array.from(tagSelect.selectedOptions).map(option => option.value);
         const author_type = authorTypeDropdown ? authorTypeDropdown.value : '';
 
@@ -95,7 +94,6 @@ if (devCommentForm) {
             source: source,
             comment_date: utcTimestamp,
             content: content,
-            // Pass the array of selected tags
             tag: selectedTags.length > 0 ? selectedTags : null,
             author_type: author_type,
         };
@@ -103,6 +101,21 @@ if (devCommentForm) {
         showFormMessage(formMessage, 'Submitting comment...', 'info');
 
         try {
+            const { data: { user }, error: authError } = await supabase.auth.getUser();
+            if (authError || !user) {
+                console.error("Auth Error before insert:", authError);
+                console.log("User object before insert:", user);
+                showFormMessage(formMessage, 'Please log in to submit comments.', 'error');
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Add Comment to DB';
+                }
+                return;
+            } else {
+                console.log("User ID from auth.getUser() before insert:", user.id);
+                console.log("User Role from auth.getUser() before insert:", user.role);
+            }
+
             const { data, error, status } = await supabase
                 .from('developer_comments')
                 .insert([commentData])
