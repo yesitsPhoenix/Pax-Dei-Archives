@@ -81,7 +81,7 @@ export async function fetchAndRenderDeveloperComments(containerId, limit = null,
                 const tagDataAttribute = comment.tag ? JSON.stringify(comment.tag) : '[]';
 
                 const commentHtml = `
-                        <div class="${containerId === 'recent-comments-home' ? 'col-lg-6 col-md-6 item' : 'col-lg-12 mb-4 dev-comment-item'}"
+                        <div class="${containerId === 'recent-comments-home' ? 'col-lg-6 col-md-6 item' : 'col-md-6 mb-4 dev-comment-item'}"
                             data-author="${comment.author || ''}"
                             data-tag='${tagDataAttribute}'
                             data-date="${formattedDateForData}">

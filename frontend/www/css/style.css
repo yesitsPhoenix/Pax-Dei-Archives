@@ -229,7 +229,7 @@ ul {
 @media (min-width: 768px) {
 	.col-md-6 {
 		flex: 0 0 50%;
-		max-width: 50%;
+		max-width: 48%;
 	}
 	.header-area .nav li {
 		text-align: left;
@@ -354,7 +354,7 @@ ul {
 	}
 	.col-lg-6, .col-lg-4, .col-lg-2, .col-md-6 {
 		flex: 0 0 50%;
-		max-width: 50%;
+		max-width: 48%;
 	}
 	.feature-card {
 		min-height: 80px;
@@ -970,7 +970,7 @@ body.modal-open {
 	color: #a1a1a1;
 	margin-bottom: 0.75em;
 	transition: all 0.3s ease;
-	
+	margin: 10px;
 }
 .dev-comment-item:hover {
 	transform: translateY(-5px);
@@ -1258,6 +1258,7 @@ body.modal-open {
 .tag-button:hover {
     background-color: var(--gold-color);
     border-color: var(--gold-color);
+	color: #000;
 }
 
 .tag-button.selected {
