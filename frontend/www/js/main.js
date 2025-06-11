@@ -7,7 +7,9 @@ import { fetchAndRenderArticles, fetchAndRenderArticleCategories, setupArticleMo
 import DOMPurify from 'https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.es.min.js';
 
 const TAG_LIST_CACHE_KEY = 'paxDeiTagList';
-const TAG_LIST_CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000;
+// const TAG_LIST_CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000;
+const TAG_LIST_CACHE_EXPIRY_MS = 600 * 1000; 
+
 
 const DEV_COMMENTS_CACHE_KEY = 'paxDeiDevComments';
 const DEV_COMMENTS_CACHE_EXPIRY_MS = 5 * 60 * 1000;
@@ -290,30 +292,38 @@ $(document).ready(async function() {
             filterTagContainer.empty();
 
             const cachedData = localStorage.getItem(TAG_LIST_CACHE_KEY);
+            console.log("main.js: populateTagsFromSupabase - Checking cache for TAG_LIST_CACHE_KEY."); // Debug log
             if (cachedData) {
                 const { data, timestamp } = JSON.parse(cachedData);
+                console.log("main.js: populateTagsFromSupabase - Cached data found:", data); // Debug log
                 if (Date.now() - timestamp < TAG_LIST_CACHE_EXPIRY_MS) {
+                    console.log("main.js: populateTagsFromSupabase - Using cached data."); // Debug log
                     renderTags(data);
                     return;
                 } else {
+                    console.log("main.js: populateTagsFromSupabase - Cached data expired, removing."); // Debug log
                     localStorage.removeItem(TAG_LIST_CACHE_KEY);
                 }
             }
 
+            console.log("main.js: populateTagsFromSupabase - Fetching tag_list from Supabase."); // Debug log
             try {
                 const { data, error } = await supabase
                     .from('tag_list')
                     .select('tag_name');
 
                 if (error) {
+                    console.error('main.js: populateTagsFromSupabase - Error fetching tags from Supabase:', error.message); // Debug error
                     return;
                 }
 
                 data.sort((a, b) => a.tag_name.localeCompare(b.tag_name));
                 localStorage.setItem(TAG_LIST_CACHE_KEY, JSON.stringify({ data, timestamp: Date.now() }));
                 renderTags(data);
+                console.log("main.js: populateTagsFromSupabase - Successfully fetched and cached tags:", data); // Debug log
 
             } catch (e) {
+                console.error('main.js: populateTagsFromSupabase - Unexpected error during Supabase tag fetch:', e); // Debug error
             }
         }
 
