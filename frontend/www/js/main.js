@@ -7,7 +7,7 @@ import { fetchAndRenderArticles, fetchAndRenderArticleCategories, setupArticleMo
 import DOMPurify from 'https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.es.min.js';
 
 const TAG_LIST_CACHE_KEY = 'paxDeiTagList';
-const TAG_LIST_CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000;
+const TAG_LIST_CACHE_EXPIRY_MS = 10 * 1000; 
 
 const DEV_COMMENTS_CACHE_KEY = 'paxDeiDevComments';
 const DEV_COMMENTS_CACHE_EXPIRY_MS = 5 * 60 * 1000;
@@ -332,12 +332,16 @@ $(document).ready(async function() {
             filterAuthorSelect.find('option:not(:first)').remove();
             const authors = new Set();
 
-            devCommentsContainer.children('.dev-comment-item').each(function() {
+            const commentElements = devCommentsContainer.children('.dev-comment-item');
+
+            commentElements.each(function() {
                 const author = $(this).data('author');
                 if (author) authors.add(author);
             });
 
-            Array.from(authors).sort().forEach(author => {
+            const sortedAuthors = Array.from(authors).sort();
+
+            sortedAuthors.forEach(author => {
                 filterAuthorSelect.append(`<option value="${author}">${author}</option>`);
             });
         }
@@ -392,13 +396,12 @@ $(document).ready(async function() {
             devCommentsContainer.find('.no-comments-found').hide();
         }
 
-        await fetchAndRenderDeveloperComments('dev-comments-container', null, null, DEV_COMMENTS_CACHE_KEY, DEV_COMMENTS_CACHE_EXPIRY_MS);
-
-
         devCommentsContainer.on('commentsRendered', function() {
             populateAuthorsFromComments();
             applyFilters();
         });
+
+        await fetchAndRenderDeveloperComments('dev-comments-container', null, null, DEV_COMMENTS_CACHE_KEY, DEV_COMMENTS_CACHE_EXPIRY_MS);
 
         populateTagsFromSupabase();
 
