@@ -1,20 +1,19 @@
 // devComments.js
 
 import { supabase } from './supabaseClient.js';
-import { authorRoleColors, formatCommentDateTime } from './utils.js'; // Ensure authorRoleColors is imported
-import DOMPurify from 'https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.es.min.js'; // Ensure DOMPurify is imported
+import { authorRoleColors, formatCommentDateTime } from './utils.js';
+import DOMPurify from 'https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.es.min.js';
 
 
 export async function fetchAndRenderDeveloperComments(containerId, limit = null, searchTerm = null, cacheKey = null, cacheExpiryMs = null) {
     const container = containerId ? document.getElementById(containerId) : null;
 
-    if (container && !searchTerm) { // Only show loading indicator if not a search and container exists
+    if (container && !searchTerm) {
         container.innerHTML = '<div class="loading-indicator">Loading comments...</div>';
     }
 
     let commentsData = [];
 
-    // Caching logic: Only apply cache if cacheKey and cacheExpiryMs are provided and no search term is present
     if (cacheKey && cacheExpiryMs && !searchTerm) {
         const cachedData = sessionStorage.getItem(cacheKey);
         if (cachedData) {
@@ -22,12 +21,11 @@ export async function fetchAndRenderDeveloperComments(containerId, limit = null,
             if (Date.now() - parsedCache.timestamp < cacheExpiryMs) {
                 commentsData = parsedCache.data;
             } else {
-                sessionStorage.removeItem(cacheKey); // Clear expired cache
+                sessionStorage.removeItem(cacheKey);
             }
         }
     }
 
-    // If data was not found in cache or cache expired, or if a search term is present, fetch from Supabase
     if (commentsData.length === 0 || searchTerm) {
         try {
             let query = supabase
@@ -55,7 +53,6 @@ export async function fetchAndRenderDeveloperComments(containerId, limit = null,
             }
             commentsData = data;
 
-            // Store in cache only if no search term was used
             if (cacheKey && cacheExpiryMs && !searchTerm) {
                 sessionStorage.setItem(cacheKey, JSON.stringify({ data: commentsData, timestamp: Date.now() }));
             }
@@ -69,28 +66,21 @@ export async function fetchAndRenderDeveloperComments(containerId, limit = null,
         }
     }
 
-    // Render comments if a container is provided (and it's not purely for search results)
     if (container && !searchTerm) {
         if (commentsData.length === 0) {
             container.innerHTML = '<div class="col-lg-12 no-comments-found"><p class="text-center text-white-50">No comments found.</p></div>';
         } else {
             renderComments(container, commentsData);
         }
-        // Dispatch custom event after rendering is complete
-        // This is crucial for main.js to know when to populate the author dropdown
         $(container).trigger('commentsRendered');
     }
 
     return commentsData;
 }
 
-/**
- * Renders an array of developer comments into the specified HTML container.
- * @param {HTMLElement} container - The DOM element to render comments into.
- * @param {Array<Object>} comments - An array of comment objects from Supabase.
- */
+
 function renderComments(container, comments) {
-    container.innerHTML = ''; // Clear loading message or previous content
+    container.innerHTML = '';
 
     comments.forEach(comment => {
         const formattedDate = formatCommentDateTime(comment.comment_date);
