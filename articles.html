@@ -3,12 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pax Dei Archives - News & Updates</title>
+    <title>Pax Dei Archives - Articles</title>
     <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="frontend/www/css/articles.css">
+    <link rel="stylesheet" href="https://unpkg.com/swiper@7/swiper-bundle.min.css"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
-    <script type="module" src="frontend/www/js/supabaseClient.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script type="module" src="frontend/www/js/main.js"></script>
+    <script type="module" src="frontend/www/js/articles.js"></script>
 </head>
 <body>
     <header class="header-area">
@@ -25,8 +28,8 @@
                 </a>
                 <div class="nav-and-search-wrapper"> <ul class="nav">
                         <li><a href="index.html">Home</a></li>
-                        <li><a href="articles.html">Articles</a></li>
-                        <li><a href="news-updates.html" class="active">News & Updates</a></li>
+                        <li><a href="articles.html" class="active">Articles</a></li>
+                        <li><a href="news-updates.html">News & Updates</a></li>
                         <li><a href="developer-comments.html">Developer Comments</a></li>
                         <li><a href="lore.html">Lore</a></li>
                         <li><a href="about.html">About</a></li>
@@ -43,25 +46,51 @@
             </nav>
         </div>
     </header>
+
     <div class="container">
         <div class="row">
             <div class="col-lg-12">
                 <div class="page-content">
-                    <div class="news-updates-full">
-                        <div class="row">
-                            <div class="col-lg-12">
-                                <div class="heading-section">
-                                    <h4><em>All News</em> & Updates</h4>
-                                </div>
+                    <div class="row">
+                        <!-- <div class="col-lg-12">
+                            <div class="heading-sections">
+                                <h4>Articles</h4>
                             </div>
-                            <div class="col-lg-12">
-                                <div id="news-updates-container" class="row">
-                                    <div class="loading-indicator">Loading news updates...</div>
-                                </div>
+                        </div> -->
+                    </div>
+                    <div class="filter-section">
+                        <h3>Filter Articles by Category</h3>
+                        <div id="articleCategoryButtons" class="category-buttons">
+                            <!-- Category buttons will be loaded here dynamically -->
+                        </div>
+                        <button id="clearArticleCategoryFilters" class="clear-filters-button">Clear Filters</button>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <div id="articlesListContainer" class="articles-list">
+
                             </div>
                         </div>
                     </div>
+
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="fullArticleModalOverlay" class="article-modal-overlay">
+        <div class="article-modal-content">
+            <button id="closeArticleModal" class="close-button">&times;</button>
+            <h2 id="articleModalTitle"></h2>
+            <div class="meta-info">
+                <span id="articleModalAuthor"></span> - <span id="articleModalDate"></span>
+            </div>
+            <div id="articleModalContent" class="full-article-body"></div>
+            <div class="main-button" style="text-align: right; margin-top: 20px;">
+                <a id="articleModalSourceLink" href="#" target="_blank" rel="noopener noreferrer" style="display: none;">
+                    <i class="fas fa-external-link-alt"></i> Original Source
+                </a>
             </div>
         </div>
     </div>
@@ -81,7 +110,5 @@
         </div>
     </footer>
 
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script type="module" src="frontend/www/js/main.js"></script>
 </body>
 </html>
