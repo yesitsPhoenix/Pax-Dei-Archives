@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const listingsBody = document.getElementById('listings-body');
     const listingsTable = document.getElementById('listings-table');
     const loader = document.getElementById('loader');
+    const itemCategorySelect = document.getElementById('item-category');
 
     const grossSalesEl = document.getElementById('dashboard-gross-sales');
     const feesPaidEl = document.getElementById('dashboard-fees-paid');
@@ -32,8 +33,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <input type="text" id="edit-item-name" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-100" readonly>
                     </div>
                     <div class="mb-4">
-                        <label for="edit-item-category" class="block text-gray-700 text-sm font-bold mb-2">Item Category:</label>
-                        <input type="text" id="edit-item-category" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-100" readonly>
+                        <label for="edit-item-category-display" class="block text-gray-700 text-sm font-bold mb-2">Item Category:</label>
+                        <input type="text" id="edit-item-category-display" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-100" readonly>
                     </div>
                     <div class="mb-4">
                         <label for="edit-quantity-listed" class="block text-gray-700 text-sm font-bold mb-2">Quantity Listed:</label>
@@ -94,7 +95,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentEditingListingId = listingId;
         const { data: listing, error } = await supabase
             .from('market_listings')
-            .select(`*, items(item_name, item_category)`)
+            .select(`*, items(item_name, item_categories(category_name))`)
             .eq('listing_id', listingId)
             .single();
 
@@ -105,7 +106,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         document.getElementById('edit-item-name').value = listing.items.item_name;
-        document.getElementById('edit-item-category').value = listing.items.item_category || '';
+        document.getElementById('edit-item-category-display').value = listing.items.item_categories?.category_name || 'N/A';
         document.getElementById('edit-quantity-listed').value = listing.quantity_listed;
         document.getElementById('edit-price-per-unit').value = listing.listed_price_per_unit;
 
@@ -157,6 +158,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
+    const fetchAndPopulateCategories = async () => {
+        const { data, error } = await supabase
+            .from('item_categories')
+            .select('category_id, category_name')
+            .order('category_name', { ascending: true });
+
+        if (error) {
+            console.error('Error fetching categories:', error.message);
+            return;
+        }
+
+        itemCategorySelect.innerHTML = '<option value="">Select a category</option>';
+        data.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category.category_id;
+            option.textContent = category.category_name;
+            itemCategorySelect.appendChild(option);
+        });
+    };
+
     const loadPageData = async () => {
         showLoader(true);
 
@@ -170,7 +191,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 market_fee,
                 listing_date,
                 is_fully_sold,
-                items (item_name, item_category)
+                items (item_name, item_categories(category_name))
             `)
             .order('listing_date', { ascending: false });
 
@@ -186,7 +207,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         showLoader(false);
     };
 
-    const getOrCreateItemId = async (itemName, itemCategory) => {
+    const getOrCreateItemId = async (itemName, categoryId) => {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
         if (userError || !user) {
             console.error('User not authenticated or error fetching user:', userError?.message);
@@ -208,7 +229,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 .from('items')
                 .insert({
                     item_name: itemName,
-                    item_category: itemCategory,
+                    category_id: categoryId,
                     owner_id: userId
                 })
                 .select('item_id')
@@ -245,7 +266,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const renderListingsTable = (activeListings) => {
         listingsBody.innerHTML = '';
         if (activeListings.length === 0) {
-            listingsBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No active listings.</td></tr>';
+            listingsBody.innerHTML = '<tr><td colspan="8" class="text-center">No active listings.</td></tr>';
             return;
         }
 
@@ -253,16 +274,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${listing.items.item_name}</td>
-                <td>${listing.items.item_category || 'N/A'}</td> 
+                <td>${listing.items.item_categories?.category_name || 'N/A'}</td> 
                 <td>${listing.quantity_listed.toLocaleString()}</td>
                 <td>${listing.listed_price_per_unit.toFixed(2)}</td>
                 <td>${listing.total_listed_price.toLocaleString()}</td>
                 <td>${listing.market_fee.toLocaleString()}</td>
                 <td>${new Date(listing.listing_date).toLocaleDateString()}</td>
                 <td class="action-buttons flex flex-wrap gap-2">
-                    <button class="sold-btn bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-full shadow-md transition duration-150 ease-in-out transform hover:scale-105">Sold</button>
-                    <button class="edit-btn bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-full shadow-md transition duration-150 ease-in-out transform hover:scale-105">Edit</button>
-                    <button class="cancel-btn bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-3 rounded-full shadow-md transition duration-150 ease-in-out transform hover:scale-105">Cancel</button>
+                    <button class="sold-btn bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-full shadow-md transition duration-150 ease-in-out transform hover:scale-105" data-id="${listing.listing_id}">Sold</button>
+                    <button class="edit-btn bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-full shadow-md transition duration-150 ease-in-out transform hover:scale-105" data-id="${listing.listing_id}">Edit</button>
+                    <button class="cancel-btn bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-3 rounded-full shadow-md transition duration-150 ease-in-out transform hover:scale-105" data-id="${listing.listing_id}">Cancel</button>
                 </td>
             `;
             listingsBody.appendChild(row);
@@ -291,7 +312,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const currentUserId = user.id;
 
         const itemName = document.getElementById('item-name').value;
-        const itemCategory = document.getElementById('item-category').value;
+        const selectedCategoryId = itemCategorySelect.value;
+        if (!selectedCategoryId) {
+            await showCustomModal('Error', 'Please select an item category.', [{ text: 'OK', value: true }]);
+            button.disabled = false;
+            button.textContent = 'Add Listing';
+            return;
+        }
+
         const stacks = parseInt(document.getElementById('item-stacks').value, 10);
         const countPerStack = parseInt(document.getElementById('item-count-per-stack').value, 10);
         const pricePerStack = parseFloat(document.getElementById('item-price-per-stack').value);
@@ -301,7 +329,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const total_listed_price = stacks * pricePerStack;
         const listed_price_per_unit = total_listed_price / quantity_listed;
 
-        const itemId = await getOrCreateItemId(itemName, itemCategory);
+        const itemId = await getOrCreateItemId(itemName, selectedCategoryId);
         if (!itemId) {
             await showCustomModal('Error', 'Error processing item name. Check console for details.', [{ text: 'OK', value: true }]);
             button.disabled = false;
@@ -322,7 +350,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (error) {
             console.error('Error adding listing:', error.message);
-            await showCustomModal('Error', 'Failed to add the new listing.', [{ text: 'OK', value: true }]);
+            await showCustomModal('Error', 'Failed to add the new listing: ' + error.message, [{ text: 'OK', value: true }]);
         } else {
             addListingForm.reset();
             await loadPageData();
@@ -408,5 +436,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     addListingForm.addEventListener('submit', handleAddListing);
     listingsBody.addEventListener('click', handleTableClick);
     
-    loadPageData();
+    await fetchAndPopulateCategories();
+    await loadPageData();
 });
