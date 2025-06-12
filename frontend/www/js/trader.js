@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const netProfitEl = document.getElementById('dashboard-net-profit');
     const activeListingsEl = document.getElementById('dashboard-active-listings');
 
-    let currentUserId = null; // Initialize currentUserId to null
+    let currentUserId = null;
 
     const customModalHtml = `
         <div id="customModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
@@ -238,7 +238,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (item) return item.item_id;
 
-        // Ensure currentUserId is available before attempting to insert new item
         if (!currentUserId) {
             console.error('User ID not available for creating new item.');
             await showCustomModal('Error', 'User ID not found. Please log in again.', [{ text: 'OK', value: true }]);
@@ -250,7 +249,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             .insert({
                 item_name: itemName,
                 category_id: categoryId,
-                user_id: currentUserId // Use the global currentUserId
+                user_id: currentUserId
             })
             .select('item_id')
             .single();
@@ -315,7 +314,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         button.disabled = true;
         button.textContent = 'Adding...';
 
-        if (!currentUserId) { // Check currentUserId at the start of form submission
+        if (!currentUserId) {
             console.error('User not authenticated or user ID not available for adding listing.');
             await showCustomModal('Error', 'You must be logged in to add a listing. User ID not found.', [{ text: 'OK', value: true }]);
             button.disabled = false;
@@ -459,21 +458,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     addListingForm.addEventListener('submit', handleAddListing);
     listingsBody.addEventListener('click', handleTableClick);
     
-    // Listen for auth state changes
-    supabase.auth.onAuthStateChanged((user) => {
-        if (user) {
-            currentUserId = user.id;
+    supabase.auth.onAuthStateChange((event, session) => {
+        if (session && session.user) {
+            currentUserId = session.user.id;
             console.log('User authenticated:', currentUserId);
-            // Once user is authenticated, load data and enable form
             fetchAndPopulateCategories();
             loadPageData();
         } else {
             currentUserId = null;
             console.log('User not authenticated.');
-            // Handle unauthenticated state if necessary (e.g., redirect to login)
-            showLoader(false); // Hide loader if no user and data can't be loaded
+            showLoader(false);
             listingsBody.innerHTML = '<tr><td colspan="8" class="text-center">Please log in to view and add listings.</td></tr>';
-            addListingForm.querySelector('button[type="submit"]').disabled = true; // Disable add button
+            addListingForm.querySelector('button[type="submit"]').disabled = true;
         }
     });
 });
