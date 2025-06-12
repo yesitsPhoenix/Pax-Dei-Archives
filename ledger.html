@@ -12,6 +12,8 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <header class="header-area">
@@ -68,6 +70,18 @@
                     <h3>Active Listings</h3>
                     <p id="dashboard-active-listings">0</p>
                 </div>
+                <div class="dashboard-card">
+                    <h3>Total Items Listed</h3>
+                    <p id="dashboard-total-quantity-listed">0</p>
+                </div>
+            </section>
+
+            <!-- Chart Section -->
+            <section class="chart-section my-8 p-6 bg-white rounded-lg shadow-xl">
+                <h2 class="text-2xl font-bold mb-4 text-gray-800">Gross Sales Trend</h2>
+                <div class="relative h-96 w-full">
+                    <canvas id="grossSalesChart"></canvas>
+                </div>
             </section>
 
             <section class="add-listing">
@@ -84,7 +98,7 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="item-stacks">Stacks</label>
+                        <label for="item-stacks">Stacks (Number of Individual Listings)</label>
                         <input type="number" id="item-stacks" value="1" required>
                     </div>
                     <div class="form-group">
@@ -120,6 +134,28 @@
                     </tbody>
                 </table>
             </section>
+
+            <!-- Sales History Section -->
+            <section class="sales-history my-8">
+                <h2 class="text-2xl font-bold mb-4 text-gray-800">Sales History Ledger</h2>
+                <div id="sales-loader">Loading sales data...</div>
+                <table id="sales-table" class="min-w-full bg-white shadow-md rounded-lg overflow-hidden" style="display:none;">
+                    <thead>
+                        <tr class="bg-gray-200 text-gray-700 uppercase text-sm leading-normal">
+                            <th class="py-3 px-6 text-left">Item Name</th>
+                            <th class="py-3 px-6 text-left">Category</th>
+                            <th class="py-3 px-6 text-left">Qty Sold</th>
+                            <th class="py-3 px-6 text-left">Price/Unit</th>
+                            <th class="py-3 px-6 text-left">Total Sale</th>
+                            <th class="py-3 px-6 text-left">Sale Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sales-body" class="text-gray-600 text-sm font-light">
+                        <!-- Sales data will be dynamically loaded here -->
+                    </tbody>
+                </table>
+            </section>
+
         </div>
     </main>
 
