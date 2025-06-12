@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .from('items')
                 .insert({
                     item_name: itemName,
-                    owner_id: userId
+                    user_id: userId
                 })
                 .select('item_id')
                 .single();
