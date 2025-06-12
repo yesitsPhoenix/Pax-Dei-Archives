@@ -151,7 +151,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const { data: listing, error: fetchError } = await supabase
             .from('market_listings')
-            .select('user_id') // Fetch user_id to verify ownership
+            .select('user_id')
             .eq('listing_id', listingId)
             .single();
 
@@ -164,7 +164,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (await showCustomModal('Confirmation', 'Are you sure you want to cancel this listing? This action will mark it as cancelled but fees are non-refundable.', [{ text: 'Yes', value: true, type: 'confirm' }, { text: 'No', value: false, type: 'cancel' }])) {
             const { error } = await supabase
                 .from('market_listings')
-                .update({ is_fully_sold: false, is_cancelled: true }) // Mark as cancelled instead of deleting
+                .update({ is_fully_sold: false, is_cancelled: true })
                 .eq('listing_id', listingId);
 
             if (error) {
@@ -238,16 +238,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (item) return item.item_id;
 
-        if (selectError && selectError.code !== 'PGRST116') {
-             console.error('Error selecting item (non-PGRST116):', selectError.message);
-             await showCustomModal('Error', 'Could not verify item existence: ' + selectError.message, [{ text: 'OK', value: true }]);
-             return null;
-        }
-
         const { data: user, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
-            console.error('User not authenticated or error fetching user:', userError?.message);
-            await showCustomModal('Error', 'You must be logged in to add items.', [{ text: 'OK', value: true }]);
+        if (userError || !user || !user.id) {
+            console.error('User not authenticated or user ID not available:', userError?.message || 'User object or ID is null/undefined.');
+            await showCustomModal('Error', 'You must be logged in to add items. User ID not found.', [{ text: 'OK', value: true }]);
             return null;
         }
         const userId = user.id;
@@ -344,12 +338,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const stacks = parseInt(document.getElementById('item-stacks').value, 10);
         const countPerStack = parseInt(document.getElementById('item-count-per-stack').value, 10);
         const pricePerStack = parseFloat(document.getElementById('item-price-per-stack').value);
-        const feePerStack = parseFloat(document.getElementById('item-fee').value);
-
-        const quantity_listed = stacks * countPerStack;
-        const total_listed_price = stacks * pricePerStack;
-        const listed_price_per_unit = total_listed_price / quantity_listed;
-        const total_market_fee = feePerStack * stacks;
+        // Removed feePerStack input value as fee is now calculated
 
         const itemId = await getOrCreateItemId(itemName, selectedCategoryId);
         if (!itemId) {
@@ -358,25 +347,38 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        const { error } = await supabase.from('market_listings').insert({
-            item_id: itemId,
-            quantity_listed,
-            listed_price_per_unit,
-            total_listed_price,
-            market_fee: total_market_fee,
-            listing_date: new Date().toISOString(),
-            is_fully_sold: false,
-            is_cancelled: false,
-            user_id: currentUserId
-        });
+        let allListingsSuccessful = true;
+        for (let i = 0; i < stacks; i++) {
+            const quantity_listed = countPerStack;
+            const total_listed_price = pricePerStack;
+            const listed_price_per_unit = total_listed_price / quantity_listed;
+            const market_fee_for_this_stack = Math.ceil(pricePerStack * 0.05); // Calculate 5% fee rounded up
 
-        if (error) {
-            console.error('Error adding listing:', error.message);
-            await showCustomModal('Error', 'Failed to add the new listing: ' + error.message, [{ text: 'OK', value: true }]);
-        } else {
+            const { error } = await supabase.from('market_listings').insert({
+                item_id: itemId,
+                quantity_listed,
+                listed_price_per_unit,
+                total_listed_price,
+                market_fee: market_fee_for_this_stack,
+                listing_date: new Date().toISOString(),
+                is_fully_sold: false,
+                is_cancelled: false,
+                user_id: currentUserId
+            });
+
+            if (error) {
+                console.error('Error adding stack listing:', error.message);
+                allListingsSuccessful = false;
+                break; 
+            }
+        }
+
+        if (allListingsSuccessful) {
             addListingForm.reset();
             await loadPageData();
-            await showCustomModal('Success', 'Listing added successfully!', [{ text: 'OK', value: true }]);
+            await showCustomModal('Success', `Listing${stacks > 1 ? 's' : ''} added successfully!`, [{ text: 'OK', value: true }]);
+        } else {
+            await showCustomModal('Error', 'Failed to add all listings. Check console for details.', [{ text: 'OK', value: true }]);
         }
 
         button.disabled = false;
