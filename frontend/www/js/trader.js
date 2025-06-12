@@ -1,32 +1,59 @@
-// trader.js
+// frontend/www/js/trader.js
 
 import { supabase } from './supabaseClient.js';
 
+// --- DOM Element References ---
 const traderLoginContainer = document.getElementById('traderLoginContainer');
 const traderDiscordLoginButton = document.getElementById('traderDiscordLoginButton');
 const traderLoginError = document.getElementById('traderLoginError');
 const traderDashboardAndForms = document.getElementById('traderDashboardAndForms');
 
+// Listing elements
 const addListingForm = document.getElementById('add-listing-form');
 const listingsBody = document.getElementById('listings-body');
 const listingsTable = document.getElementById('listings-table');
-const loader = document.getElementById('loader');
-const salesLoader = document.getElementById('sales-loader');
-const itemCategorySelect = document.getElementById('item-category');
+const loader = document.getElementById('loader'); // For active listings table
+const itemCategorySelect = document.getElementById('item-category'); // For add listing form category
+
+// Sales elements
+const salesLoader = document.getElementById('sales-loader'); // For sales history table
 const salesBody = document.getElementById('sales-body');
 const salesTable = document.getElementById('sales-table');
 const grossSalesChartCanvas = document.getElementById('grossSalesChart');
 
+// Dashboard elements
 const grossSalesEl = document.getElementById('dashboard-gross-sales');
 const feesPaidEl = document.getElementById('dashboard-fees-paid');
 const netProfitEl = document.getElementById('dashboard-net-profit');
 const activeListingsEl = document.getElementById('dashboard-active-listings');
 
+// New: Filter and Pagination elements
+const filterListingItemNameInput = document.getElementById('filter-listing-item-name');
+const filterListingCategorySelect = document.getElementById('filter-listing-category');
+const filterListingStatusSelect = document.getElementById('filter-listing-status');
+const listingsPaginationContainer = document.getElementById('listings-pagination');
 
+const salesPaginationContainer = document.getElementById('sales-pagination');
+const downloadSalesCsvButton = document.getElementById('download-sales-csv');
+
+// --- Global State Variables ---
 let currentUserId = null;
 let grossSalesChartInstance;
 
+// Pagination state
+const LISTINGS_PER_PAGE = 10;
+let currentListingsPage = 1;
+const SALES_PER_PAGE = 10;
+let currentSalesPage = 1;
 
+// Filter state for listings
+let listingsFilter = {
+    itemName: '',
+    categoryId: '',
+    status: 'active' // Default to active listings
+};
+
+// --- Modals (retained from previous versions) ---
 const customModalHtml = `
     <div id="customModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white p-6 rounded-lg shadow-xl w-96 max-w-full font-inter">
@@ -69,6 +96,7 @@ const editListingModalHtml = `
 `;
 document.body.insertAdjacentHTML('beforeend', editListingModalHtml);
 
+// Universal modal function
 const showCustomModal = (title, message, buttons) => {
     return new Promise(resolve => {
         const modal = document.getElementById('customModal');
@@ -112,13 +140,14 @@ const showCustomModal = (title, message, buttons) => {
 
 let currentEditingListingId = null;
 
+// --- CRUD Operations for Listings ---
 const showEditListingModal = async (listingId) => {
     currentEditingListingId = listingId;
     const { data: listing, error } = await supabase
         .from('market_listings')
         .select(`*, items(item_name, item_categories(category_name))`)
         .eq('listing_id', listingId)
-        .eq('user_id', currentUserId)
+        .eq('user_id', currentUserId) // Ensure only owner can edit
         .single();
 
     if (error || !listing) {
@@ -148,6 +177,7 @@ const handleEditListingSave = async (e) => {
     const quantity_listed = parseInt(document.getElementById('edit-quantity-listed').value, 10);
     const listed_price_per_unit = parseFloat(document.getElementById('edit-price-per-unit').value);
 
+    // Basic validation
     if (isNaN(quantity_listed) || quantity_listed <= 0 || isNaN(listed_price_per_unit) || listed_price_per_unit <= 0) {
         await showCustomModal('Validation Error', 'Quantity and price must be positive numbers.', [{ text: 'OK', value: true }]);
         return;
@@ -160,10 +190,10 @@ const handleEditListingSave = async (e) => {
         .update({
             quantity_listed: quantity_listed,
             listed_price_per_unit: listed_price_per_unit,
-            total_listed_price: total_listed_price
+            total_listed_price: total_listed_price // Update total price as well
         })
         .eq('listing_id', currentEditingListingId)
-        .eq('user_id', currentUserId); 
+        .eq('user_id', currentUserId); // Ensure only owner can update
 
     if (error) {
         console.error('Error updating listing:', error.message);
@@ -171,7 +201,7 @@ const handleEditListingSave = async (e) => {
     } else {
         document.getElementById('editListingModal').classList.add('hidden');
         await showCustomModal('Success', 'Listing updated successfully!', [{ text: 'OK', value: true }]);
-        await loadTraderPageData();
+        await loadTraderPageData(); // Reload all data after successful update
     }
 };
 
@@ -185,7 +215,7 @@ const handleCancelListing = async (listingId) => {
         .from('market_listings')
         .select('user_id')
         .eq('listing_id', listingId)
-        .eq('user_id', currentUserId)
+        .eq('user_id', currentUserId) // Crucial: ensure the logged-in user owns this listing
         .single();
 
     if (fetchError || !listing || listing.user_id !== currentUserId) {
@@ -199,21 +229,21 @@ const handleCancelListing = async (listingId) => {
             .from('market_listings')
             .update({ is_fully_sold: false, is_cancelled: true })
             .eq('listing_id', listingId)
-            .eq('user_id', currentUserId);
+            .eq('user_id', currentUserId); // Double-check ownership on update
 
         if (error) {
             console.error('Error cancelling listing:', error.message);
             await showCustomModal('Error', 'Failed to cancel listing: ' + error.message, [{ text: 'OK', value: true }]);
         } else {
             await showCustomModal('Success', 'Listing cancelled successfully!', [{ text: 'OK', value: true }]);
-            await loadTraderPageData();
+            await loadTraderPageData(); // Reload all data after successful cancellation
         }
     }
 };
 
 const fetchAndPopulateCategories = async () => {
-    if (!itemCategorySelect) {
-        console.warn("Item category select element not found.");
+    if (!itemCategorySelect || !filterListingCategorySelect) {
+        console.warn("Category select elements not found.");
         return;
     }
 
@@ -227,6 +257,7 @@ const fetchAndPopulateCategories = async () => {
         return;
     }
 
+    // Populate for add listing form
     itemCategorySelect.innerHTML = '<option value="">Select a category</option>';
     data.forEach(category => {
         const option = document.createElement('option');
@@ -234,76 +265,17 @@ const fetchAndPopulateCategories = async () => {
         option.textContent = category.category_name;
         itemCategorySelect.appendChild(option);
     });
-};
 
-const loadTraderPageData = async () => {
-
-    if (loader) loader.style.display = 'block';
-    if (salesLoader) salesLoader.style.display = 'block';
-    if (listingsTable) listingsTable.style.display = 'none';
-    if (salesTable) salesTable.style.display = 'none';
-    const { data: listings, error: listingsError } = await supabase
-        .from('market_listings')
-        .select(`
-            listing_id,
-            quantity_listed,
-            listed_price_per_unit,
-            total_listed_price,
-            market_fee,
-            listing_date,
-            is_fully_sold,
-            is_cancelled,
-            items (item_name, item_categories(category_name), user_id)
-        `)
-        .eq('user_id', currentUserId)
-        .order('listing_date', { ascending: false });
-
-    if (listingsError) {
-        console.error('Error fetching listings:', listingsError.message);
-
-        if (listingsError.code !== 'PGRST116') {
-             await showCustomModal('Error', 'Could not fetch your market data. Please try logging in again.', [{ text: 'OK', value: true }]);
-        }
-        if (loader) loader.style.display = 'none';
-        if (salesLoader) salesLoader.style.display = 'none';
-        return;
-    }
-
-    const { data: sales, error: salesError } = await supabase
-        .from('sales')
-        .select(`
-            sale_id,
-            quantity_sold,
-            sale_price_per_unit,
-            total_sale_price,
-            sale_date,
-            market_listings (listing_id, items(item_name, item_categories(category_name), user_id))
-        `)
-        .eq('user_id', currentUserId)
-        .order('sale_date', { ascending: false });
-
-    if (salesError) {
-        console.error('Error fetching sales:', salesError.message);
-        if (salesError.code !== 'PGRST116') {
-            await showCustomModal('Error', 'Could not fetch your sales data. Please try logging in again.', [{ text: 'OK', value: true }]);
-        }
-        if (loader) loader.style.display = 'none';
-        if (salesLoader) salesLoader.style.display = 'none';
-        return;
-    }
-
-    const activeListings = listings.filter(l => !l.is_fully_sold && !l.is_cancelled);
-
-    renderDashboard(listings);
-    renderListingsTable(activeListings);
-    renderSalesTable(sales);
-    // renderGrossSalesChart(sales); // Uncomment if Chart.js is re-enabled in HTML
-
-
-    if (loader) loader.style.display = 'none';
-    if (salesLoader) salesLoader.style.display = 'none';
-    if (listingsTable) listingsTable.style.display = 'table';
-    if (salesTable) salesTable.style.display = 'table';
+    // Populate for filter select
+    filterListingCategorySelect.innerHTML = '<option value="">All Categories</option>';
+    data.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category.category_id;
+        option.textContent = category.category_name;
+        filterListingCategorySelect.appendChild(option);
+    });
+    // Set filter select to current filter state if exists
+    filterListingCategorySelect.value = listingsFilter.categoryId;
 };
 
 const getOrCreateItemId = async (itemName, categoryId) => {
@@ -311,7 +283,7 @@ const getOrCreateItemId = async (itemName, categoryId) => {
         .from('items')
         .select('item_id')
         .eq('item_name', itemName)
-        .eq('user_id', currentUserId)
+        .eq('user_id', currentUserId) // Ensure uniqueness per user for item names
         .limit(1);
 
     let item = items && items.length > 0 ? items[0] : null;
@@ -329,7 +301,7 @@ const getOrCreateItemId = async (itemName, categoryId) => {
         .insert({
             item_name: itemName,
             category_id: categoryId,
-            user_id: currentUserId
+            user_id: currentUserId // Assign item to the current user
         })
         .select('item_id')
         .single();
@@ -342,13 +314,117 @@ const getOrCreateItemId = async (itemName, categoryId) => {
     return newItem.item_id;
 };
 
+// --- Main Data Loading Function ---
+const loadTraderPageData = async () => {
+    // Show loaders initially
+    if (loader) loader.style.display = 'block';
+    if (salesLoader) salesLoader.style.display = 'block';
+    if (listingsTable) listingsTable.style.display = 'none'; // Hide table while loading
+    if (salesTable) salesTable.style.display = 'none'; // Hide table while loading
+
+    // --- Fetch Listings with Pagination and Filters ---
+    let listingsQuery = supabase
+        .from('market_listings')
+        .select(`
+            listing_id,
+            quantity_listed,
+            listed_price_per_unit,
+            total_listed_price,
+            market_fee,
+            listing_date,
+            is_fully_sold,
+            is_cancelled,
+            items (item_name, item_categories(category_name), user_id)
+        `, { count: 'exact' }) // Request total count
+        .eq('user_id', currentUserId); // Filter by current user
+
+    // Apply filters
+    if (listingsFilter.itemName) {
+        listingsQuery = listingsQuery.ilike('items.item_name', `%${listingsFilter.itemName}%`);
+    }
+    if (listingsFilter.categoryId) {
+        listingsQuery = listingsQuery.eq('items.category_id', listingsFilter.categoryId);
+    }
+    if (listingsFilter.status === 'active') {
+        listingsQuery = listingsQuery.eq('is_fully_sold', false).eq('is_cancelled', false);
+    } else if (listingsFilter.status === 'sold') {
+        listingsQuery = listingsQuery.eq('is_fully_sold', true);
+    } else if (listingsFilter.status === 'cancelled') {
+        listingsQuery = listingsQuery.eq('is_cancelled', true);
+    }
+    // 'all' status doesn't add any specific filters for is_fully_sold or is_cancelled
+
+    // Apply pagination for listings
+    const listingsOffset = (currentListingsPage - 1) * LISTINGS_PER_PAGE;
+    listingsQuery = listingsQuery.range(listingsOffset, listingsOffset + LISTINGS_PER_PAGE - 1);
+
+    const { data: listings, error: listingsError, count: totalListingsCount } = await listingsQuery
+        .order('listing_date', { ascending: false });
+
+    if (listingsError) {
+        console.error('Error fetching listings:', listingsError.message);
+        if (listingsError.code !== 'PGRST116') {
+             await showCustomModal('Error', 'Could not fetch your market data. Please try logging in again.', [{ text: 'OK', value: true }]);
+        }
+        if (loader) loader.style.display = 'none';
+        return;
+    }
+
+    // --- Fetch Sales with Pagination ---
+    let salesQuery = supabase
+        .from('sales')
+        .select(`
+            sale_id,
+            quantity_sold,
+            sale_price_per_unit,
+            total_sale_price,
+            sale_date,
+            market_listings (listing_id, items(item_name, item_categories(category_name), user_id))
+        `, { count: 'exact' }) // Request total count for sales
+        .eq('user_id', currentUserId); // Filter by current user
+
+    // Apply pagination for sales
+    const salesOffset = (currentSalesPage - 1) * SALES_PER_PAGE;
+    salesQuery = salesQuery.range(salesOffset, salesOffset + SALES_PER_PAGE - 1);
+
+    const { data: sales, error: salesError, count: totalSalesCount } = await salesQuery
+        .order('sale_date', { ascending: false });
+
+    if (salesError) {
+        console.error('Error fetching sales:', salesError.message);
+        if (salesError.code !== 'PGRST116') {
+            await showCustomModal('Error', 'Could not fetch your sales data. Please try logging in again.', [{ text: 'OK', value: true }]);
+        }
+        if (salesLoader) salesLoader.style.display = 'none';
+        return;
+    }
+
+    // --- Render UI ---
+    renderDashboard(listings); // Pass all listings to calculate totals (dashboard is not paginated)
+    renderListingsTable(listings); // Render the currently paginated listings
+    renderListingsPagination(totalListingsCount);
+
+    renderSalesTable(sales);
+    renderSalesPagination(totalSalesCount);
+
+    // Hide loaders and show tables
+    if (loader) loader.style.display = 'none';
+    if (salesLoader) salesLoader.style.display = 'none';
+    if (listingsTable) listingsTable.style.display = 'table';
+    if (salesTable) salesTable.style.display = 'table';
+};
+
+// --- Dashboard Rendering ---
 const renderDashboard = (allListings) => {
+    // Add null checks for dashboard elements
     if (!grossSalesEl || !feesPaidEl || !netProfitEl || !activeListingsEl) {
         console.error("One or more dashboard elements not found.");
         return;
     }
 
     const soldListings = allListings.filter(l => l.is_fully_sold);
+    // Note: Fees paid are typically market fees incurred on all listings, not just sold ones,
+    // unless your business logic dictates otherwise. Keeping it as sum of all market_fee for simplicity.
     const feesPaid = allListings.reduce((sum, l) => sum + l.market_fee, 0);
 
     const grossSales = soldListings.reduce((sum, l) => sum + l.total_listed_price, 0);
@@ -360,22 +436,21 @@ const renderDashboard = (allListings) => {
     netProfitEl.innerHTML = `${netProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} <i class="fas fa-coins"></i>`;
 
     activeListingsEl.textContent = activeListings.length;
-
-
 };
 
-const renderListingsTable = (activeListings) => {
+// --- Listings Table Rendering and Pagination ---
+const renderListingsTable = (listings) => {
     if (!listingsBody) {
         console.error("Listings table body element not found.");
         return;
     }
     listingsBody.innerHTML = '';
-    if (activeListings.length === 0) {
-        listingsBody.innerHTML = '<tr><td colspan="8" class="text-center">No active listings.</td></tr>';
+    if (listings.length === 0) {
+        listingsBody.innerHTML = '<tr><td colspan="8" class="text-center">No listings found for the current filters.</td></tr>';
         return;
     }
 
-    activeListings.forEach(listing => {
+    listings.forEach(listing => {
         const row = document.createElement('tr');
         row.innerHTML = `
             <td class="py-3 px-6 text-left">${listing.items.item_name}</td>
@@ -386,7 +461,7 @@ const renderListingsTable = (activeListings) => {
             <td class="py-3 px-6 text-left">${listing.market_fee.toLocaleString()}</td>
             <td class="py-3 px-6 text-left">${new Date(listing.listing_date).toLocaleDateString()}</td>
             <td class="py-3 px-6 text-left">
-                <div class="flex gap-2 whitespace-nowrap"> <!-- Added this wrapping div -->
+                <div class="flex gap-2 whitespace-nowrap">
                     <button class="sold-btn bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-full shadow-md transition duration-150 ease-in-out transform hover:scale-105" data-id="${listing.listing_id}">Sold</button>
                     <button class="edit-btn bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-full shadow-md transition duration-150 ease-in-out transform hover:scale-105" data-id="${listing.listing_id}">Edit</button>
                     <button class="cancel-btn bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-3 rounded-full shadow-md transition duration-150 ease-in-out transform hover:scale-105" data-id="${listing.listing_id}">Cancel</button>
@@ -397,6 +472,55 @@ const renderListingsTable = (activeListings) => {
     });
 };
 
+const renderListingsPagination = (totalCount) => {
+    if (!listingsPaginationContainer) return;
+
+    const totalPages = Math.ceil(totalCount / LISTINGS_PER_PAGE);
+    listingsPaginationContainer.innerHTML = '';
+
+    if (totalPages <= 1) return; // No pagination needed for 1 or fewer pages
+
+    // Previous button
+    const prevButton = document.createElement('button');
+    prevButton.textContent = 'Previous';
+    prevButton.className = `px-4 py-2 rounded-full font-bold transition duration-150 ease-in-out ${currentListingsPage === 1 ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-700 text-white'}`;
+    prevButton.disabled = currentListingsPage === 1;
+    prevButton.addEventListener('click', () => {
+        if (currentListingsPage > 1) {
+            currentListingsPage--;
+            loadTraderPageData();
+        }
+    });
+    listingsPaginationContainer.appendChild(prevButton);
+
+    // Page numbers
+    for (let i = 1; i <= totalPages; i++) {
+        const pageButton = document.createElement('button');
+        pageButton.textContent = i;
+        pageButton.className = `px-4 py-2 rounded-full font-bold transition duration-150 ease-in-out ${i === currentListingsPage ? 'bg-yellow-500 text-gray-900' : 'bg-gray-600 hover:bg-gray-500 text-white'}`;
+        pageButton.addEventListener('click', () => {
+            currentListingsPage = i;
+            loadTraderPageData();
+        });
+        listingsPaginationContainer.appendChild(pageButton);
+    }
+
+    // Next button
+    const nextButton = document.createElement('button');
+    nextButton.textContent = 'Next';
+    nextButton.className = `px-4 py-2 rounded-full font-bold transition duration-150 ease-in-out ${currentListingsPage === totalPages ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-700 text-white'}`;
+    nextButton.disabled = currentListingsPage === totalPages;
+    nextButton.addEventListener('click', () => {
+        if (currentListingsPage < totalPages) {
+            currentListingsPage++;
+            loadTraderPageData();
+        }
+    });
+    listingsPaginationContainer.appendChild(nextButton);
+};
+
+
+// --- Sales Table Rendering and Pagination ---
 const renderSalesTable = (sales) => {
     if (!salesBody || !salesTable) {
         console.error("Sales table elements not found.");
@@ -411,8 +535,8 @@ const renderSalesTable = (sales) => {
         const row = document.createElement('tr');
         row.className = 'border-b border-gray-200 hover:bg-gray-100';
         row.innerHTML = `
-            <td class="py-3 px-6 text-left whitespace-nowrap">${sale.market_listings.items.item_name}
-            <td class="py-3 px-6 text-left">${sale.market_listings.items.item_categories?.category_name || 'N/A'}
+            <td class="py-3 px-6 text-left whitespace-nowrap">${sale.market_listings.items.item_name}</td>
+            <td class="py-3 px-6 text-left">${sale.market_listings.items.item_categories?.category_name || 'N/A'}</td>
             <td class="py-3 px-6 text-left">${sale.quantity_sold.toLocaleString()}</td>
             <td class="py-3 px-6 text-left">${sale.sale_price_per_unit.toFixed(2)}</td>
             <td class="py-3 px-6 text-left">${sale.total_sale_price.toLocaleString()}</td>
@@ -423,6 +547,54 @@ const renderSalesTable = (sales) => {
     salesTable.style.display = 'table';
 };
 
+const renderSalesPagination = (totalCount) => {
+    if (!salesPaginationContainer) return;
+
+    const totalPages = Math.ceil(totalCount / SALES_PER_PAGE);
+    salesPaginationContainer.innerHTML = '';
+
+    if (totalPages <= 1) return; // No pagination needed for 1 or fewer pages
+
+    // Previous button
+    const prevButton = document.createElement('button');
+    prevButton.textContent = 'Previous';
+    prevButton.className = `px-4 py-2 rounded-full font-bold transition duration-150 ease-in-out ${currentSalesPage === 1 ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-700 text-white'}`;
+    prevButton.disabled = currentSalesPage === 1;
+    prevButton.addEventListener('click', () => {
+        if (currentSalesPage > 1) {
+            currentSalesPage--;
+            loadTraderPageData();
+        }
+    });
+    salesPaginationContainer.appendChild(prevButton);
+
+    // Page numbers
+    for (let i = 1; i <= totalPages; i++) {
+        const pageButton = document.createElement('button');
+        pageButton.textContent = i;
+        pageButton.className = `px-4 py-2 rounded-full font-bold transition duration-150 ease-in-out ${i === currentSalesPage ? 'bg-yellow-500 text-gray-900' : 'bg-gray-600 hover:bg-gray-500 text-white'}`;
+        pageButton.addEventListener('click', () => {
+            currentSalesPage = i;
+            loadTraderPageData();
+        });
+        salesPaginationContainer.appendChild(pageButton);
+    }
+
+    // Next button
+    const nextButton = document.createElement('button');
+    nextButton.textContent = 'Next';
+    nextButton.className = `px-4 py-2 rounded-full font-bold transition duration-150 ease-in-out ${currentSalesPage === totalPages ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-700 text-white'}`;
+    nextButton.disabled = currentSalesPage === totalPages;
+    nextButton.addEventListener('click', () => {
+        if (currentSalesPage < totalPages) {
+            currentSalesPage++;
+            loadTraderPageData();
+        }
+    });
+    salesPaginationContainer.appendChild(nextButton);
+};
+
+// --- Chart Rendering (retained) ---
 const renderGrossSalesChart = (sales) => {
     // Only render if chart canvas exists
     if (!grossSalesChartCanvas) {
@@ -441,6 +613,12 @@ const renderGrossSalesChart = (sales) => {
 
     if (grossSalesChartInstance) {
         grossSalesChartInstance.destroy();
+    }
+
+    // Ensure Chart.js is loaded before trying to create a chart instance
+    if (typeof Chart === 'undefined') {
+        console.error("Chart.js is not loaded. Please ensure the Chart.js script is included in your HTML.");
+        return;
     }
 
     grossSalesChartInstance = new Chart(grossSalesChartCanvas, {
@@ -508,11 +686,13 @@ const renderGrossSalesChart = (sales) => {
     });
 };
 
+// --- Utility Functions ---
 const showLoader = (isLoading) => {
     if (loader) loader.style.display = isLoading ? 'block' : 'none';
     if (listingsTable) listingsTable.style.display = isLoading ? 'none' : 'table';
 };
 
+// --- Event Handlers ---
 const handleAddListing = async (e) => {
     e.preventDefault();
 
@@ -586,6 +766,9 @@ const handleAddListing = async (e) => {
         const total_listed_price = pricePerStack;
         const listed_price_per_unit = total_listed_price / quantity_listed;
 
+        // The fee calculation remains Math.ceil(pricePerStack * 0.05) as per current logic
+        // If you want standard rounding (0.5 up, else down), change to Math.round()
+        // If you want to always round down, change to Math.floor()
         const market_fee_for_this_stack = Math.ceil(pricePerStack * 0.05);
 
         const { error } = await supabase.from('market_listings').insert({
@@ -609,6 +792,8 @@ const handleAddListing = async (e) => {
 
     if (allListingsSuccessful) {
         if (addListingForm) addListingForm.reset();
+        currentListingsPage = 1; // Reset to first page after adding new listing
+        listingsFilter.status = 'active'; // Filter to active listings after adding
         await loadTraderPageData();
         await showCustomModal('Success', `Listing${stacks > 1 ? 's' : ''} added successfully!`, [{ text: 'OK', value: true }]);
     } else {
@@ -640,7 +825,7 @@ const handleTableClick = async (e) => {
                 .from('market_listings')
                 .select('*, user_id')
                 .eq('listing_id', listingId)
-                .eq('user_id', currentUserId)
+                .eq('user_id', currentUserId) // Only owner can mark as sold
                 .single();
 
             if (fetchError || !listing || listing.user_id !== currentUserId) {
@@ -656,7 +841,7 @@ const handleTableClick = async (e) => {
                 sale_price_per_unit: listing.listed_price_per_unit,
                 total_sale_price: listing.total_listed_price,
                 sale_date: new Date().toISOString(),
-                user_id: listing.user_id
+                user_id: listing.user_id // Record sale under the listing owner's user_id
             });
 
             if (saleError) {
@@ -670,7 +855,7 @@ const handleTableClick = async (e) => {
                 .from('market_listings')
                 .update({ is_fully_sold: true })
                 .eq('listing_id', listingId)
-                .eq('user_id', currentUserId);
+                .eq('user_id', currentUserId); // Double-check ownership on update
 
             if (updateError) {
                 console.error('Error updating listing status:', updateError.message);
@@ -679,7 +864,7 @@ const handleTableClick = async (e) => {
                 await showCustomModal('Success', 'Listing marked as sold successfully!', [{ text: 'OK', value: true }]);
             }
 
-            await loadTraderPageData();
+            await loadTraderPageData(); // Reload all data
         } else {
             button.disabled = false;
         }
@@ -691,6 +876,88 @@ const handleTableClick = async (e) => {
     }
 };
 
+// --- CSV Download Function ---
+const downloadSalesHistoryCSV = async () => {
+    if (!currentUserId) {
+        await showCustomModal('Error', 'You must be logged in to download sales history.', [{ text: 'OK', value: true }]);
+        return;
+    }
+
+    const { data: allSales, error } = await supabase
+        .from('sales')
+        .select(`
+            sale_id,
+            quantity_sold,
+            sale_price_per_unit,
+            total_sale_price,
+            sale_date,
+            market_listings (listing_id, items(item_name, item_categories(category_name), user_id))
+        `)
+        .eq('user_id', currentUserId)
+        .order('sale_date', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching all sales for CSV:', error.message);
+        await showCustomModal('Error', 'Failed to fetch sales data for download: ' + error.message, [{ text: 'OK', value: true }]);
+        return;
+    }
+
+    if (!allSales || allSales.length === 0) {
+        await showCustomModal('Info', 'No sales history to download.', [{ text: 'OK', value: true }]);
+        return;
+    }
+
+    // Prepare CSV header
+    const headers = [
+        "Sale ID",
+        "Item Name",
+        "Category",
+        "Quantity Sold",
+        "Price Per Unit",
+        "Total Sale Price",
+        "Sale Date"
+    ];
+    let csvContent = headers.join(",") + "\n";
+
+    // Add rows
+    allSales.forEach(sale => {
+        const item_name = sale.market_listings?.items?.item_name || 'N/A';
+        const category_name = sale.market_listings?.items?.item_categories?.category_name || 'N/A';
+        const quantity_sold = sale.quantity_sold;
+        const sale_price_per_unit = sale.sale_price_per_unit;
+        const total_sale_price = sale.total_sale_price;
+        const sale_date = new Date(sale.sale_date).toLocaleDateString();
+
+        const row = [
+            `"${sale.sale_id}"`, // Wrap in quotes to handle commas if any
+            `"${item_name}"`,
+            `"${category_name}"`,
+            quantity_sold,
+            sale_price_per_unit,
+            total_sale_price,
+            `"${sale_date}"`
+        ].join(",");
+        csvContent += row + "\n";
+    });
+
+    // Create and trigger download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) { // Feature detection
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'sales_history.csv');
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url); // Clean up
+    } else {
+        await showCustomModal('Error', 'Your browser does not support downloading files directly.', [{ text: 'OK', value: true }]);
+    }
+};
+
+// --- Event Listeners Initialization ---
 document.getElementById('closeEditModal')?.addEventListener('click', () => {
     document.getElementById('editListingModal')?.classList.add('hidden');
 });
@@ -732,7 +999,38 @@ if (traderDiscordLoginButton) {
     });
 }
 
+// New: Filter Event Listeners
+if (filterListingItemNameInput) {
+    filterListingItemNameInput.addEventListener('input', () => {
+        listingsFilter.itemName = filterListingItemNameInput.value;
+        currentListingsPage = 1; // Reset to first page on filter change
+        loadTraderPageData();
+    });
+}
 
+if (filterListingCategorySelect) {
+    filterListingCategorySelect.addEventListener('change', () => {
+        listingsFilter.categoryId = filterListingCategorySelect.value;
+        currentListingsPage = 1; // Reset to first page on filter change
+        loadTraderPageData();
+    });
+}
+
+if (filterListingStatusSelect) {
+    filterListingStatusSelect.addEventListener('change', () => {
+        listingsFilter.status = filterListingStatusSelect.value;
+        currentListingsPage = 1; // Reset to first page on filter change
+        loadTraderPageData();
+    });
+}
+
+// New: Download Sales CSV Event Listener
+if (downloadSalesCsvButton) {
+    downloadSalesCsvButton.addEventListener('click', downloadSalesHistoryCSV);
+}
+
+
+// --- Authentication State Change Listener (Main Entry Point) ---
 supabase.auth.onAuthStateChange(async (event, session) => {
     if (session && session.user) {
         currentUserId = session.user.id;
@@ -741,8 +1039,9 @@ supabase.auth.onAuthStateChange(async (event, session) => {
         if (traderDashboardAndForms) traderDashboardAndForms.style.display = 'block';
         if (addListingForm) addListingForm.querySelector('button[type="submit"]').disabled = false;
         
+        // Initial data load and category fetch
         await fetchAndPopulateCategories();
-        await loadTraderPageData();
+        await loadTraderPageData(); // Load data with initial pagination and filters
 
     } else {
         currentUserId = null;
@@ -753,11 +1052,17 @@ supabase.auth.onAuthStateChange(async (event, session) => {
         if (salesLoader) salesLoader.style.display = 'none';
         if (listingsBody) listingsBody.innerHTML = '<tr><td colspan="8" class="text-center">Please log in to view and add listings.</td></tr>';
         if (salesBody) salesBody.innerHTML = '<tr><td colspan="6" class="text-center py-4">Please log in to view sales history.</td></tr>';
-        if (salesTable) salesTable.style.display = 'table';
-        if (addListingForm) addListingForm.querySelector('button[type="submit"]').disabled = true;
-        if (traderLoginError) {
+        if (salesTable) salesTable.style.display = 'table'; // Show table with message
+        if (addListingForm) addListingForm.querySelector('button[type="submit"]').disabled = true; // Disable add listing button
+        if (traderLoginError) { // Clear any previous error message
             traderLoginError.style.display = 'none';
             traderLoginError.textContent = '';
         }
+        // Clear pagination and filter controls if not logged in
+        if (listingsPaginationContainer) listingsPaginationContainer.innerHTML = '';
+        if (salesPaginationContainer) salesPaginationContainer.innerHTML = '';
+        if (filterListingItemNameInput) filterListingItemNameInput.value = '';
+        if (filterListingCategorySelect) filterListingCategorySelect.innerHTML = '<option value="">All Categories</option>'; // Reset categories
+        if (filterListingStatusSelect) filterListingStatusSelect.value = 'active'; // Reset status filter
     }
 });
