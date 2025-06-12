@@ -5,11 +5,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const listingsBody = document.getElementById('listings-body');
     const listingsTable = document.getElementById('listings-table');
     const loader = document.getElementById('loader');
-    const salesLoader = document.getElementById('sales-loader');
     const itemCategorySelect = document.getElementById('item-category');
-    const salesBody = document.getElementById('sales-body');
-    const salesTable = document.getElementById('sales-table');
-    const grossSalesChartCanvas = document.getElementById('grossSalesChart');
 
     const grossSalesEl = document.getElementById('dashboard-gross-sales');
     const feesPaidEl = document.getElementById('dashboard-fees-paid');
@@ -18,7 +14,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const totalQuantityListedEl = document.getElementById('dashboard-total-quantity-listed');
 
     let currentUserId = null;
-    let grossSalesChartInstance;
 
     const customModalHtml = `
         <div id="customModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
@@ -205,7 +200,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const loadPageData = async () => {
         showLoader(true);
-        salesLoader.style.display = 'block';
 
         const { data: listings, error: listingsError } = await supabase
             .from('market_listings')
@@ -226,27 +220,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('Error fetching listings:', listingsError.message);
             await showCustomModal('Error', 'Could not fetch market data.', [{ text: 'OK', value: true }]);
             showLoader(false);
-            salesLoader.style.display = 'none';
-            return;
-        }
-
-        const { data: sales, error: salesError } = await supabase
-            .from('sales')
-            .select(`
-                sale_id,
-                quantity_sold,
-                sale_price_per_unit,
-                total_sale_price,
-                sale_date,
-                market_listings (listing_id, items(item_name, item_categories(category_name)))
-            `)
-            .order('sale_date', { ascending: false });
-
-        if (salesError) {
-            console.error('Error fetching sales:', salesError.message);
-            await showCustomModal('Error', 'Could not fetch sales data.', [{ text: 'OK', value: true }]);
-            showLoader(false);
-            salesLoader.style.display = 'none';
             return;
         }
 
@@ -254,10 +227,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         renderDashboard(listings);
         renderListingsTable(activeListings);
-        renderSalesTable(sales);
-        renderGrossSalesChart(sales);
         showLoader(false);
-        salesLoader.style.display = 'none';
     };
 
     const getOrCreateItemId = async (itemName, categoryId) => {
@@ -307,10 +277,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         feesPaidEl.innerHTML = `${feesPaid.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} <i class="fas fa-coins"></i>`;
         netProfitEl.innerHTML = `${netProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} <i class="fas fa-coins"></i>`;
         
+        // This now correctly reflects the count of individual entries in the database
         activeListingsEl.textContent = activeListings.length;
         
-        const totalActiveQuantity = activeListings.reduce((sum, l) => sum + l.quantity_listed, 0);
-        totalQuantityListedEl.textContent = totalActiveQuantity.toLocaleString();
+        // Ensure totalQuantityListedEl is handled here as well, if it exists in HTML
+        const totalQuantityListedEl = document.getElementById('dashboard-total-quantity-listed');
+        if (totalQuantityListedEl) {
+            const totalActiveQuantity = activeListings.reduce((sum, l) => sum + l.quantity_listed, 0);
+            totalQuantityListedEl.textContent = totalActiveQuantity.toLocaleString();
+        }
     };
 
     const renderListingsTable = (activeListings) => {
@@ -323,14 +298,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         activeListings.forEach(listing => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td class="py-3 px-6 text-left">${listing.items.item_name}</td>
-                <td class="py-3 px-6 text-left">${listing.items.item_categories?.category_name || 'N/A'}</td> 
-                <td class="py-3 px-6 text-left">${listing.quantity_listed.toLocaleString()}</td>
-                <td class="py-3 px-6 text-left">${listing.listed_price_per_unit.toFixed(2)}</td>
-                <td class="py-3 px-6 text-left">${listing.total_listed_price.toLocaleString()}</td>
-                <td class="py-3 px-6 text-left">${listing.market_fee.toLocaleString()}</td>
-                <td class="py-3 px-6 text-left">${new Date(listing.listing_date).toLocaleDateString()}</td>
-                <td class="py-3 px-6 text-left action-buttons flex flex-wrap gap-2">
+                <td>${listing.items.item_name}</td>
+                <td>${listing.items.item_categories?.category_name || 'N/A'}</td> 
+                <td>${listing.quantity_listed.toLocaleString()}</td>
+                <td>${listing.listed_price_per_unit.toFixed(2)}</td>
+                <td>${listing.total_listed_price.toLocaleString()}</td>
+                <td>${listing.market_fee.toLocaleString()}</td>
+                <td>${new Date(listing.listing_date).toLocaleDateString()}</td>
+                <td class="action-buttons flex flex-wrap gap-2">
                     <button class="sold-btn bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-full shadow-md transition duration-150 ease-in-out transform hover:scale-105" data-id="${listing.listing_id}">Sold</button>
                     <button class="edit-btn bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-full shadow-md transition duration-150 ease-in-out transform hover:scale-105" data-id="${listing.listing_id}">Edit</button>
                     <button class="cancel-btn bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-3 rounded-full shadow-md transition duration-150 ease-in-out transform hover:scale-105" data-id="${listing.listing_id}">Cancel</button>
@@ -339,107 +314,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             listingsBody.appendChild(row);
         });
     };
-
-    const renderSalesTable = (sales) => {
-    salesBody.innerHTML = '';
-    if (sales.length === 0) {
-        salesBody.innerHTML = '<tr><td colspan="6" class="text-center py-4">No sales recorded yet.</td></tr>';
-        return;
-    }
-    sales.forEach(sale => {
-        const row = document.createElement('tr');
-        row.className = 'border-b border-gray-200 hover:bg-gray-100';
-        row.innerHTML = `
-            <td class="py-3 px-6 text-left whitespace-nowrap">${sale.market_listings.items.item_name}
-            <td class="py-3 px-6 text-left">${sale.market_listings.items.item_categories?.category_name || 'N/A'}
-            <td class="py-3 px-6 text-left">${sale.quantity_sold.toLocaleString()}</td>
-            <td class="py-3 px-6 text-left">${sale.sale_price_per_unit.toFixed(2)}</td>
-            <td class="py-3 px-6 text-left">${sale.total_sale_price.toLocaleString()}</td>
-            <td class="py-3 px-6 text-left">${new Date(sale.sale_date).toLocaleDateString()}</td>
-        `;
-        salesBody.appendChild(row);
-    });
-    salesTable.style.display = 'table';
-};
-
-    const renderGrossSalesChart = (sales) => {
-    const salesByDate = sales.reduce((acc, sale) => {
-        const date = new Date(sale.sale_date).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
-        acc[date] = (acc[date] || 0) + sale.total_sale_price;
-        return acc;
-    }, {});
-
-    const sortedDates = Object.keys(salesByDate).sort((a, b) => new Date(a) - new Date(b));
-    const chartData = sortedDates.map(date => salesByDate[date]);
-
-    if (grossSalesChartInstance) {
-        grossSalesChartInstance.destroy();
-    }
-
-    grossSalesChartInstance = new Chart(grossSalesChartCanvas, {
-        type: 'line',
-        data: {
-            labels: sortedDates,
-            datasets: [{
-                label: 'Gross Sales',
-                data: chartData,
-                borderColor: '#4A90E2',
-                backgroundColor: 'rgba(74, 144, 226, 0.2)',
-                fill: true,
-                tension: 0.3
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'top',
-                    labels: {
-                        color: '#FFFFFF'
-                    }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return `Gross Sales: ${context.raw.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} Coins`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Date',
-                        color: '#FFFFFF'
-                    },
-                    ticks: {
-                        color: '#FFFFFF'
-                    },
-                    grid: {
-                        display: false
-                    }
-                },
-                y: {
-                    title: {
-                        display: true,
-                        text: 'Sales (Coins)',
-                        color: '#FFFFFF'
-                    },
-                    beginAtZero: true,
-                    ticks: {
-                        color: '#FFFFFF',
-                        callback: function(value) {
-                            return value.toLocaleString();
-                        }
-                    }
-                }
-            }
-        }
-    });
-};
 
     const showLoader = (isLoading) => {
         loader.style.display = isLoading ? 'block' : 'none';
@@ -596,20 +470,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     addListingForm.addEventListener('submit', handleAddListing);
     listingsBody.addEventListener('click', handleTableClick);
     
-    supabase.auth.onAuthStateChange(async (event, session) => {
+    supabase.auth.onAuthStateChange((event, session) => {
         if (session && session.user) {
             currentUserId = session.user.id;
-            // console.log('User authenticated:', currentUserId); 
+            // console.log('User authenticated:', currentUserId);
             fetchAndPopulateCategories();
-            await loadPageData();
+            loadPageData();
         } else {
             currentUserId = null;
             console.log('User not authenticated.');
             showLoader(false);
-            salesLoader.style.display = 'none';
             listingsBody.innerHTML = '<tr><td colspan="8" class="text-center">Please log in to view and add listings.</td></tr>';
-            salesBody.innerHTML = '<tr><td colspan="6" class="text-center py-4">Please log in to view sales history.</td></tr>';
-            salesTable.style.display = 'table';
             addListingForm.querySelector('button[type="submit"]').disabled = true;
         }
     });
