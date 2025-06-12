@@ -1,8 +1,12 @@
-/* Trader Page Styles */
+/* General Trader Container Styling */
 .trader-container {
-    padding: 100px 0;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: 'Inter', sans-serif; /* Ensuring consistent font */
 }
 
+/* Dashboard Section */
 .dashboard {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -11,118 +15,362 @@
 }
 
 .dashboard-card {
-    background-color: #2a2a2a;
+    background-color: #2a2a2a; /* Matched existing dark background */
     padding: 20px;
-    border-radius: 8px;
+    border-radius: 8px; /* Matched existing border-radius */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* Soft shadow */
     text-align: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
 }
 
 .dashboard-card h3 {
-    margin-top: 0;
-    color: #fff;
+    font-size: 1.1rem;
+    color: #fff; /* Matched existing light text color */
+    margin-bottom: 10px;
 }
 
 .dashboard-card p {
-    font-size: 24px;
+    font-size: 2rem;
     font-weight: bold;
-    color: #ffc107;
-    margin: 10px 0 0;
+    color: #ffc107; /* Matched existing accent color */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
-.dashboard-card i {
-    font-size: 50px;
-    color: #ffc107;
+.dashboard-card p .fas {
+    color: #ffc107; /* Matched existing accent color */
 }
 
-.add-listing, .active-listings {
-    background-color: #2a2a2a;
+/* Add Listing Section */
+.add-listing {
+    background-color: #2a2a2a; /* Matched existing dark background */
     padding: 30px;
-    border-radius: 8px;
+    border-radius: 8px; /* Matched existing border-radius */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     margin-bottom: 40px;
 }
 
-.add-listing h2, .active-listings h2 {
-    margin-top: 0;
-    border-bottom: 1px solid #444;
-    padding-bottom: 15px;
+.add-listing h2 {
+    font-size: 1.8rem;
+    color: #fff; /* Matched existing light text color */
+    margin-bottom: 25px;
+    text-align: center;
+    border-bottom: 1px solid #444; /* Matched existing border style */
+    padding-bottom: 15px; /* Matched existing padding */
+}
+
+.add-listing .form-group {
     margin-bottom: 20px;
 }
 
-#add-listing-form {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 20px;
-}
-
-.form-group {
-    display: flex;
-    flex-direction: column;
-}
-
-.form-group label {
+.add-listing label {
+    display: block;
     margin-bottom: 8px;
-    font-weight: bold;
+    font-weight: 600;
+    color: #fff; /* Matched existing light text color */
 }
 
-.form-group input {
-    padding: 10px;
-    border-radius: 4px;
-    border: 1px solid #555;
-    background-color: #333;
-    color: #fff;
-}
-
-.btn {
-    padding: 12px 20px;
-    border: none;
-    background-color: #ffc107;
-    color: #1a1a1a;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    text-transform: uppercase;
-    grid-column: 1 / -1;
-    justify-self: start;
-}
-
-.btn:hover {
-    background-color: #e0a800;
-}
-
-#listings-table {
+.add-listing input[type="text"],
+.add-listing input[type="number"],
+.add-listing select {
     width: 100%;
-    border-collapse: collapse;
+    padding: 10px; /* Matched existing padding */
+    border: 1px solid #555; /* Matched existing border color */
+    border-radius: 4px; /* Matched existing border-radius */
+    background-color: #333; /* Matched existing dark input background */
+    color: #fff; /* Matched existing light text color */
+    box-sizing: border-box;
+    transition: border-color 0.2s ease;
 }
 
-#listings-table th, #listings-table td {
-    padding: 15px;
+.add-listing input[type="text"]:focus,
+.add-listing input[type="number"]:focus,
+.add-listing select:focus {
+    border-color: #ffc107; /* Matched accent color for focus */
+    outline: none;
+}
+
+.add-listing .btn {
+    display: block;
+    width: 100%;
+    padding: 12px 20px;
+    background-color: #ffc107; /* Matched existing button background */
+    color: #1a1a1a; /* Matched existing button text color */
+    border: none;
+    border-radius: 4px; /* Matched existing border-radius */
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.add-listing .btn:hover {
+    background-color: #e0a800; /* Matched existing button hover color */
+    transform: translateY(-2px);
+}
+
+.add-listing .btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Listings Table Section */
+.active-listings {
+    background-color: #2a2a2a; /* Matched existing dark background */
+    padding: 30px;
+    border-radius: 8px; /* Matched existing border-radius */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    margin-bottom: 40px;
+}
+
+.active-listings h2 {
+    font-size: 1.8rem;
+    color: #fff; /* Matched existing light text color */
+    margin-bottom: 25px;
+    text-align: center;
+    border-bottom: 1px solid #444; /* Matched existing border style */
+    padding-bottom: 15px; /* Matched existing padding */
+}
+
+#loader {
+    text-align: center;
+    padding: 20px;
+    font-size: 1.1rem;
+    color: #fff; /* Matched light text color */
+}
+
+#listings-table, #sales-table {
+    width: 100%;
+    border-collapse: collapse; /* Matched existing */
+    /* Removed border-spacing and overflow:hidden as collapse handles this better with existing styles */
+}
+
+#listings-table thead, #sales-table thead {
+    background-color: #333; /* Matched existing dark header background */
+    color: #fff; /* Matched existing light text color */
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+}
+
+#listings-table th, #sales-table th {
+    padding: 15px; /* Matched existing padding */
     text-align: left;
-    border-bottom: 1px solid #444;
+    font-weight: 700;
 }
 
-#listings-table th {
-    background-color: #333;
+#listings-table tbody tr, #sales-table tbody tr {
+    border-bottom: 1px solid #444; /* Matched existing border style */
+    transition: background-color 0.2s ease;
+}
+
+#listings-table tbody tr:last-child, #sales-table tbody tr:last-child {
+    border-bottom: none; /* No border on the last row */
+}
+
+#listings-table tbody tr:hover, #sales-table tbody tr:hover {
+    background-color: #3a3a3a; /* Darker hover for dark theme */
+}
+
+#listings-table td, #sales-table td {
+    padding: 15px; /* Matched existing padding */
+    color: #fff; /* Matched existing light text color */
+    font-size: 0.9rem;
+}
+
+/* Action Buttons within table */
+.action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-start;
 }
 
 .action-buttons button {
-    margin-right: 5px;
     padding: 8px 12px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
+    border-radius: 4px; /* Matched existing border-radius for buttons */
+    font-size: 0.8rem;
     font-weight: bold;
-    color: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.15s ease-in-out;
+    transform: scale(1);
+    white-space: nowrap;
+    color: #fff; /* Ensure button text is white */
 }
 
-.action-buttons .sold-btn { background-color: #28a745; }
-.action-buttons .cancel-btn { background-color: #dc3545; }
-.action-buttons .edit-btn { background-color: #007bff; }
+.action-buttons button:hover {
+    transform: scale(1.05);
+}
 
-.action-buttons .sold-btn:hover { background-color: #218838; }
-.action-buttons .cancel-btn:hover { background-color: #c82333; }
-.action-buttons .edit-btn:hover { background-color: #0069d9; }
+.sold-btn {
+    background-color: #28a745; /* Matched existing */
+}
 
-.w-full {
-    background-color: black;
+.sold-btn:hover {
+    background-color: #218838; /* Matched existing */
+}
 
+.edit-btn {
+    background-color: #007bff; /* Matched existing */
+}
+
+.edit-btn:hover {
+    background-color: #0069d9; /* Matched existing */
+}
+
+.cancel-btn {
+    background-color: #dc3545; /* Matched existing */
+}
+
+.cancel-btn:hover {
+    background-color: #c82333; /* Matched existing */
+}
+
+/* Custom Modal Styling (from JS, adding base styles here for consistency) */
+#customModal > div, #editListingModal > div {
+    font-family: 'Inter', sans-serif;
+    border-radius: 8px; /* Matched existing border-radius */
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    background-color: #2a2a2a; /* Ensure modal matches dark theme */
+    color: #fff; /* Ensure modal text is light */
+}
+
+#modalTitle {
+    color: #ffc107; /* Accent color for modal title */
+}
+
+#modalMessage {
+    color: #fff; /* Light text for modal message */
+}
+
+#modalButtons button {
+    border-radius: 4px; /* Matched existing button border-radius */
+    font-weight: bold;
+    transition: all 0.15s ease-in-out;
+    transform: scale(1);
+}
+
+#modalButtons button:hover {
+    transform: scale(1.05);
+}
+
+/* Chart Section Styling */
+.chart-section {
+    background-color: #2a2a2a; /* Matched dark background */
+    padding: 30px; /* Consistent padding */
+    border-radius: 8px; /* Consistent border-radius */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    margin-top: 32px;
+    margin-bottom: 32px;
+    color: white !important;
+}
+
+.chart-section h2 {
+    font-size: 1.8rem;
+    font-weight: bold;
+    margin-bottom: 25px; /* Consistent spacing */
+    color: #fff; /* Matched light text color */
+    text-align: center;
+    border-bottom: 1px solid #444; /* Consistent border style */
+    padding-bottom: 15px; /* Consistent padding */
+}
+
+.chart-section canvas {
+    max-width: 100%;
+    height: 384px;
+    /* Chart.js handles responsiveness, but enforce max-width and height */
+}
+
+/* Sales History Section Styling */
+.sales-history {
+    background-color: #2a2a2a; /* Matched dark background */
+    padding: 30px; /* Consistent padding */
+    border-radius: 8px; /* Consistent border-radius */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    margin-top: 32px;
+}
+
+.sales-history h2 {
+    font-size: 1.8rem;
+    font-weight: bold;
+    margin-bottom: 25px; /* Consistent spacing */
+    color: #fff; /* Matched light text color */
+    text-align: center;
+    border-bottom: 1px solid #444; /* Consistent border style */
+    padding-bottom: 15px; /* Consistent padding */
+}
+
+#sales-loader {
+    text-align: center;
+    padding: 20px;
+    font-size: 1.1rem;
+    color: #fff; /* Matched light text color */
+}
+
+/* Specific styling for the sales table cells to match the active listings table */
+#sales-table th {
+    background-color: #333; /* Matched dark header background */
+    color: #fff; /* Matched light text color */
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+    padding: 15px; /* Consistent padding */
+    text-align: left;
+    font-weight: 700;
+}
+
+#sales-table td {
+    padding: 15px; /* Consistent padding */
+    color: #fff; /* Matched light text color */
+    font-size: 0.9rem;
+    border-bottom: 1px solid #444; /* Consistent border style */
+}
+
+#sales-table tbody tr:hover {
+    background-color: #3a3a3a; /* Darker hover for dark theme */
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .dashboard {
+        grid-template-columns: 1fr; /* Stack cards on small screens */
+    }
+
+    .add-listing, .active-listings, .chart-section, .sales-history {
+        padding: 20px; /* Consistent padding adjustment for smaller screens */
+    }
+
+    .add-listing h2, .active-listings h2, .chart-section h2, .sales-history h2 {
+        font-size: 1.5rem;
+    }
+
+    #listings-table th, #listings-table td,
+    #sales-table th, #sales-table td {
+        padding: 8px 10px; /* Consistent reduction in cell padding */
+        font-size: 0.85rem;
+    }
+
+    /* Make tables scrollable on small screens if content overflows */
+    .active-listings, .sales-history {
+        overflow-x: auto;
+    }
+    #listings-table, #sales-table {
+        min-width: 600px; /* Ensure table doesn't shrink too much */
+    }
+}
+
+.bg-white {
+    background-color: #1F2124 !important;
+}
+
+.relative h-96 w-full {
+    color: white !important;
 }
