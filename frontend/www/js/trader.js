@@ -1,19 +1,15 @@
-// Ensure this path is correct for your project structure
 import { supabase } from './supabaseClient.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-    // --- DOM ELEMENT REFERENCES ---
     const addListingForm = document.getElementById('add-listing-form');
     const listingsBody = document.getElementById('listings-body');
     const listingsTable = document.getElementById('listings-table');
     const loader = document.getElementById('loader');
 
-    // Dashboard Elements
     const grossSalesEl = document.getElementById('dashboard-gross-sales');
     const feesPaidEl = document.getElementById('dashboard-fees-paid');
     const netProfitEl = document.getElementById('dashboard-net-profit');
     const activeListingsEl = document.getElementById('dashboard-active-listings');
-
 
     const loadPageData = async () => {
         showLoader(true);
@@ -44,17 +40,14 @@ document.addEventListener('DOMContentLoaded', () => {
         showLoader(false);
     };
 
-
-     const getOrCreateItemId = async (itemName) => {
-        // --- ADD THIS BLOCK TO GET THE CURRENT USER'S ID ---
+    const getOrCreateItemId = async (itemName) => {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
         if (userError || !user) {
             console.error('User not authenticated or error fetching user:', userError?.message);
             alert('You must be logged in to add items.');
-            return null; // Prevent further execution if user is not authenticated
+            return null;
         }
         const userId = user.id;
-        // --- END ADDITION ---
 
         let { data: item, error: selectError } = await supabase
             .from('items')
@@ -69,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .from('items')
                 .insert({
                     item_name: itemName,
-                    user_id: userId
+                    owner_id: userId
                 })
                 .select('item_id')
                 .single();
@@ -86,9 +79,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return null;
         }
     };
-
-
-    // --- RENDER FUNCTIONS ---
 
     const renderDashboard = (listings) => {
         const soldListings = listings.filter(l => l.is_fully_sold);
@@ -123,7 +113,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${new Date(listing.listing_date).toLocaleDateString()}</td>
                 <td class="action-buttons">
                     <button class="sold-btn" data-id="${listing.listing_id}" title="Mark as Sold">Sold</button>
-                    <!-- Cancel button can be added here if needed -->
                 </td>
             `;
             listingsBody.appendChild(row);
@@ -135,28 +124,32 @@ document.addEventListener('DOMContentLoaded', () => {
         listingsTable.style.display = isLoading ? 'none' : 'table';
     };
 
-
-    // --- EVENT HANDLERS ---
-
     const handleAddListing = async (e) => {
         e.preventDefault();
         const button = e.target.querySelector('button');
         button.disabled = true;
         button.textContent = 'Adding...';
 
-        // 1. Get values from the form
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+            console.error('User not authenticated:', userError?.message);
+            alert('You must be logged in to add a listing.');
+            button.disabled = false;
+            button.textContent = 'Add Listing';
+            return;
+        }
+        const currentUserId = user.id;
+
         const itemName = document.getElementById('item-name').value;
         const stacks = parseInt(document.getElementById('item-stacks').value, 10);
         const countPerStack = parseInt(document.getElementById('item-count-per-stack').value, 10);
         const pricePerStack = parseFloat(document.getElementById('item-price-per-stack').value);
         const fee = parseFloat(document.getElementById('item-fee').value);
 
-        // 2. Calculate values for the database schema
         const quantity_listed = stacks * countPerStack;
         const total_listed_price = stacks * pricePerStack;
         const listed_price_per_unit = total_listed_price / quantity_listed;
 
-        // 3. Get or create the item ID
         const itemId = await getOrCreateItemId(itemName);
         if (!itemId) {
             alert('Error processing item name. Check console for details.');
@@ -165,7 +158,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // 4. Insert the new market listing
         const { error } = await supabase.from('market_listings').insert({
             item_id: itemId,
             quantity_listed,
@@ -173,7 +165,8 @@ document.addEventListener('DOMContentLoaded', () => {
             total_listed_price,
             market_fee: fee,
             listing_date: new Date().toISOString(),
-            is_fully_sold: false
+            is_fully_sold: false,
+            user_id: currentUserId
         });
 
         if (error) {
@@ -181,7 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Failed to add the new listing.');
         } else {
             addListingForm.reset();
-            await loadPageData(); // Refresh the page data
+            await loadPageData();
         }
 
         button.disabled = false;
@@ -198,7 +191,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (confirm('Are you sure you want to mark this item as sold?')) {
             button.disabled = true;
             
-            // Step 1: Fetch the listing to get its details for the sales table
             const { data: listing, error: fetchError } = await supabase
                 .from('market_listings')
                 .select('*')
@@ -206,13 +198,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 .single();
             
             if (fetchError) {
-                 console.error('Error fetching listing to sell:', fetchError.message);
-                 alert('Could not find listing details to complete sale.');
-                 button.disabled = false;
-                 return;
+                console.error('Error fetching listing to sell:', fetchError.message);
+                alert('Could not find listing details to complete sale.');
+                button.disabled = false;
+                return;
             }
 
-            // Step 2: Create the sale record
             const { error: saleError } = await supabase.from('sales').insert({
                 listing_id: listing.listing_id,
                 quantity_sold: listing.quantity_listed,
@@ -228,24 +219,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Step 3: Update the original listing to mark it as sold
             const { error: updateError } = await supabase
                 .from('market_listings')
                 .update({ is_fully_sold: true })
                 .eq('listing_id', listingId);
 
             if (updateError) {
-                 console.error('Error updating listing status:', updateError.message);
-                 alert('Sale was recorded, but the listing status could not be updated.');
+                console.error('Error updating listing status:', updateError.message);
+                alert('Sale was recorded, but the listing status could not be updated.');
             }
 
-            await loadPageData(); // Refresh everything
+            await loadPageData();
         }
     };
 
-
-    // --- INITIALIZATION ---
     addListingForm.addEventListener('submit', handleAddListing);
     listingsBody.addEventListener('click', handleTableClick);
-    loadPageData(); // Load initial data when the page starts
+    loadPageData();
 });
