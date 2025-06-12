@@ -12,6 +12,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const netProfitEl = document.getElementById('dashboard-net-profit');
     const activeListingsEl = document.getElementById('dashboard-active-listings');
 
+    let currentUserId = null; // Initialize currentUserId to null
+
     const customModalHtml = `
         <div id="customModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
             <div class="bg-white p-6 rounded-lg shadow-xl w-96 max-w-full font-inter">
@@ -142,12 +144,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const handleCancelListing = async (listingId) => {
-        const { data: user, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
+        if (!currentUserId) {
             await showCustomModal('Error', 'You must be logged in to cancel a listing.', [{ text: 'OK', value: true }]);
             return;
         }
-        const currentUserId = user.id;
 
         const { data: listing, error: fetchError } = await supabase
             .from('market_listings')
@@ -238,20 +238,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (item) return item.item_id;
 
-        const { data: user, error: userError } = await supabase.auth.getUser();
-        if (userError || !user || !user.id) {
-            console.error('User not authenticated or user ID not available:', userError?.message || 'User object or ID is null/undefined.');
-            await showCustomModal('Error', 'You must be logged in to add items. User ID not found.', [{ text: 'OK', value: true }]);
+        // Ensure currentUserId is available before attempting to insert new item
+        if (!currentUserId) {
+            console.error('User ID not available for creating new item.');
+            await showCustomModal('Error', 'User ID not found. Please log in again.', [{ text: 'OK', value: true }]);
             return null;
         }
-        const userId = user.id;
         
         const { data: newItem, error: insertError } = await supabase
             .from('items')
             .insert({
                 item_name: itemName,
                 category_id: categoryId,
-                user_id: userId
+                user_id: currentUserId // Use the global currentUserId
             })
             .select('item_id')
             .single();
@@ -316,15 +315,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         button.disabled = true;
         button.textContent = 'Adding...';
 
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
-            console.error('User not authenticated:', userError?.message);
-            await showCustomModal('Error', 'You must be logged in to add a listing.', [{ text: 'OK', value: true }]);
+        if (!currentUserId) { // Check currentUserId at the start of form submission
+            console.error('User not authenticated or user ID not available for adding listing.');
+            await showCustomModal('Error', 'You must be logged in to add a listing. User ID not found.', [{ text: 'OK', value: true }]);
             button.disabled = false;
             button.textContent = 'Add Listing';
             return;
         }
-        const currentUserId = user.id;
 
         const itemName = document.getElementById('item-name').value;
         const selectedCategoryId = itemCategorySelect.value;
@@ -339,9 +336,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const countPerStack = parseInt(document.getElementById('item-count-per-stack').value, 10);
         const pricePerStack = parseFloat(document.getElementById('item-price-per-stack').value);
         
-        // Fee is now calculated automatically, no need to read from an input
-        // const feePerStack = parseFloat(document.getElementById('item-fee').value);
-
         const itemId = await getOrCreateItemId(itemName, selectedCategoryId);
         if (!itemId) {
             button.disabled = false;
@@ -355,7 +349,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const total_listed_price = pricePerStack;
             const listed_price_per_unit = total_listed_price / quantity_listed;
             
-            // Calculate 5% fee rounded up, based on pricePerStack
             const market_fee_for_this_stack = Math.ceil(pricePerStack * 0.05);
 
             const { error } = await supabase.from('market_listings').insert({
@@ -466,6 +459,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     addListingForm.addEventListener('submit', handleAddListing);
     listingsBody.addEventListener('click', handleTableClick);
     
-    await fetchAndPopulateCategories();
-    await loadPageData();
+    // Listen for auth state changes
+    supabase.auth.onAuthStateChanged((user) => {
+        if (user) {
+            currentUserId = user.id;
+            console.log('User authenticated:', currentUserId);
+            // Once user is authenticated, load data and enable form
+            fetchAndPopulateCategories();
+            loadPageData();
+        } else {
+            currentUserId = null;
+            console.log('User not authenticated.');
+            // Handle unauthenticated state if necessary (e.g., redirect to login)
+            showLoader(false); // Hide loader if no user and data can't be loaded
+            listingsBody.innerHTML = '<tr><td colspan="8" class="text-center">Please log in to view and add listings.</td></tr>';
+            addListingForm.querySelector('button[type="submit"]').disabled = true; // Disable add button
+        }
+    });
 });
