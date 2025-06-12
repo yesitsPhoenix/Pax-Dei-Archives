@@ -237,6 +237,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (insertError) {
                 console.error('Error creating item:', insertError.message);
+                await showCustomModal('Error', 'Failed to create new item record: ' + insertError.message, [{ text: 'OK', value: true }]);
                 return null;
             }
             return newItem.item_id;
@@ -244,6 +245,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (selectError) {
             console.error('Error selecting item:', selectError.message);
+            await showCustomModal('Error', 'Could not verify item existence: ' + selectError.message, [{ text: 'OK', value: true }]);
             return null;
         }
     };
@@ -323,15 +325,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         const stacks = parseInt(document.getElementById('item-stacks').value, 10);
         const countPerStack = parseInt(document.getElementById('item-count-per-stack').value, 10);
         const pricePerStack = parseFloat(document.getElementById('item-price-per-stack').value);
-        const fee = parseFloat(document.getElementById('item-fee').value);
+        const feePerStack = parseFloat(document.getElementById('item-fee').value); // Get fee per stack
 
         const quantity_listed = stacks * countPerStack;
         const total_listed_price = stacks * pricePerStack;
         const listed_price_per_unit = total_listed_price / quantity_listed;
+        const total_market_fee = feePerStack * stacks; // Calculate total fee
 
         const itemId = await getOrCreateItemId(itemName, selectedCategoryId);
         if (!itemId) {
-            await showCustomModal('Error', 'Error processing item name. Check console for details.', [{ text: 'OK', value: true }]);
             button.disabled = false;
             button.textContent = 'Add Listing';
             return;
@@ -342,7 +344,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             quantity_listed,
             listed_price_per_unit,
             total_listed_price,
-            market_fee: fee,
+            market_fee: total_market_fee, // Use the calculated total fee
             listing_date: new Date().toISOString(),
             is_fully_sold: false,
             user_id: currentUserId
