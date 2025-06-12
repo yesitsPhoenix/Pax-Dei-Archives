@@ -121,3 +121,8 @@
 .action-buttons .sold-btn:hover { background-color: #218838; }
 .action-buttons .cancel-btn:hover { background-color: #c82333; }
 .action-buttons .edit-btn:hover { background-color: #0069d9; }
+
+.w-full {
+    background-color: black;
+
+}

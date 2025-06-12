@@ -230,7 +230,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 .insert({
                     item_name: itemName,
                     category_id: categoryId,
-                    owner_id: userId
+                    user_id: userId
                 })
                 .select('item_id')
                 .single();
