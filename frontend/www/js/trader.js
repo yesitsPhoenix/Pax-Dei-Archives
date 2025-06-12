@@ -338,7 +338,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const stacks = parseInt(document.getElementById('item-stacks').value, 10);
         const countPerStack = parseInt(document.getElementById('item-count-per-stack').value, 10);
         const pricePerStack = parseFloat(document.getElementById('item-price-per-stack').value);
-        // Removed feePerStack input value as fee is now calculated
+        
+        // Fee is now calculated automatically, no need to read from an input
+        // const feePerStack = parseFloat(document.getElementById('item-fee').value);
 
         const itemId = await getOrCreateItemId(itemName, selectedCategoryId);
         if (!itemId) {
@@ -352,7 +354,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const quantity_listed = countPerStack;
             const total_listed_price = pricePerStack;
             const listed_price_per_unit = total_listed_price / quantity_listed;
-            const market_fee_for_this_stack = Math.ceil(pricePerStack * 0.05); // Calculate 5% fee rounded up
+            
+            // Calculate 5% fee rounded up, based on pricePerStack
+            const market_fee_for_this_stack = Math.ceil(pricePerStack * 0.05);
 
             const { error } = await supabase.from('market_listings').insert({
                 item_id: itemId,
