@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const feesPaidEl = document.getElementById('dashboard-fees-paid');
     const netProfitEl = document.getElementById('dashboard-net-profit');
     const activeListingsEl = document.getElementById('dashboard-active-listings');
+    const totalQuantityListedEl = document.getElementById('dashboard-total-quantity-listed');
 
     let currentUserId = null;
 
@@ -222,8 +223,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
+        const activeListings = listings.filter(l => !l.is_fully_sold && !l.is_cancelled);
+        
         renderDashboard(listings);
-        renderListingsTable(listings.filter(l => !l.is_fully_sold && !l.is_cancelled));
+        renderListingsTable(activeListings);
         showLoader(false);
     };
 
@@ -273,7 +276,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         grossSalesEl.innerHTML = `${grossSales.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} <i class="fas fa-coins"></i>`;
         feesPaidEl.innerHTML = `${feesPaid.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} <i class="fas fa-coins"></i>`;
         netProfitEl.innerHTML = `${netProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} <i class="fas fa-coins"></i>`;
+        
+        // This now correctly reflects the count of individual entries in the database
         activeListingsEl.textContent = activeListings.length;
+        
+        // Ensure totalQuantityListedEl is handled here as well, if it exists in HTML
+        const totalQuantityListedEl = document.getElementById('dashboard-total-quantity-listed');
+        if (totalQuantityListedEl) {
+            const totalActiveQuantity = activeListings.reduce((sum, l) => sum + l.quantity_listed, 0);
+            totalQuantityListedEl.textContent = totalActiveQuantity.toLocaleString();
+        }
     };
 
     const renderListingsTable = (activeListings) => {
@@ -365,7 +377,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (error) {
                 console.error('Error adding stack listing:', error.message);
                 allListingsSuccessful = false;
-                break; 
+                break;
             }
         }
 
@@ -461,7 +473,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     supabase.auth.onAuthStateChange((event, session) => {
         if (session && session.user) {
             currentUserId = session.user.id;
-            console.log('User authenticated:', currentUserId);
+            // console.log('User authenticated:', currentUserId);
             fetchAndPopulateCategories();
             loadPageData();
         } else {
