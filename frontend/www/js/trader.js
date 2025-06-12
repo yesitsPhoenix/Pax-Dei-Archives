@@ -208,46 +208,51 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const getOrCreateItemId = async (itemName, categoryId) => {
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        const { data: items, error: selectError } = await supabase
+            .from('items')
+            .select('item_id')
+            .eq('item_name', itemName)
+            .limit(1); // Changed from .single() to .limit(1)
+
+        let item = items && items.length > 0 ? items[0] : null;
+
+        if (item) return item.item_id;
+
+        // If selectError exists AND it's NOT the 406 (which doesn't have PGRST116 code)
+        // or if it truly means no rows were found (PGRST116)
+        // If there was an error other than "no rows found" (e.g., 406), it will fall through here
+        // The previous error handling for selectError will catch it if item is null.
+        if (selectError && selectError.code !== 'PGRST116') {
+             console.error('Error selecting item (non-PGRST116):', selectError.message);
+             await showCustomModal('Error', 'Could not verify item existence: ' + selectError.message, [{ text: 'OK', value: true }]);
+             return null;
+        }
+
+        // If item is null (not found) or selectError.code was PGRST116 (no rows found)
+        const { data: user, error: userError } = await supabase.auth.getUser();
         if (userError || !user) {
             console.error('User not authenticated or error fetching user:', userError?.message);
             await showCustomModal('Error', 'You must be logged in to add items.', [{ text: 'OK', value: true }]);
             return null;
         }
         const userId = user.id;
-
-        let { data: item, error: selectError } = await supabase
+        
+        const { data: newItem, error: insertError } = await supabase
             .from('items')
+            .insert({
+                item_name: itemName,
+                category_id: categoryId,
+                user_id: userId
+            })
             .select('item_id')
-            .eq('item_name', itemName)
             .single();
 
-        if (item) return item.item_id;
-
-        if (selectError && selectError.code === 'PGRST116') {
-            const { data: newItem, error: insertError } = await supabase
-                .from('items')
-                .insert({
-                    item_name: itemName,
-                    category_id: categoryId,
-                    user_id: userId
-                })
-                .select('item_id')
-                .single();
-
-            if (insertError) {
-                console.error('Error creating item:', insertError.message);
-                await showCustomModal('Error', 'Failed to create new item record: ' + insertError.message, [{ text: 'OK', value: true }]);
-                return null;
-            }
-            return newItem.item_id;
-        }
-
-        if (selectError) {
-            console.error('Error selecting item:', selectError.message);
-            await showCustomModal('Error', 'Could not verify item existence: ' + selectError.message, [{ text: 'OK', value: true }]);
+        if (insertError) {
+            console.error('Error creating item:', insertError.message);
+            await showCustomModal('Error', 'Failed to create new item record: ' + insertError.message, [{ text: 'OK', value: true }]);
             return null;
         }
+        return newItem.item_id;
     };
 
     const renderDashboard = (listings) => {
@@ -325,12 +330,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         const stacks = parseInt(document.getElementById('item-stacks').value, 10);
         const countPerStack = parseInt(document.getElementById('item-count-per-stack').value, 10);
         const pricePerStack = parseFloat(document.getElementById('item-price-per-stack').value);
-        const feePerStack = parseFloat(document.getElementById('item-fee').value); // Get fee per stack
+        const feePerStack = parseFloat(document.getElementById('item-fee').value);
 
         const quantity_listed = stacks * countPerStack;
         const total_listed_price = stacks * pricePerStack;
         const listed_price_per_unit = total_listed_price / quantity_listed;
-        const total_market_fee = feePerStack * stacks; // Calculate total fee
+        const total_market_fee = feePerStack * stacks;
 
         const itemId = await getOrCreateItemId(itemName, selectedCategoryId);
         if (!itemId) {
@@ -344,7 +349,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             quantity_listed,
             listed_price_per_unit,
             total_listed_price,
-            market_fee: total_market_fee, // Use the calculated total fee
+            market_fee: total_market_fee,
             listing_date: new Date().toISOString(),
             is_fully_sold: false,
             user_id: currentUserId
@@ -418,7 +423,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         } else if (e.target.classList.contains('edit-btn')) {
             showEditListingModal(listingId);
-        } else if (e.target.classList.contains('cancel-btn')) {
+        }
+
+        else if (e.target.classList.contains('cancel-btn')) {
             handleCancelListing(listingId);
         }
     };
