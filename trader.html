@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pax Dei Archives - Trader</title>
     <link rel="stylesheet" href="frontend/www/css/style.css">
-    <!-- Assuming you have a trader.css or will add styles to style.css -->
     <link rel="stylesheet" href="frontend/www/css/trader.css"> 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
     <script type="module" src="frontend/www/js/supabaseClient.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.min.js"></script>
+
 </head>
 <body>
     <header class="header-area">
@@ -78,6 +78,10 @@
                         <input type="text" id="item-name" placeholder="e.g., Iron Ingot" required>
                     </div>
                     <div class="form-group">
+                        <label for="item-category">Item Category</label>
+                        <input type="text" id="item-category" placeholder="e.g., Crafting Material" required>
+                    </div>
+                    <div class="form-group">
                         <label for="item-stacks">Stacks</label>
                         <input type="number" id="item-stacks" value="1" required>
                     </div>
@@ -104,6 +108,7 @@
                     <thead>
                         <tr>
                             <th>Item Name</th>
+                            <th>Item Category</th>
                             <th>Total Quantity</th>
                             <th>Price (per unit)</th>
                             <th>Total Value</th>
