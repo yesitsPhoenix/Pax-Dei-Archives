@@ -142,10 +142,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const handleCancelListing = async (listingId) => {
-        if (await showCustomModal('Confirmation', 'Are you sure you want to cancel this listing? This action cannot be undone.', [{ text: 'Yes', value: true, type: 'confirm' }, { text: 'No', value: false, type: 'cancel' }])) {
+        const { data: user, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+            await showCustomModal('Error', 'You must be logged in to cancel a listing.', [{ text: 'OK', value: true }]);
+            return;
+        }
+        const currentUserId = user.id;
+
+        const { data: listing, error: fetchError } = await supabase
+            .from('market_listings')
+            .select('user_id') // Fetch user_id to verify ownership
+            .eq('listing_id', listingId)
+            .single();
+
+        if (fetchError || !listing || listing.user_id !== currentUserId) {
+            console.error('Error fetching listing or not authorized to cancel:', fetchError?.message || 'User not authorized.');
+            await showCustomModal('Error', 'Could not cancel listing. You may not own this listing or it does not exist.', [{ text: 'OK', value: true }]);
+            return;
+        }
+
+        if (await showCustomModal('Confirmation', 'Are you sure you want to cancel this listing? This action will mark it as cancelled but fees are non-refundable.', [{ text: 'Yes', value: true, type: 'confirm' }, { text: 'No', value: false, type: 'cancel' }])) {
             const { error } = await supabase
                 .from('market_listings')
-                .delete()
+                .update({ is_fully_sold: false, is_cancelled: true }) // Mark as cancelled instead of deleting
                 .eq('listing_id', listingId);
 
             if (error) {
@@ -191,7 +210,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 market_fee,
                 listing_date,
                 is_fully_sold,
-                items (item_name, item_categories(category_name))
+                is_cancelled,
+                items (item_name, item_categories(category_name), user_id)
             `)
             .order('listing_date', { ascending: false });
 
@@ -203,7 +223,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         renderDashboard(listings);
-        renderListingsTable(listings.filter(l => !l.is_fully_sold));
+        renderListingsTable(listings.filter(l => !l.is_fully_sold && !l.is_cancelled));
         showLoader(false);
     };
 
@@ -212,23 +232,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             .from('items')
             .select('item_id')
             .eq('item_name', itemName)
-            .limit(1); // Changed from .single() to .limit(1)
+            .limit(1);
 
         let item = items && items.length > 0 ? items[0] : null;
 
         if (item) return item.item_id;
 
-        // If selectError exists AND it's NOT the 406 (which doesn't have PGRST116 code)
-        // or if it truly means no rows were found (PGRST116)
-        // If there was an error other than "no rows found" (e.g., 406), it will fall through here
-        // The previous error handling for selectError will catch it if item is null.
         if (selectError && selectError.code !== 'PGRST116') {
              console.error('Error selecting item (non-PGRST116):', selectError.message);
              await showCustomModal('Error', 'Could not verify item existence: ' + selectError.message, [{ text: 'OK', value: true }]);
              return null;
         }
 
-        // If item is null (not found) or selectError.code was PGRST116 (no rows found)
         const { data: user, error: userError } = await supabase.auth.getUser();
         if (userError || !user) {
             console.error('User not authenticated or error fetching user:', userError?.message);
@@ -255,15 +270,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         return newItem.item_id;
     };
 
-    const renderDashboard = (listings) => {
-        const soldListings = listings.filter(l => l.is_fully_sold);
-        const allListings = listings;
-        const activeListings = listings.filter(l => !l.is_fully_sold);
+    const renderDashboard = (allListings) => {
+        const soldListings = allListings.filter(l => l.is_fully_sold);
+        const feesPaid = allListings.reduce((sum, l) => sum + l.market_fee, 0);
 
         const grossSales = soldListings.reduce((sum, l) => sum + l.total_listed_price, 0);
-        const feesPaid = allListings.reduce((sum, l) => sum + l.market_fee, 0);
         const netProfit = grossSales - feesPaid;
-        
+        const activeListings = allListings.filter(l => !l.is_fully_sold && !l.is_cancelled);
+
         grossSalesEl.innerHTML = `${grossSales.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} <i class="fas fa-coins"></i>`;
         feesPaidEl.innerHTML = `${feesPaid.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} <i class="fas fa-coins"></i>`;
         netProfitEl.innerHTML = `${netProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} <i class="fas fa-coins"></i>`;
@@ -352,6 +366,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             market_fee: total_market_fee,
             listing_date: new Date().toISOString(),
             is_fully_sold: false,
+            is_cancelled: false,
             user_id: currentUserId
         });
 
@@ -379,7 +394,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (await showCustomModal('Confirmation', 'Are you sure you want to mark this item as sold?', [{ text: 'Yes', value: true, type: 'confirm' }, { text: 'No', value: false, type: 'cancel' }])) {
                 const { data: listing, error: fetchError } = await supabase
                     .from('market_listings')
-                    .select('*')
+                    .select('*, user_id')
                     .eq('listing_id', listingId)
                     .single();
                 
@@ -395,12 +410,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     quantity_sold: listing.quantity_listed,
                     sale_price_per_unit: listing.listed_price_per_unit,
                     total_sale_price: listing.total_listed_price,
-                    sale_date: new Date().toISOString()
+                    sale_date: new Date().toISOString(),
+                    user_id: listing.user_id
                 });
 
                 if (saleError) {
                     console.error('Error creating sale record:', saleError.message);
-                    await showCustomModal('Error', 'Failed to create the sale record.', [{ text: 'OK', value: true }]);
+                    await showCustomModal('Error', 'Failed to create the sale record: ' + saleError.message, [{ text: 'OK', value: true }]);
                     button.disabled = false;
                     return;
                 }
@@ -424,7 +440,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (e.target.classList.contains('edit-btn')) {
             showEditListingModal(listingId);
         }
-
         else if (e.target.classList.contains('cancel-btn')) {
             handleCancelListing(listingId);
         }
