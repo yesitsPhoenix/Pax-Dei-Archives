@@ -322,8 +322,32 @@ const loadTraderPageData = async () => {
     if (listingsTable) listingsTable.style.display = 'none'; // Hide table while loading
     if (salesTable) salesTable.style.display = 'none'; // Hide table while loading
 
-    // --- Fetch Listings with Pagination and Filters ---
-    let listingsQuery = supabase
+    // --- Fetch ALL Listings for Dashboard (no filters, no pagination) ---
+    const { data: allListingsForDashboard, error: allListingsError } = await supabase
+        .from('market_listings')
+        .select(`
+            listing_id,
+            quantity_listed,
+            listed_price_per_unit,
+            total_listed_price,
+            market_fee,
+            listing_date,
+            is_fully_sold,
+            is_cancelled
+        `) // Select only necessary fields for dashboard to keep it lightweight
+        .eq('user_id', currentUserId)
+        .order('listing_date', { ascending: false });
+
+    if (allListingsError) {
+        console.error('Error fetching all listings for dashboard:', allListingsError.message);
+        if (allListingsError.code !== 'PGRST116') {
+             await showCustomModal('Error', 'Could not fetch all market data for dashboard. Please try logging in again.', [{ text: 'OK', value: true }]);
+        }
+        // Proceed even if dashboard data fails, to try and load tables
+    }
+
+    // --- Fetch Listings for TABLE (with filters and pagination) ---
+    let listingsTableQuery = supabase
         .from('market_listings')
         .select(`
             listing_id,
@@ -335,36 +359,36 @@ const loadTraderPageData = async () => {
             is_fully_sold,
             is_cancelled,
             items (item_name, item_categories(category_name), user_id)
-        `, { count: 'exact' }) // Request total count
-        .eq('user_id', currentUserId); // Filter by current user
+        `, { count: 'exact' }) // Request total count for current filters
+        .eq('user_id', currentUserId);
 
-    // Apply filters
+    // Apply filters for the table
     if (listingsFilter.itemName) {
-        listingsQuery = listingsQuery.ilike('items.item_name', `%${listingsFilter.itemName}%`);
+        listingsTableQuery = listingsTableQuery.ilike('items.item_name', `%${listingsFilter.itemName}%`);
     }
     if (listingsFilter.categoryId) {
-        listingsQuery = listingsQuery.eq('items.category_id', listingsFilter.categoryId);
+        listingsTableQuery = listingsTableQuery.eq('items.category_id', listingsFilter.categoryId);
     }
     if (listingsFilter.status === 'active') {
-        listingsQuery = listingsQuery.eq('is_fully_sold', false).eq('is_cancelled', false);
+        listingsTableQuery = listingsTableQuery.eq('is_fully_sold', false).eq('is_cancelled', false);
     } else if (listingsFilter.status === 'sold') {
-        listingsQuery = listingsQuery.eq('is_fully_sold', true);
+        listingsTableQuery = listingsTableQuery.eq('is_fully_sold', true);
     } else if (listingsFilter.status === 'cancelled') {
-        listingsQuery = listingsQuery.eq('is_cancelled', true);
+        listingsTableQuery = listingsTableQuery.eq('is_cancelled', true);
     }
     // 'all' status doesn't add any specific filters for is_fully_sold or is_cancelled
 
-    // Apply pagination for listings
+    // Apply pagination for listings table
     const listingsOffset = (currentListingsPage - 1) * LISTINGS_PER_PAGE;
-    listingsQuery = listingsQuery.range(listingsOffset, listingsOffset + LISTINGS_PER_PAGE - 1);
+    listingsTableQuery = listingsTableQuery.range(listingsOffset, listingsOffset + LISTINGS_PER_PAGE - 1);
 
-    const { data: listings, error: listingsError, count: totalListingsCount } = await listingsQuery
+    const { data: listingsForTable, error: listingsTableError, count: totalListingsCount } = await listingsTableQuery
         .order('listing_date', { ascending: false });
 
-    if (listingsError) {
-        console.error('Error fetching listings:', listingsError.message);
-        if (listingsError.code !== 'PGRST116') {
-             await showCustomModal('Error', 'Could not fetch your market data. Please try logging in again.', [{ text: 'OK', value: true }]);
+    if (listingsTableError) {
+        console.error('Error fetching listings for table:', listingsTableError.message);
+        if (listingsTableError.code !== 'PGRST116') {
+             await showCustomModal('Error', 'Could not fetch your market listings. Please try logging in again.', [{ text: 'OK', value: true }]);
         }
         if (loader) loader.style.display = 'none';
         return;
@@ -400,11 +424,14 @@ const loadTraderPageData = async () => {
     }
 
     // --- Render UI ---
-    renderDashboard(listings); // Pass all listings to calculate totals (dashboard is not paginated)
-    renderListingsTable(listings); // Render the currently paginated listings
+    // Pass allListingsForDashboard to renderDashboard for accurate totals
+    renderDashboard(allListingsForDashboard || []); // Ensure it's an array even if fetch failed
+
+    // Pass listingsForTable to renderListingsTable as it's already paginated/filtered
+    renderListingsTable(listingsForTable || []);
     renderListingsPagination(totalListingsCount);
 
-    renderSalesTable(sales);
+    renderSalesTable(sales || []);
     renderSalesPagination(totalSalesCount);
 
     // Hide loaders and show tables
@@ -792,8 +819,13 @@ const handleAddListing = async (e) => {
 
     if (allListingsSuccessful) {
         if (addListingForm) addListingForm.reset();
-        currentListingsPage = 1; // Reset to first page after adding new listing
+        currentListingsPage = 1; // Reset to first page on filter change
         listingsFilter.status = 'active'; // Filter to active listings after adding
+        // Reset filter inputs to reflect active status
+        if (filterListingItemNameInput) filterListingItemNameInput.value = '';
+        if (filterListingCategorySelect) filterListingCategorySelect.value = '';
+        if (filterListingStatusSelect) filterListingStatusSelect.value = 'active';
+
         await loadTraderPageData();
         await showCustomModal('Success', `Listing${stacks > 1 ? 's' : ''} added successfully!`, [{ text: 'OK', value: true }]);
     } else {
