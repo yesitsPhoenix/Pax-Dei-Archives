@@ -1,4 +1,4 @@
-// trader.js
+// frontend/www/js/trader.js
 
 import { supabase } from './supabaseClient.js';
 
@@ -16,13 +16,12 @@ const itemCategorySelect = document.getElementById('item-category');
 const salesLoader = document.getElementById('sales-loader');
 const salesBody = document.getElementById('sales-body');
 const salesTable = document.getElementById('sales-table');
-
+const grossSalesChartCanvas = document.getElementById('grossSalesChart');
 
 const grossSalesEl = document.getElementById('dashboard-gross-sales');
 const feesPaidEl = document.getElementById('dashboard-fees-paid');
 const netProfitEl = document.getElementById('dashboard-net-profit');
 const activeListingsEl = document.getElementById('dashboard-active-listings');
-
 
 const filterListingItemNameInput = document.getElementById('filter-listing-item-name');
 const filterListingCategorySelect = document.getElementById('filter-listing-category');
@@ -32,10 +31,8 @@ const listingsPaginationContainer = document.getElementById('listings-pagination
 const salesPaginationContainer = document.getElementById('sales-pagination');
 const downloadSalesCsvButton = document.getElementById('download-sales-csv');
 
-
 let currentUserId = null;
 let grossSalesChartInstance;
-
 
 const LISTINGS_PER_PAGE = 10;
 let currentListingsPage = 1;
@@ -248,7 +245,6 @@ const fetchAndPopulateCategories = async () => {
         return;
     }
 
-
     itemCategorySelect.innerHTML = '<option value="">Select a category</option>';
     data.forEach(category => {
         const option = document.createElement('option');
@@ -257,7 +253,6 @@ const fetchAndPopulateCategories = async () => {
         itemCategorySelect.appendChild(option);
     });
 
-
     filterListingCategorySelect.innerHTML = '<option value="">All Categories</option>';
     data.forEach(category => {
         const option = document.createElement('option');
@@ -265,7 +260,6 @@ const fetchAndPopulateCategories = async () => {
         option.textContent = category.category_name;
         filterListingCategorySelect.appendChild(option);
     });
-
     filterListingCategorySelect.value = listingsFilter.categoryId;
 };
 
@@ -306,13 +300,13 @@ const getOrCreateItemId = async (itemName, categoryId) => {
 };
 
 const loadTraderPageData = async () => {
-
+    console.log("loadTraderPageData: Initiating data fetch.");
     if (loader) loader.style.display = 'block';
     if (salesLoader) salesLoader.style.display = 'block';
     if (listingsTable) listingsTable.style.display = 'none';
     if (salesTable) salesTable.style.display = 'none';
 
-
+    console.log("loadTraderPageData: Fetching all listings for dashboard.");
     const { data: allListingsForDashboard, error: allListingsError } = await supabase
         .from('market_listings')
         .select(`
@@ -333,8 +327,11 @@ const loadTraderPageData = async () => {
         if (allListingsError.code !== 'PGRST116') {
              await showCustomModal('Error', 'Could not fetch all market data for dashboard. Please try logging in again.', [{ text: 'OK', value: true }]);
         }
+    } else {
+        console.log("loadTraderPageData: All listings for dashboard fetched successfully.");
     }
 
+    console.log("loadTraderPageData: Fetching filtered/paginated listings for table.");
     let listingsTableQuery = supabase
         .from('market_listings')
         .select(`
@@ -377,8 +374,11 @@ const loadTraderPageData = async () => {
         }
         if (loader) loader.style.display = 'none';
         return;
+    } else {
+        console.log("loadTraderPageData: Filtered/paginated listings for table fetched successfully.");
     }
 
+    console.log("loadTraderPageData: Fetching sales data.");
     let salesQuery = supabase
         .from('sales')
         .select(`
@@ -390,6 +390,7 @@ const loadTraderPageData = async () => {
             market_listings (listing_id, items(item_name, item_categories(category_name), user_id))
         `, { count: 'exact' })
         .eq('user_id', currentUserId);
+
     const salesOffset = (currentSalesPage - 1) * SALES_PER_PAGE;
     salesQuery = salesQuery.range(salesOffset, salesOffset + SALES_PER_PAGE - 1);
 
@@ -403,9 +404,11 @@ const loadTraderPageData = async () => {
         }
         if (salesLoader) salesLoader.style.display = 'none';
         return;
+    } else {
+        console.log("loadTraderPageData: Sales data fetched successfully.");
     }
 
-
+    console.log("loadTraderPageData: Rendering UI elements.");
     renderDashboard(allListingsForDashboard || []);
 
     renderListingsTable(listingsForTable || []);
@@ -414,23 +417,20 @@ const loadTraderPageData = async () => {
     renderSalesTable(sales || []);
     renderSalesPagination(totalSalesCount);
 
-
     if (loader) loader.style.display = 'none';
     if (salesLoader) salesLoader.style.display = 'none';
     if (listingsTable) listingsTable.style.display = 'table';
     if (salesTable) salesTable.style.display = 'table';
+    console.log("loadTraderPageData: UI rendering complete.");
 };
 
-
 const renderDashboard = (allListings) => {
-
     if (!grossSalesEl || !feesPaidEl || !netProfitEl || !activeListingsEl) {
-        console.error("One or more dashboard elements not found.");
+        console.error("renderDashboard: One or more dashboard elements not found. Skipping stats render.");
         return;
     }
 
     const soldListings = allListings.filter(l => l.is_fully_sold);
-
     const feesPaid = allListings.reduce((sum, l) => sum + l.market_fee, 0);
 
     const grossSales = soldListings.reduce((sum, l) => sum + l.total_listed_price, 0);
@@ -442,11 +442,12 @@ const renderDashboard = (allListings) => {
     netProfitEl.innerHTML = `${netProfit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} <i class="fas fa-coins"></i>`;
 
     activeListingsEl.textContent = activeListings.length;
+    console.log("renderDashboard: Dashboard elements updated.");
 };
 
 const renderListingsTable = (listings) => {
     if (!listingsBody) {
-        console.error("Listings table body element not found.");
+        console.error("renderListingsTable: Listings table body element not found. Skipping table render.");
         return;
     }
     listingsBody.innerHTML = '';
@@ -458,13 +459,13 @@ const renderListingsTable = (listings) => {
     listings.forEach(listing => {
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td class="py-3 px-6 text-left">${listing.items.item_name}</td>
-            <td class="py-3 px-6 text-left">${listing.items.item_categories?.category_name || 'N/A'}</td>
-            <td class="py-3 px-6 text-left">${listing.quantity_listed.toLocaleString()}</td>
-            <td class="py-3 px-6 text-left">${listing.listed_price_per_unit.toFixed(2)}</td>
-            <td class="py-3 px-6 text-left">${listing.total_listed_price.toLocaleString()}</td>
-            <td class="py-3 px-6 text-left">${listing.market_fee.toLocaleString()}</td>
-            <td class="py-3 px-6 text-left">${new Date(listing.listing_date).toLocaleDateString()}</td>
+            <td class="py-3 px-6 text-left">${listing.items?.item_name || 'N/A'}</td>
+            <td class="py-3 px-6 text-left">${listing.items?.item_categories?.category_name || 'N/A'}</td>
+            <td class="py-3 px-6 text-left">${listing.quantity_listed?.toLocaleString() || 'N/A'}</td>
+            <td class="py-3 px-6 text-left">${listing.listed_price_per_unit?.toFixed(2) || 'N/A'}</td>
+            <td class="py-3 px-6 text-left">${listing.total_listed_price?.toLocaleString() || 'N/A'}</td>
+            <td class="py-3 px-6 text-left">${listing.market_fee?.toLocaleString() || 'N/A'}</td>
+            <td class="py-3 px-6 text-left">${listing.listing_date ? new Date(listing.listing_date).toLocaleDateString() : 'N/A'}</td>
             <td class="py-3 px-6 text-left">
                 <div class="flex gap-2 whitespace-nowrap">
                     <button class="sold-btn bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-full shadow-md transition duration-150 ease-in-out transform hover:scale-105" data-id="${listing.listing_id}">Sold</button>
@@ -475,15 +476,24 @@ const renderListingsTable = (listings) => {
         `;
         listingsBody.appendChild(row);
     });
+    console.log("renderListingsTable: Listings table rendered.");
 };
 
 const renderListingsPagination = (totalCount) => {
-    if (!listingsPaginationContainer) return;
+    if (!listingsPaginationContainer) {
+        console.warn("renderListingsPagination: Pagination container not found.");
+        return;
+    }
 
     const totalPages = Math.ceil(totalCount / LISTINGS_PER_PAGE);
     listingsPaginationContainer.innerHTML = '';
 
-    if (totalPages <= 1) return;
+    if (totalPages <= 1) {
+        console.log("renderListingsPagination: Only one page, no pagination needed.");
+        return;
+    }
+
+    console.log(`renderListingsPagination: Total pages: ${totalPages}, current page: ${currentListingsPage}`);
 
     const prevButton = document.createElement('button');
     prevButton.textContent = 'Previous';
@@ -521,10 +531,9 @@ const renderListingsPagination = (totalCount) => {
     listingsPaginationContainer.appendChild(nextButton);
 };
 
-
 const renderSalesTable = (sales) => {
     if (!salesBody || !salesTable) {
-        console.error("Sales table elements not found.");
+        console.error("renderSalesTable: Sales table elements not found. Skipping table render.");
         return;
     }
     salesBody.innerHTML = '';
@@ -536,25 +545,34 @@ const renderSalesTable = (sales) => {
         const row = document.createElement('tr');
         row.className = 'border-b border-gray-200 hover:bg-gray-100';
         row.innerHTML = `
-            <td class="py-3 px-6 text-left whitespace-nowrap">${sale.market_listings.items.item_name}</td>
-            <td class="py-3 px-6 text-left">${sale.market_listings.items.item_categories?.category_name || 'N/A'}</td>
-            <td class="py-3 px-6 text-left">${sale.quantity_sold.toLocaleString()}</td>
-            <td class="py-3 px-6 text-left">${sale.sale_price_per_unit.toFixed(2)}</td>
-            <td class="py-3 px-6 text-left">${sale.total_sale_price.toLocaleString()}</td>
-            <td class="py-3 px-6 text-left">${new Date(sale.sale_date).toLocaleDateString()}</td>
+            <td class="py-3 px-6 text-left whitespace-nowrap">${sale.market_listings?.items?.item_name || 'N/A'}</td>
+            <td class="py-3 px-6 text-left">${sale.market_listings?.items?.item_categories?.category_name || 'N/A'}</td>
+            <td class="py-3 px-6 text-left">${sale.quantity_sold?.toLocaleString() || 'N/A'}</td>
+            <td class="py-3 px-6 text-left">${sale.sale_price_per_unit?.toFixed(2) || 'N/A'}</td>
+            <td class="py-3 px-6 text-left">${sale.total_sale_price?.toLocaleString() || 'N/A'}</td>
+            <td class="py-3 px-6 text-left">${sale.sale_date ? new Date(sale.sale_date).toLocaleDateString() : 'N/A'}</td>
         `;
         salesBody.appendChild(row);
     });
     salesTable.style.display = 'table';
+    console.log("renderSalesTable: Sales table rendered.");
 };
 
 const renderSalesPagination = (totalCount) => {
-    if (!salesPaginationContainer) return;
+    if (!salesPaginationContainer) {
+        console.warn("renderSalesPagination: Sales pagination container not found.");
+        return;
+    }
 
     const totalPages = Math.ceil(totalCount / SALES_PER_PAGE);
     salesPaginationContainer.innerHTML = '';
 
-    if (totalPages <= 1) return;
+    if (totalPages <= 1) {
+        console.log("renderSalesPagination: Only one page, no pagination needed.");
+        return;
+    }
+
+    console.log(`renderSalesPagination: Total pages: ${totalPages}, current page: ${currentSalesPage}`);
 
     const prevButton = document.createElement('button');
     prevButton.textContent = 'Previous';
@@ -592,6 +610,95 @@ const renderSalesPagination = (totalCount) => {
     salesPaginationContainer.appendChild(nextButton);
 };
 
+const renderGrossSalesChart = (sales) => {
+    if (!grossSalesChartCanvas) {
+        console.warn("renderGrossSalesChart: Gross sales chart canvas not found. Skipping chart render.");
+        return;
+    }
+
+    const salesByDate = sales.reduce((acc, sale) => {
+        const date = new Date(sale.sale_date).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
+        acc[date] = (acc[date] || 0) + sale.total_sale_price;
+        return acc;
+    }, {});
+
+    const sortedDates = Object.keys(salesByDate).sort((a, b) => new Date(a) - new Date(b));
+    const chartData = sortedDates.map(date => salesByDate[date]);
+
+    if (grossSalesChartInstance) {
+        grossSalesChartInstance.destroy();
+    }
+
+    if (typeof Chart === 'undefined') {
+        console.error("renderGrossSalesChart: Chart.js is not loaded. Please ensure the Chart.js script is included in your HTML.");
+        return;
+    }
+
+    grossSalesChartInstance = new Chart(grossSalesChartCanvas, {
+        type: 'line',
+        data: {
+            labels: sortedDates,
+            datasets: [{
+                label: 'Gross Sales',
+                data: chartData,
+                borderColor: '#4A90E2',
+                backgroundColor: 'rgba(74, 144, 226, 0.2)',
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        color: '#FFFFFF'
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `Gross Sales: ${context.raw.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} Coins`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Date',
+                        color: '#FFFFFF'
+                    },
+                    ticks: {
+                        color: '#FFFFFF'
+                    },
+                    grid: {
+                        display: false
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Sales (Coins)',
+                        color: '#FFFFFF'
+                    },
+                    beginAtZero: true,
+                    ticks: {
+                        color: '#FFFFFF',
+                        callback: function(value) {
+                            return value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+    console.log("renderGrossSalesChart: Chart rendered.");
+};
 
 const showLoader = (isLoading) => {
     if (loader) loader.style.display = isLoading ? 'block' : 'none';
@@ -608,7 +715,7 @@ const handleAddListing = async (e) => {
     }
 
     if (!currentUserId) {
-        console.error('User not authenticated or user ID not available for adding listing.');
+        console.error('handleAddListing: User not authenticated or user ID not available for adding listing.');
         await showCustomModal('Error', 'You must be logged in to add a listing. User ID not found.', [{ text: 'OK', value: true }]);
         if (button) {
             button.disabled = false;
@@ -623,7 +730,7 @@ const handleAddListing = async (e) => {
     const itemPricePerStackInput = document.getElementById('item-price-per-stack');
 
     if (!itemNameInput || !itemCategorySelect || !itemStacksInput || !itemCountPerStackInput || !itemPricePerStackInput) {
-        console.error("One or more form input elements are missing.");
+        console.error("handleAddListing: One or more form input elements are missing.");
         await showCustomModal('Error', 'Missing form elements. Cannot add listing.', [{ text: 'OK', value: true }]);
         if (button) {
             button.disabled = false;
@@ -686,7 +793,7 @@ const handleAddListing = async (e) => {
         });
 
         if (error) {
-            console.error('Error adding stack listing:', error.message);
+            console.error('handleAddListing: Error adding stack listing:', error.message);
             allListingsSuccessful = false;
             break;
         }
@@ -735,7 +842,7 @@ const handleTableClick = async (e) => {
                 .single();
 
             if (fetchError || !listing || listing.user_id !== currentUserId) {
-                console.error('Error fetching listing to sell or not authorized:', fetchError?.message || 'User not authorized.');
+                console.error('handleTableClick (sold-btn): Error fetching listing to sell or not authorized:', fetchError?.message || 'User not authorized.');
                 await showCustomModal('Error', 'Could not find listing details or you do not own this listing to complete sale.', [{ text: 'OK', value: true }]);
                 button.disabled = false;
                 return;
@@ -751,7 +858,7 @@ const handleTableClick = async (e) => {
             });
 
             if (saleError) {
-                console.error('Error creating sale record:', saleError.message);
+                console.error('handleTableClick (sold-btn): Error creating sale record:', saleError.message);
                 await showCustomModal('Error', 'Failed to create the sale record: ' + saleError.message, [{ text: 'OK', value: true }]);
                 button.disabled = false;
                 return;
@@ -764,7 +871,7 @@ const handleTableClick = async (e) => {
                 .eq('user_id', currentUserId);
 
             if (updateError) {
-                console.error('Error updating listing status:', updateError.message);
+                console.error('handleTableClick (sold-btn): Error updating listing status:', updateError.message);
                 await showCustomModal('Error', 'Sale was recorded, but the listing status could not be updated.', [{ text: 'OK', value: true }]);
             } else {
                 await showCustomModal('Success', 'Listing marked as sold successfully!', [{ text: 'OK', value: true }]);
@@ -802,7 +909,7 @@ const downloadSalesHistoryCSV = async () => {
         .order('sale_date', { ascending: false });
 
     if (error) {
-        console.error('Error fetching all sales for CSV:', error.message);
+        console.error('downloadSalesHistoryCSV: Error fetching all sales for CSV:', error.message);
         await showCustomModal('Error', 'Failed to fetch sales data for download: ' + error.message, [{ text: 'OK', value: true }]);
         return;
     }
@@ -928,9 +1035,10 @@ if (downloadSalesCsvButton) {
     downloadSalesCsvButton.addEventListener('click', downloadSalesHistoryCSV);
 }
 
-
 const updateUIForAuthStatus = async (authenticated) => {
+    console.log(`updateUIForAuthStatus: Called with authenticated = ${authenticated}`);
     if (authenticated) {
+        console.log("updateUIForAuthStatus: User is authenticated. Showing dashboard and forms.");
         if (traderLoginContainer) traderLoginContainer.style.display = 'none';
         if (traderDashboardAndForms) traderDashboardAndForms.style.display = 'block';
         if (addListingForm) {
@@ -938,9 +1046,19 @@ const updateUIForAuthStatus = async (authenticated) => {
             if (submitButton) submitButton.disabled = false;
         }
         
-        await fetchAndPopulateCategories(); 
-        await loadTraderPageData();
+        try {
+            console.log("updateUIForAuthStatus: Calling fetchAndPopulateCategories...");
+            await fetchAndPopulateCategories(); 
+            console.log("updateUIForAuthStatus: Calling loadTraderPageData...");
+            await loadTraderPageData();
+            console.log("updateUIForAuthStatus: Initial data load for authenticated user complete.");
+        } catch (error) {
+            console.error("updateUIForAuthStatus: Error during initial data load after authentication:", error);
+            await showCustomModal('Error', 'Failed to load dashboard data. Please try again or refresh the page.', [{ text: 'OK', value: true }]);
+        }
+
     } else {
+        console.log("updateUIForAuthStatus: User is NOT authenticated. Showing login container.");
         if (traderLoginContainer) traderLoginContainer.style.display = 'block';
         if (traderDashboardAndForms) traderDashboardAndForms.style.display = 'none';
         if (loader) loader.style.display = 'none';
@@ -956,7 +1074,6 @@ const updateUIForAuthStatus = async (authenticated) => {
             traderLoginError.style.display = 'none';
             traderLoginError.textContent = '';
         }
-
         if (listingsPaginationContainer) listingsPaginationContainer.innerHTML = '';
         if (salesPaginationContainer) salesPaginationContainer.innerHTML = '';
         if (filterListingItemNameInput) filterListingItemNameInput.value = '';
@@ -965,36 +1082,43 @@ const updateUIForAuthStatus = async (authenticated) => {
     }
 }
 
-
 supabase.auth.onAuthStateChange(async (event, session) => {
+    console.log(`onAuthStateChange event: ${event}, session exists: ${!!session}`);
     if (session && session.user) {
         currentUserId = session.user.id;
-        console.log('User authenticated on Trader page:', currentUserId);
+        console.log('onAuthStateChange: User authenticated on Trader page:', currentUserId);
         await updateUIForAuthStatus(true); 
     } else {
         currentUserId = null;
-        console.log('User not authenticated on Trader page.');
+        console.log('onAuthStateChange: User not authenticated on Trader page.');
         await updateUIForAuthStatus(false);
     }
 });
 
 async function checkInitialAuthAndLoad() {
+    console.log("checkInitialAuthAndLoad: Performing initial session check.");
     const { data: { session }, error } = await supabase.auth.getSession();
     if (error) {
-        console.error("Error getting session:", error.message);
+        console.error("checkInitialAuthAndLoad: Error getting session:", error.message);
         await updateUIForAuthStatus(false);
         return;
     }
 
     if (session && session.user) {
         currentUserId = session.user.id;
-        console.log('Initial session check: User authenticated:', currentUserId);
+        console.log('checkInitialAuthAndLoad: Initial session check: User authenticated:', currentUserId);
         await updateUIForAuthStatus(true);
     } else {
-        console.log('Initial session check: User not authenticated.');
+        console.log('checkInitialAuthAndLoad: Initial session check: User not authenticated.');
         await updateUIForAuthStatus(false);
     }
 }
 
-
-checkInitialAuthAndLoad();
+window.addEventListener('pageshow', async (event) => {
+    if (event.persisted) {
+        console.log("pageshow event: Page restored from BFCache. Re-checking auth and loading data.");
+    } else {
+        console.log("pageshow event: Page loaded normally. Checking auth and loading data.");
+    }
+    await checkInitialAuthAndLoad();
+});
