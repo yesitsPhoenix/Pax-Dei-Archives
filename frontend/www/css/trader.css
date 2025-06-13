@@ -372,3 +372,8 @@
 .relative h-96 w-full {
  color: white !important;
 }
+
+
+.text-2xl, .block  {
+    color: white !important;
+}
