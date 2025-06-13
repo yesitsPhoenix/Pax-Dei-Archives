@@ -1,5 +1,6 @@
 import { supabase } from '../supabaseClient.js';
 import { showCustomModal, loadTraderPageData } from '../trader.js';
+import { currentCharacterId } from './characters.js';
 
 const addListingForm = document.getElementById('add-listing-form');
 const listingsBody = document.getElementById('listings-body');
@@ -50,18 +51,24 @@ document.body.insertAdjacentHTML('beforeend', editListingModalHtml);
 
 export const initializeListings = (userId) => {
     currentUserId = userId;
-    addEventListeners();
+    addListingsEventListeners();
     fetchAndPopulateCategories();
 };
 
 export const loadActiveListings = async () => {
-    if (!currentUserId) return;
+    if (!currentCharacterId) {
+        loader.style.display = 'none';
+        listingsTable.style.display = 'table';
+        listingsBody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Please select a character or create one to view listings.</td></tr>';
+        return;
+    }
+    
     loader.style.display = 'block';
     listingsTable.style.display = 'none';
 
     try {
         const { data, error } = await supabase.rpc('search_trader_listings', {
-            p_user_id: currentUserId,
+            p_character_id: currentCharacterId, 
             p_item_name: listingsFilter.itemName || null,
             p_category_id: listingsFilter.categoryId ? parseInt(listingsFilter.categoryId) : null,
             p_status: listingsFilter.status,
@@ -107,7 +114,6 @@ const renderListingsTable = (listings) => {
                 <div class="flex gap-2 whitespace-nowrap">
                     ${!listing.is_cancelled && !listing.is_fully_sold ? `
                         <button class="sold-btn bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-full" data-id="${listing.listing_id}">Sold</button>
-                        <button class="edit-btn bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-full" data-id="${listing.listing_id}">Edit</button>
                         <button class="cancel-btn bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-3 rounded-full" data-id="${listing.listing_id}">Cancel</button>
                     ` : ''}
                 </div>
@@ -152,7 +158,7 @@ const renderListingsPagination = (totalCount) => {
     listingsPaginationContainer.appendChild(createButton('Next', currentListingsPage + 1, currentListingsPage === totalPages));
 };
 
-const addEventListeners = () => {
+const addListingsEventListeners = () => {
     addListingForm.addEventListener('submit', handleAddListing);
     filterListingItemNameInput.addEventListener('input', (e) => handleFilterChange('itemName', e.target.value));
     filterListingCategorySelect.addEventListener('change', (e) => handleFilterChange('categoryId', e.target.value));
@@ -215,11 +221,16 @@ const fetchAndPopulateCategories = async () => {
 };
 
 const getOrCreateItemId = async (itemName, categoryId) => {
+    if (!currentCharacterId) {
+        await showCustomModal('Error', 'No character selected. Cannot create or retrieve item.', [{ text: 'OK', value: true }]);
+        return null;
+    }
+
     const { data: items, error: selectError } = await supabase
         .from('items')
         .select('item_id')
         .eq('item_name', itemName)
-        .eq('user_id', currentUserId)
+        .eq('character_id', currentCharacterId) 
         .limit(1);
 
     if (selectError) {
@@ -231,7 +242,7 @@ const getOrCreateItemId = async (itemName, categoryId) => {
 
     const { data: newItem, error: insertError } = await supabase
         .from('items')
-        .insert({ item_name: itemName, category_id: categoryId, user_id: currentUserId })
+        .insert({ item_name: itemName, category_id: categoryId, character_id: currentCharacterId }) 
         .select('item_id')
         .single();
 
@@ -244,6 +255,12 @@ const getOrCreateItemId = async (itemName, categoryId) => {
 
 const handleAddListing = async (e) => {
     e.preventDefault();
+
+    if (!currentCharacterId) {
+        await showCustomModal('Validation Error', 'Please select a character before creating a listing.', [{ text: 'OK', value: true }]);
+        return;
+    }
+
     const formData = new FormData(e.target);
     const itemName = formData.get('item-name').trim();
     const categoryId = formData.get('item-category');
@@ -256,14 +273,14 @@ const handleAddListing = async (e) => {
     }
 
     const itemId = await getOrCreateItemId(itemName, categoryId);
-    if (!itemId) return;
+    if (!itemId) return; 
 
     const marketFee = totalListedPrice * 0.05;
     const pricePerUnit = totalListedPrice / quantity;
 
     const { error } = await supabase.from('market_listings').insert({
         item_id: itemId,
-        user_id: currentUserId,
+        character_id: currentCharacterId, 
         quantity_listed: quantity,
         listed_price_per_unit: pricePerUnit,
         total_listed_price: totalListedPrice,
@@ -291,7 +308,7 @@ const handleCancelListing = async (listingId) => {
             .from('market_listings')
             .update({ is_cancelled: true })
             .eq('listing_id', listingId)
-            .eq('user_id', currentUserId);
+            .eq('character_id', currentCharacterId); 
 
         if (error) {
             await showCustomModal('Error', 'Failed to cancel listing: ' + error.message, [{ text: 'OK', value: true }]);
@@ -310,39 +327,48 @@ const handleMarkAsSold = async (listingId) => {
     );
 
     if (confirmed) {
-        const { error } = await supabase
+        const { data: listing, error: fetchError } = await supabase
+            .from('market_listings')
+            .select('listing_id, item_id, quantity_listed, total_listed_price, listed_price_per_unit, character_id')
+            .eq('listing_id', listingId)
+            .single();
+
+        if (fetchError || !listing) {
+            console.error('Error fetching listing for sale record:', fetchError);
+            await showCustomModal('Error', 'Could not retrieve listing details to record sale.', [{ text: 'OK', value: true }]);
+            return;
+        }
+
+        const { error: updateError } = await supabase
             .from('market_listings')
             .update({ is_fully_sold: true })
             .eq('listing_id', listingId)
-            .eq('user_id', currentUserId);
+            .eq('character_id', currentCharacterId); 
 
-        if (error) {
-            await showCustomModal('Error', 'Failed to mark listing as sold: ' + error.message, [{ text: 'OK', value: true }]);
+        if (updateError) {
+            await showCustomModal('Error', 'Failed to mark listing as sold: ' + updateError.message, [{ text: 'OK', value: true }]);
+            return;
+        }
+
+        const { error: insertSaleError } = await supabase
+            .from('sales')
+            .insert({
+                listing_id: listing.listing_id,
+                quantity_sold: listing.quantity_listed,
+                sale_price_per_unit: listing.listed_price_per_unit,
+                total_sale_price: listing.total_listed_price
+            });
+
+        if (insertSaleError) {
+            console.error('Error inserting sales record:', insertSaleError.message);
+            await showCustomModal('Error', 'Listing marked as sold, but failed to record sale history: ' + insertSaleError.message, [{ text: 'OK', value: true }]);
         } else {
-            await showCustomModal('Success', 'Listing marked as sold successfully!', [{ text: 'OK', value: true }]);
+            await showCustomModal('Success', 'Listing marked as sold and sales record created!', [{ text: 'OK', value: true }]);
             await loadTraderPageData(); 
         }
     }
 };
 
-const showEditListingModal = async (listingId) => {
-    currentEditingListingId = listingId;
-    const { data: listing, error } = await supabase
-        .from('market_listings')
-        .select(`*, items(item_name)`)
-        .eq('listing_id', listingId)
-        .single();
-
-    if (error || !listing) {
-        console.error('Error fetching listing for edit:', error);
-        return await showCustomModal('Error', 'Could not load listing details.', [{ text: 'OK', value: true }]);
-    }
-
-    document.getElementById('edit-item-name').value = listing.items.item_name;
-    document.getElementById('edit-quantity-listed').value = listing.quantity_listed;
-    document.getElementById('edit-total-price').value = listing.total_listed_price;
-    document.getElementById('editListingModal').classList.remove('hidden');
-};
 
 const handleEditListingSave = async (e) => {
     e.preventDefault();
@@ -367,13 +393,13 @@ const handleEditListingSave = async (e) => {
             market_fee
         })
         .eq('listing_id', currentEditingListingId)
-        .eq('user_id', currentUserId);
+        .eq('character_id', currentCharacterId); 
 
     if (error) {
         await showCustomModal('Error', 'Failed to update listing: ' + error.message, [{ text: 'OK', value: true }]);
     } else {
-        document.getElementById('editListingModal').classList.add('hidden');
-        await showCustomModal('Success', 'Listing updated successfully!', [{ text: 'OK', value: true }]);
-        await loadTraderPageData();
+            document.getElementById('editListingModal').classList.add('hidden');
+            await showCustomModal('Success', 'Listing updated successfully!', [{ text: 'OK', value: true }]);
+            await loadTraderPageData();
     }
 };

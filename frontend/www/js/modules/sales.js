@@ -1,5 +1,6 @@
 import { supabase } from '../supabaseClient.js';
 import { showCustomModal } from '../trader.js';
+import { currentCharacterId } from './characters.js';
 
 const salesLoader = document.getElementById('sales-loader');
 const salesBody = document.getElementById('sales-body');
@@ -9,20 +10,23 @@ const downloadSalesCsvButton = document.getElementById('download-sales-csv');
 
 const SALES_PER_PAGE = 10;
 let currentSalesPage = 1;
-let currentUserId = null;
 
-export const initializeSales = (userId) => {
-    currentUserId = userId;
+export const initializeSales = () => {
     if (downloadSalesCsvButton) {
         downloadSalesCsvButton.addEventListener('click', handleDownloadCsv);
     }
 };
 
 export const loadSalesHistory = async () => {
-    if (!currentUserId) return;
+    if (!currentCharacterId) {
+        if (salesLoader) salesLoader.style.display = 'none';
+        if (salesTable) salesTable.style.display = 'none';
+        if (salesBody) salesBody.innerHTML = '<tr><td colspan="6" class="text-center py-4">Please select a character or create one to view sales history.</td></tr>';
+        return;
+    }
 
-    salesLoader.style.display = 'block';
-    salesTable.style.display = 'none';
+    if (salesLoader) salesLoader.style.display = 'block';
+    if (salesTable) salesTable.style.display = 'none';
 
     try {
         const offset = (currentSalesPage - 1) * SALES_PER_PAGE;
@@ -30,9 +34,9 @@ export const loadSalesHistory = async () => {
             .from('sales')
             .select(`
                 sale_id, quantity_sold, sale_price_per_unit, total_sale_price, sale_date,
-                market_listings ( items(item_name, item_categories(category_name)) )
+                market_listings!inner ( listing_id, character_id, items(item_name, item_categories(category_name)) )
             `, { count: 'exact' })
-            .eq('user_id', currentUserId)
+            .eq('market_listings.character_id', currentCharacterId)
             .order('sale_date', { ascending: false })
             .range(offset, offset + SALES_PER_PAGE - 1);
 
@@ -45,12 +49,13 @@ export const loadSalesHistory = async () => {
         console.error('Error fetching sales:', error.message);
         await showCustomModal('Error', 'Could not fetch sales history.', [{ text: 'OK', value: true }]);
     } finally {
-        salesLoader.style.display = 'none';
-        salesTable.style.display = 'table';
+        if (salesLoader) salesLoader.style.display = 'none';
+        if (salesTable) salesTable.style.display = 'table';
     }
 };
 
 const renderSalesTable = (sales) => {
+    if (!salesBody) return;
     salesBody.innerHTML = '';
     if (!sales || sales.length === 0) {
         salesBody.innerHTML = '<tr><td colspan="6" class="text-center py-4">No sales recorded yet.</td></tr>';
@@ -108,9 +113,11 @@ const renderSalesPagination = (totalCount) => {
 };
 
 const handleDownloadCsv = async () => {
-    if (!currentUserId) return;
-    downloadSalesCsvButton.disabled = true;
-    downloadSalesCsvButton.textContent = 'Preparing...';
+    if (!currentCharacterId) return;
+    if (downloadSalesCsvButton) {
+        downloadSalesCsvButton.disabled = true;
+        downloadSalesCsvButton.textContent = 'Preparing...';
+    }
 
     try {
         const { data: sales, error } = await supabase
@@ -119,9 +126,9 @@ const handleDownloadCsv = async () => {
                 sale_date,
                 quantity_sold,
                 total_sale_price,
-                market_listings ( items(item_name, item_categories(category_name)) )
+                market_listings!inner ( listing_id, character_id, items(item_name, item_categories(category_name)) )
             `)
-            .eq('user_id', currentUserId)
+            .eq('market_listings.character_id', currentCharacterId)
             .order('sale_date', { ascending: false });
 
         if (error) throw error;
@@ -153,7 +160,9 @@ const handleDownloadCsv = async () => {
         console.error('Error generating CSV:', err.message);
         await showCustomModal('Error', 'Failed to generate CSV file.', [{ text: 'OK', value: true }]);
     } finally {
-        downloadSalesCsvButton.disabled = false;
-        downloadSalesCsvButton.textContent = 'Download Sales CSV';
+        if (downloadSalesCsvButton) {
+            downloadSalesCsvButton.disabled = false;
+            downloadSalesCsvButton.textContent = 'Download Sales CSV';
+        }
     }
 };

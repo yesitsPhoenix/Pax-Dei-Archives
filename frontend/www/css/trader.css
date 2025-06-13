@@ -377,3 +377,6 @@
 .text-2xl, .block  {
     color: white !important;
 }
+.text-xl, .mb-6 {
+    color: white !important;
+}

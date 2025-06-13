@@ -1,120 +1,141 @@
 import { supabase } from './supabaseClient.js';
-import { renderDashboard } from './modules/dashboard.js';
 import { initializeListings, loadActiveListings } from './modules/listings.js';
+import { initializeCharacters, insertCharacterModalHtml, currentCharacterId } from './modules/characters.js';
 import { initializeSales, loadSalesHistory } from './modules/sales.js';
+import { renderDashboard } from './modules/dashboard.js';
 
-const traderLoginContainer = document.getElementById('traderLoginContainer');
-const traderDiscordLoginButton = document.getElementById('traderDiscordLoginButton');
-const traderLoginError = document.getElementById('traderLoginError');
-const traderDashboardAndForms = document.getElementById('traderDashboardAndForms');
-
-let currentUserId = null;
-
-const customModalHtml = `
-    <div id="customModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white p-6 rounded-lg shadow-xl w-96 max-w-full font-inter">
-            <h3 id="modalTitle" class="text-xl font-bold mb-4 text-gray-800"></h3>
-            <p id="modalMessage" class="mb-6 text-gray-700"></p>
-            <div id="modalButtons" class="flex justify-end space-x-3"></div>
-        </div>
-    </div>
-`;
-document.body.insertAdjacentHTML('beforeend', customModalHtml);
+let currentUser = null;
 
 export const showCustomModal = (title, message, buttons) => {
     return new Promise(resolve => {
-        const modal = document.getElementById('customModal');
-        const modalTitle = document.getElementById('modalTitle');
-        const modalMessage = document.getElementById('modalMessage');
-        const modalButtons = document.getElementById('modalButtons');
+        const modalId = `customModal-${Date.now()}`;
+        const modalHtml = `
+            <div id="${modalId}" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+                <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm mx-4 sm:mx-auto font-inter">
+                    <h3 class="text-xl font-bold mb-4 text-gray-800">${title}</h3>
+                    <p class="mb-6 text-gray-700">${message}</p>
+                    <div class="flex justify-end gap-3">
+                        ${buttons.map(btn => `
+                            <button class="px-4 py-2 rounded-full font-bold
+                                ${btn.type === 'confirm' ? 'bg-blue-500 hover:bg-blue-700 text-white' : ''}
+                                ${btn.type === 'cancel' ? 'bg-gray-500 hover:bg-gray-700 text-white' : ''}
+                                ${!btn.type ? 'bg-gray-300 hover:bg-gray-400 text-gray-800' : ''}"
+                                data-value="${btn.value}">${btn.text}</button>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
 
-        if (!modal || !modalTitle || !modalMessage || !modalButtons) {
-            resolve(false);
-            return;
-        }
-
-        modalTitle.textContent = title;
-        modalMessage.textContent = message;
-        modalButtons.innerHTML = '';
-
-        buttons.forEach(buttonConfig => {
-            const button = document.createElement('button');
-            button.textContent = buttonConfig.text;
-            let baseClass = 'px-4 py-2 rounded-full font-bold transition duration-150 ease-in-out transform hover:scale-105';
-            
-            if (buttonConfig.type === 'confirm') {
-                button.className = `${baseClass} bg-blue-500 text-white hover:bg-blue-700`;
-            } else if (buttonConfig.type === 'cancel') {
-                button.className = `${baseClass} bg-gray-500 text-white hover:bg-gray-700`;
-            } else {
-                button.className = `${baseClass} bg-blue-500 text-white hover:bg-blue-700`;
-            }
-
-            button.onclick = () => {
-                modal.classList.add('hidden');
-                resolve(buttonConfig.value);
-            };
-            modalButtons.appendChild(button);
+        const modalElement = document.getElementById(modalId);
+        modalElement.querySelectorAll('button').forEach(button => {
+            button.addEventListener('click', () => {
+                const value = button.dataset.value === 'true' ? true : (button.dataset.value === 'false' ? false : button.dataset.value);
+                modalElement.remove();
+                resolve(value);
+            });
         });
-
-        modal.classList.remove('hidden');
     });
 };
 
 const checkUser = async () => {
-    const { data: { session }, error } = await supabase.auth.getSession();
-    if (error) {
-        console.error("Error getting session:", error.message);
-        return;
-    }
+    const { data: { user } } = await supabase.auth.getUser();
+    const traderLoginContainer = document.getElementById('traderLoginContainer');
+    const traderDashboardAndForms = document.getElementById('traderDashboardAndForms');
 
-    if (session && session.user) {
-        currentUserId = session.user.id;
-        traderLoginContainer.style.display = 'none';
-        traderDashboardAndForms.style.display = 'block';
+    if (user) {
+        currentUser = user;
 
-        initializeListings(currentUserId);
-        initializeSales(currentUserId);
+        if (traderLoginContainer) {
+            traderLoginContainer.style.display = 'none';
+        }
+
+        insertCharacterModalHtml();
+
+        await initializeCharacters(currentUser.id, async () => {
+            await loadTraderPageData();
+        });
+
+        initializeListings(currentUser.id);
+        initializeSales();
+
+        if (traderDashboardAndForms) {
+            traderDashboardAndForms.style.display = 'block';
+        }
         
-        loadTraderPageData();
+        await loadTraderPageData();
     } else {
-        traderLoginContainer.style.display = 'block';
-        traderDashboardAndForms.style.display = 'none';
+        if (traderLoginContainer) {
+            traderLoginContainer.style.display = 'block';
+        }
+        if (traderDashboardAndForms) {
+            traderDashboardAndForms.style.display = 'none';
+        }
     }
 };
 
 export const loadTraderPageData = async () => {
-    if (!currentUserId) return;
+    if (!currentCharacterId) {
+        renderDashboard([]);
+        await loadActiveListings();
+        await loadSalesHistory();
+        return;
+    }
 
-    const dashboardPromise = supabase
-        .from('market_listings')
-        .select('total_listed_price, market_fee, is_fully_sold, is_cancelled')
-        .eq('user_id', currentUserId)
-        .then(({ data, error }) => {
-            if (error) console.error("Dashboard fetch error:", error);
-            renderDashboard(data || []);
+    try {
+        const { data: allListings, error: allListingsError } = await supabase
+            .from('market_listings')
+            .select('is_fully_sold, is_cancelled, market_fee, total_listed_price')
+            .eq('character_id', currentCharacterId);
+
+        if (allListingsError) {
+            throw allListingsError;
+        }
+
+        renderDashboard(allListings || []);
+
+        await loadActiveListings();
+        await loadSalesHistory();
+    } catch (error) {
+        console.error('Error loading trader page data:', error.message);
+        await showCustomModal('Error', 'Failed to load trader data: ' + error.message, [{ text: 'OK', value: true }]);
+    }
+};
+
+const addPageEventListeners = () => {
+    const showCreateCharacterModalBtn = document.getElementById('showCreateCharacterModalBtn');
+
+    if (showCreateCharacterModalBtn) {
+        showCreateCharacterModalBtn.addEventListener('click', () => {
+            const createCharacterModal = document.getElementById('createCharacterModal');
+            if (createCharacterModal) {
+                createCharacterModal.classList.remove('hidden');
+            }
         });
-
-    await Promise.all([
-        loadActiveListings(),
-        loadSalesHistory(),
-        dashboardPromise
-    ]);
-};
-
-const handleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'discord',
-    });
-    if (error) {
-        traderLoginError.textContent = 'Error logging in: ' + error.message;
-        traderLoginError.style.display = 'block';
     }
-};
-
-document.addEventListener('DOMContentLoaded', () => {
+    const traderDiscordLoginButton = document.getElementById('traderDiscordLoginButton');
     if (traderDiscordLoginButton) {
-        traderDiscordLoginButton.addEventListener('click', handleLogin);
+        traderDiscordLoginButton.addEventListener('click', async () => {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'discord',
+                options: {
+                    redirectTo: window.location.origin + '/trader.html'
+                }
+            });
+            if (error) {
+                console.error('Error logging in with Discord:', error.message);
+                const traderLoginError = document.getElementById('traderLoginError');
+                if (traderLoginError) {
+                    traderLoginError.textContent = 'Login failed: ' + error.message;
+                    traderLoginError.style.display = 'block';
+                }
+            }
+        });
     }
-    checkUser();
+};
+
+document.addEventListener('DOMContentLoaded', async () => {
+    addPageEventListeners();
+    await checkUser();
 });
