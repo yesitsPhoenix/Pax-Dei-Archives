@@ -1,55 +1,24 @@
-// frontend/www/js/admin.js
-
 import { supabase } from './supabaseClient.js';
-import { authorRoleColors } from './utils.js'; // Assuming utils.js provides authorRoleColors
+import { authorRoleColors } from './utils.js';
 
-// Get references to Admin page specific elements
-const loginFormContainer = document.getElementById('loginFormContainer');
-const discordLoginButton = document.getElementById('discordLoginButton');
-const loginError = document.getElementById('loginError');
-const adminDashboardAndForm = document.getElementById('adminDashboardAndForm');
-
-// Dashboard statistics elements (added null checks)
-const totalCommentsCount = document.getElementById('totalCommentsCount');
-const totalNewsCount = document.getElementById('totalNewsCount');
-const commentsMonthCount = document.getElementById('commentsMonthCount');
-const newsMonthCount = document.getElementById('newsMonthCount');
-
-// Form elements
-const authorTypeDropdown = document.getElementById('author_type');
-const formMessage = document.getElementById('formMessage');
-const devCommentForm = document.getElementById('devCommentForm');
-const tagSelect = document.getElementById('tagSelect');
-const addNewsUpdateForm = document.getElementById('addNewsUpdateForm');
-const addNewsUpdateMessage = document.getElementById('addNewsUpdateMessage');
-const addLoreItemForm = document.getElementById('addLoreItemForm');
-const addLoreItemMessage = document.getElementById('addLoreItemMessage');
-
-
-// Cache for dashboard stats to prevent excessive fetches
+let initialAuthCheckComplete = false;
 let dashboardStatsCache = null;
 let lastStatsFetchTime = 0;
-const STATS_CACHE_DURATION = 60 * 5000; // Cache for 5 minutes (in ms)
+const STATS_CACHE_DURATION = 60 * 5000;
 
-// Helper function to show/hide form messages
+
 function showFormMessage(messageElement, message, type) {
-    if (!messageElement) {
-        console.warn("Message element not found for displaying message:", message);
-        return;
-    }
     messageElement.textContent = message;
-    messageElement.className = ''; // Reset classes
+    messageElement.className = '';
     if (type) {
         messageElement.classList.add('form-message', type);
         messageElement.style.display = 'block';
 
         if (message) {
             setTimeout(() => {
-                if (messageElement) { // Check again before manipulating after timeout
-                    messageElement.style.display = 'none';
-                    messageElement.textContent = '';
-                }
-            }, 5000); // Hide after 5 seconds
+                messageElement.style.display = 'none';
+                messageElement.textContent = '';
+            }, 5000);
         }
     } else {
         messageElement.style.display = 'none';
@@ -57,7 +26,9 @@ function showFormMessage(messageElement, message, type) {
     }
 }
 
-// Populate Author Type Dropdown
+const authorTypeDropdown = document.getElementById('author_type');
+const formMessage = document.getElementById('formMessage');
+
 if (authorTypeDropdown) {
     const defaultOption = document.createElement('option');
     defaultOption.value = "";
@@ -75,88 +46,24 @@ if (authorTypeDropdown) {
     }
 }
 
-// --- Dashboard Functions ---
-async function fetchDashboardData() {
-    // Use cache if available and not expired
-    const now = Date.now();
-    if (dashboardStatsCache && (now - lastStatsFetchTime < STATS_CACHE_DURATION)) {
-        console.log("Using cached dashboard stats.");
-        updateDashboardUI(dashboardStatsCache);
-        return;
-    }
+const devCommentForm = document.getElementById('devCommentForm');
+const tagSelect = document.getElementById('tagSelect');
 
-    try {
-        // Fetch total dev comments
-        const { count: totalComments, error: commentsError } = await supabase
-            .from('developer_comments')
-            .select('*', { count: 'exact', head: true });
-
-        // Fetch total news updates
-        const { count: totalNews, error: newsError } = await supabase
-            .from('news_updates')
-            .select('*', { count: 'exact', head: true });
-
-        // Fetch comments this month
-        const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-        const { count: commentsMonth, error: commentsMonthError } = await supabase
-            .from('developer_comments')
-            .select('*', { count: 'exact', head: true })
-            .gte('timestamp', startOfMonth);
-
-        // Fetch news this month
-        const { count: newsMonth, error: newsMonthError } = await supabase
-            .from('news_updates')
-            .select('*', { count: 'exact', head: true })
-            .gte('news_date', startOfMonth);
-
-        if (commentsError || newsError || commentsMonthError || newsMonthError) {
-            throw new Error(commentsError?.message || newsError?.message || commentsMonthError?.message || newsMonthError?.message);
-        }
-
-        const stats = {
-            totalComments: totalComments || 0,
-            totalNews: totalNews || 0,
-            commentsMonth: commentsMonth || 0,
-            newsMonth: newsMonth || 0
-        };
-
-        dashboardStatsCache = stats;
-        lastStatsFetchTime = now;
-        updateDashboardUI(stats);
-
-    } catch (error) {
-        console.error("Error fetching dashboard data:", error.message);
-        // Optionally display an error message to the user
-    }
-}
-
-function updateDashboardUI(stats) {
-    if (totalCommentsCount) totalCommentsCount.textContent = stats.totalComments;
-    if (totalNewsCount) totalNewsCount.textContent = stats.totalNews;
-    if (commentsMonthCount) commentsMonthCount.textContent = stats.commentsMonth;
-    if (newsMonthCount) newsMonthCount.textContent = stats.newsMonth;
-}
-
-
-// --- Comment Form Functions ---
 if (devCommentForm) {
     devCommentForm.addEventListener('submit', async function(event) {
         event.preventDefault();
 
-        showFormMessage(formMessage, '', null); // Clear previous message
-
-        const author = document.getElementById('author')?.value;
-        const source = document.getElementById('source')?.value;
-        const timestamp = document.getElementById('timestamp')?.value;
-        const content = document.getElementById('commentContent')?.value;
-        const selectedTags = Array.from(tagSelect?.selectedOptions || []).map(option => option.value);
-        const author_type = authorTypeDropdown ? authorTypeDropdown.value : '';
-
-        // Input validation
-        if (!author || !source || !timestamp || !content || !author_type || selectedTags.length === 0) {
-            showFormMessage(formMessage, 'Please fill in all fields and select at least one tag.', 'error');
-            return;
+        if (formMessage) {
+            formMessage.textContent = '';
+            formMessage.className = '';
         }
+
+        const author = document.getElementById('author').value;
+        const source = document.getElementById('source').value;
+        const timestamp = document.getElementById('timestamp').value;
+        const content = document.getElementById('commentContent').value;
+        const selectedTags = Array.from(tagSelect.selectedOptions).map(option => option.value);
+        const author_type = authorTypeDropdown ? authorTypeDropdown.value : '';
 
         let utcTimestamp = null;
         if (timestamp) {
@@ -170,314 +77,439 @@ if (devCommentForm) {
             submitButton.textContent = 'Submitting...';
         }
 
+        if (!author_type) {
+            showFormMessage(formMessage, 'Please select an Author Type.', 'error');
+            if (authorTypeDropdown) {
+                authorTypeDropdown.focus();
+            }
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Add Comment to DB';
+            }
+            return;
+        }
+
         const commentData = {
             author: author,
             source: source,
-            timestamp: utcTimestamp,
+            comment_date: utcTimestamp,
             content: content,
-            tags: selectedTags, // Store as array
-            author_type: author_type
+            tag: selectedTags.length > 0 ? selectedTags : null,
+            author_type: author_type,
         };
 
-        const { error } = await supabase.from('developer_comments').insert([commentData]);
+        showFormMessage(formMessage, 'Submitting comment...', 'info');
 
-        if (error) {
-            console.error('Error adding developer comment:', error.message);
-            showFormMessage(formMessage, 'Error adding comment: ' + error.message, 'error');
-        } else {
-            showFormMessage(formMessage, 'Developer comment added successfully!', 'success');
-            if (devCommentForm) devCommentForm.reset(); // Reset the form only on success
-            // Optionally clear the textareas for markdown and content
-            document.getElementById('commentInput').value = '';
-            document.getElementById('commentContent').value = '';
-            document.getElementById('devCommentForm').style.display = 'none'; // Hide parsed form
-            await fetchDashboardData(); // Refresh dashboard stats
-        }
+        try {
+            const { data: { user }, error: authError } = await supabase.auth.getUser();
+            if (authError || !user) {
+                console.error("Auth Error before insert:", authError);
+                //console.log("User object before insert:", user);
+                showFormMessage(formMessage, 'Please log in to submit comments.', 'error');
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Add Comment to DB';
+                }
+                return;
+            } else {
+                //console.log("User ID from auth.getUser() before insert:", user.id);
+                //console.log("User Role from auth.getUser() before insert:", user.role);
+            }
 
-        if (submitButton) {
-            submitButton.disabled = false;
-            submitButton.textContent = 'Add Comment to DB';
+            const { data, error, status } = await supabase
+                .from('developer_comments')
+                .insert([commentData])
+                .select();
+
+            if (error) {
+                console.error('Error inserting comment:', error);
+                showFormMessage(formMessage, `Error saving comment: ${error.message}`, 'error');
+            } else {
+                showFormMessage(formMessage, 'Developer comment added successfully!', 'success');
+
+                devCommentForm.reset();
+                if (authorTypeDropdown) {
+                    authorTypeDropdown.value = "";
+                }
+                if (tagSelect) {
+                    Array.from(tagSelect.options).forEach(option => option.selected = false);
+                }
+
+                document.getElementById('devCommentForm').style.display = 'none';
+                document.getElementById('commentInput').style.display = 'block';
+                document.getElementById('parseButton').style.display = 'block';
+                document.getElementById('parseError').style.display = 'none';
+
+                const currentPage = window.location.pathname.split('/').pop();
+                if (currentPage === 'developer-comments.html' && typeof fetchAndRenderDeveloperComments === 'function' && document.getElementById('dev-comments-container')) {
+                    fetchAndRenderDeveloperComments('dev-comments-container');
+                } else if ((currentPage === 'index.html' || currentPage === '') && typeof fetchAndRenderDeveloperComments === 'function' && document.getElementById('recent-comments-home')) {
+                    fetchAndRenderDeveloperComments('recent-comments-home', 6);
+                }
+                fetchDashboardStats();
+            }
+        } catch (err) {
+            console.error('Unexpected error submitting comment:', err);
+            showFormMessage(formMessage, 'An unexpected error occurred. Please try again.', 'error');
+        } finally {
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Add Comment to DB';
+            }
         }
     });
 }
 
-// Function to parse comment input (assuming it uses Marked and DOMPurify)
-const parseCommentInput = () => {
-    const commentInput = document.getElementById('commentInput');
-    const parseError = document.getElementById('parseError');
-    const devCommentForm = document.getElementById('devCommentForm');
-    const authorInput = document.getElementById('author');
-    const sourceInput = document.getElementById('source');
-    const timestampInput = document.getElementById('timestamp');
-    const commentContentInput = document.getElementById('commentContent');
+async function isAuthorizedAdmin(userId) {
+    if (!userId) return false;
+    try {
+        const { data, error } = await supabase
+            .from('admin_users')
+            .select('user_id')
+            .eq('user_id', userId)
+            .eq('role', 'comment_adder')
+            .single();
 
-    if (!commentInput || !parseError || !devCommentForm || !authorInput || !sourceInput || !timestampInput || !commentContentInput) {
-        console.error("One or more comment parsing elements not found.");
+        return !!data;
+    } catch (error) {
+        console.error('Error checking admin authorization:', error.message);
+        return false;
+    }
+}
+
+
+async function fetchDashboardStats() {
+    const totalCommentsCount = document.getElementById('totalCommentsCount');
+    const totalNewsCount = document.getElementById('totalNewsCount');
+    const commentsMonthCount = document.getElementById('commentsMonthCount');
+    const newsMonthCount = document.getElementById('newsMonthCount');
+
+    if (!totalCommentsCount || !totalNewsCount || !commentsMonthCount || !newsMonthCount) {
+        console.warn('Dashboard elements not found. Skipping stats fetch.');
         return;
     }
 
-    const input = commentInput.value;
-    parseError.style.display = 'none';
+    const now = Date.now();
+    if (dashboardStatsCache && (now - lastStatsFetchTime < STATS_CACHE_DURATION)) {
+        totalCommentsCount.textContent = dashboardStatsCache.commentsTotal;
+        totalNewsCount.textContent = dashboardStatsCache.newsTotal;
+        commentsMonthCount.textContent = dashboardStatsCache.commentsThisMonth;
+        newsMonthCount.textContent = dashboardStatsCache.newsThisMonth;
+        return;
+    }
+
+    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+    const endOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59, 999).toISOString();
+
+    const [{ count: commentsTotal, error: commentsTotalError },
+            { count: newsTotal, error: newsTotalError },
+            { count: commentsThisMonth, error: commentsMonthError },
+            { count: newsThisMonth, error: newsMonthError }] = await Promise.all([
+        supabase.from('developer_comments').select('*', { count: 'exact', head: true }),
+        supabase.from('news_updates').select('*', { count: 'exact', head: true }),
+        supabase.from('developer_comments').select('*', { count: 'exact', head: true }).gte('comment_date', startOfMonth).lte('comment_date', endOfMonth),
+        supabase.from('news_updates').select('*', { count: 'exact', head: true }).gte('news_date', startOfMonth).lte('news_date', endOfMonth)
+    ]);
+
+    if (commentsTotalError || newsTotalError || commentsMonthError || newsMonthError) {
+        console.error('Error fetching dashboard stats:', commentsTotalError || newsTotalError || commentsMonthError || newsMonthError);
+        totalCommentsCount.textContent = 'Error';
+        totalNewsCount.textContent = 'Error';
+        commentsMonthCount.textContent = 'Error';
+        newsMonthCount.textContent = 'Error';
+        dashboardStatsCache = null;
+    } else {
+
+        dashboardStatsCache = {
+            commentsTotal,
+            newsTotal,
+            commentsThisMonth,
+            newsThisMonth
+        };
+        lastStatsFetchTime = now;
+
+        totalCommentsCount.textContent = commentsTotal;
+        totalNewsCount.textContent = newsTotal;
+        commentsMonthCount.textContent = commentsThisMonth;
+        newsMonthCount.textContent = newsThisMonth;
+    }
+}
+
+function parseComment(text) {
+    const mainRegex = /^(.*?)\s*—\s*([\s\S]*?)(https?:\/\/[^\s]+)?$/;
+    const match = text.match(mainRegex);
+
+    if (!match) {
+        console.error("Main regex did not match the input text. Ensure it has 'Author — Content'.");
+        return null;
+    }
 
     try {
-        const authorMatch = input.match(/Author:\s*(.*)/);
-        const sourceMatch = input.match(/Source:\s*(.*)/);
-        const timestampMatch = input.match(/Timestamp:\s*(.*)/);
-        const contentMatch = input.match(/```markdown\s*([\s\S]*?)\s*```/);
+        const author = match[1].trim();
+        let fullContentAndPotentialTimestamp = match[2].trim();
+        const url = match[3] ? match[3].trim() : '';
+        const finalSource = url;
 
-        if (!authorMatch || !sourceMatch || !timestampMatch || !contentMatch) {
-            parseError.textContent = 'Failed to parse. Ensure format: Author:, Source:, Timestamp:, and markdown block.';
-            parseError.style.display = 'block';
-            devCommentForm.style.display = 'none';
-            return;
+        let parsedDate = new Date();
+        let content = fullContentAndPotentialTimestamp;
+
+        const lines = fullContentAndPotentialTimestamp.split('\n').map(line => line.trim()).filter(Boolean);
+        let firstLine = lines.length > 0 ? lines[0] : '';
+        let timestampMatchFound = false;
+
+        let timestampMatch;
+
+        const fullDateTimePattern = /^(\d{1,2}\/\d{1,2}\/\d{2,4})(?:,\s*|\s+)(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
+        timestampMatch = firstLine.match(fullDateTimePattern);
+
+        if (timestampMatch) {
+            const datePart = timestampMatch[1];
+            const timePart = timestampMatch[2];
+            const remainingFirstLineContent = timestampMatch[3].trim();
+
+            let [month, day, year] = datePart.split('/').map(Number);
+            if (year < 100) {
+                year += (year > 50) ? 1900 : 2000;
+            }
+            parsedDate = new Date(year, month - 1, day);
+            parseTimeIntoDate(timePart, parsedDate);
+            timestampMatchFound = true;
+
+            content = [remainingFirstLineContent, ...lines.slice(1)].filter(Boolean).join('\n').trim();
+
+        } else {
+            const yesterdayPattern = /^yesterday at\s*(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
+            timestampMatch = firstLine.match(yesterdayPattern);
+
+            if (timestampMatch) {
+                const timePart = timestampMatch[1];
+                const remainingFirstLineContent = timestampMatch[2].trim();
+
+                parsedDate = new Date();
+                parsedDate.setDate(parsedDate.getDate() - 1);
+                parseTimeIntoDate(timePart, parsedDate);
+                timestampMatchFound = true;
+
+                content = [remainingFirstLineContent, ...lines.slice(1)].filter(Boolean).join('\n').trim();
+
+            } else {
+                const todayPattern = /^today at\s*(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
+                timestampMatch = firstLine.match(todayPattern);
+
+                if (timestampMatch) {
+                    const timePart = timestampMatch[1];
+                    const remainingFirstLineContent = timestampMatch[2].trim();
+
+                    parsedDate = new Date();
+                    parseTimeIntoDate(timePart, parsedDate);
+                    timestampMatchFound = true;
+
+                    content = [remainingFirstLineContent, ...lines.slice(1)].filter(Boolean).join('\n').trim();
+
+                } else {
+
+                    const timeOnlyPattern = /^(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
+                    timestampMatch = firstLine.match(timeOnlyPattern);
+
+                    if (timestampMatch) {
+                        const timePart = timestampMatch[1];
+                        const remainingFirstLineContent = timestampMatch[2].trim();
+
+                        parsedDate = new Date();
+                        parseTimeIntoDate(timePart, parsedDate);
+                        timestampMatchFound = true;
+
+                        content = [remainingFirstLineContent, ...lines.slice(1)].filter(Boolean).join('\n').trim();
+                    }
+                }
+            }
         }
 
-        authorInput.value = authorMatch[1].trim();
-        sourceInput.value = sourceMatch[1].trim();
-        
-        // Convert timestamp to local datetime format for datetime-local input
-        const isoTimestamp = new Date(timestampMatch[1].trim()).toISOString().slice(0, 16);
-        timestampInput.value = isoTimestamp;
+        if (!timestampMatchFound) {
+            console.warn("No specific timestamp format recognized from the first line. Assuming content is the full string and using current date/time.");
+        }
 
-        commentContentInput.value = DOMPurify.sanitize(marked.parse(contentMatch[1].trim()));
-        
-        devCommentForm.style.display = 'block';
+        function parseTimeIntoDate(timePart, dateObject) {
+            const timeRegex = /(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)/i;
+            const timeMatchResult = timePart.match(timeRegex);
+
+            if (timeMatchResult) {
+                let hours = parseInt(timeMatchResult[1]);
+                const minutes = parseInt(timeMatchResult[2]);
+                const ampm = timeMatchResult[3].toLowerCase();
+                if (ampm === 'pm' && hours < 12) { hours += 12; }
+                if (ampm === 'am' && hours === 12) { hours = 0; }
+                dateObject.setHours(hours, minutes, 0, 0);
+            } else {
+                console.warn(`Could not parse time part for timestamp: ${timePart}`);
+                dateObject.setHours(0, 0, 0, 0);
+            }
+        }
+
+        const yearFormatted = parsedDate.getFullYear();
+        const monthFormatted = (parsedDate.getMonth() + 1).toString().padStart(2, '0');
+        const dayFormatted = parsedDate.getDate().toString().padStart(2, '0');
+        const hoursFormatted = parsedDate.getHours().toString().padStart(2, '0');
+        const minutesFormatted = parsedDate.getMinutes().toString().padStart(2, '0');
+
+        const formattedTimestamp = `${yearFormatted}-${monthFormatted}-${dayFormatted}T${hoursFormatted}:${minutesFormatted}`;
+
+        return { author, source: finalSource, timestamp: formattedTimestamp, content };
+
     } catch (e) {
-        parseError.textContent = 'An error occurred during parsing: ' + e.message;
-        parseError.style.display = 'block';
-        devCommentForm.style.display = 'none';
+        console.error("Error during comment parsing:", e);
+        return null;
     }
-};
+}
 
-// Add listener for parse button
-document.getElementById('parseButton')?.addEventListener('click', parseCommentInput);
 
-// Add listener for edit raw button
-document.getElementById('editButton')?.addEventListener('click', () => {
+async function populateTagSelect(tagSelectElement) {
+    if (!tagSelectElement) {
+        console.warn('tagSelect element not found. Cannot populate tags.');
+        return;
+    }
+    tagSelectElement.innerHTML = '';
+
+    if (!tagSelectElement.multiple && tagSelectElement.id === 'loreCategory') {
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = 'Select a category';
+        tagSelectElement.appendChild(defaultOption);
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('tag_list')
+            .select('tag_name')
+            .order('tag_name', { ascending: true });
+
+        if (error) {
+            console.error('Error fetching tags for admin form:', error.message);
+            return;
+        }
+
+        if (data && data.length > 0) {
+            data.forEach(tag => {
+                const option = document.createElement('option');
+                option.value = tag.tag_name;
+                option.textContent = tag.tag_name;
+                tagSelectElement.appendChild(option);
+            });
+        }
+    } catch (e) {
+        console.error('Unexpected error populating tags for admin form:', e);
+    }
+}
+
+
+function slugify(text) {
+    return text
+        .toString()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/[^\w-]+/g, '')
+        .replace(/--+/g, '-');
+}
+
+
+$(document).ready(async function() {
+    const currentPage = window.location.pathname.split('/').pop();
+    if (currentPage !== 'admin.html') {
+        return;
+    }
+
+    const discordLoginButton = document.getElementById('discordLoginButton');
+    const loginError = document.getElementById('loginError');
+    const loginFormContainer = document.getElementById('loginFormContainer');
+    const loginHeading = document.getElementById('loginHeading');
+    const adminDashboardAndForm = document.getElementById('adminDashboardAndForm');
+
     const commentInput = document.getElementById('commentInput');
+    const parseButton = document.getElementById('parseButton');
     const devCommentForm = document.getElementById('devCommentForm');
-    if (commentInput && devCommentForm) {
-        devCommentForm.style.display = 'none';
-        commentInput.focus();
-    }
-});
+    const parseError = document.getElementById('parseError');
+    const formMessage = document.getElementById('formMessage');
 
-
-// --- Tag Management Functions ---
-async function populateTagSelect() {
-    if (!tagSelect) {
-        console.warn("Tag select element not found.");
-        return;
-    }
-    const { data, error } = await supabase
-        .from('tags')
-        .select('tag_id, tag_name')
-        .order('tag_name', { ascending: true });
-
-    if (error) {
-        console.error('Error fetching tags:', error.message);
-        return;
-    }
-
-    tagSelect.innerHTML = '<option value="">Select one or more tags</option>'; // Clear existing
-    data.forEach(tag => {
-        const option = document.createElement('option');
-        option.value = tag.tag_id;
-        option.textContent = tag.tag_name;
-        tagSelect.appendChild(option);
-    });
-}
-
-document.getElementById('addNewTagButton')?.addEventListener('click', async () => {
+    const authorField = document.getElementById('author');
+    const sourceField = document.getElementById('source');
+    const timestampField = document.getElementById('timestamp');
+    const commentContentField = document.getElementById('commentContent');
+    const editButton = document.getElementById('editButton');
+    const tagSelect = document.getElementById('tagSelect');
     const newTagInput = document.getElementById('newTagInput');
-    if (!newTagInput || !tagSelect) {
-        console.warn("New tag input or select element not found.");
-        return;
-    }
-    const newTagName = newTagInput.value.trim();
+    const addNewTagButton = document.getElementById('addNewTagButton');
 
-    if (newTagName) {
-        const { error } = await supabase.from('tags').insert([{ tag_name: newTagName }]);
-        if (error) {
-            console.error('Error adding new tag:', error.message);
-            showFormMessage(formMessage, 'Failed to add new tag: ' + error.message, 'error');
-        } else {
-            showFormMessage(formMessage, 'New tag added!', 'success');
-            newTagInput.value = '';
-            await populateTagSelect(); // Re-populate dropdown with new tag
-        }
-    } else {
-        showFormMessage(formMessage, 'Please enter a tag name.', 'error');
-    }
-});
+    const addNewsUpdateForm = document.getElementById('addNewsUpdateForm');
+    const newsDateInput = document.getElementById('news_date');
+    const newsTitleInput = document.getElementById('news_title');
+    const newsSummaryInput = document.getElementById('news_summary');
+    const fullArticleLinkInput = document.getElementById('full_article_link');
+    const addNewsUpdateMessage = document.getElementById('addNewsUpdateMessage');
 
-// --- News Update Form Functions ---
-if (addNewsUpdateForm) {
-    addNewsUpdateForm.addEventListener('submit', async function(event) {
-        event.preventDefault();
-        showFormMessage(addNewsUpdateMessage, '', null); // Clear previous message
-
-        const news_date = document.getElementById('news_date')?.value;
-        const news_title = document.getElementById('news_title')?.value;
-        const news_summary = document.getElementById('news_summary')?.value;
-        const full_article_link = document.getElementById('full_article_link')?.value;
-
-        if (!news_date || !news_title || !news_summary) {
-            showFormMessage(addNewsUpdateMessage, 'Please fill in all required news update fields.', 'error');
-            return;
-        }
-
-        const submitButton = addNewsUpdateForm.querySelector('button[type="submit"]');
-        if (submitButton) {
-            submitButton.disabled = true;
-            submitButton.textContent = 'Adding...';
-        }
-
-        const { error } = await supabase.from('news_updates').insert([
-            {
-                news_date: news_date, // Already in YYYY-MM-DD format
-                title: news_title,
-                summary: news_summary,
-                full_article_link: full_article_link || null
-            }
-        ]);
-
-        if (error) {
-            console.error('Error adding news update:', error.message);
-            showFormMessage(addNewsUpdateMessage, 'Error adding news update: ' + error.message, 'error');
-        } else {
-            showFormMessage(addNewsUpdateMessage, 'News update added successfully!', 'success');
-            if (addNewsUpdateForm) addNewsUpdateForm.reset();
-            await fetchDashboardData(); // Refresh dashboard stats
-        }
-
-        if (submitButton) {
-            submitButton.disabled = false;
-            submitButton.textContent = 'Add News Update';
-        }
-    });
-}
-
-// --- Lore Item Form Functions ---
-if (addLoreItemForm) {
-    // Auto-generate slug from title
-    document.getElementById('loreTitle')?.addEventListener('input', function() {
-        const loreSlugInput = document.getElementById('loreSlug');
-        if (loreSlugInput) {
-            loreSlugInput.value = this.value.toLowerCase()
-                .replace(/[^a-z0-9 -]/g, '') // Remove invalid chars
-                .replace(/\s+/g, '-')       // Replace spaces with -
-                .replace(/-+/g, '-');       // Collapse repeated dashes
-        }
-    });
-
-    addLoreItemForm.addEventListener('submit', async function(event) {
-        event.preventDefault();
-        showFormMessage(addLoreItemMessage, '', null); // Clear previous message
-
-        const loreTitle = document.getElementById('loreTitle')?.value;
-        const loreSlug = document.getElementById('loreSlug')?.value;
-        const loreCategory = document.getElementById('loreCategory')?.value;
-        const loreContent = document.getElementById('loreContent')?.value;
-
-        if (!loreTitle || !loreSlug || !loreCategory || !loreContent) {
-            showFormMessage(addLoreItemMessage, 'Please fill in all required lore item fields.', 'error');
-            return;
-        }
-
-        const submitButton = addLoreItemForm.querySelector('button[type="submit"]');
-        if (submitButton) {
-            submitButton.disabled = true;
-            submitButton.textContent = 'Adding...';
-        }
-
-        const { error } = await supabase.from('lore_items').insert([
-            {
-                title: loreTitle,
-                slug: loreSlug,
-                category_id: loreCategory, // category_id should match the foreign key in Supabase
-                content_markdown: loreContent // Store raw markdown
-            }
-        ]);
-
-        if (error) {
-            console.error('Error adding lore item:', error.message);
-            showFormMessage(addLoreItemMessage, 'Error adding lore item: ' + error.message, 'error');
-        } else {
-            showFormMessage(addLoreItemMessage, 'Lore item added successfully!', 'success');
-            if (addLoreItemForm) addLoreItemForm.reset();
-        }
-
-        if (submitButton) {
-            submitButton.disabled = false;
-            submitButton.textContent = 'Add Lore Item';
-        }
-    });
-}
-
-// --- Lore Category Management Functions ---
-async function populateLoreCategorySelect() {
+    const addLoreItemForm = document.getElementById('addLoreItemForm');
+    const loreTitleInput = document.getElementById('loreTitle');
+    const loreSlugInput = document.getElementById('loreSlug');
     const loreCategorySelect = document.getElementById('loreCategory');
-    if (!loreCategorySelect) {
-        console.warn("Lore category select element not found.");
-        return;
-    }
-    const { data, error } = await supabase
-        .from('lore_categories')
-        .select('category_id, category_name')
-        .order('category_name', { ascending: true });
-
-    if (error) {
-        console.error('Error fetching lore categories:', error.message);
-        return;
-    }
-
-    loreCategorySelect.innerHTML = '<option value="">Select a category</option>'; // Clear existing
-    data.forEach(category => {
-        const option = document.createElement('option');
-        option.value = category.category_id;
-        option.textContent = category.category_name;
-        loreCategorySelect.appendChild(option);
-    });
-}
-
-document.getElementById('addNewLoreCategoryButton')?.addEventListener('click', async () => {
     const newLoreCategoryInput = document.getElementById('newLoreCategoryInput');
-    const loreCategorySelect = document.getElementById('loreCategory');
-    if (!newLoreCategoryInput || !loreCategorySelect) {
-        console.warn("New lore category input or select element not found.");
-        return;
-    }
-    const newCategoryName = newLoreCategoryInput.value.trim();
+    const addNewLoreCategoryButton = document.getElementById('addNewLoreCategoryButton');
+    const loreContentInput = document.getElementById('loreContent');
+    const addLoreItemMessage = document.getElementById('addLoreItemMessage');
 
-    if (newCategoryName) {
-        const { error } = await supabase.from('lore_categories').insert([{ category_name: newCategoryName }]);
-        if (error) {
-            console.error('Error adding new lore category:', error.message);
-            showFormMessage(addLoreItemMessage, 'Failed to add new lore category: ' + error.message, 'error');
+
+    async function checkAuth() {
+        const { data: { user } = {} } = await supabase.auth.getUser();
+
+        if (user) {
+            const authorized = await isAuthorizedAdmin(user.id);
+
+            if (authorized) {
+                if (loginFormContainer) loginFormContainer.style.display = 'none';
+                if (loginHeading) loginHeading.style.display = 'none';
+                if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'block';
+                fetchDashboardStats();
+                if (!initialAuthCheckComplete) {
+                    populateTagSelect(tagSelect);
+                    populateTagSelect(loreCategorySelect);
+                    initialAuthCheckComplete = true;
+                }
+            } else {
+                if (loginFormContainer) loginFormContainer.style.display = 'block';
+                if (loginHeading) loginHeading.style.display = 'none';
+                if (loginError) {
+                    loginError.textContent = 'You are logged in but not authorized to add comments.';
+                    loginError.style.display = 'block';
+                }
+                if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none';
+            }
         } else {
-            showFormMessage(addLoreItemMessage, 'New lore category added!', 'success');
-            newLoreCategoryInput.value = '';
-            await populateLoreCategorySelect(); // Re-populate dropdown with new category
+            if (loginFormContainer) loginFormContainer.style.display = 'block';
+            if (loginHeading) loginHeading.style.display = 'block';
+            if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none';
+            if (loginError) loginError.style.display = 'none';
         }
-    } else {
-        showFormMessage(addLoreItemMessage, 'Please enter a category name.', 'error');
     }
-});
 
+    checkAuth();
 
-// --- Core Authentication Logic for Admin Page ---
+    supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+            initialAuthCheckComplete = false;
+            checkAuth();
+        }
+    });
 
-// Admin login button event listener
-if (discordLoginButton) {
-    discordLoginButton.addEventListener('click', async () => {
-        try {
-            const { error } = await supabase.auth.signInWithOAuth({
+    if (discordLoginButton) {
+        discordLoginButton.addEventListener('click', async () => {
+            const { data, error } = await supabase.auth.signInWithOAuth({
                 provider: 'discord',
                 options: {
-                    redirectTo: window.location.origin + window.location.pathname // Redirects back to admin.html
+                    redirectTo: 'https://yesitsphoenix.github.io/Pax-Dei-Archives/admin.html'
                 }
             });
+
             if (error) {
                 console.error('Discord login error:', error);
                 if (loginError) {
@@ -485,70 +517,174 @@ if (discordLoginButton) {
                     loginError.style.display = 'block';
                 }
             }
-        } catch (e) {
-            console.error('Login initiation failed:', e);
-            if (loginError) {
-                loginError.textContent = 'An unexpected error occurred during login initiation.';
-                loginError.style.display = 'block';
-            }
-        }
-    });
-}
-
-async function loadAdminPageData() {
-    // Hide all forms/dashboard initially
-    if (loginFormContainer) loginFormContainer.style.display = 'none';
-    if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none';
-    if (loginError) {
-        loginError.style.display = 'none';
-        loginError.textContent = '';
+        });
     }
 
-    const { data: { user } } = await supabase.auth.getUser();
+    if (parseButton && commentInput && devCommentForm && parseError) {
+        parseButton.addEventListener('click', () => {
+            showFormMessage(formMessage, '', '');
+            const inputText = commentInput.value;
+            const parsedData = parseComment(inputText);
 
-    if (user) {
-        console.log("User found:", user.id);
-        // Check if user is an admin
-        const { data: profile, error: profileError } = await supabase
-            .from('profiles') // Assuming you have a 'profiles' table with 'id' and 'role'
-            .select('role')
-            .eq('id', user.id)
-            .single();
+            if (parsedData) {
+                if (authorField) authorField.value = parsedData.author;
+                if (sourceField) sourceField.value = parsedData.source;
+                if (timestampField) timestampField.value = parsedData.timestamp;
+                if (commentContentField) commentContentField.value = parsedData.content;
 
-        if (profileError || !profile || profile.role !== 'admin') { // Adjust role check as needed
-            console.warn("User is not an admin or profile not found:", user.id, profileError?.message);
-            if (loginFormContainer) loginFormContainer.style.display = 'block';
-            if (loginError) {
-                loginError.textContent = "You are logged in, but you don't have administrative privileges to access this page.";
-                loginError.style.display = 'block';
+                devCommentForm.style.display = 'block';
+                commentInput.style.display = 'none';
+                parseButton.style.display = 'none';
+                parseError.style.display = 'none';
+            } else {
+                parseError.textContent = 'Could not parse the input. Please ensure it matches one of the expected formats: "Author — Timestamp Content [Optional URL]" or "Author — Content [Optional URL]"';
+                parseError.style.display = 'block';
+                devCommentForm.style.display = 'none';
+                commentInput.style.display = 'block';
+                parseButton.style.display = 'block';
+                parseError.style.display = 'none';
             }
-            // Optionally redirect
-            // window.location.href = 'index.html';
-            return;
-        }
-
-        // User is authenticated and is an admin
-        console.log("Admin user authenticated. Loading dashboard...");
-        if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'block';
-
-        // Load admin dashboard data and populate forms
-        await fetchDashboardData();
-        await populateTagSelect();
-        await populateLoreCategorySelect();
-
-    } else {
-        console.log("User not authenticated on Admin page. Showing login.");
-        if (loginFormContainer) loginFormContainer.style.display = 'block';
-        if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none';
+        });
     }
-}
 
-// Listen for auth state changes across the app
-supabase.auth.onAuthStateChange(async (event, session) => {
-    console.log('Auth state changed:', event, session);
-    // This listener will trigger on initial load and whenever auth state changes (login, logout, refresh)
-    await loadAdminPageData();
+    if (editButton && devCommentForm && commentInput && parseButton && parseError) {
+        editButton.addEventListener('click', () => {
+            showFormMessage(formMessage, '', '');
+            devCommentForm.style.display = 'none';
+            commentInput.style.display = 'block';
+            parseButton.style.display = 'block';
+            parseError.style.display = 'none';
+        });
+    }
+
+    if (addNewTagButton && newTagInput && tagSelect) {
+        addNewTagButton.addEventListener('click', async () => {
+            const newTag = newTagInput.value.trim();
+            if (newTag) {
+                try {
+                    const { data, error } = await supabase
+                        .from('tag_list')
+                        .insert([{ tag_name: newTag }]);
+
+                    if (error && error.code !== '23505') {
+                        console.error('Error adding new tag:', error.message);
+                        showFormMessage(formMessage, 'Error adding tag: ' + error.message, 'error');
+                    } else {
+                        if (error && error.code === '23505') {
+                            showFormMessage(formMessage, `Tag '${newTag}' already exists.`, 'warning');
+                        } else {
+                            showFormMessage(formMessage, `Tag '${newTag}' added successfully!`, 'success');
+                        }
+                        newTagInput.value = '';
+                        populateTagSelect(tagSelect);
+                        populateTagSelect(loreCategorySelect);
+                    }
+                } catch (e) {
+                    console.error('Unexpected error adding new tag:', e);
+                    showFormMessage(formMessage, 'An unexpected error occurred while adding tag.', 'error');
+                }
+            } else {
+                showFormMessage(formMessage, 'Please enter a tag name.', 'warning');
+            }
+        });
+    }
+
+    if (addNewsUpdateForm) {
+        addNewsUpdateForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            showFormMessage(addNewsUpdateMessage, '', '');
+
+            const newNewsUpdate = {
+                news_date: newsDateInput.value,
+                title: newsTitleInput.value,
+                summary: newsSummaryInput.value,
+                full_article_link: fullArticleLinkInput.value || null
+            };
+
+            const { data, error } = await supabase
+                .from('news_updates')
+                .insert([newNewsUpdate]);
+
+            if (error) {
+                console.error('Error inserting news update:', error);
+                showFormMessage(addNewsUpdateMessage, 'Error adding news update: ' + error.message, 'error');
+            } else {
+                showFormMessage(addNewsUpdateMessage, 'News update added successfully!', 'success');
+                //console.log('News update added:', data);
+                newsDateInput.value = '';
+                newsTitleInput.value = '';
+                newsSummaryInput.value = '';
+                fullArticleLinkInput.value = '';
+                fetchDashboardStats();
+            }
+        });
+    }
+
+    if (loreTitleInput && loreSlugInput && addLoreItemForm) {
+        loreTitleInput.addEventListener('input', () => {
+            loreSlugInput.value = slugify(loreTitleInput.value);
+        });
+    }
+
+    if (addNewLoreCategoryButton && newLoreCategoryInput && loreCategorySelect) {
+        addNewLoreCategoryButton.addEventListener('click', async () => {
+            const newCategory = newLoreCategoryInput.value.trim();
+            if (newCategory) {
+                try {
+                    const { data, error } = await supabase
+                        .from('tag_list')
+                        .insert([{ tag_name: newCategory }]);
+
+                    if (error && error.code !== '23505') {
+                        console.error('Error adding new lore category:', error.message);
+                        showFormMessage(addLoreItemMessage, 'Error adding category: ' + error.message, 'error');
+                    } else {
+                        if (error && error.code === '23505') {
+                            showFormMessage(addLoreItemMessage, `Category '${newCategory}' already exists.`, 'warning');
+                        } else {
+                            showFormMessage(addLoreItemMessage, `Category '${newCategory}' added successfully!`, 'success');
+                        }
+                        newLoreCategoryInput.value = '';
+                        populateTagSelect(loreCategorySelect);
+                        populateTagSelect(tagSelect);
+                    }
+                } catch (e) {
+                    console.error('Unexpected error adding new lore category:', e);
+                    showFormMessage(addLoreItemMessage, 'An unexpected error occurred while adding category.', 'error');
+                }
+            } else {
+                showFormMessage(addLoreItemMessage, 'Please enter a category name.', 'warning');
+            }
+        });
+    }
+
+    if (addLoreItemForm) {
+        addLoreItemForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            showFormMessage(addLoreItemMessage, '', '');
+
+            const newLoreItem = {
+                title: loreTitleInput.value,
+                slug: loreSlugInput.value,
+                category: loreCategorySelect.value,
+                content: loreContentInput.value
+            };
+
+            const { data, error } = await supabase
+                .from('lore_items')
+                .insert([newLoreItem]);
+
+            if (error) {
+                console.error('Error inserting lore item:', error);
+                showFormMessage(addLoreItemMessage, 'Error adding lore item: ' + error.message, 'error');
+            } else {
+                showFormMessage(addLoreItemMessage, 'Lore item added successfully!', 'success');
+                //console.log('Lore item added:', data);
+                loreTitleInput.value = '';
+                loreSlugInput.value = '';
+                loreCategorySelect.value = '';
+                loreContentInput.value = '';
+            }
+        });
+    }
 });
-
-// Initial load for the admin page
-// The onAuthStateChange listener above will handle the initial load, so we don't need a separate DOMContentLoaded here.
