@@ -111,12 +111,16 @@
                                 </select>
                         </div>
                         <div class="form-group">
-                            <label for="quantity-listed">Quantity Listed (Total)</label>
-                            <input type="number" id="quantity-listed" name="quantity-listed" placeholder="e.g., 100" required>
+                            <label for="item-stacks">Stacks (Number of Individual Listings)</label>
+                            <input type="number" id="item-stacks" name="item-stacks" value="1" required>
                         </div>
                         <div class="form-group">
-                            <label for="total-listed-price">Total Price of Stack</label>
-                            <input type="number" step="0.01" id="total-listed-price" name="total-listed-price" placeholder="e.g., 500" required>
+                            <label for="item-count-per-stack">Count (per stack)</label>
+                            <input type="number" id="item-count-per-stack" name="item-count-per-stack" placeholder="e.g., 100" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="item-price-per-stack">Price (per stack)</label>
+                            <input type="number" id="item-price-per-stack" name="item-price-per-stack" placeholder="e.g., 500" required>
                         </div>
                         <button type="submit" class="btn">Add Listing</button>
                     </form>

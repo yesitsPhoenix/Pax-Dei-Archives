@@ -264,33 +264,49 @@ const handleAddListing = async (e) => {
     const formData = new FormData(e.target);
     const itemName = formData.get('item-name').trim();
     const categoryId = formData.get('item-category');
-    const quantity = parseInt(formData.get('quantity-listed'), 10);
-    const totalListedPrice = parseFloat(formData.get('total-listed-price'));
+    const itemStacks = parseInt(formData.get('item-stacks'), 10);
+    const itemCountPerStack = parseInt(formData.get('item-count-per-stack'), 10);
+    const itemPricePerStack = parseFloat(formData.get('item-price-per-stack'));
 
-    if (!itemName || !categoryId || !quantity || !totalListedPrice || quantity <= 0 || totalListedPrice <= 0) {
+    if (!itemName || !categoryId || isNaN(itemStacks) || isNaN(itemCountPerStack) || isNaN(itemPricePerStack) || itemStacks <= 0 || itemCountPerStack <= 0 || itemPricePerStack <= 0) {
         await showCustomModal('Validation Error', 'Please fill all fields with valid, positive numbers.', [{ text: 'OK', value: true }]);
         return;
     }
 
     const itemId = await getOrCreateItemId(itemName, categoryId);
-    if (!itemId) return; 
+    if (!itemId) return;
 
-    const marketFee = totalListedPrice * 0.05;
-    const pricePerUnit = totalListedPrice / quantity;
+    const quantityPerListing = itemCountPerStack;
+    const totalListedPricePerListing = itemPricePerStack;
+    const marketFeePerListing = totalListedPricePerListing * 0.05;
+    const pricePerUnitPerListing = totalListedPricePerListing / quantityPerListing;
 
-    const { error } = await supabase.from('market_listings').insert({
-        item_id: itemId,
-        character_id: currentCharacterId, 
-        quantity_listed: quantity,
-        listed_price_per_unit: pricePerUnit,
-        total_listed_price: totalListedPrice,
-        market_fee: marketFee
-    });
+    let successCount = 0;
+    let failedCount = 0;
+    const errors = [];
 
-    if (error) {
-        await showCustomModal('Error', 'Failed to create listing: ' + error.message, [{ text: 'OK', value: true }]);
+    for (let i = 0; i < itemStacks; i++) {
+        const { error } = await supabase.from('market_listings').insert({
+            item_id: itemId,
+            character_id: currentCharacterId,
+            quantity_listed: quantityPerListing,
+            listed_price_per_unit: pricePerUnitPerListing,
+            total_listed_price: totalListedPricePerListing,
+            market_fee: marketFeePerListing
+        });
+
+        if (error) {
+            errors.push(error.message);
+            failedCount++;
+        } else {
+            successCount++;
+        }
+    }
+
+    if (failedCount > 0) {
+        await showCustomModal('Error', `Failed to create ${failedCount} out of ${itemStacks} listings. Some listings may have been created. Errors: ${errors.join('; ')}`, [{ text: 'OK', value: true }]);
     } else {
-        await showCustomModal('Success', 'New listing created successfully!', [{ text: 'OK', value: true }]);
+        await showCustomModal('Success', `Successfully created ${successCount} new listing(s)!`, [{ text: 'OK', value: true }]);
         e.target.reset();
         await loadTraderPageData();
     }
@@ -398,8 +414,8 @@ const handleEditListingSave = async (e) => {
     if (error) {
         await showCustomModal('Error', 'Failed to update listing: ' + error.message, [{ text: 'OK', value: true }]);
     } else {
-            document.getElementById('editListingModal').classList.add('hidden');
-            await showCustomModal('Success', 'Listing updated successfully!', [{ text: 'OK', value: true }]);
-            await loadTraderPageData();
+        document.getElementById('editListingModal').classList.add('hidden');
+        await showCustomModal('Success', 'Listing updated successfully!', [{ text: 'OK', value: true }]);
+        await loadTraderPageData();
     }
 };
