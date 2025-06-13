@@ -27,6 +27,6 @@ export const renderDashboard = (allListings, characterData) => {
     grossSalesEl.innerHTML = `${formatCurrency(grossSales)} <i class="fa-solid fa-chart-line"></i>`;
     feesPaidEl.innerHTML = `${formatCurrency(feesPaid)} <i class="fa-solid fa-arrow-trend-down"></i>`;
     netProfitEl.innerHTML = `${formatCurrency(netProfit)} <i class="fas fa-coins"></i>`;
-    activeListingsEl.textContent = activeListingsCount;
+    activeListingsEl.innerHTML = `${activeListingsCount} <i class="fa-solid fa-list"></i>`;
     currentHoldingsEl.innerHTML = `${formatCurrency(currentGoldHoldings)} <i class="fa-solid fa-sack-dollar"></i>`;
 };

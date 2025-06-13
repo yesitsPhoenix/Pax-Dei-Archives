@@ -35,7 +35,6 @@
 
 .dashboard-card p {
  font-size: 2rem;
- font-weight: bold;
  color: #ffc107;
  display: flex;
  align-items: center;
@@ -46,7 +45,10 @@
 .dashboard-card p .fas {
  color: #ffc107;
 }
+.fa-solid {
+ color: #ffc107 !important;
 
+}
 
 .add-listing {
  background-color: #2a2a2a;
