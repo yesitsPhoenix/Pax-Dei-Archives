@@ -1,5 +1,3 @@
-// js/modules/dashboard.js
-
 const grossSalesEl = document.getElementById('dashboard-gross-sales');
 const feesPaidEl = document.getElementById('dashboard-fees-paid');
 const netProfitEl = document.getElementById('dashboard-net-profit');

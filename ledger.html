@@ -60,6 +60,23 @@
                 <p id="traderLoginError" style="color: red; display: none;"></p>
             </div>
 
+
+            <div class="mb-4">
+                <label for="character-select" class="block text-gray-700 text-sm font-bold mb-2">Select Character:</label>
+                <select id="character-select" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </select>
+            </div>
+
+            <div class="mb-6 flex gap-4">
+                <button id="showCreateCharacterModalBtn" class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-full">
+                    Create New Character
+                </button>
+                <button id="deleteCharacterBtn" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-full">
+                    Delete Character
+                </button>
+            </div>
+
+
             <div id="traderDashboardAndForms" style="display: none;">
                 <section class="dashboard">
                     <div class="dashboard-card">
@@ -152,13 +169,11 @@
                         <tbody id="listings-body">
                         </tbody>
                     </table>
-                    <!-- Moved: Pagination for Active Listings to the bottom -->
                     <div id="listings-pagination" class="flex justify-center items-center space-x-2 mt-4 text-white"></div>
                 </section>
 
                 <section class="sales-history my-8">
                     <h2 class="text-2xl font-bold mb-4 text-gray-800">Sales History Ledger</h2>
-                    <!-- Download Button remains at the top for easy access -->
                     <div class="flex justify-end mb-4">
                         <button id="download-sales-csv" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-full shadow-md transition duration-150 ease-in-out transform hover:scale-105">
                             <i class="fas fa-download mr-2"></i> Download Sales History CSV
@@ -180,7 +195,6 @@
                         <tbody id="sales-body" class="text-gray-600 text-sm font-light">
                         </tbody>
                     </table>
-                    <!-- Moved: Pagination for Sales History to the bottom -->
                     <div id="sales-pagination" class="flex justify-center items-center space-x-2 mt-4 text-white"></div>
                 </section>
             </div>
