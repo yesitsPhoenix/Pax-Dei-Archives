@@ -285,7 +285,24 @@ const handleAddListing = async (e) => {
     let failedCount = 0;
     const errors = [];
 
+    // Fetch current gold before adding listings
+    const { data: characterData, error: fetchCharacterError } = await supabase
+        .from('characters')
+        .select('gold')
+        .eq('character_id', currentCharacterId)
+        .single();
+
+    if (fetchCharacterError) {
+        await showCustomModal('Error', 'Failed to fetch character gold: ' + fetchCharacterError.message, [{ text: 'OK', value: true }]);
+        console.error('Error fetching character gold:', fetchCharacterError.message);
+        return;
+    }
+
+    let currentGold = characterData.gold || 0;
+    let totalFees = 0;
+
     for (let i = 0; i < itemStacks; i++) {
+        totalFees += marketFeePerListing;
         const { error } = await supabase.from('market_listings').insert({
             item_id: itemId,
             character_id: currentCharacterId,
@@ -303,12 +320,23 @@ const handleAddListing = async (e) => {
         }
     }
 
-    if (failedCount > 0) {
-        await showCustomModal('Error', `Failed to create ${failedCount} out of ${itemStacks} listings. Some listings may have been created. Errors: ${errors.join('; ')}`, [{ text: 'OK', value: true }]);
+    if (successCount > 0) {
+        const newGold = currentGold - totalFees;
+        const { error: updateGoldError } = await supabase
+            .from('characters')
+            .update({ gold: newGold })
+            .eq('character_id', currentCharacterId);
+
+        if (updateGoldError) {
+            await showCustomModal('Error', 'Successfully added listings, but failed to deduct gold: ' + updateGoldError.message, [{ text: 'OK', value: true }]);
+            console.error('Error deducting gold:', updateGoldError.message);
+        } else {
+            await showCustomModal('Success', `Successfully created ${successCount} new listing(s) and deducted ${totalFees.toLocaleString()} gold in fees!`, [{ text: 'OK', value: true }]);
+            e.target.reset();
+            await loadTraderPageData();
+        }
     } else {
-        await showCustomModal('Success', `Successfully created ${successCount} new listing(s)!`, [{ text: 'OK', value: true }]);
-        e.target.reset();
-        await loadTraderPageData();
+        await showCustomModal('Error', `Failed to create any listings. Errors: ${errors.join('; ')}`, [{ text: 'OK', value: true }]);
     }
 };
 
@@ -379,7 +407,30 @@ const handleMarkAsSold = async (listingId) => {
             console.error('Error inserting sales record:', insertSaleError.message);
             await showCustomModal('Error', 'Listing marked as sold, but failed to record sale history: ' + insertSaleError.message, [{ text: 'OK', value: true }]);
         } else {
-            await showCustomModal('Success', 'Listing marked as sold and sales record created!', [{ text: 'OK', value: true }]);
+            // Also add the sale amount to the character's gold
+            const { data: characterData, error: fetchGoldError } = await supabase
+                .from('characters')
+                .select('gold')
+                .eq('character_id', currentCharacterId)
+                .single();
+
+            if (fetchGoldError) {
+                console.error('Error fetching character gold for sale receipt:', fetchGoldError.message);
+                await showCustomModal('Warning', 'Listing marked as sold, but failed to update character gold. Please manually adjust gold if needed.', [{ text: 'OK', value: true }]);
+            } else {
+                const newGold = (characterData.gold || 0) + listing.total_listed_price;
+                const { error: updateGoldError } = await supabase
+                    .from('characters')
+                    .update({ gold: newGold })
+                    .eq('character_id', currentCharacterId);
+
+                if (updateGoldError) {
+                    console.error('Error updating character gold after sale:', updateGoldError.message);
+                    await showCustomModal('Warning', 'Listing marked as sold, but failed to update character gold. Please manually adjust gold if needed.', [{ text: 'OK', value: true }]);
+                } else {
+                    await showCustomModal('Success', `Listing marked as sold and character gold updated by ${listing.total_listed_price.toLocaleString()}!`, [{ text: 'OK', value: true }]);
+                }
+            }
             await loadTraderPageData(); 
         }
     }

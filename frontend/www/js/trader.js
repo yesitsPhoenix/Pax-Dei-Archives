@@ -1,10 +1,17 @@
 import { supabase } from './supabaseClient.js';
 import { initializeListings, loadActiveListings } from './modules/listings.js';
-import { initializeCharacters, insertCharacterModalHtml, currentCharacterId } from './modules/characters.js';
+import { initializeCharacters, insertCharacterModalHtml, currentCharacterId, getCurrentCharacter } from './modules/characters.js';
 import { initializeSales, loadSalesHistory } from './modules/sales.js';
 import { renderDashboard } from './modules/dashboard.js';
 
 let currentUser = null;
+
+// Define a filter object specifically for dashboard data aggregation (unfiltered)
+const dashboardListingsFilter = {
+    itemName: null,
+    categoryId: null,
+    status: 'all' // Assuming 'all' means no status filter for dashboard aggregates
+};
 
 export const showCustomModal = (title, message, buttons) => {
     return new Promise(resolve => {
@@ -38,6 +45,15 @@ export const showCustomModal = (title, message, buttons) => {
         });
     });
 };
+
+const characterSelectEl = document.getElementById('character-select');
+const showCreateCharacterModalBtn = document.getElementById('showCreateCharacterModalBtn');
+const deleteCharacterBtn = document.getElementById('deleteCharacterBtn');
+const traderDashboardAndForms = document.getElementById('traderDashboardAndForms');
+const traderLoginContainer = document.getElementById('traderLoginContainer');
+const traderDiscordLoginButton = document.getElementById('traderDiscordLoginButton');
+const traderLoginError = document.getElementById('traderLoginError');
+
 
 const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -84,16 +100,22 @@ export const loadTraderPageData = async () => {
     }
 
     try {
-        const { data: allListings, error: allListingsError } = await supabase
-            .from('market_listings')
-            .select('is_fully_sold, is_cancelled, market_fee, total_listed_price')
-            .eq('character_id', currentCharacterId);
+        const { data: allListings, error: allListingsError } = await supabase.rpc('search_trader_listings', {
+            p_character_id: currentCharacterId, 
+            p_item_name: dashboardListingsFilter.itemName,
+            p_category_id: dashboardListingsFilter.categoryId,
+            p_status: dashboardListingsFilter.status,
+            p_limit: 999999, // Fetch a large number to ensure all for dashboard calculations
+            p_offset: 0
+        });
 
         if (allListingsError) {
             throw allListingsError;
         }
 
-        renderDashboard(allListings || []);
+        const currentCharacterData = await getCurrentCharacter(); 
+        
+        renderDashboard(allListings || [], currentCharacterData);
 
         await loadActiveListings();
         await loadSalesHistory();
@@ -104,8 +126,6 @@ export const loadTraderPageData = async () => {
 };
 
 const addPageEventListeners = () => {
-    const showCreateCharacterModalBtn = document.getElementById('showCreateCharacterModalBtn');
-
     if (showCreateCharacterModalBtn) {
         showCreateCharacterModalBtn.addEventListener('click', () => {
             const createCharacterModal = document.getElementById('createCharacterModal');
@@ -114,7 +134,7 @@ const addPageEventListeners = () => {
             }
         });
     }
-    const traderDiscordLoginButton = document.getElementById('traderDiscordLoginButton');
+
     if (traderDiscordLoginButton) {
         traderDiscordLoginButton.addEventListener('click', async () => {
             const { error } = await supabase.auth.signInWithOAuth({
@@ -125,7 +145,6 @@ const addPageEventListeners = () => {
             });
             if (error) {
                 console.error('Error logging in with Discord:', error.message);
-                const traderLoginError = document.getElementById('traderLoginError');
                 if (traderLoginError) {
                     traderLoginError.textContent = 'Login failed: ' + error.message;
                     traderLoginError.style.display = 'block';
