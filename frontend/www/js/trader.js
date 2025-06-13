@@ -235,68 +235,88 @@ const fetchAndPopulateCategories = async () => {
         return;
     }
 
-    const { data, error } = await supabase
-        .from('item_categories')
-        .select('category_id, category_name')
-        .order('category_name', { ascending: true });
+    try {
+        const { data, error } = await supabase
+            .from('item_categories')
+            .select('category_id, category_name')
+            .order('category_name', { ascending: true });
 
-    if (error) {
-        console.error('Error fetching categories:', error.message);
-        return;
+        console.log("fetchAndPopulateCategories: Supabase query returned.");
+
+        if (error) {
+            console.error('Error fetching categories:', error.message);
+            await showCustomModal('Error', 'Failed to fetch categories: ' + error.message, [{ text: 'OK', value: true }]);
+            return;
+        }
+
+        itemCategorySelect.innerHTML = '<option value="">Select a category</option>';
+        data.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category.category_id;
+            option.textContent = category.category_name;
+            itemCategorySelect.appendChild(option);
+        });
+
+        filterListingCategorySelect.innerHTML = '<option value="">All Categories</option>';
+        data.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category.category_id;
+            option.textContent = category.category_name;
+            filterListingCategorySelect.appendChild(option);
+        });
+        filterListingCategorySelect.value = listingsFilter.categoryId;
+    } catch (e) {
+        console.error("Critical error in fetchAndPopulateCategories:", e);
+        await showCustomModal('Error', 'An unexpected error occurred while loading categories.', [{ text: 'OK', value: true }]);
     }
-
-    itemCategorySelect.innerHTML = '<option value="">Select a category</option>';
-    data.forEach(category => {
-        const option = document.createElement('option');
-        option.value = category.category_id;
-        option.textContent = category.category_name;
-        itemCategorySelect.appendChild(option);
-    });
-
-    filterListingCategorySelect.innerHTML = '<option value="">All Categories</option>';
-    data.forEach(category => {
-        const option = document.createElement('option');
-        option.value = category.category_id;
-        option.textContent = category.category_name;
-        filterListingCategorySelect.appendChild(option);
-    });
-    filterListingCategorySelect.value = listingsFilter.categoryId;
 };
 
 const getOrCreateItemId = async (itemName, categoryId) => {
-    const { data: items, error: selectError } = await supabase
-        .from('items')
-        .select('item_id')
-        .eq('item_name', itemName)
-        .eq('user_id', currentUserId)
-        .limit(1);
+    try {
+        const { data: items, error: selectError } = await supabase
+            .from('items')
+            .select('item_id')
+            .eq('item_name', itemName)
+            .eq('user_id', currentUserId)
+            .limit(1);
 
-    let item = items && items.length > 0 ? items[0] : null;
+        if (selectError) {
+            console.error('Error checking for existing item:', selectError.message);
+            await showCustomModal('Error', 'Failed to check for existing item. Please try again.', [{ text: 'OK', value: true }]);
+            return null;
+        }
 
-    if (item) return item.item_id;
+        let item = items && items.length > 0 ? items[0] : null;
 
-    if (!currentUserId) {
-        console.error('User ID not available for creating new item.');
-        await showCustomModal('Error', 'User ID not found. Please log in again.', [{ text: 'OK', value: true }]);
+        if (item) return item.item_id;
+
+        if (!currentUserId) {
+            console.error('User ID not available for creating new item.');
+            await showCustomModal('Error', 'User ID not found. Please log in again.', [{ text: 'OK', value: true }]);
+            return null;
+        }
+
+        const { data: newItem, error: insertError } = await supabase
+            .from('items')
+            .insert({
+                item_name: itemName,
+                category_id: categoryId,
+                user_id: currentUserId
+            })
+            .select('item_id')
+            .single();
+
+        if (insertError) {
+            console.error('Error creating item:', insertError.message);
+            await showCustomModal('Error', 'Failed to create new item record: ' + insertError.message, [{ text: 'OK', value: true }]);
+            return null;
+        }
+        return newItem.item_id;
+    } catch (e) {
+        console.error("Critical error in getOrCreateItemId:", e);
+        await showCustomModal('Error', 'An unexpected error occurred during item creation/retrieval.', [{ text: 'OK', value: true }]);
         return null;
     }
-
-    const { data: newItem, error: insertError } = await supabase
-        .from('items')
-        .insert({
-            item_name: itemName,
-            category_id: categoryId,
-            user_id: currentUserId
-        })
-        .select('item_id')
-        .single();
-
-    if (insertError) {
-        console.error('Error creating item:', insertError.message);
-        await showCustomModal('Error', 'Failed to create new item record: ' + insertError.message, [{ text: 'OK', value: true }]);
-        return null;
-    }
-    return newItem.item_id;
 };
 
 const loadTraderPageData = async () => {
@@ -306,122 +326,135 @@ const loadTraderPageData = async () => {
     if (listingsTable) listingsTable.style.display = 'none';
     if (salesTable) salesTable.style.display = 'none';
 
-    console.log("loadTraderPageData: Fetching all listings for dashboard.");
-    const { data: allListingsForDashboard, error: allListingsError } = await supabase
-        .from('market_listings')
-        .select(`
-            listing_id,
-            quantity_listed,
-            listed_price_per_unit,
-            total_listed_price,
-            market_fee,
-            listing_date,
-            is_fully_sold,
-            is_cancelled
-        `)
-        .eq('user_id', currentUserId)
-        .order('listing_date', { ascending: false });
+    try {
+        console.log("loadTraderPageData: Fetching all listings for dashboard.");
+        const { data: allListingsForDashboard, error: allListingsError } = await supabase
+            .from('market_listings')
+            .select(`
+                listing_id,
+                quantity_listed,
+                listed_price_per_unit,
+                total_listed_price,
+                market_fee,
+                listing_date,
+                is_fully_sold,
+                is_cancelled
+            `)
+            .eq('user_id', currentUserId)
+            .order('listing_date', { ascending: false });
 
-    if (allListingsError) {
-        console.error('Error fetching all listings for dashboard:', allListingsError.message);
-        if (allListingsError.code !== 'PGRST116') {
-             await showCustomModal('Error', 'Could not fetch all market data for dashboard. Please try logging in again.', [{ text: 'OK', value: true }]);
+        console.log("loadTraderPageData: All listings query returned.");
+
+        if (allListingsError) {
+            console.error('Error fetching all listings for dashboard:', allListingsError.message);
+            if (allListingsError.code !== 'PGRST116') {
+                 await showCustomModal('Error', 'Could not fetch all market data for dashboard. Please try logging in again.', [{ text: 'OK', value: true }]);
+            }
+        } else {
+            console.log("loadTraderPageData: All listings for dashboard fetched successfully. Count:", allListingsForDashboard ? allListingsForDashboard.length : 0);
         }
-    } else {
-        console.log("loadTraderPageData: All listings for dashboard fetched successfully.");
-    }
 
-    console.log("loadTraderPageData: Fetching filtered/paginated listings for table.");
-    let listingsTableQuery = supabase
-        .from('market_listings')
-        .select(`
-            listing_id,
-            quantity_listed,
-            listed_price_per_unit,
-            total_listed_price,
-            market_fee,
-            listing_date,
-            is_fully_sold,
-            is_cancelled,
-            items (item_name, item_categories(category_name), user_id)
-        `, { count: 'exact' })
-        .eq('user_id', currentUserId);
+        console.log("loadTraderPageData: Fetching filtered/paginated listings for table.");
+        let listingsTableQuery = supabase
+            .from('market_listings')
+            .select(`
+                listing_id,
+                quantity_listed,
+                listed_price_per_unit,
+                total_listed_price,
+                market_fee,
+                listing_date,
+                is_fully_sold,
+                is_cancelled,
+                items (item_name, item_categories(category_name), user_id)
+            `, { count: 'exact' })
+            .eq('user_id', currentUserId);
 
-    if (listingsFilter.itemName) {
-        listingsTableQuery = listingsTableQuery.ilike('items.item_name', `%${listingsFilter.itemName}%`);
-    }
-    if (listingsFilter.categoryId) {
-        listingsTableQuery = listingsTableQuery.eq('items.category_id', listingsFilter.categoryId);
-    }
-    if (listingsFilter.status === 'active') {
-        listingsTableQuery = listingsTableQuery.eq('is_fully_sold', false).eq('is_cancelled', false);
-    } else if (listingsFilter.status === 'sold') {
-        listingsTableQuery = listingsTableQuery.eq('is_fully_sold', true);
-    } else if (listingsFilter.status === 'cancelled') {
-        listingsTableQuery = listingsTableQuery.eq('is_cancelled', true);
-    }
-
-    const listingsOffset = (currentListingsPage - 1) * LISTINGS_PER_PAGE;
-    listingsTableQuery = listingsTableQuery.range(listingsOffset, listingsOffset + LISTINGS_PER_PAGE - 1);
-
-    const { data: listingsForTable, error: listingsTableError, count: totalListingsCount } = await listingsTableQuery
-        .order('listing_date', { ascending: false });
-
-    if (listingsTableError) {
-        console.error('Error fetching listings for table:', listingsTableError.message);
-        if (listingsTableError.code !== 'PGRST116') {
-             await showCustomModal('Error', 'Could not fetch your market listings. Please try logging in again.', [{ text: 'OK', value: true }]);
+        if (listingsFilter.itemName) {
+            listingsTableQuery = listingsTableQuery.ilike('items.item_name', `%${listingsFilter.itemName}%`);
         }
+        if (listingsFilter.categoryId) {
+            listingsTableQuery = listingsTableQuery.eq('items.category_id', listingsFilter.categoryId);
+        }
+        if (listingsFilter.status === 'active') {
+            listingsTableQuery = listingsTableQuery.eq('is_fully_sold', false).eq('is_cancelled', false);
+        } else if (listingsFilter.status === 'sold') {
+            listingsTableQuery = listingsTableQuery.eq('is_fully_sold', true);
+        } else if (listingsFilter.status === 'cancelled') {
+            listingsTableQuery = listingsTableQuery.eq('is_cancelled', true);
+        }
+
+        const listingsOffset = (currentListingsPage - 1) * LISTINGS_PER_PAGE;
+        listingsTableQuery = listingsTableQuery.range(listingsOffset, listingsOffset + LISTINGS_PER_PAGE - 1);
+
+        const { data: listingsForTable, error: listingsTableError, count: totalListingsCount } = await listingsTableQuery
+            .order('listing_date', { ascending: false });
+
+        console.log("loadTraderPageData: Filtered listings query returned.");
+
+        if (listingsTableError) {
+            console.error('Error fetching listings for table:', listingsTableError.message);
+            if (listingsTableError.code !== 'PGRST116') {
+                 await showCustomModal('Error', 'Could not fetch your market listings. Please try logging in again.', [{ text: 'OK', value: true }]);
+            }
+            if (loader) loader.style.display = 'none';
+            return;
+        } else {
+            console.log("loadTraderPageData: Filtered/paginated listings for table fetched successfully. Count:", listingsForTable ? listingsForTable.length : 0);
+        }
+
+        console.log("loadTraderPageData: Fetching sales data.");
+        let salesQuery = supabase
+            .from('sales')
+            .select(`
+                sale_id,
+                quantity_sold,
+                sale_price_per_unit,
+                total_sale_price,
+                sale_date,
+                market_listings (listing_id, items(item_name, item_categories(category_name), user_id))
+            `, { count: 'exact' })
+            .eq('user_id', currentUserId);
+
+        const salesOffset = (currentSalesPage - 1) * SALES_PER_PAGE;
+        salesQuery = salesQuery.range(salesOffset, salesOffset + SALES_PER_PAGE - 1);
+
+        const { data: sales, error: salesError, count: totalSalesCount } = await salesQuery
+            .order('sale_date', { ascending: false });
+
+        console.log("loadTraderPageData: Sales query returned.");
+
+        if (salesError) {
+            console.error('Error fetching sales:', salesError.message);
+            if (salesError.code !== 'PGRST116') {
+                await showCustomModal('Error', 'Could not fetch your sales data. Please try logging in again.', [{ text: 'OK', value: true }]);
+            }
+            if (salesLoader) salesLoader.style.display = 'none';
+            return;
+        } else {
+            console.log("loadTraderPageData: Sales data fetched successfully. Count:", sales ? sales.length : 0);
+        }
+
+        console.log("loadTraderPageData: Rendering UI elements.");
+        renderDashboard(allListingsForDashboard || []);
+
+        renderListingsTable(listingsForTable || []);
+        renderListingsPagination(totalListingsCount);
+
+        renderSalesTable(sales || []);
+        renderSalesPagination(totalSalesCount);
+
         if (loader) loader.style.display = 'none';
-        return;
-    } else {
-        console.log("loadTraderPageData: Filtered/paginated listings for table fetched successfully.");
-    }
-
-    console.log("loadTraderPageData: Fetching sales data.");
-    let salesQuery = supabase
-        .from('sales')
-        .select(`
-            sale_id,
-            quantity_sold,
-            sale_price_per_unit,
-            total_sale_price,
-            sale_date,
-            market_listings (listing_id, items(item_name, item_categories(category_name), user_id))
-        `, { count: 'exact' })
-        .eq('user_id', currentUserId);
-
-    const salesOffset = (currentSalesPage - 1) * SALES_PER_PAGE;
-    salesQuery = salesQuery.range(salesOffset, salesOffset + SALES_PER_PAGE - 1);
-
-    const { data: sales, error: salesError, count: totalSalesCount } = await salesQuery
-        .order('sale_date', { ascending: false });
-
-    if (salesError) {
-        console.error('Error fetching sales:', salesError.message);
-        if (salesError.code !== 'PGRST116') {
-            await showCustomModal('Error', 'Could not fetch your sales data. Please try logging in again.', [{ text: 'OK', value: true }]);
-        }
         if (salesLoader) salesLoader.style.display = 'none';
-        return;
-    } else {
-        console.log("loadTraderPageData: Sales data fetched successfully.");
+        if (listingsTable) listingsTable.style.display = 'table';
+        if (salesTable) salesTable.style.display = 'table';
+        console.log("loadTraderPageData: UI rendering complete.");
+    } catch (e) {
+        console.error("Critical error in loadTraderPageData:", e);
+        await showCustomModal('Error', 'An unexpected error occurred while loading your ledger data. Please try again.', [{ text: 'OK', value: true }]);
+        if (loader) loader.style.display = 'none';
+        if (salesLoader) salesLoader.style.display = 'none';
     }
-
-    console.log("loadTraderPageData: Rendering UI elements.");
-    renderDashboard(allListingsForDashboard || []);
-
-    renderListingsTable(listingsForTable || []);
-    renderListingsPagination(totalListingsCount);
-
-    renderSalesTable(sales || []);
-    renderSalesPagination(totalSalesCount);
-
-    if (loader) loader.style.display = 'none';
-    if (salesLoader) salesLoader.style.display = 'none';
-    if (listingsTable) listingsTable.style.display = 'table';
-    if (salesTable) salesTable.style.display = 'table';
-    console.log("loadTraderPageData: UI rendering complete.");
 };
 
 const renderDashboard = (allListings) => {
@@ -452,10 +485,12 @@ const renderListingsTable = (listings) => {
     }
     listingsBody.innerHTML = '';
     if (listings.length === 0) {
+        console.log("renderListingsTable: No listings to render for current filters.");
         listingsBody.innerHTML = '<tr><td colspan="8" class="text-center">No listings found for the current filters.</td></tr>';
         return;
     }
 
+    console.log(`renderListingsTable: Rendering ${listings.length} listings.`);
     listings.forEach(listing => {
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -538,9 +573,11 @@ const renderSalesTable = (sales) => {
     }
     salesBody.innerHTML = '';
     if (sales.length === 0) {
+        console.log("renderSalesTable: No sales to render.");
         salesBody.innerHTML = '<tr><td colspan="6" class="text-center py-4">No sales recorded yet.</td></tr>';
         return;
     }
+    console.log(`renderSalesTable: Rendering ${sales.length} sales.`);
     sales.forEach(sale => {
         const row = document.createElement('tr');
         row.className = 'border-b border-gray-200 hover:bg-gray-100';
@@ -1096,20 +1133,25 @@ supabase.auth.onAuthStateChange(async (event, session) => {
 });
 
 async function checkInitialAuthAndLoad() {
-    console.log("checkInitialAuthAndLoad: Performing initial session check.");
-    const { data: { session }, error } = await supabase.auth.getSession();
-    if (error) {
-        console.error("checkInitialAuthAndLoad: Error getting session:", error.message);
-        await updateUIForAuthStatus(false);
-        return;
-    }
+    try {
+        console.log("checkInitialAuthAndLoad: Performing initial session check.");
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+            console.error("checkInitialAuthAndLoad: Error getting session:", error.message);
+            await updateUIForAuthStatus(false);
+            return;
+        }
 
-    if (session && session.user) {
-        currentUserId = session.user.id;
-        console.log('checkInitialAuthAndLoad: Initial session check: User authenticated:', currentUserId);
-        await updateUIForAuthStatus(true);
-    } else {
-        console.log('checkInitialAuthAndLoad: Initial session check: User not authenticated.');
+        if (session && session.user) {
+            currentUserId = session.user.id;
+            console.log('checkInitialAuthAndLoad: Initial session check: User authenticated:', currentUserId);
+            await updateUIForAuthStatus(true);
+        } else {
+            console.log('checkInitialAuthAndLoad: Initial session check: User not authenticated.');
+            await updateUIForAuthStatus(false);
+        }
+    } catch (e) {
+        console.error("Critical error in checkInitialAuthAndLoad:", e);
         await updateUIForAuthStatus(false);
     }
 }
