@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="frontend/www/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+    <!-- Supabase Client should be loaded first as other scripts depend on it -->
     <script type="module" src="frontend/www/js/supabaseClient.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.min.js"></script>
@@ -59,6 +60,14 @@
                         </button>
                         <p id="loginError" style="color: red; display: none;"></p>
                     </div>
+
+                    <!-- Authentication Bypass Section
+                    <section id="testAuthSection" class="mt-8 p-6 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-lg shadow-md">
+                        <h2 class="text-xl font-bold mb-3">Authentication Bypass for Local Testing</h2>
+                        <p class="mb-3 text-sm">Use this button to toggle a simulated login for local development. Refresh the page after toggling.</p>
+                        <button id="toggleTestAuthButton" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-md shadow">Toggle Test Auth Bypass</button>
+                        <p id="testAuthStatus" class="mt-3 font-semibold"></p>
+                    </section> -->
 
                     <div id="adminDashboardAndForm" style="display: none;">
                         <div class="heading-section" style="margin-top: 50px;">
@@ -205,48 +214,56 @@
                                 </div>
                             </div>
                         </div>
-                    <!-- Article Post Section -->
-                    <section id="addArticleSection" class="mt-8 p-6 bg-white rounded-lg shadow-md">
-                        <h2 class="text-2xl font-bold mb-4 text-gray-800">Add New Article</h2>
-                        <form id="addArticleForm" class="space-y-4">
-                            <div>
-                                <label for="articleTitle" class="block text-sm font-medium text-gray-700">Article Title</label>
-                                <input type="text" id="articleTitle" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
+
+                        <!-- Article Post Section -->
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <section id="addArticleSection" class="mt-8 p-6 bg-white rounded-lg shadow-md admin-form-container">
+                                    <div class="heading-section" style="margin-top: 50px;">
+                                        <h4>Add New <em>Article</em></h4>
+                                    </div>
+                                    <p>Create new articles for the site. Content supports Markdown!</p>
+                                    <form id="addArticleForm" class="space-y-4">
+                                        <div>
+                                            <label for="articleTitle" class="block text-sm font-medium text-gray-700">Article Title</label>
+                                            <input type="text" id="articleTitle" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
+                                        </div>
+                                        <div>
+                                            <label for="articleSlug" class="block text-sm font-medium text-gray-700">Article Slug (Auto-generated)</label>
+                                            <input type="text" id="articleSlug" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100" readonly required>
+                                        </div>
+                                        <div>
+                                            <label for="articleSummary" class="block text-sm font-medium text-gray-700">Summary (for cards)</label>
+                                            <textarea id="articleSummary" rows="3" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required></textarea>
+                                        </div>
+                                        <div>
+                                            <label for="articleContent" class="block text-sm font-medium text-gray-700">Full Article Content (Supports Markdown)</label>
+                                            <textarea id="articleContent" rows="10" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required></textarea>
+                                        </div>
+                                        <div>
+                                            <label for="articleAuthor" class="block text-sm font-medium text-gray-700">Author Name</label>
+                                            <input type="text" id="articleAuthor" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
+                                        </div>
+                                        <div>
+                                            <label for="articleCategory" class="block text-sm font-medium text-gray-700">Category</label>
+                                            <select id="articleCategory" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
+                                                <!-- Options will be populated by JavaScript -->
+                                            </select>
+                                            <div class="mt-2 flex">
+                                                <input type="text" id="addNewArticleCategoryInput" placeholder="Add new category" class="flex-grow border border-gray-300 rounded-l-md shadow-sm p-2">
+                                                <button type="button" id="addNewArticleCategoryButton" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-r-md">Add Category</button>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label for="articlePublicationDate" class="block text-sm font-medium text-gray-700">Publication Date (Optional, defaults to now)</label>
+                                            <input type="datetime-local" id="articlePublicationDate" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                                        </div>
+                                        <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-md">Add Article to DB</button>
+                                        <div id="addArticleMessage" class="form-message mt-2" style="display: none;"></div>
+                                    </form>
+                                </section>
                             </div>
-                            <div>
-                                <label for="articleSlug" class="block text-sm font-medium text-gray-700">Article Slug (Auto-generated)</label>
-                                <input type="text" id="articleSlug" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100" readonly required>
-                            </div>
-                            <div>
-                                <label for="articleSummary" class="block text-sm font-medium text-gray-700">Summary (for cards)</label>
-                                <textarea id="articleSummary" rows="3" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required></textarea>
-                            </div>
-                            <div>
-                                <label for="articleContent" class="block text-sm font-medium text-gray-700">Full Article Content (Supports Markdown)</label>
-                                <textarea id="articleContent" rows="10" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required></textarea>
-                            </div>
-                            <div>
-                                <label for="articleAuthor" class="block text-sm font-medium text-gray-700">Author Name</label>
-                                <input type="text" id="articleAuthor" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
-                            </div>
-                            <div>
-                                <label for="articleCategory" class="block text-sm font-medium text-gray-700">Category</label>
-                                <select id="articleCategory" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
-                                    <!-- Options will be populated by JavaScript -->
-                                </select>
-                                <div class="mt-2 flex">
-                                    <input type="text" id="addNewArticleCategoryInput" placeholder="Add new category" class="flex-grow border border-gray-300 rounded-l-md shadow-sm p-2">
-                                    <button type="button" id="addNewArticleCategoryButton" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-r-md">Add Category</button>
-                                </div>
-                            </div>
-                            <div>
-                                <label for="articlePublicationDate" class="block text-sm font-medium text-gray-700">Publication Date (Optional, defaults to now)</label>
-                                <input type="datetime-local" id="articlePublicationDate" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                            </div>
-                            <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-md">Add Article to DB</button>
-                            <div id="addArticleMessage" class="form-message mt-2" style="display: none;"></div>
-                        </form>
-                    </section>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -276,7 +293,10 @@
     </div>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script type="module" src="frontend/www/js/main.js"></script>
+    <!-- <script type="module" src="frontend/www/js/testAuthBypass.js"></script> -->
     <script type="module" src="frontend/www/js/admin.js"></script>
+    <script type="module" src="frontend/www/js/articlePosts.js"></script>
+    <script type="module" src="frontend/www/js/main.js"></script>
+
 </body>
 </html>
