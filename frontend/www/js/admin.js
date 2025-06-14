@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient.js';
-// Corrected path: Go up three levels from frontend/www/js/ to reach the project root
-import { enableTestAuthBypass, disableTestAuthBypass, isTestAuthBypassEnabled } from '../../../testAuthBypass.js';
+// Corrected path based on the 404 error: Go up two levels from frontend/www/js/
+// to reach frontend/, assuming testAuthBypass.js is directly within frontend/
+import { enableTestAuthBypass, disableTestAuthBypass, isTestAuthBypassEnabled } from './././testAuthBypass.js';
 import { authorRoleColors } from './utils.js'; // Assuming this utility is in the same directory as admin.js
 
 let initialAuthCheckComplete = false;
@@ -186,7 +187,7 @@ async function fetchDashboardStats() {
     const totalCommentsCount = document.getElementById('totalCommentsCount');
     const totalNewsCount = document.getElementById('totalNewsCount');
     const commentsMonthCount = document.getElementById('commentsMonthCount');
-    const newsMonthCount = document.getElementById('newsMonthCount'); // This is fine as a reference to the element
+    const newsMonthCount = document.getElementById('newsMonthCount');
 
     if (!totalCommentsCount || !totalNewsCount || !commentsMonthCount || !newsMonthCount) {
         console.warn('Dashboard elements not found. Skipping stats fetch.');
@@ -215,9 +216,8 @@ async function fetchDashboardStats() {
         supabase.from('news_updates').select('*', { count: 'exact', head: true }).gte('news_date', startOfMonth).lte('news_date', endOfMonth)
     ]);
 
-    // Corrected the variable name here: newsMonthError -> newsThisMonthError
-    if (commentsTotalError || newsTotalError || commentsMonthError || newsThisMonthError) {
-        console.error('Error fetching dashboard stats:', commentsTotalError || newsTotalError || commentsMonthError || newsThisMonthError);
+    if (commentsTotalError || newsTotalError || commentsMonthError || newsMonthError) {
+        console.error('Error fetching dashboard stats:', commentsTotalError || newsTotalError || commentsMonthError || newsMonthError);
         totalCommentsCount.textContent = 'Error';
         totalNewsCount.textContent = 'Error';
         commentsMonthCount.textContent = 'Error';
