@@ -1,8 +1,5 @@
 import { supabase } from './supabaseClient.js';
-// Corrected path based on the 404 error: Go up two levels from frontend/www/js/
-// to reach frontend/, assuming testAuthBypass.js is directly within frontend/
-import { enableTestAuthBypass, disableTestAuthBypass, isTestAuthBypassEnabled } from './././testAuthBypass.js';
-import { authorRoleColors } from './utils.js'; // Assuming this utility is in the same directory as admin.js
+import { authorRoleColors } from './utils.js';
 
 let initialAuthCheckComplete = false;
 let dashboardStatsCache = null;
@@ -107,6 +104,7 @@ if (devCommentForm) {
             const { data: { user }, error: authError } = await supabase.auth.getUser();
             if (authError || !user) {
                 console.error("Auth Error before insert:", authError);
+                //console.log("User object before insert:", user);
                 showFormMessage(formMessage, 'Please log in to submit comments.', 'error');
                 if (submitButton) {
                     submitButton.disabled = false;
@@ -114,11 +112,8 @@ if (devCommentForm) {
                 }
                 return;
             } else {
-                console.log("User ID from auth.getUser() before insert:", user.id);
-                // The original code checked user.role, but getUser() typically doesn't return role directly.
-                // If roles are stored in user_metadata, you might access user.user_metadata.role.
-                // For testing, mock user from testAuthBypass.js includes a 'role' in user_metadata.
-                console.log("User metadata from auth.getUser() before insert:", user.user_metadata);
+                //console.log("User ID from auth.getUser() before insert:", user.id);
+                //console.log("User Role from auth.getUser() before insert:", user.role);
             }
 
             const { data, error, status } = await supabase
@@ -209,7 +204,7 @@ async function fetchDashboardStats() {
     const [{ count: commentsTotal, error: commentsTotalError },
             { count: newsTotal, error: newsTotalError },
             { count: commentsThisMonth, error: commentsMonthError },
-            { count: newsThisMonth, error: newsThisMonthError }] = await Promise.all([
+            { count: newsThisMonth, error: newsMonthError }] = await Promise.all([
         supabase.from('developer_comments').select('*', { count: 'exact', head: true }),
         supabase.from('news_updates').select('*', { count: 'exact', head: true }),
         supabase.from('developer_comments').select('*', { count: 'exact', head: true }).gte('comment_date', startOfMonth).lte('comment_date', endOfMonth),
@@ -460,53 +455,17 @@ $(document).ready(async function() {
     const loreCategorySelect = document.getElementById('loreCategory');
     const newLoreCategoryInput = document.getElementById('newLoreCategoryInput');
     const addNewLoreCategoryButton = document.getElementById('addNewLoreCategoryButton');
-    const loreContentInput = document.getElementById('loreContent'); // Corrected typo
+    const loreContentInput = document.getElementById('loreContent');
     const addLoreItemMessage = document.getElementById('addLoreItemMessage');
-
-    // Test Auth Bypass Elements
-    const toggleTestAuthButton = document.getElementById('toggleTestAuthButton');
-    const testAuthStatus = document.getElementById('testAuthStatus');
-
-
-    function updateTestAuthStatus() {
-        if (isTestAuthBypassEnabled()) {
-            testAuthStatus.textContent = 'Status: Test Auth Bypass is ENABLED.';
-            testAuthStatus.className = 'mt-3 font-semibold text-green-700'; // Tailwind green for enabled
-            toggleTestAuthButton.textContent = 'Disable Test Auth Bypass';
-            toggleTestAuthButton.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
-            toggleTestAuthButton.classList.add('bg-red-500', 'hover:bg-red-600'); // Red for disabling
-        } else {
-            testAuthStatus.textContent = 'Status: Test Auth Bypass is DISABLED.';
-            testAuthStatus.className = 'mt-3 font-semibold text-gray-700'; // Gray for disabled
-            toggleTestAuthButton.textContent = 'Enable Test Auth Bypass';
-            toggleTestAuthButton.classList.remove('bg-red-500', 'hover:bg-red-600');
-            toggleTestAuthButton.classList.add('bg-yellow-500', 'hover:bg-yellow-600'); // Yellow for enabling
-        }
-    }
-
-    if (toggleTestAuthButton) {
-        toggleTestAuthButton.addEventListener('click', () => {
-            if (isTestAuthBypassEnabled()) {
-                disableTestAuthBypass();
-            } else {
-                enableTestAuthBypass();
-            }
-            // A page reload is necessary for the change to fully take effect on the Supabase client instance
-            location.reload();
-        });
-        updateTestAuthStatus(); // Set initial status on load
-    }
 
 
     async function checkAuth() {
         const { data: { user } = {} } = await supabase.auth.getUser();
 
         if (user) {
-            // In test mode, we consider the mock user authorized by default for forms that use auth.getUser()
-            // If you have specific roles for authorization, you'd check them here based on user.user_metadata.role
-            const authorized = await isAuthorizedAdmin(user.id); // This will still check your 'admin_users' table
+            const authorized = await isAuthorizedAdmin(user.id);
 
-            if (authorized || isTestAuthBypassEnabled()) { // Allow access if authorized OR if bypass is enabled
+            if (authorized) {
                 if (loginFormContainer) loginFormContainer.style.display = 'none';
                 if (loginHeading) loginHeading.style.display = 'none';
                 if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'block';
@@ -533,7 +492,6 @@ $(document).ready(async function() {
         }
     }
 
-    // Call checkAuth to determine visibility of admin forms
     checkAuth();
 
     supabase.auth.onAuthStateChange((event, session) => {
@@ -576,7 +534,7 @@ $(document).ready(async function() {
 
                 devCommentForm.style.display = 'block';
                 commentInput.style.display = 'none';
-                parseButton.style.display = 'block';
+                parseButton.style.display = 'none';
                 parseError.style.display = 'none';
             } else {
                 parseError.textContent = 'Could not parse the input. Please ensure it matches one of the expected formats: "Author — Timestamp Content [Optional URL]" or "Author — Content [Optional URL]"';
@@ -652,6 +610,7 @@ $(document).ready(async function() {
                 showFormMessage(addNewsUpdateMessage, 'Error adding news update: ' + error.message, 'error');
             } else {
                 showFormMessage(addNewsUpdateMessage, 'News update added successfully!', 'success');
+                //console.log('News update added:', data);
                 newsDateInput.value = '';
                 newsTitleInput.value = '';
                 newsSummaryInput.value = '';
@@ -720,6 +679,7 @@ $(document).ready(async function() {
                 showFormMessage(addLoreItemMessage, 'Error adding lore item: ' + error.message, 'error');
             } else {
                 showFormMessage(addLoreItemMessage, 'Lore item added successfully!', 'success');
+                //console.log('Lore item added:', data);
                 loreTitleInput.value = '';
                 loreSlugInput.value = '';
                 loreCategorySelect.value = '';
