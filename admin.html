@@ -205,7 +205,48 @@
                                 </div>
                             </div>
                         </div>
-
+                    <!-- Article Post Section -->
+                    <section id="addArticleSection" class="mt-8 p-6 bg-white rounded-lg shadow-md">
+                        <h2 class="text-2xl font-bold mb-4 text-gray-800">Add New Article</h2>
+                        <form id="addArticleForm" class="space-y-4">
+                            <div>
+                                <label for="articleTitle" class="block text-sm font-medium text-gray-700">Article Title</label>
+                                <input type="text" id="articleTitle" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
+                            </div>
+                            <div>
+                                <label for="articleSlug" class="block text-sm font-medium text-gray-700">Article Slug (Auto-generated)</label>
+                                <input type="text" id="articleSlug" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100" readonly required>
+                            </div>
+                            <div>
+                                <label for="articleSummary" class="block text-sm font-medium text-gray-700">Summary (for cards)</label>
+                                <textarea id="articleSummary" rows="3" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required></textarea>
+                            </div>
+                            <div>
+                                <label for="articleContent" class="block text-sm font-medium text-gray-700">Full Article Content (Supports Markdown)</label>
+                                <textarea id="articleContent" rows="10" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required></textarea>
+                            </div>
+                            <div>
+                                <label for="articleAuthor" class="block text-sm font-medium text-gray-700">Author Name</label>
+                                <input type="text" id="articleAuthor" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
+                            </div>
+                            <div>
+                                <label for="articleCategory" class="block text-sm font-medium text-gray-700">Category</label>
+                                <select id="articleCategory" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
+                                    <!-- Options will be populated by JavaScript -->
+                                </select>
+                                <div class="mt-2 flex">
+                                    <input type="text" id="addNewArticleCategoryInput" placeholder="Add new category" class="flex-grow border border-gray-300 rounded-l-md shadow-sm p-2">
+                                    <button type="button" id="addNewArticleCategoryButton" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-r-md">Add Category</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="articlePublicationDate" class="block text-sm font-medium text-gray-700">Publication Date (Optional, defaults to now)</label>
+                                <input type="datetime-local" id="articlePublicationDate" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                            </div>
+                            <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-md">Add Article to DB</button>
+                            <div id="addArticleMessage" class="form-message mt-2" style="display: none;"></div>
+                        </form>
+                    </section>
                     </div>
                 </div>
             </div>
