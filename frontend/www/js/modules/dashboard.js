@@ -22,7 +22,8 @@ export const renderDashboard = (allListings, characterData) => {
     const activeListingsCount = allListings.filter(l => !l.is_fully_sold && !l.is_cancelled).length;
 
 
-    const formatCurrency = (amount) => amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formatCurrency = (amount) => amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    // const formatCurrency = (amount) => amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     grossSalesEl.innerHTML = `${formatCurrency(grossSales)} <i class="fa-solid fa-chart-line"></i>`;
     feesPaidEl.innerHTML = `${formatCurrency(feesPaid)} <i class="fa-solid fa-arrow-trend-down"></i>`;
