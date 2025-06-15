@@ -279,7 +279,7 @@ const handleAddListing = async (e) => {
     const quantityPerListing = itemCountPerStack;
     const totalListedPricePerListing = itemPricePerStack;
     const rawMarketFeePerListing = totalListedPricePerListing * 0.05; 
-    const marketFeePerListing = Math.round(rawMarketFeePerListing);
+    const marketFeePerListing = Math.ceil(rawMarketFeePerListing);
     const pricePerUnitPerListing = totalListedPricePerListing / quantityPerListing;
 
     let successCount = 0;
@@ -341,28 +341,6 @@ const handleAddListing = async (e) => {
     }
 };
 
-const handleCancelListing = async (listingId) => {
-    const confirmed = await showCustomModal(
-        'Confirmation', 
-        'Are you sure you want to cancel this listing? Fees are non-refundable.', 
-        [{ text: 'Yes, Cancel', value: true, type: 'confirm' }, { text: 'No', value: false, type: 'cancel' }]
-    );
-
-    if (confirmed) {
-        const { error } = await supabase
-            .from('market_listings')
-            .update({ is_cancelled: true })
-            .eq('listing_id', listingId)
-            .eq('character_id', currentCharacterId); 
-
-        if (error) {
-            await showCustomModal('Error', 'Failed to cancel listing: ' + error.message, [{ text: 'OK', value: true }]);
-        } else {
-            await showCustomModal('Success', 'Listing cancelled successfully!', [{ text: 'OK', value: true }]);
-            await loadTraderPageData();
-        }
-    }
-};
 
 const handleMarkAsSold = async (listingId) => {
     const confirmed = await showCustomModal(
