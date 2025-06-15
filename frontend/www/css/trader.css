@@ -4,7 +4,15 @@
  padding: 20px;
  font-family: 'Inter', sans-serif;
 }
-
+.dashboard-header {
+    font-size: 3rem;
+    color: #FFD700;
+    margin-bottom: 20px;
+    margin-top: 20px;
+    text-align: center;
+    font-weight: bold;
+    text-shadow: 3px 3px 7px rgba(240, 240, 240, 0.3);
+}
 
 .dashboard {
  display: grid;
