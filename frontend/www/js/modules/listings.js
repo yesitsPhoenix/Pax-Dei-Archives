@@ -278,7 +278,8 @@ const handleAddListing = async (e) => {
 
     const quantityPerListing = itemCountPerStack;
     const totalListedPricePerListing = itemPricePerStack;
-    const marketFeePerListing = totalListedPricePerListing * 0.05;
+    const rawMarketFeePerListing = totalListedPricePerListing * 0.05; 
+    const marketFeePerListing = Math.round(rawMarketFeePerListing);
     const pricePerUnitPerListing = totalListedPricePerListing / quantityPerListing;
 
     let successCount = 0;
@@ -320,10 +321,7 @@ const handleAddListing = async (e) => {
     }
 
     if (successCount > 0) {
-
-        const roundedTotalFees = Math.round(totalFees);
-
-        const newGold = currentGold - roundedTotalFees;
+        const newGold = currentGold - totalFees;
 
         const { error: updateGoldError } = await supabase
             .from('characters')
@@ -334,7 +332,7 @@ const handleAddListing = async (e) => {
             await showCustomModal('Error', 'Successfully added listings, but failed to deduct gold: ' + updateGoldError.message, [{ text: 'OK', value: true }]);
             console.error('Error deducting gold:', updateGoldError.message);
         } else {
-            await showCustomModal('Success', `Successfully created ${successCount} new listing(s) and deducted ${roundedTotalFees.toLocaleString()} gold in fees!`, [{ text: 'OK', value: true }]);
+            await showCustomModal('Success', `Successfully created ${successCount} new listing(s) and deducted ${totalFees.toLocaleString()} gold in fees!`, [{ text: 'OK', value: true }]);
             e.target.reset();
             await loadTraderPageData();
         }
@@ -342,7 +340,6 @@ const handleAddListing = async (e) => {
         await showCustomModal('Error', `Failed to create any listings. Errors: ${errors.join('; ')}`, [{ text: 'OK', value: true }]);
     }
 };
-
 
 const handleCancelListing = async (listingId) => {
     const confirmed = await showCustomModal(
