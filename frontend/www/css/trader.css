@@ -44,14 +44,13 @@
 }
 
 .dashboard-card h3 {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     color: #fff;
     margin-bottom: 10px;
-    font-weight: 900;
 }
 
 .dashboard-card p {
-    font-size: 1.2rem;
+    font-size: 2rem;
     color: #ffc107;
     display: flex;
     align-items: center;
@@ -77,6 +76,7 @@
 }
 
 .add-listing,
+.add-purchase,
 .active-listings,
 .chart-section,
 .sales-history {
@@ -97,6 +97,7 @@
 }
 
 .add-listing h2,
+.add-purchase h2,
 .active-listings h2,
 .chart-section h2,
 .sales-history h2 {
@@ -109,11 +110,13 @@
     font-weight: bold;
 }
 
-.add-listing .form-group {
+.add-listing .form-group,
+.add-purchase .form-group {
     margin-bottom: 20px;
 }
 
-.add-listing label {
+.add-listing label,
+.add-purchase label {
     display: block;
     margin-bottom: 8px;
     font-weight: 600;
@@ -122,7 +125,10 @@
 
 .add-listing input[type="text"],
 .add-listing input[type="number"],
-.add-listing select {
+.add-listing select,
+.add-purchase input[type="text"],
+.add-purchase input[type="number"],
+.add-purchase select {
     width: 100%;
     padding: 10px;
     border: 1px solid #555;
@@ -135,12 +141,16 @@
 
 .add-listing input[type="text"]:focus,
 .add-listing input[type="number"]:focus,
-.add-listing select:focus {
+.add-listing select:focus,
+.add-purchase input[type="text"]:focus,
+.add-purchase input[type="number"]:focus,
+.add-purchase select:focus {
     border-color: #ffc107;
     outline: none;
 }
 
-.add-listing .btn {
+.add-listing .btn,
+.add-purchase .btn {
     display: block;
     width: 100%;
     padding: 12px 20px;
@@ -154,12 +164,14 @@
     transition: background-color 0.2s ease, transform 0.1s ease;
 }
 
-.add-listing .btn:hover {
+.add-listing .btn:hover,
+.add-purchase .btn:hover {
     background-color: #e0a800;
     transform: translateY(-2px);
 }
 
-.add-listing .btn:disabled {
+.add-listing .btn:disabled,
+.add-purchase .btn:disabled {
     background-color: #ccc;
     cursor: not-allowed;
     transform: none;
@@ -318,6 +330,7 @@
     }
 
     .add-listing,
+    .add-purchase,
     .active-listings,
     .chart-section,
     .sales-history {
@@ -325,6 +338,7 @@
     }
 
     .add-listing h2,
+    .add-purchase h2,
     .active-listings h2,
     .chart-section h2,
     .sales-history h2 {

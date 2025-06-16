@@ -1,52 +1,75 @@
-// frontend/www/js/modules/salesChart.js
 import { supabase } from '../supabaseClient.js';
 import { currentCharacterId } from './characters.js';
 
-let salesChart = null;
+let marketActivityChart = null;
 
 export const renderSalesChart = async (timeframe = 'daily') => {
     if (!currentCharacterId) {
-        if (salesChart) {
-            salesChart.destroy();
-            salesChart = null;
+        if (marketActivityChart) {
+            marketActivityChart.destroy();
+            marketActivityChart = null;
         }
         return;
     }
 
     try {
-        const { data: sales, error } = await supabase
+        const { data: sales, error: salesError } = await supabase
             .from('sales')
             .select('sale_date, total_sale_price')
             .eq('character_id', currentCharacterId)
             .order('sale_date', { ascending: true });
 
-        if (error) {
-            throw error;
+        if (salesError) {
+            throw salesError;
         }
 
-        const processedData = aggregateSalesData(sales, timeframe);
-        const labels = Object.keys(processedData);
-        const data = Object.values(processedData);
+        const { data: purchases, error: purchasesError } = await supabase
+            .from('purchases')
+            .select('purchase_date, total_purchase_price')
+            .eq('character_id', currentCharacterId)
+            .order('purchase_date', { ascending: true });
 
+        if (purchasesError) {
+            throw purchasesError;
+        }
+
+        const combinedData = [];
+        sales.forEach(s => combinedData.push({ type: 'sale', date: s.sale_date, amount: s.total_sale_price }));
+        purchases.forEach(p => combinedData.push({ type: 'purchase', date: p.purchase_date, amount: p.total_purchase_price }));
+
+        combinedData.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        const { aggregatedSales, aggregatedPurchases, allLabels } = aggregateTransactionData(combinedData, timeframe);
 
         const ctx = document.getElementById('salesChartCanvas').getContext('2d');
 
-        if (salesChart) {
-            salesChart.destroy();
+        if (marketActivityChart) {
+            marketActivityChart.destroy();
+            marketActivityChart = null;
         }
 
-        salesChart = new Chart(ctx, {
+        marketActivityChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Gross Sales',
-                    data: data,
-                    borderColor: '#FFD700',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    tension: 0.1,
-                    fill: false
-                }]
+                labels: allLabels,
+                datasets: [
+                    {
+                        label: 'Gross Sales',
+                        data: allLabels.map(label => Math.round(aggregatedSales[label] || 0)),
+                        borderColor: '#FFD700',
+                        backgroundColor: 'rgba(255, 215, 0, 0.2)',
+                        tension: 0.1,
+                        fill: false
+                    },
+                    {
+                        label: 'Total Purchases',
+                        data: allLabels.map(label => Math.round(aggregatedPurchases[label] || 0)),
+                        borderColor: 'rgba(173, 76, 10, 1)',
+                        backgroundColor: 'rgba(173, 76, 10, 0.2)',
+                        tension: 0.1,
+                        fill: false
+                    }
+                ]
             },
             options: {
                 responsive: true,
@@ -70,7 +93,7 @@ export const renderSalesChart = async (timeframe = 'daily') => {
                         beginAtZero: true,
                         title: {
                             display: true,
-                            text: 'Total Sales (Gold)',
+                            text: 'Amount (Gold)',
                             color: 'rgb(255, 255, 255)'
                         },
                         ticks: {
@@ -95,7 +118,7 @@ export const renderSalesChart = async (timeframe = 'daily') => {
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                return `Sales: ${context.parsed.y.toLocaleString()} Gold`;
+                                return `${context.dataset.label}: ${Math.round(context.parsed.y).toLocaleString()} Gold`;
                             }
                         },
                         backgroundColor: 'rgba(0, 0, 0, 0.7)',
@@ -106,7 +129,7 @@ export const renderSalesChart = async (timeframe = 'daily') => {
                     },
                     title: {
                         display: true,
-                        text: `Sales by ${timeframe === 'monthly' ? 'Month' : (timeframe === 'weekly' ? 'Week' : 'Day')}`,
+                        text: `Market Activity by ${timeframe === 'monthly' ? 'Month' : (timeframe === 'weekly' ? 'Week' : 'Day')}`,
                         font: {
                             size: 18
                         },
@@ -116,21 +139,23 @@ export const renderSalesChart = async (timeframe = 'daily') => {
             }
         });
     } catch (error) {
-        console.error('Error rendering sales chart:', error.message);
+        console.error('Error rendering market activity chart:', error.message);
     }
 };
 
-const aggregateSalesData = (sales, timeframe) => {
-    const aggregated = {};
+const aggregateTransactionData = (transactions, timeframe) => {
+    const aggregatedSales = {};
+    const aggregatedPurchases = {};
+    const allLabelsSet = new Set();
 
-    sales.forEach(sale => {
-        const saleDate = new Date(sale.sale_date);
+    transactions.forEach(transaction => {
+        const transactionDate = new Date(transaction.date);
         let key;
 
         if (timeframe === 'monthly') {
-            key = `${saleDate.getFullYear()}-${(saleDate.getMonth() + 1).toString().padStart(2, '0')}`;
+            key = `${transactionDate.getFullYear()}-${(transactionDate.getMonth() + 1).toString().padStart(2, '0')}`;
         } else if (timeframe === 'weekly') {
-            const date = new Date(saleDate);
+            const date = new Date(transactionDate);
             const day = date.getUTCDay();
             const diff = date.getUTCDate() - day + (day === 0 ? -6 : 1);
             const monday = new Date(date.setUTCDate(diff));
@@ -139,23 +164,27 @@ const aggregateSalesData = (sales, timeframe) => {
             const week = getWeekNumber(monday);
             key = `${year}-W${week.toString().padStart(2, '0')}`;
         } else if (timeframe === 'daily') {
-            key = `${saleDate.getFullYear()}-${(saleDate.getMonth() + 1).toString().padStart(2, '0')}-${saleDate.getUTCDate().toString().padStart(2, '0')}`;
+            key = `${transactionDate.getFullYear()}-${(transactionDate.getMonth() + 1).toString().padStart(2, '0')}-${transactionDate.getUTCDate().toString().padStart(2, '0')}`;
         }
 
+        allLabelsSet.add(key);
 
-        if (!aggregated[key]) {
-            aggregated[key] = 0;
+        if (transaction.type === 'sale') {
+            if (!aggregatedSales[key]) {
+                aggregatedSales[key] = 0;
+            }
+            aggregatedSales[key] += Math.round(transaction.amount || 0);
+        } else if (transaction.type === 'purchase') {
+            if (!aggregatedPurchases[key]) {
+                aggregatedPurchases[key] = 0;
+            }
+            aggregatedPurchases[key] += Math.round(transaction.amount || 0);
         }
-        aggregated[key] += sale.total_sale_price;
     });
 
-    const sortedKeys = Object.keys(aggregated).sort();
-    const sortedAggregated = {};
-    sortedKeys.forEach(key => {
-        sortedAggregated[key] = aggregated[key];
-    });
+    const allLabels = Array.from(allLabelsSet).sort();
 
-    return sortedAggregated;
+    return { aggregatedSales, aggregatedPurchases, allLabels };
 };
 
 const getWeekNumber = (date) => {

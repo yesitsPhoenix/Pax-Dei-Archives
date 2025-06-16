@@ -14,6 +14,13 @@ const listingsPaginationContainer = document.getElementById('listings-pagination
 const sortBySelect = document.getElementById('sort-by');
 const sortDirectionSelect = document.getElementById('sort-direction');
 
+const addPurchaseForm = document.getElementById('add-purchase-form');
+const purchaseItemNameInput = document.getElementById('purchase-item-name');
+const purchaseItemCategorySelect = document.getElementById('purchase-item-category');
+const purchaseItemStacksInput = document.getElementById('purchase-item-stacks');
+const purchaseItemCountPerStackInput = document.getElementById('purchase-item-count-per-stack');
+const purchaseItemPricePerStackInput = document.getElementById('purchase-item-price-per-stack');
+
 
 const LISTINGS_PER_PAGE = 15;
 let currentListingsPage = 1;
@@ -117,10 +124,10 @@ const renderListingsTable = (listings) => {
         row.innerHTML = `
             <td class="py-3 px-6 text-left">${listing.item_name || 'N/A'}</td>
             <td class="py-3 px-6 text-left">${listing.category_name || 'N/A'}</td>
-            <td class="py-3 px-6 text-left">${listing.quantity_listed?.toLocaleString() || 'N/A'}</td>
-            <td class="py-3 px-6 text-left">${listing.listed_price_per_unit?.toFixed(2) || 'N/A'}</td>
-            <td class="py-3 px-6 text-left">${listing.total_listed_price?.toLocaleString() || 'N/A'}</td>
-            <td class="py-3 px-6 text-left">${listing.market_fee?.toLocaleString() || 'N/A'}</td>
+            <td class="py-3 px-6 text-left">${Math.round(listing.quantity_listed || 0).toLocaleString()}</td>
+            <td class="py-3 px-6 text-left">${Math.round(listing.listed_price_per_unit || 0).toLocaleString()}</td>
+            <td class="py-3 px-6 text-left">${Math.round(listing.total_listed_price || 0).toLocaleString()}</td>
+            <td class="py-3 px-6 text-left">${Math.round(listing.market_fee || 0).toLocaleString()}</td>
             <td class="py-3 px-6 text-left">${new Date(listing.listing_date).toLocaleDateString()}</td>
             <td class="py-3 px-6 text-left">
                 <div class="flex gap-2 whitespace-nowrap">
@@ -172,6 +179,8 @@ const renderListingsPagination = (totalCount) => {
 
 const addListingsEventListeners = () => {
     addListingForm.addEventListener('submit', handleAddListing);
+    addPurchaseForm.addEventListener('submit', handleRecordPurchase);
+
     filterListingItemNameInput.addEventListener('input', (e) => handleFilterChange('itemName', e.target.value));
     filterListingCategorySelect.addEventListener('change', (e) => handleFilterChange('categoryId', e.target.value));
     filterListingStatusSelect.addEventListener('change', (e) => handleFilterChange('status', e.target.value));
@@ -179,10 +188,7 @@ const addListingsEventListeners = () => {
     listingsBody.addEventListener('click', (e) => {
         const target = e.target;
         if (target.classList.contains('edit-btn')) {
-            // Placeholder for showEditListingModal, assuming it's defined elsewhere or will be added.
-            // If it's not defined, this line will still cause an error.
-            // For now, only addressing the handleCancelListing error.
-            console.warn('showEditListingModal is not defined. Edit button will not work.');
+            showEditListingModal(target.dataset.id);
         } else if (target.classList.contains('cancel-btn')) {
             handleCancelListing(target.dataset.id);
         } else if (target.classList.contains('sold-btn')) { 
@@ -219,7 +225,7 @@ const handleFilterChange = (key, value) => {
 };
 
 const fetchAndPopulateCategories = async () => {
-    if (!itemCategorySelect || !filterListingCategorySelect) return;
+    if (!itemCategorySelect || !filterListingCategorySelect || !purchaseItemCategorySelect) return;
 
     try {
         const { data, error } = await supabase
@@ -245,6 +251,15 @@ const fetchAndPopulateCategories = async () => {
             filterListingCategorySelect.appendChild(option);
         });
         filterListingCategorySelect.value = listingsFilter.categoryId;
+
+        purchaseItemCategorySelect.innerHTML = '<option value="">Select a category</option>';
+        data.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category.category_id;
+            option.textContent = category.category_name;
+            purchaseItemCategorySelect.appendChild(option);
+        });
+
     } catch (e) {
         console.error("Error fetching categories:", e);
         await showCustomModal('Error', 'An unexpected error occurred while loading categories.', [{ text: 'OK', value: true }]);
@@ -388,6 +403,115 @@ const handleAddListing = async (e) => {
     }
 };
 
+const handleRecordPurchase = async (e) => {
+    e.preventDefault();
+
+    const submitButton = addPurchaseForm.querySelector('button[type="submit"]');
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Recording Purchase...';
+    }
+
+    try {
+        if (!currentCharacterId) {
+            await showCustomModal('Validation Error', 'Please select a character before recording a purchase.', [{ text: 'OK', value: true }]);
+            return;
+        }
+
+        const formData = new FormData(e.target);
+        const itemName = formData.get('purchase-item-name').trim();
+        const categoryId = formData.get('purchase-item-category');
+        const itemStacks = parseInt(formData.get('purchase-item-stacks'), 10);
+        const itemCountPerStack = parseInt(formData.get('purchase-item-count-per-stack'), 10);
+        const itemPricePerStack = parseFloat(formData.get('purchase-item-price-per-stack'));
+
+        if (!itemName || !categoryId || isNaN(itemStacks) || isNaN(itemCountPerStack) || isNaN(itemPricePerStack) || itemStacks <= 0 || itemCountPerStack <= 0 || itemPricePerStack <= 0) {
+            await showCustomModal('Validation Error', 'Please fill all fields with valid, positive numbers.', [{ text: 'OK', value: true }]);
+            return;
+        }
+
+        const itemId = await getOrCreateItemId(itemName, categoryId);
+        if (!itemId) return;
+
+        const quantityPerPurchase = itemCountPerStack;
+        const totalPurchasePricePerPurchase = itemPricePerStack;
+        const purchasePricePerUnitPerPurchase = totalPurchasePricePerPurchase / quantityPerPurchase;
+
+        let successCount = 0;
+        let failedCount = 0;
+        const errors = [];
+
+        const { data: characterData, error: fetchCharacterError } = await supabase
+            .from('characters')
+            .select('gold')
+            .eq('character_id', currentCharacterId)
+            .single();
+
+        if (fetchCharacterError) {
+            await showCustomModal('Error', 'Failed to fetch character gold: ' + fetchCharacterError.message, [{ text: 'OK', value: true }]);
+            console.error('Error fetching character gold:', fetchCharacterError.message);
+            return;
+        }
+
+        let currentGold = characterData.gold || 0;
+        let totalCost = 0;
+
+        for (let i = 0; i < itemStacks; i++) {
+            totalCost += totalPurchasePricePerPurchase;
+        }
+
+        if (currentGold < totalCost) {
+            await showCustomModal('Validation Error', `Not enough gold! You need ${totalCost.toLocaleString()} gold but only have ${currentGold.toLocaleString()}.`, [{ text: 'OK', value: true }]);
+            return;
+        }
+        
+        for (let i = 0; i < itemStacks; i++) {
+            const { error } = await supabase.from('purchases').insert({
+                item_id: itemId,
+                character_id: currentCharacterId,
+                quantity_purchased: quantityPerPurchase,
+                purchase_price_per_unit: purchasePricePerUnitPerPurchase,
+                total_purchase_price: totalPurchasePricePerPurchase
+            });
+
+            if (error) {
+                errors.push(error.message);
+                failedCount++;
+            } else {
+                successCount++;
+            }
+        }
+
+        if (successCount > 0) {
+            const newGold = currentGold - totalCost;
+
+            const { error: updateGoldError } = await supabase
+                .from('characters')
+                .update({ gold: newGold })
+                .eq('character_id', currentCharacterId);
+
+            if (updateGoldError) {
+                await showCustomModal('Error', 'Successfully recorded purchases, but failed to deduct gold: ' + updateGoldError.message, [{ text: 'OK', value: true }]);
+                console.error('Error deducting gold for purchase:', updateGoldError.message);
+            } else {
+                await showCustomModal('Success', `Successfully recorded ${successCount} new purchase(s) and deducted ${totalCost.toLocaleString()} gold!`, [{ text: 'OK', value: true }]);
+                e.target.reset();
+                await loadTraderPageData();
+            }
+        } else {
+            await showCustomModal('Error', `Failed to record any purchases. Errors: ${errors.join('; ')}`, [{ text: 'OK', value: true }]);
+        }
+    } catch (error) {
+        console.error('Error during handleRecordPurchase:', error);
+        await showCustomModal('Error', 'An unexpected error occurred while recording the purchase.', [{ text: 'OK', value: true }]);
+    } finally {
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Record Purchase';
+        }
+    }
+};
+
 
 const handleMarkAsSold = async (listingId) => {
     const confirmed = await showCustomModal(
@@ -481,10 +605,44 @@ const handleCancelListing = async (listingId) => {
             await showCustomModal('Error', 'Failed to cancel listing: ' + error.message, [{ text: 'OK', value: true }]);
         } else {
             await showCustomModal('Success', 'Listing canceled successfully!', [{ text: 'OK', value: true }]);
-            await loadTraderPageData(); 
+            await loadTraderPageData();
         }
     }
 };
+
+const showEditListingModal = async (listingId) => {
+    currentEditingListingId = listingId;
+    const editModal = document.getElementById('editListingModal');
+    const editItemNameInput = document.getElementById('edit-item-name');
+    const editQuantityListedInput = document.getElementById('edit-quantity-listed');
+    const editTotalPriceInput = document.getElementById('edit-total-price');
+
+    try {
+        const { data: listing, error } = await supabase
+            .from('market_listings')
+            .select('item_id, quantity_listed, total_listed_price, items(item_name)')
+            .eq('listing_id', listingId)
+            .eq('character_id', currentCharacterId)
+            .single();
+
+        if (error || !listing) {
+            console.error('Error fetching listing for edit:', error);
+            await showCustomModal('Error', 'Could not retrieve listing details for editing.', [{ text: 'OK', value: true }]);
+            return;
+        }
+
+        // Round values when populating the edit modal
+        editItemNameInput.value = listing.items.item_name;
+        editQuantityListedInput.value = Math.round(listing.quantity_listed || 0);
+        editTotalPriceInput.value = Math.round(listing.total_listed_price || 0);
+
+        editModal.classList.remove('hidden');
+    } catch (e) {
+        console.error('Error showing edit modal:', e);
+        await showCustomModal('Error', 'An unexpected error occurred while preparing the edit form.', [{ text: 'OK', value: true }]);
+    }
+};
+
 
 const handleEditListingSave = async (e) => {
     e.preventDefault();
@@ -497,8 +655,8 @@ const handleEditListingSave = async (e) => {
         return await showCustomModal('Validation Error', 'Quantity and total price must be positive numbers.', [{ text: 'OK', value: true }]);
     }
 
-    const listed_price_per_unit = total_listed_price / quantity_listed;
-    const market_fee = Math.ceil(total_listed_price * 0.05);
+    const listed_price_per_unit = Math.round(total_listed_price / quantity_listed || 0);
+    const market_fee = Math.round(total_listed_price * 0.05 || 0);
 
     const { error } = await supabase
         .from('market_listings')

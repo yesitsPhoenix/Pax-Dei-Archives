@@ -2,7 +2,7 @@
 import { supabase } from './supabaseClient.js';
 import { initializeListings, loadActiveListings } from './modules/listings.js';
 import { initializeCharacters, insertCharacterModalHtml, currentCharacterId, getCurrentCharacter } from './modules/characters.js';
-import { initializeSales, loadSalesHistory } from './modules/sales.js';
+import { initializeSales, loadTransactionHistory } from './modules/sales.js';
 import { renderDashboard } from './modules/dashboard.js';
 import { renderSalesChart, setupSalesChartListeners } from './modules/salesChart.js';
 
@@ -84,7 +84,7 @@ export const loadTraderPageData = async () => {
     if (!currentUser || !currentUser.id) {
         renderDashboard([]);
         await loadActiveListings();
-        await loadSalesHistory();
+        await loadTransactionHistory();
         renderSalesChart(null, 'monthly');
         return;
     }
@@ -105,7 +105,7 @@ export const loadTraderPageData = async () => {
 
         renderDashboard(allListings || [], currentCharacterData);
         await loadActiveListings();
-        await loadSalesHistory();
+        await loadTransactionHistory();
         await renderSalesChart('daily');
     } catch (error) {
         console.error('Error loading trader page data:', error.message);

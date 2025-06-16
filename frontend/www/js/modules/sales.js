@@ -8,8 +8,8 @@ const salesTable = document.getElementById('sales-table');
 const salesPaginationContainer = document.getElementById('sales-pagination');
 const downloadSalesCsvButton = document.getElementById('download-sales-csv');
 
-const SALES_PER_PAGE = 10;
-let currentSalesPage = 1;
+const TRANSACTIONS_PER_PAGE = 10;
+let currentTransactionsPage = 1;
 
 export const initializeSales = () => {
     if (downloadSalesCsvButton) {
@@ -17,11 +17,11 @@ export const initializeSales = () => {
     }
 };
 
-export const loadSalesHistory = async () => {
+export const loadTransactionHistory = async () => {
     if (!currentCharacterId) {
         if (salesLoader) salesLoader.style.display = 'none';
         if (salesTable) salesTable.style.display = 'none';
-        if (salesBody) salesBody.innerHTML = '<tr><td colspan="6" class="text-center py-4">Please select a character or create one to view sales history.</td></tr>';
+        if (salesBody) salesBody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Please select a character or create one to view transaction history.</td></tr>';
         return;
     }
 
@@ -29,57 +29,125 @@ export const loadSalesHistory = async () => {
     if (salesTable) salesTable.style.display = 'none';
 
     try {
-        const offset = (currentSalesPage - 1) * SALES_PER_PAGE;
-        const { data: sales, error, count } = await supabase
+        const offset = (currentTransactionsPage - 1) * TRANSACTIONS_PER_PAGE;
+
+        const { data: salesData, error: salesError, count: salesCount } = await supabase
             .from('sales')
             .select(`
                 sale_id, quantity_sold, sale_price_per_unit, total_sale_price, sale_date,
-                market_listings!inner ( listing_id, character_id, items(item_name, item_categories(category_name)) )
+                market_listings!inner ( listing_id, character_id, market_fee, items(item_name, item_categories(category_name)) )
             `, { count: 'exact' })
-            .eq('market_listings.character_id', currentCharacterId)
-            .order('sale_date', { ascending: false })
-            .range(offset, offset + SALES_PER_PAGE - 1);
+            .eq('market_listings.character_id', currentCharacterId);
 
-        if (error) throw error;
+        if (salesError) throw salesError;
 
-        renderSalesTable(sales);
-        renderSalesPagination(count);
+        const { data: purchasesData, error: purchasesError, count: purchasesCount } = await supabase
+            .from('purchases')
+            .select(`
+                purchase_id, quantity_purchased, purchase_price_per_unit, total_purchase_price, purchase_date,
+                items(item_name, item_categories(category_name))
+            `, { count: 'exact' })
+            .eq('character_id', currentCharacterId);
+
+        if (purchasesError) throw purchasesError;
+
+        const { data: cancelledListingsData, error: cancelledError, count: cancelledCount } = await supabase
+            .from('market_listings')
+            .select(`
+                listing_id, listing_date, quantity_listed, listed_price_per_unit, total_listed_price, market_fee,
+                items(item_name, item_categories(category_name))
+            `, { count: 'exact' })
+            .eq('character_id', currentCharacterId)
+            .eq('is_cancelled', true); 
+        if (cancelledError) throw cancelledError;
+
+        const allTransactions = [];
+
+        salesData.forEach(sale => {
+            allTransactions.push({
+                type: 'Sale',
+                date: sale.sale_date,
+                item_name: sale.market_listings?.items?.item_name,
+                category_name: sale.market_listings?.items?.item_categories?.category_name,
+                quantity: Math.round(sale.quantity_sold || 0),
+                price_per_unit: Math.round(sale.sale_price_per_unit || 0),
+                total_amount: Math.round(sale.total_sale_price || 0),
+                fee: Math.round(sale.market_listings?.market_fee || 0)
+            });
+        });
+
+        purchasesData.forEach(purchase => {
+            allTransactions.push({
+                type: 'Purchase',
+                date: purchase.purchase_date,
+                item_name: purchase.items?.item_name,
+                category_name: purchase.items?.item_categories?.category_name,
+                quantity: Math.round(purchase.quantity_purchased || 0),
+                price_per_unit: Math.round(purchase.purchase_price_per_unit || 0),
+                total_amount: Math.round(purchase.total_purchase_price || 0),
+                fee: 0
+            });
+        });
+
+        cancelledListingsData.forEach(listing => {
+            allTransactions.push({
+                type: 'Cancellation',
+                date: listing.listing_date,
+                item_name: listing.items?.item_name,
+                category_name: listing.items?.item_categories?.category_name,
+                quantity: Math.round(listing.quantity_listed || 0),
+                price_per_unit: Math.round(listing.listed_price_per_unit || 0),
+                total_amount: 0,
+                fee: Math.round(listing.market_fee || 0) 
+            });
+        });
+
+        allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        const totalCount = salesCount + purchasesCount + cancelledCount;
+        
+        const paginatedTransactions = allTransactions.slice(offset, offset + TRANSACTIONS_PER_PAGE);
+
+        renderTransactionTable(paginatedTransactions);
+        renderTransactionPagination(totalCount);
 
     } catch (error) {
-        console.error('Error fetching sales:', error.message);
-        await showCustomModal('Error', 'Could not fetch sales history.', [{ text: 'OK', value: true }]);
+        console.error('Error fetching transaction history:', error.message);
+        await showCustomModal('Error', 'Could not fetch transaction history.', [{ text: 'OK', value: true }]);
     } finally {
         if (salesLoader) salesLoader.style.display = 'none';
         if (salesTable) salesTable.style.display = 'table';
     }
 };
 
-const renderSalesTable = (sales) => {
+const renderTransactionTable = (transactions) => {
     if (!salesBody) return;
     salesBody.innerHTML = '';
-    if (!sales || sales.length === 0) {
-        salesBody.innerHTML = '<tr><td colspan="6" class="text-center py-4">No sales recorded yet.</td></tr>';
+    if (!transactions || transactions.length === 0) {
+        salesBody.innerHTML = '<tr><td colspan="8" class="text-center py-4">No transactions recorded yet.</td></tr>';
         return;
     }
 
-    sales.forEach(sale => {
+    transactions.forEach(transaction => {
         const row = document.createElement('tr');
         row.className = 'border-b border-gray-200 hover:bg-gray-100';
         row.innerHTML = `
-            <td class="py-3 px-6 text-left whitespace-nowrap">${sale.market_listings?.items?.item_name || 'N/A'}</td>
-            <td class="py-3 px-6 text-left">${sale.market_listings?.items?.item_categories?.category_name || 'N/A'}</td>
-            <td class="py-3 px-6 text-left">${sale.quantity_sold?.toLocaleString() || 'N/A'}</td>
-            <td class="py-3 px-6 text-left">${sale.sale_price_per_unit?.toFixed(2) || 'N/A'}</td>
-            <td class="py-3 px-6 text-left">${sale.total_sale_price?.toLocaleString() || 'N/A'}</td>
-            <td class="py-3 px-6 text-left">${sale.sale_date ? new Date(sale.sale_date).toLocaleDateString() : 'N/A'}</td>
+            <td class="py-3 px-6 text-left whitespace-nowrap">${transaction.type}</td>
+            <td class="py-3 px-6 text-left">${transaction.date ? new Date(transaction.date).toLocaleDateString() : 'N/A'}</td>
+            <td class="py-3 px-6 text-left whitespace-nowrap">${transaction.item_name || 'N/A'}</td>
+            <td class="py-3 px-6 text-left">${transaction.category_name || 'N/A'}</td>
+            <td class="py-3 px-6 text-left">${transaction.quantity?.toLocaleString() || 'N/A'}</td>
+            <td class="py-3 px-6 text-left">${transaction.price_per_unit?.toLocaleString() || 'N/A'}</td>
+            <td class="py-3 px-6 text-left">${transaction.total_amount?.toLocaleString() || 'N/A'}</td>
+            <td class="py-3 px-6 text-left">${transaction.fee?.toLocaleString() || 'N/A'}</td>
         `;
         salesBody.appendChild(row);
     });
 };
 
-const renderSalesPagination = (totalCount) => {
+const renderTransactionPagination = (totalCount) => {
     if (!salesPaginationContainer) return;
-    const totalPages = Math.ceil(totalCount / SALES_PER_PAGE);
+    const totalPages = Math.ceil(totalCount / TRANSACTIONS_PER_PAGE);
     salesPaginationContainer.innerHTML = '';
     if (totalPages <= 1) return;
 
@@ -97,74 +165,116 @@ const renderSalesPagination = (totalCount) => {
         button.className = classes;
         button.disabled = disabled;
         button.addEventListener('click', () => {
-            currentSalesPage = page;
-            loadSalesHistory();
+            currentTransactionsPage = page;
+            loadTransactionHistory();
         });
         return button;
     };
 
-    salesPaginationContainer.appendChild(createButton('Previous', currentSalesPage - 1, currentSalesPage === 1));
+    salesPaginationContainer.appendChild(createButton('Previous', currentTransactionsPage - 1, currentTransactionsPage === 1));
 
     for (let i = 1; i <= totalPages; i++) {
-        salesPaginationContainer.appendChild(createButton(i, i, false, i === currentSalesPage));
+        salesPaginationContainer.appendChild(createButton(i, i, false, i === currentTransactionsPage));
     }
 
-    salesPaginationContainer.appendChild(createButton('Next', currentSalesPage + 1, currentSalesPage === totalPages));
+    salesPaginationContainer.appendChild(createButton('Next', currentTransactionsPage + 1, currentTransactionsPage === totalPages));
 };
 
 const handleDownloadCsv = async () => {
     if (!currentCharacterId) return;
     if (downloadSalesCsvButton) {
         downloadSalesCsvButton.disabled = true;
-        downloadSalesCsvButton.textContent = 'Preparing...';
+        downloadSalesCsvButton.textContent = 'Preparing Market History CSV...';
     }
 
     try {
-        const { data: listings, error } = await supabase
+        const { data: salesData, error: salesError } = await supabase
+            .from('sales')
+            .select(`
+                sale_id, quantity_sold, sale_price_per_unit, total_sale_price, sale_date,
+                market_listings!inner ( listing_id, character_id, market_fee, items(item_name, item_categories(category_name)) )
+            `)
+            .eq('market_listings.character_id', currentCharacterId);
+
+        if (salesError) throw salesError;
+
+        const { data: purchasesData, error: purchasesError } = await supabase
+            .from('purchases')
+            .select(`
+                purchase_id, quantity_purchased, purchase_price_per_unit, total_purchase_price, purchase_date,
+                items(item_name, item_categories(category_name))
+            `)
+            .eq('character_id', currentCharacterId);
+
+        if (purchasesError) throw purchasesError;
+
+        const { data: cancelledListingsData, error: cancelledError } = await supabase
             .from('market_listings')
             .select(`
-                listing_id, listing_date, quantity_listed, total_listed_price, is_fully_sold, is_cancelled,
-                items(item_name, item_categories(category_name)),
-                sales(quantity_sold, total_sale_price)
+                listing_id, listing_date, quantity_listed, listed_price_per_unit, total_listed_price, market_fee,
+                items(item_name, item_categories(category_name))
             `)
             .eq('character_id', currentCharacterId)
-            .or('is_fully_sold.eq.true,is_cancelled.eq.true')
-            .order('listing_date', { ascending: false });
+            .eq('is_cancelled', true); 
 
-        if (error) throw error;
+        if (cancelledError) throw cancelledError;
 
-        const headers = ['Date', 'Item Name', 'Category', 'Quantity', 'Total Price', 'Status'];
+        const allTransactions = [];
+
+        salesData.forEach(sale => {
+            allTransactions.push({
+                type: 'Sale',
+                date: sale.sale_date,
+                item_name: sale.market_listings?.items?.item_name,
+                category_name: sale.market_listings?.items?.item_categories?.category_name,
+                quantity: Math.round(sale.quantity_sold || 0),
+                price_per_unit: Math.round(sale.sale_price_per_unit || 0),
+                total_amount: Math.round(sale.total_sale_price || 0),
+                fee: Math.round(sale.market_listings?.market_fee || 0)
+            });
+        });
+
+        purchasesData.forEach(purchase => {
+            allTransactions.push({
+                type: 'Purchase',
+                date: purchase.purchase_date,
+                item_name: purchase.items?.item_name,
+                category_name: purchase.items?.item_categories?.category_name,
+                quantity: Math.round(purchase.quantity_purchased || 0),
+                price_per_unit: Math.round(purchase.purchase_price_per_unit || 0),
+                total_amount: Math.round(purchase.total_purchase_price || 0),
+                fee: 0
+            });
+        });
+
+        cancelledListingsData.forEach(listing => {
+            allTransactions.push({
+                type: 'Cancellation',
+                date: listing.listing_date,
+                item_name: listing.items?.item_name,
+                category_name: listing.items?.item_categories?.category_name,
+                quantity: Math.round(listing.quantity_listed || 0),
+                price_per_unit: Math.round(listing.listed_price_per_unit || 0),
+                total_amount: 0,
+                fee: Math.round(listing.market_fee || 0)
+            });
+        });
+
+        allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        const headers = ['Type', 'Date', 'Item Name', 'Category', 'Quantity', 'Price Per Unit', 'Total Amount', 'Fee'];
         const csvRows = [headers.join(',')];
 
-        listings.forEach(listing => {
-            const date = new Date(listing.listing_date).toLocaleDateString();
-            const itemName = `"${listing.items?.item_name || 'N/A'}"`;
-            const category = `"${listing.items?.item_categories?.category_name || 'N/A'}"`;
-            let quantity = 0;
-            let totalPrice = 0;
-            let status = 'Active';
+        allTransactions.forEach(transaction => {
+            const date = new Date(transaction.date).toLocaleDateString();
+            const itemName = `"${transaction.item_name || 'N/A'}"`;
+            const category = `"${transaction.category_name || 'N/A'}"`;
+            const quantity = transaction.quantity?.toLocaleString() || 'N/A';
+            const pricePerUnit = transaction.price_per_unit?.toLocaleString() || 'N/A';
+            const totalAmount = transaction.total_amount?.toLocaleString() || 'N/A';
+            const fee = transaction.fee?.toLocaleString() || 'N/A';
 
-            if (listing.is_fully_sold) {
-                status = 'Sold';
-                if (listing.sales && listing.sales.length > 0) {
-                    quantity = listing.sales[0].quantity_sold;
-                    totalPrice = listing.sales[0].total_sale_price;
-                } else {
-                    quantity = listing.quantity_listed;
-                    totalPrice = listing.total_listed_price;
-                }
-            } else if (listing.is_cancelled) {
-                status = 'Cancelled';
-                quantity = listing.quantity_listed;
-                totalPrice = listing.total_listed_price;
-            } else {
-
-                status = 'Active';
-                quantity = listing.quantity_listed;
-                totalPrice = listing.total_listed_price;
-            }
-            
-            csvRows.push([date, itemName, category, quantity, totalPrice, status].join(','));
+            csvRows.push([transaction.type, date, itemName, category, quantity, pricePerUnit, totalAmount, fee].join(','));
         });
 
         const csvString = csvRows.join('\n');
@@ -178,13 +288,15 @@ const handleDownloadCsv = async () => {
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
 
+        await showCustomModal('Success', 'Market activity history CSV generated successfully!', [{ text: 'OK', value: true }]);
+
     } catch (err) {
         console.error('Error generating CSV:', err.message);
-        await showCustomModal('Error', 'Failed to generate CSV file.', [{ text: 'OK', value: true }]);
+        await showCustomModal('Error', 'Failed to generate market activity CSV file.', [{ text: 'OK', value: true }]);
     } finally {
         if (downloadSalesCsvButton) {
             downloadSalesCsvButton.disabled = false;
-            downloadSalesCsvButton.textContent = 'Download Sales History CSV';
+            downloadSalesCsvButton.textContent = 'Download Market History CSV';
         }
     }
 };
