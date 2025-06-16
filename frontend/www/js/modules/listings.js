@@ -284,88 +284,104 @@ const getOrCreateItemId = async (itemName, categoryId) => {
 const handleAddListing = async (e) => {
     e.preventDefault();
 
-    if (!currentCharacterId) {
-        await showCustomModal('Validation Error', 'Please select a character before creating a listing.', [{ text: 'OK', value: true }]);
-        return;
+    const submitButton = addListingForm.querySelector('button[type="submit"]');
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Adding Listing...';
     }
 
-    const formData = new FormData(e.target);
-    const itemName = formData.get('item-name').trim();
-    const categoryId = formData.get('item-category');
-    const itemStacks = parseInt(formData.get('item-stacks'), 10);
-    const itemCountPerStack = parseInt(formData.get('item-count-per-stack'), 10);
-    const itemPricePerStack = parseFloat(formData.get('item-price-per-stack'));
-
-    if (!itemName || !categoryId || isNaN(itemStacks) || isNaN(itemCountPerStack) || isNaN(itemPricePerStack) || itemStacks <= 0 || itemCountPerStack <= 0 || itemPricePerStack <= 0) {
-        await showCustomModal('Validation Error', 'Please fill all fields with valid, positive numbers.', [{ text: 'OK', value: true }]);
-        return;
-    }
-
-    const itemId = await getOrCreateItemId(itemName, categoryId);
-    if (!itemId) return;
-
-    const quantityPerListing = itemCountPerStack;
-    const totalListedPricePerListing = itemPricePerStack;
-    const rawMarketFeePerListing = totalListedPricePerListing * 0.05; 
-    const marketFeePerListing = Math.ceil(rawMarketFeePerListing);
-    const pricePerUnitPerListing = totalListedPricePerListing / quantityPerListing;
-
-    let successCount = 0;
-    let failedCount = 0;
-    const errors = [];
-
-    const { data: characterData, error: fetchCharacterError } = await supabase
-        .from('characters')
-        .select('gold')
-        .eq('character_id', currentCharacterId)
-        .single();
-
-    if (fetchCharacterError) {
-        await showCustomModal('Error', 'Failed to fetch character gold: ' + fetchCharacterError.message, [{ text: 'OK', value: true }]);
-        console.error('Error fetching character gold:', fetchCharacterError.message);
-        return;
-    }
-
-    let currentGold = characterData.gold || 0;
-    let totalFees = 0;
-
-    for (let i = 0; i < itemStacks; i++) {
-        totalFees += marketFeePerListing;
-        const { error } = await supabase.from('market_listings').insert({
-            item_id: itemId,
-            character_id: currentCharacterId,
-            quantity_listed: quantityPerListing,
-            listed_price_per_unit: pricePerUnitPerListing,
-            total_listed_price: totalListedPricePerListing,
-            market_fee: marketFeePerListing
-        });
-
-        if (error) {
-            errors.push(error.message);
-            failedCount++;
-        } else {
-            successCount++;
+    try {
+        if (!currentCharacterId) {
+            await showCustomModal('Validation Error', 'Please select a character before creating a listing.', [{ text: 'OK', value: true }]);
+            return;
         }
-    }
 
-    if (successCount > 0) {
-        const newGold = currentGold - totalFees;
+        const formData = new FormData(e.target);
+        const itemName = formData.get('item-name').trim();
+        const categoryId = formData.get('item-category');
+        const itemStacks = parseInt(formData.get('item-stacks'), 10);
+        const itemCountPerStack = parseInt(formData.get('item-count-per-stack'), 10);
+        const itemPricePerStack = parseFloat(formData.get('item-price-per-stack'));
 
-        const { error: updateGoldError } = await supabase
+        if (!itemName || !categoryId || isNaN(itemStacks) || isNaN(itemCountPerStack) || isNaN(itemPricePerStack) || itemStacks <= 0 || itemCountPerStack <= 0 || itemPricePerStack <= 0) {
+            await showCustomModal('Validation Error', 'Please fill all fields with valid, positive numbers.', [{ text: 'OK', value: true }]);
+            return;
+        }
+
+        const itemId = await getOrCreateItemId(itemName, categoryId);
+        if (!itemId) return;
+
+        const quantityPerListing = itemCountPerStack;
+        const totalListedPricePerListing = itemPricePerStack;
+        const rawMarketFeePerListing = totalListedPricePerListing * 0.05; 
+        const marketFeePerListing = Math.ceil(rawMarketFeePerListing);
+        const pricePerUnitPerListing = totalListedPricePerListing / quantityPerListing;
+
+        let successCount = 0;
+        let failedCount = 0;
+        const errors = [];
+
+        const { data: characterData, error: fetchCharacterError } = await supabase
             .from('characters')
-            .update({ gold: newGold })
-            .eq('character_id', currentCharacterId);
+            .select('gold')
+            .eq('character_id', currentCharacterId)
+            .single();
 
-        if (updateGoldError) {
-            await showCustomModal('Error', 'Successfully added listings, but failed to deduct gold: ' + updateGoldError.message, [{ text: 'OK', value: true }]);
-            console.error('Error deducting gold:', updateGoldError.message);
-        } else {
-            await showCustomModal('Success', `Successfully created ${successCount} new listing(s) and deducted ${totalFees.toLocaleString()} gold in fees!`, [{ text: 'OK', value: true }]);
-            e.target.reset();
-            await loadTraderPageData();
+        if (fetchCharacterError) {
+            await showCustomModal('Error', 'Failed to fetch character gold: ' + fetchCharacterError.message, [{ text: 'OK', value: true }]);
+            console.error('Error fetching character gold:', fetchCharacterError.message);
+            return;
         }
-    } else {
-        await showCustomModal('Error', `Failed to create any listings. Errors: ${errors.join('; ')}`, [{ text: 'OK', value: true }]);
+
+        let currentGold = characterData.gold || 0;
+        let totalFees = 0;
+
+        for (let i = 0; i < itemStacks; i++) {
+            totalFees += marketFeePerListing;
+            const { error } = await supabase.from('market_listings').insert({
+                item_id: itemId,
+                character_id: currentCharacterId,
+                quantity_listed: quantityPerListing,
+                listed_price_per_unit: pricePerUnitPerListing,
+                total_listed_price: totalListedPricePerListing,
+                market_fee: marketFeePerListing
+            });
+
+            if (error) {
+                errors.push(error.message);
+                failedCount++;
+            } else {
+                successCount++;
+            }
+        }
+
+        if (successCount > 0) {
+            const newGold = currentGold - totalFees;
+
+            const { error: updateGoldError } = await supabase
+                .from('characters')
+                .update({ gold: newGold })
+                .eq('character_id', currentCharacterId);
+
+            if (updateGoldError) {
+                await showCustomModal('Error', 'Successfully added listings, but failed to deduct gold: ' + updateGoldError.message, [{ text: 'OK', value: true }]);
+                console.error('Error deducting gold:', updateGoldError.message);
+            } else {
+                await showCustomModal('Success', `Successfully created ${successCount} new listing(s) and deducted ${totalFees.toLocaleString()} gold in fees!`, [{ text: 'OK', value: true }]);
+                e.target.reset();
+                await loadTraderPageData();
+            }
+        } else {
+            await showCustomModal('Error', `Failed to create any listings. Errors: ${errors.join('; ')}`, [{ text: 'OK', value: true }]);
+        }
+    } catch (error) {
+        console.error('Error during handleAddListing:', error);
+        await showCustomModal('Error', 'An unexpected error occurred while adding the listing.', [{ text: 'OK', value: true }]);
+    } finally {
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Add Listing';
+        }
     }
 };
 
@@ -408,7 +424,7 @@ const handleMarkAsSold = async (listingId) => {
                 quantity_sold: listing.quantity_listed,
                 sale_price_per_unit: listing.listed_price_per_unit,
                 total_sale_price: listing.total_listed_price,
-                character_id: listing.character_id
+                character_id: listing.character_id 
             });
 
         if (insertSaleError) {
