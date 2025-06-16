@@ -31,16 +31,18 @@ export const loadTransactionHistory = async () => {
     try {
         const offset = (currentTransactionsPage - 1) * TRANSACTIONS_PER_PAGE;
 
+        // Fetch sales data
         const { data: salesData, error: salesError, count: salesCount } = await supabase
             .from('sales')
             .select(`
                 sale_id, quantity_sold, sale_price_per_unit, total_sale_price, sale_date,
-                market_listings!inner ( listing_id, character_id, market_fee, items(item_name, item_categories(category_name)) )
+                market_listings!sales_listing_id_fkey!inner ( listing_id, character_id, market_fee, items(item_name, item_categories(category_name)) )
             `, { count: 'exact' })
             .eq('market_listings.character_id', currentCharacterId);
 
         if (salesError) throw salesError;
 
+        // Fetch purchase data
         const { data: purchasesData, error: purchasesError, count: purchasesCount } = await supabase
             .from('purchases')
             .select(`
@@ -51,6 +53,7 @@ export const loadTransactionHistory = async () => {
 
         if (purchasesError) throw purchasesError;
 
+        // Fetch cancelled listings data
         const { data: cancelledListingsData, error: cancelledError, count: cancelledCount } = await supabase
             .from('market_listings')
             .select(`
@@ -58,7 +61,8 @@ export const loadTransactionHistory = async () => {
                 items(item_name, item_categories(category_name))
             `, { count: 'exact' })
             .eq('character_id', currentCharacterId)
-            .eq('is_cancelled', true); 
+            .eq('is_cancelled', true);
+
         if (cancelledError) throw cancelledError;
 
         const allTransactions = [];
@@ -98,7 +102,7 @@ export const loadTransactionHistory = async () => {
                 quantity: Math.round(listing.quantity_listed || 0),
                 price_per_unit: Math.round(listing.listed_price_per_unit || 0),
                 total_amount: 0,
-                fee: Math.round(listing.market_fee || 0) 
+                fee: Math.round(listing.market_fee || 0)
             });
         });
 
@@ -124,7 +128,7 @@ const renderTransactionTable = (transactions) => {
     if (!salesBody) return;
     salesBody.innerHTML = '';
     if (!transactions || transactions.length === 0) {
-        salesBody.innerHTML = '<tr><td colspan="8" class="text-center py-4">No transactions recorded yet.</td></tr>';
+        if (salesBody) salesBody.innerHTML = '<tr><td colspan="8" class="text-center py-4">No transactions recorded yet.</td></tr>';
         return;
     }
 
@@ -188,16 +192,18 @@ const handleDownloadCsv = async () => {
     }
 
     try {
+        // Fetch all sales (no pagination)
         const { data: salesData, error: salesError } = await supabase
             .from('sales')
             .select(`
                 sale_id, quantity_sold, sale_price_per_unit, total_sale_price, sale_date,
-                market_listings!inner ( listing_id, character_id, market_fee, items(item_name, item_categories(category_name)) )
+                market_listings!sales_listing_id_fkey!inner ( listing_id, character_id, market_fee, items(item_name, item_categories(category_name)) )
             `)
             .eq('market_listings.character_id', currentCharacterId);
 
         if (salesError) throw salesError;
 
+        // Fetch all purchases (no pagination)
         const { data: purchasesData, error: purchasesError } = await supabase
             .from('purchases')
             .select(`
@@ -208,6 +214,7 @@ const handleDownloadCsv = async () => {
 
         if (purchasesError) throw purchasesError;
 
+        // Fetch all cancelled listings (no pagination)
         const { data: cancelledListingsData, error: cancelledError } = await supabase
             .from('market_listings')
             .select(`
@@ -215,7 +222,7 @@ const handleDownloadCsv = async () => {
                 items(item_name, item_categories(category_name))
             `)
             .eq('character_id', currentCharacterId)
-            .eq('is_cancelled', true); 
+            .eq('is_cancelled', true);
 
         if (cancelledError) throw cancelledError;
 
