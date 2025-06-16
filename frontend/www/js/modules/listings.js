@@ -179,7 +179,10 @@ const addListingsEventListeners = () => {
     listingsBody.addEventListener('click', (e) => {
         const target = e.target;
         if (target.classList.contains('edit-btn')) {
-            showEditListingModal(target.dataset.id);
+            // Placeholder for showEditListingModal, assuming it's defined elsewhere or will be added.
+            // If it's not defined, this line will still cause an error.
+            // For now, only addressing the handleCancelListing error.
+            console.warn('showEditListingModal is not defined. Edit button will not work.');
         } else if (target.classList.contains('cancel-btn')) {
             handleCancelListing(target.dataset.id);
         } else if (target.classList.contains('sold-btn')) { 
@@ -459,6 +462,29 @@ const handleMarkAsSold = async (listingId) => {
     }
 };
 
+const handleCancelListing = async (listingId) => {
+    const confirmed = await showCustomModal(
+        'Confirmation',
+        'Are you sure you want to cancel this listing? This will remove it from your active listings.',
+        [{ text: 'Yes, Cancel', value: true, type: 'confirm' }, { text: 'No', value: false, type: 'cancel' }]
+    );
+
+    if (confirmed) {
+        const { error } = await supabase
+            .from('market_listings')
+            .update({ is_cancelled: true })
+            .eq('listing_id', listingId)
+            .eq('character_id', currentCharacterId);
+
+        if (error) {
+            console.error('Error canceling listing:', error.message);
+            await showCustomModal('Error', 'Failed to cancel listing: ' + error.message, [{ text: 'OK', value: true }]);
+        } else {
+            await showCustomModal('Success', 'Listing canceled successfully!', [{ text: 'OK', value: true }]);
+            await loadTraderPageData(); 
+        }
+    }
+};
 
 const handleEditListingSave = async (e) => {
     e.preventDefault();

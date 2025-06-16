@@ -6,6 +6,7 @@ let createCharacterModal = null;
 let createCharacterForm = null;
 let closeCreateCharacterModalBtn = null;
 let newCharacterNameInput = null;
+let newCharacterGoldInput = null; // New input for initial gold
 let deleteCharacterBtn = null;
 const setGoldBtn = document.getElementById('setGoldBtn');
 
@@ -22,6 +23,10 @@ export const insertCharacterModalHtml = () => {
                         <label for="newCharacterNameInput" class="block text-gray-700 text-sm font-bold mb-2">Character Name:</label>
                         <input type="text" id="newCharacterNameInput" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Enter character name" required>
                     </div>
+                    <div class="mb-4">
+                        <label for="newCharacterGoldInput" class="block text-gray-700 text-sm font-bold mb-2">Starting Gold:</label>
+                        <input type="number" id="newCharacterGoldInput" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Enter starting gold (e.g., 100)" value="0" required min="0">
+                    </div>
                     <div class="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
                         <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">Create Character</button>
                         <button type="button" id="closeCreateCharacterModalBtn" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-full">Cancel</button>
@@ -36,6 +41,7 @@ export const insertCharacterModalHtml = () => {
     createCharacterForm = document.getElementById('createCharacterForm');
     closeCreateCharacterModalBtn = document.getElementById('closeCreateCharacterModalBtn');
     newCharacterNameInput = document.getElementById('newCharacterNameInput');
+    newCharacterGoldInput = document.getElementById('newCharacterGoldInput'); // Get new input element
 
     if (closeCreateCharacterModalBtn) {
         closeCreateCharacterModalBtn.addEventListener('click', () => {
@@ -113,15 +119,21 @@ const handleCharacterSelection = async (event) => {
 const handleCreateCharacter = async (e) => {
     e.preventDefault();
     const characterName = newCharacterNameInput.value.trim();
+    const initialGold = parseInt(newCharacterGoldInput.value, 10); // Get initial gold value
 
     if (!characterName) {
         await showCustomModal('Validation Error', 'Character name cannot be empty.', [{ text: 'OK', value: true }]);
         return;
     }
 
+    if (isNaN(initialGold) || initialGold < 0) {
+        await showCustomModal('Validation Error', 'Starting gold must be a non-negative number.', [{ text: 'OK', value: true }]);
+        return;
+    }
+
     const { data, error } = await supabase
         .from('characters')
-        .insert([{ user_id: currentUserId, character_name: characterName }])
+        .insert([{ user_id: currentUserId, character_name: characterName, gold: initialGold }]) // Include gold
         .select('character_id');
 
     if (error) {
@@ -135,11 +147,12 @@ const handleCreateCharacter = async (e) => {
     }
 
     currentCharacterId = data[0].character_id;
-    await showCustomModal('Success', `Character "${characterName}" created successfully!`, [{ text: 'OK', value: true }]);
+    await showCustomModal('Success', `Character "${characterName}" created successfully with ${initialGold.toLocaleString()} gold!`, [{ text: 'OK', value: true }]);
     if (createCharacterModal) {
         createCharacterModal.classList.add('hidden');
     }
     newCharacterNameInput.value = '';
+    newCharacterGoldInput.value = '0'; // Reset gold input
     await loadCharacters(loadTraderPageData);
 };
 
