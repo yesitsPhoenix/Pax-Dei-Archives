@@ -408,7 +408,7 @@ const handleMarkAsSold = async (listingId) => {
                 quantity_sold: listing.quantity_listed,
                 sale_price_per_unit: listing.listed_price_per_unit,
                 total_sale_price: listing.total_listed_price,
-                character_id: listing.character_id // ADDED: Record the character_id
+                character_id: listing.character_id
             });
 
         if (insertSaleError) {
