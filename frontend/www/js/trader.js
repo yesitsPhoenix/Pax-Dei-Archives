@@ -1,17 +1,17 @@
+//trader.js:
 import { supabase } from './supabaseClient.js';
 import { initializeListings, loadActiveListings } from './modules/listings.js';
 import { initializeCharacters, insertCharacterModalHtml, currentCharacterId, getCurrentCharacter } from './modules/characters.js';
 import { initializeSales, loadSalesHistory } from './modules/sales.js';
 import { renderDashboard } from './modules/dashboard.js';
+import { renderSalesChart, setupSalesChartListeners } from './modules/salesChart.js';
 
 let currentUser = null;
-
 const dashboardListingsFilter = {
     itemName: null,
     categoryId: null,
     status: 'all'
 };
-
 export const showCustomModal = (title, message, buttons) => {
     return new Promise(resolve => {
         const modalId = `customModal-${Date.now()}`;
@@ -33,7 +33,6 @@ export const showCustomModal = (title, message, buttons) => {
             </div>
         `;
         document.body.insertAdjacentHTML('beforeend', modalHtml);
-
         const modalElement = document.getElementById(modalId);
         modalElement.querySelectorAll('button').forEach(button => {
             button.addEventListener('click', () => {
@@ -44,7 +43,6 @@ export const showCustomModal = (title, message, buttons) => {
         });
     });
 };
-
 const characterSelectEl = document.getElementById('character-select');
 const showCreateCharacterModalBtn = document.getElementById('showCreateCharacterModalBtn');
 const deleteCharacterBtn = document.getElementById('deleteCharacterBtn');
@@ -52,33 +50,25 @@ const traderDashboardAndForms = document.getElementById('traderDashboardAndForms
 const traderLoginContainer = document.getElementById('traderLoginContainer');
 const traderDiscordLoginButton = document.getElementById('traderDiscordLoginButton');
 const traderLoginError = document.getElementById('traderLoginError');
-
-
 const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     const traderLoginContainer = document.getElementById('traderLoginContainer');
     const traderDashboardAndForms = document.getElementById('traderDashboardAndForms');
-
     if (user) {
         currentUser = user;
-
         if (traderLoginContainer) {
             traderLoginContainer.style.display = 'none';
         }
-
         insertCharacterModalHtml();
-
         await initializeCharacters(currentUser.id, async () => {
             await loadTraderPageData();
         });
-
         initializeListings(currentUser.id);
         initializeSales();
-
         if (traderDashboardAndForms) {
             traderDashboardAndForms.style.display = 'block';
         }
-        
+
         await loadTraderPageData();
     } else {
         if (traderLoginContainer) {
@@ -89,41 +79,39 @@ const checkUser = async () => {
         }
     }
 };
-
 export const loadTraderPageData = async () => {
-    if (!currentCharacterId) {
+
+    if (!currentUser || !currentUser.id) {
         renderDashboard([]);
         await loadActiveListings();
         await loadSalesHistory();
+        renderSalesChart(null, 'monthly');
         return;
     }
 
     try {
         const { data: allListings, error: allListingsError } = await supabase.rpc('search_trader_listings', {
-            p_character_id: currentCharacterId, 
+            p_character_id: currentCharacterId,
             p_item_name: dashboardListingsFilter.itemName,
             p_category_id: dashboardListingsFilter.categoryId,
             p_status: dashboardListingsFilter.status,
             p_limit: 999999,
             p_offset: 0
         });
-
         if (allListingsError) {
             throw allListingsError;
         }
+        const currentCharacterData = await getCurrentCharacter();
 
-        const currentCharacterData = await getCurrentCharacter(); 
-        
         renderDashboard(allListings || [], currentCharacterData);
-
         await loadActiveListings();
         await loadSalesHistory();
+        await renderSalesChart(currentUser.id, 'daily');
     } catch (error) {
         console.error('Error loading trader page data:', error.message);
         await showCustomModal('Error', 'Failed to load trader data: ' + error.message, [{ text: 'OK', value: true }]);
     }
 };
-
 const addPageEventListeners = () => {
     if (showCreateCharacterModalBtn) {
         showCreateCharacterModalBtn.addEventListener('click', () => {
@@ -133,7 +121,6 @@ const addPageEventListeners = () => {
             }
         });
     }
-
     if (traderDiscordLoginButton) {
         traderDiscordLoginButton.addEventListener('click', async () => {
             const { error } = await supabase.auth.signInWithOAuth({
@@ -151,6 +138,7 @@ const addPageEventListeners = () => {
             }
         });
     }
+    setupSalesChartListeners();
 };
 document.addEventListener('DOMContentLoaded', async () => {
     addPageEventListeners();

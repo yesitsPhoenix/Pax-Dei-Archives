@@ -1,9 +1,10 @@
 .trader-container {
- max-width: 1200px;
- margin: 0 auto;
- padding: 20px;
- font-family: 'Inter', sans-serif;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: 'Inter', sans-serif;
 }
+
 .dashboard-header {
     font-size: 3rem;
     color: #FFD700;
@@ -14,379 +15,337 @@
 }
 
 .dashboard {
- display: grid;
- grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
- gap: 20px;
- margin-bottom: 40px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
 }
 
 .dashboard-card {
- background-color: #2a2a2a;
- padding: 20px;
- border-radius: 8px;
- box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
- text-align: center;
- transition: transform 0.2s ease, box-shadow 0.2s ease;
+    background-color: #2a2a2a;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    height: 100px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    margin-bottom: 20px;
 }
 
 .dashboard-card:hover {
- transform: translateY(-5px);
- box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    transform: translateY(-5px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
 }
 
 .dashboard-card h3 {
- font-size: 1.1rem;
- color: #fff;
- margin-bottom: 10px;
+    font-size: 1.2rem;
+    color: #fff;
+    margin-bottom: 10px;
+    font-weight: 900;
 }
 
 .dashboard-card p {
- font-size: 2rem;
- color: #ffc107;
- display: flex;
- align-items: center;
- justify-content: center;
- gap: 8px;
+    font-size: 1.2rem;
+    color: #ffc107;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1;
+    z-index: 1;
 }
 
-.dashboard-card p .fas {
- color: #ffc107;
+.dashboard-card i {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    font-size: 30px;
+    color: rgba(255, 255, 255, 0.05);
+    z-index: 0;
 }
+
 .fa-solid {
- color: #ffc107 !important;
-
+    color: #ffc107 !important;
 }
 
-.add-listing {
- background-color: #2a2a2a;
- padding: 30px;
- border-radius: 8px;
- box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
- margin-bottom: 40px;
+.add-listing,
+.active-listings,
+.chart-section,
+.sales-history {
+    background-color: #2a2a2a;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    margin-bottom: 40px;
 }
 
-.add-listing h2 {
- font-size: 1.8rem;
- color: #fff;
- margin-bottom: 25px;
- text-align: center;
- border-bottom: 1px solid #444;
- padding-bottom: 15px;
+.chart-section {
+    margin-top: 32px;
+    margin-bottom: 32px;
+}
+
+.sales-history {
+    margin-top: 32px;
+}
+
+.add-listing h2,
+.active-listings h2,
+.chart-section h2,
+.sales-history h2 {
+    font-size: 1.8rem;
+    color: #fff;
+    margin-bottom: 25px;
+    text-align: center;
+    border-bottom: 1px solid #444;
+    padding-bottom: 15px;
+    font-weight: bold;
 }
 
 .add-listing .form-group {
- margin-bottom: 20px;
+    margin-bottom: 20px;
 }
 
 .add-listing label {
- display: block;
- margin-bottom: 8px;
- font-weight: 600;
- color: #fff;
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #fff;
 }
 
 .add-listing input[type="text"],
 .add-listing input[type="number"],
 .add-listing select {
- width: 100%;
- padding: 10px;
- border: 1px solid #555;
- border-radius: 4px;
- background-color: #333;
- color: #fff;
- box-sizing: border-box;
- transition: border-color 0.2s ease;
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #555;
+    border-radius: 4px;
+    background-color: #333;
+    color: #fff;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease;
 }
 
 .add-listing input[type="text"]:focus,
 .add-listing input[type="number"]:focus,
 .add-listing select:focus {
- border-color: #ffc107;
- outline: none;
+    border-color: #ffc107;
+    outline: none;
 }
 
 .add-listing .btn {
- display: block;
- width: 100%;
- padding: 12px 20px;
- background-color: #ffc107;
- color: #1a1a1a;
- border: none;
- border-radius: 4px;
- font-size: 1.1rem;
- font-weight: bold;
- cursor: pointer;
- transition: background-color 0.2s ease, transform 0.1s ease;
+    display: block;
+    width: 100%;
+    padding: 12px 20px;
+    background-color: #ffc107;
+    color: #1a1a1a;
+    border: none;
+    border-radius: 4px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
 }
 
 .add-listing .btn:hover {
- background-color: #e0a800;
- transform: translateY(-2px);
+    background-color: #e0a800;
+    transform: translateY(-2px);
 }
 
 .add-listing .btn:disabled {
- background-color: #ccc;
- cursor: not-allowed;
- transform: none;
+    background-color: #ccc;
+    cursor: not-allowed;
+    transform: none;
 }
 
-
-.active-listings {
- background-color: #2a2a2a;
- padding: 30px;
- border-radius: 8px;
- box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
- margin-bottom: 40px;
+#loader,
+#sales-loader {
+    text-align: center;
+    padding: 20px;
+    font-size: 1.1rem;
+    color: #fff;
 }
 
-.active-listings h2 {
- font-size: 1.8rem;
- color: #fff;
- margin-bottom: 25px;
- text-align: center;
- border-bottom: 1px solid #444;
- padding-bottom: 15px;
+#listings-table,
+#sales-table {
+    width: 100%;
+    border-collapse: collapse;
 }
 
-#loader {
- text-align: center;
- padding: 20px;
- font-size: 1.1rem;
- color: #fff;
+#listings-table thead,
+#sales-table thead {
+    background-color: #333;
+    color: #fff;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
 }
 
-#listings-table, #sales-table {
- width: 100%;
- border-collapse: collapse;
+#listings-table th,
+#sales-table th {
+    padding: 15px;
+    text-align: left;
+    font-weight: 700;
 }
 
-#listings-table thead, #sales-table thead {
- background-color: #333;
- color: #fff;
- text-transform: uppercase;
- font-size: 0.85rem;
- letter-spacing: 0.05em;
+#listings-table tbody tr,
+#sales-table tbody tr {
+    border-bottom: 1px solid #444;
+    transition: background-color 0.2s ease;
 }
 
-#listings-table th, #sales-table th {
- padding: 15px;
- text-align: left;
- font-weight: 700;
+#listings-table tbody tr:last-child,
+#sales-table tbody tr:last-child {
+    border-bottom: none;
 }
 
-#listings-table tbody tr, #sales-table tbody tr {
- border-bottom: 1px solid #444;
- transition: background-color 0.2s ease;
+#listings-table tbody tr:hover,
+#sales-table tbody tr:hover {
+    background-color: #3a3a3a;
 }
 
-#listings-table tbody tr:last-child, #sales-table tbody tr:last-child {
- border-bottom: none;
+#listings-table td,
+#sales-table td {
+    padding: 15px;
+    color: #fff;
+    font-size: 0.9rem;
 }
-
-#listings-table tbody tr:hover, #sales-table tbody tr:hover {
- background-color: #3a3a3a;
-}
-
-#listings-table td, #sales-table td {
- padding: 15px;
- color: #fff;
- font-size: 0.9rem;
-}
-
 
 .action-buttons {
- display: flex;
- flex-wrap: wrap;
- gap: 8px;
- justify-content: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-start;
 }
 
 .action-buttons button {
- padding: 8px 12px;
- border-radius: 4px;
- font-size: 0.8rem;
- font-weight: bold;
- box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
- transition: all 0.15s ease-in-out;
- transform: scale(1);
- white-space: nowrap;
- color: #fff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.15s ease-in-out;
+    transform: scale(1);
+    white-space: nowrap;
+    color: #fff;
 }
 
 .action-buttons button:hover {
- transform: scale(1.05);
+    transform: scale(1.05);
 }
 
 .sold-btn {
- background-color: #28a745;
+    background-color: #28a745;
 }
 
 .sold-btn:hover {
- background-color: #218838;
+    background-color: #218838;
 }
 
 .edit-btn {
- background-color: #007bff;
+    background-color: #007bff;
 }
 
 .edit-btn:hover {
- background-color: #0069d9;
+    background-color: #0069d9;
 }
 
 .cancel-btn {
- background-color: #dc3545;
+    background-color: #dc3545;
 }
 
 .cancel-btn:hover {
- background-color: #c82333;
+    background-color: #c82333;
 }
 
-
-#customModal > div, #editListingModal > div {
- font-family: 'Inter', sans-serif;
- border-radius: 8px;
- box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
- background-color: #2a2a2a;
- color: #fff;
+#customModal > div,
+#editListingModal > div {
+    font-family: 'Inter', sans-serif;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    background-color: #2a2a2a;
+    color: #fff;
 }
 
 #modalTitle {
- color: #ffc107;
+    color: #ffc107;
 }
 
 #modalMessage {
- color: #fff;
+    color: #fff;
 }
 
 #modalButtons button {
- border-radius: 4px;
- font-weight: bold;
- transition: all 0.15s ease-in-out;
- transform: scale(1);
+    border-radius: 4px;
+    font-weight: bold;
+    transition: all 0.15s ease-in-out;
+    transform: scale(1);
 }
 
 #modalButtons button:hover {
- transform: scale(1.05);
-}
-
-
-.chart-section {
- background-color: #2a2a2a;
- padding: 30px;
- border-radius: 8px;
- box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
- margin-top: 32px;
- margin-bottom: 32px;
- color: white !important;
-}
-
-.chart-section h2 {
- font-size: 1.8rem;
- font-weight: bold;
- margin-bottom: 25px;
- color: #fff;
- text-align: center;
- border-bottom: 1px solid #444;
- padding-bottom: 15px;
+    transform: scale(1.05);
 }
 
 .chart-section canvas {
- max-width: 100%;
- height: 384px;
-
-}
-
-
-.sales-history {
- background-color: #2a2a2a;
- padding: 30px;
- border-radius: 8px;
- box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
- margin-top: 32px;
-}
-
-.sales-history h2 {
- font-size: 1.8rem;
- font-weight: bold;
- margin-bottom: 25px;
- color: #fff;
- text-align: center;
- border-bottom: 1px solid #444;
- padding-bottom: 15px;
-}
-
-#sales-loader {
- text-align: center;
- padding: 20px;
- font-size: 1.1rem;
- color: #fff;
-}
-
-
-#sales-table th {
- background-color: #333;
- color: #fff;
- text-transform: uppercase;
- font-size: 0.85rem;
- letter-spacing: 0.05em;
- padding: 15px;
- text-align: left;
- font-weight: 700;
-}
-
-#sales-table td {
- padding: 15px;
- color: #fff;
- font-size: 0.9rem;
- border-bottom: 1px solid #444;
-}
-
-#sales-table tbody tr:hover {
- background-color: #3a3a3a;
-}
-
-
-@media (max-width: 768px) {
- .dashboard {
- grid-template-columns: 1fr;
- }
-
- .add-listing, .active-listings, .chart-section, .sales-history {
- padding: 20px;
- }
-
- .add-listing h2, .active-listings h2, .chart-section h2, .sales-history h2 {
- font-size: 1.5rem;
- }
-
- #listings-table th, #listings-table td,
- #sales-table th, #sales-table td {
- padding: 8px 10px;
- font-size: 0.85rem;
- }
-
-
- .active-listings, .sales-history {
- overflow-x: auto;
- }
- #listings-table, #sales-table {
- min-width: 600px;
- }
+    max-width: 100%;
+    height: 384px;
 }
 
 .bg-white {
- background-color: #1F2124 !important;
+    background-color: #1F2124 !important;
 }
 
-.relative h-96 w-full {
- color: white !important;
-}
-
-
-.text-2xl, .block  {
-    color: white !important;
-}
-.text-xl, .mb-6 {
+.text-2xl,
+.block {
     color: white !important;
 }
 
+.text-xl,
+.mb-6 {
+    color: white !important;
+}
+
+@media (max-width: 768px) {
+    .dashboard {
+        grid-template-columns: 1fr;
+    }
+
+    .add-listing,
+    .active-listings,
+    .chart-section,
+    .sales-history {
+        padding: 20px;
+    }
+
+    .add-listing h2,
+    .active-listings h2,
+    .chart-section h2,
+    .sales-history h2 {
+        font-size: 1.5rem;
+    }
+
+    #listings-table th,
+    #listings-table td,
+    #sales-table th,
+    #sales-table td {
+        padding: 8px 10px;
+        font-size: 0.85rem;
+    }
+
+    .active-listings,
+    .sales-history {
+        overflow-x: auto;
+    }
+
+    #listings-table,
+    #sales-table {
+        min-width: 600px;
+    }
+}
