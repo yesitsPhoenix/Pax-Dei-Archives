@@ -57,7 +57,6 @@ export const initializeListings = (userId) => {
     currentUserId = userId;
     addListingsEventListeners();
     fetchAndPopulateCategories();
-    // Set initial values for sorting dropdowns
     if (sortBySelect) {
         sortBySelect.value = currentSort.column;
     }
@@ -408,7 +407,8 @@ const handleMarkAsSold = async (listingId) => {
                 listing_id: listing.listing_id,
                 quantity_sold: listing.quantity_listed,
                 sale_price_per_unit: listing.listed_price_per_unit,
-                total_sale_price: listing.total_listed_price
+                total_sale_price: listing.total_listed_price,
+                character_id: listing.character_id // ADDED: Record the character_id
             });
 
         if (insertSaleError) {
