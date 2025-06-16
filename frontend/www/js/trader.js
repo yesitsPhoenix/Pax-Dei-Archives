@@ -106,7 +106,7 @@ export const loadTraderPageData = async () => {
         renderDashboard(allListings || [], currentCharacterData);
         await loadActiveListings();
         await loadSalesHistory();
-        await renderSalesChart(currentUser.id, 'daily');
+        await renderSalesChart('daily');
     } catch (error) {
         console.error('Error loading trader page data:', error.message);
         await showCustomModal('Error', 'Failed to load trader data: ' + error.message, [{ text: 'OK', value: true }]);

@@ -1,15 +1,11 @@
 // frontend/www/js/modules/salesChart.js
 import { supabase } from '../supabaseClient.js';
+import { currentCharacterId } from './characters.js';
 
 let salesChart = null;
-let currentUserIdForChart = null;
 
-export const renderSalesChart = async (userId, timeframe = 'daily') => {
-    if (userId) {
-        currentUserIdForChart = userId;
-    }
-
-    if (!currentUserIdForChart) {
+export const renderSalesChart = async (timeframe = 'daily') => {
+    if (!currentCharacterId) {
         if (salesChart) {
             salesChart.destroy();
             salesChart = null;
@@ -21,7 +17,7 @@ export const renderSalesChart = async (userId, timeframe = 'daily') => {
         const { data: sales, error } = await supabase
             .from('sales')
             .select('sale_date, total_sale_price')
-            .eq('user_id', currentUserIdForChart)
+            .eq('character_id', currentCharacterId)
             .order('sale_date', { ascending: true });
 
         if (error) {
@@ -78,7 +74,7 @@ export const renderSalesChart = async (userId, timeframe = 'daily') => {
                             color: 'rgb(255, 255, 255)'
                         },
                         ticks: {
-                            color: 'rgb(255, 255, 255)', 
+                            color: 'rgb(255, 255, 255)',
                             callback: function(value, index, values) {
                                 return value.toLocaleString();
                             }
@@ -176,12 +172,12 @@ export const setupSalesChartListeners = () => {
     const viewSalesDailyBtn = document.getElementById('viewSalesDaily');
 
     if (viewSalesWeeklyBtn) {
-        viewSalesWeeklyBtn.addEventListener('click', () => renderSalesChart(currentUserIdForChart, 'weekly'));
+        viewSalesWeeklyBtn.addEventListener('click', () => renderSalesChart('weekly'));
     }
     if (viewSalesMonthlyBtn) {
-        viewSalesMonthlyBtn.addEventListener('click', () => renderSalesChart(currentUserIdForChart, 'monthly'));
+        viewSalesMonthlyBtn.addEventListener('click', () => renderSalesChart('monthly'));
     }
     if (viewSalesDailyBtn) {
-        viewSalesDailyBtn.addEventListener('click', () => renderSalesChart(currentUserIdForChart, 'daily'));
+        viewSalesDailyBtn.addEventListener('click', () => renderSalesChart('daily'));
     }
 };
