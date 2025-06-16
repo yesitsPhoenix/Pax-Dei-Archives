@@ -48,7 +48,6 @@
             </nav>
         </div>
     </header>
-
     <main class="trader-container">
         <div class="container">
             <div id="traderLoginContainer" class="admin-form-container" style="display: none; text-align: center;">
@@ -79,6 +78,9 @@
 
             <div id="traderDashboardAndForms" style="display: none;">
                 <h1 class="dashboard-header">Sales Dashboard</h1>
+                <em>It may be necessary to occasionally update gold manually (due to PVE gold pickup).</em>
+                <br>
+                <br>
                 <section class="dashboard">
                     <div class="dashboard-card">
                         <h3>Gross Sales</h3>
@@ -142,7 +144,6 @@
                             <label for="filter-listing-category" class="block text-gray-400 text-sm font-bold mb-1">Filter by Category:</label>
                             <select id="filter-listing-category" class="p-2 border rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
                                 <option value="">All Categories</option>
-                                <!-- Categories will be populated by JavaScript -->
                             </select>
                         </div>
                         <div class="flex-1 min-w-[150px]">
@@ -153,9 +154,25 @@
                                 <option value="cancelled">Cancelled</option>
                                 <option value="all">All Listings</option>
                             </select>
+                        </div>       
+                        <div class="flex-1 min-w-[150px]">
+                            <label for="sort-by" class="block text-gray-400 text-sm font-bold mb-1">Sort By:</label>
+                            <select id="sort-by" class="p-2 border rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
+                                <option value="listing_date">Listed On</option>
+                                <option value="item_name">Item Name</option>
+                                <option value="quantity_listed">Quantity</option>
+                                <option value="listed_price_per_unit">Price Per Unit</option>
+                                <option value="total_listed_price">Total Value</option>
+                            </select>
+                        </div>
+                        <div class="flex-1 min-w-[150px]">
+                            <label for="sort-direction" class="block text-gray-400 text-sm font-bold mb-1">Sort Direction:</label>
+                            <select id="sort-direction" class="p-2 border rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
+                                <option value="desc">Descending</option>
+                                <option value="asc">Ascending</option>
+                            </select>
                         </div>
                     </div>
-                    
                     <div id="loader">Loading...</div>
                     <table id="listings-table" style="display:none;">
                         <thead>
@@ -175,15 +192,13 @@
                     </table>
                     <div id="listings-pagination" class="flex justify-center items-center space-x-2 mt-4 text-white"></div>
                 </section>
-
                 <section class="sales-history my-8">
                     <h2 class="text-2xl font-bold mb-4 text-gray-800">Sales History Ledger</h2>
                     <div class="flex justify-end mb-4">
                         <button id="download-sales-csv" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-full shadow-md transition duration-150 ease-in-out transform hover:scale-105">
-                            <i class="fas fa-download mr-2"></i> Download Sales History CSV
+                            <i class="fas fa-download mr-2"></i> Download Market History CSV
                         </button>
                     </div>
-                    
                     <div id="sales-loader">Loading sales data...</div>
                     <table id="sales-table" class="min-w-full bg-white shadow-md rounded-lg overflow-hidden" style="display:none;">
                         <thead>
@@ -204,7 +219,6 @@
             </div>
         </div>
     </main>
-
     <footer>
         <div class="container">
             <div class="row">
@@ -220,7 +234,6 @@
             <span class="nav-text-profile">Made by Phoenix ✨</span>
         </div>
     </footer>
-
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script type="module" src="frontend/www/js/main.js"></script>
     <script type="module" src="frontend/www/js/trader.js"></script>

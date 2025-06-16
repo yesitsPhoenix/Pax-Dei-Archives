@@ -11,8 +11,11 @@ const filterListingItemNameInput = document.getElementById('filter-listing-item-
 const filterListingCategorySelect = document.getElementById('filter-listing-category');
 const filterListingStatusSelect = document.getElementById('filter-listing-status');
 const listingsPaginationContainer = document.getElementById('listings-pagination');
+const sortBySelect = document.getElementById('sort-by');
+const sortDirectionSelect = document.getElementById('sort-direction');
 
-const LISTINGS_PER_PAGE = 10;
+
+const LISTINGS_PER_PAGE = 15;
 let currentListingsPage = 1;
 let currentUserId = null;
 let currentEditingListingId = null;
@@ -21,6 +24,7 @@ let listingsFilter = {
     categoryId: '',
     status: 'active'
 };
+let currentSort = { column: 'item_name', direction: 'asc' };
 
 const editListingModalHtml = `
     <div id="editListingModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
@@ -53,6 +57,13 @@ export const initializeListings = (userId) => {
     currentUserId = userId;
     addListingsEventListeners();
     fetchAndPopulateCategories();
+    // Set initial values for sorting dropdowns
+    if (sortBySelect) {
+        sortBySelect.value = currentSort.column;
+    }
+    if (sortDirectionSelect) {
+        sortDirectionSelect.value = currentSort.direction;
+    }
 };
 
 export const loadActiveListings = async () => {
@@ -73,7 +84,9 @@ export const loadActiveListings = async () => {
             p_category_id: listingsFilter.categoryId ? parseInt(listingsFilter.categoryId) : null,
             p_status: listingsFilter.status,
             p_limit: LISTINGS_PER_PAGE,
-            p_offset: (currentListingsPage - 1) * LISTINGS_PER_PAGE
+            p_offset: (currentListingsPage - 1) * LISTINGS_PER_PAGE,
+            p_sort_by: currentSort.column,
+            p_sort_direction: currentSort.direction
         });
 
         if (error) throw error;
@@ -174,6 +187,22 @@ const addListingsEventListeners = () => {
             handleMarkAsSold(target.dataset.id);
         }
     });
+
+    if (sortBySelect) {
+        sortBySelect.addEventListener('change', (e) => {
+            currentSort.column = e.target.value;
+            currentListingsPage = 1;
+            loadActiveListings();
+        });
+    }
+
+    if (sortDirectionSelect) {
+        sortDirectionSelect.addEventListener('change', (e) => {
+            currentSort.direction = e.target.value;
+            currentListingsPage = 1;
+            loadActiveListings();
+        });
+    }
 
     document.getElementById('editListingForm').addEventListener('submit', handleEditListingSave);
     document.getElementById('closeEditModal').addEventListener('click', () => {
@@ -386,7 +415,6 @@ const handleMarkAsSold = async (listingId) => {
             console.error('Error inserting sales record:', insertSaleError.message);
             await showCustomModal('Error', 'Listing marked as sold, but failed to record sale history: ' + insertSaleError.message, [{ text: 'OK', value: true }]);
         } else {
-            // Also add the sale amount to the character's gold
             const { data: characterData, error: fetchGoldError } = await supabase
                 .from('characters')
                 .select('gold')
@@ -428,7 +456,7 @@ const handleEditListingSave = async (e) => {
     }
 
     const listed_price_per_unit = total_listed_price / quantity_listed;
-    const market_fee = total_listed_price * 0.05;
+    const market_fee = Math.ceil(total_listed_price * 0.05);
 
     const { error } = await supabase
         .from('market_listings')

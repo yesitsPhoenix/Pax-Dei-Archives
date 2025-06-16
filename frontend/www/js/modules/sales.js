@@ -120,29 +120,51 @@ const handleDownloadCsv = async () => {
     }
 
     try {
-        const { data: sales, error } = await supabase
-            .from('sales')
+        const { data: listings, error } = await supabase
+            .from('market_listings')
             .select(`
-                sale_date,
-                quantity_sold,
-                total_sale_price,
-                market_listings!inner ( listing_id, character_id, items(item_name, item_categories(category_name)) )
+                listing_id, listing_date, quantity_listed, total_listed_price, is_fully_sold, is_cancelled,
+                items(item_name, item_categories(category_name)),
+                sales(quantity_sold, total_sale_price)
             `)
-            .eq('market_listings.character_id', currentCharacterId)
-            .order('sale_date', { ascending: false });
+            .eq('character_id', currentCharacterId)
+            .or('is_fully_sold.eq.true,is_cancelled.eq.true')
+            .order('listing_date', { ascending: false });
 
         if (error) throw error;
 
-        const headers = ['Date', 'Item Name', 'Category', 'Quantity Sold', 'Total Sale Price'];
+        const headers = ['Date', 'Item Name', 'Category', 'Quantity', 'Total Price', 'Status'];
         const csvRows = [headers.join(',')];
 
-        sales.forEach(sale => {
-            const date = new Date(sale.sale_date).toLocaleDateString();
-            const itemName = `"${sale.market_listings?.items?.item_name || 'N/A'}"`;
-            const category = `"${sale.market_listings?.items?.item_categories?.category_name || 'N/A'}"`;
-            const quantity = sale.quantity_sold;
-            const price = sale.total_sale_price;
-            csvRows.push([date, itemName, category, quantity, price].join(','));
+        listings.forEach(listing => {
+            const date = new Date(listing.listing_date).toLocaleDateString();
+            const itemName = `"${listing.items?.item_name || 'N/A'}"`;
+            const category = `"${listing.items?.item_categories?.category_name || 'N/A'}"`;
+            let quantity = 0;
+            let totalPrice = 0;
+            let status = 'Active';
+
+            if (listing.is_fully_sold) {
+                status = 'Sold';
+                if (listing.sales && listing.sales.length > 0) {
+                    quantity = listing.sales[0].quantity_sold;
+                    totalPrice = listing.sales[0].total_sale_price;
+                } else {
+                    quantity = listing.quantity_listed;
+                    totalPrice = listing.total_listed_price;
+                }
+            } else if (listing.is_cancelled) {
+                status = 'Cancelled';
+                quantity = listing.quantity_listed;
+                totalPrice = listing.total_listed_price;
+            } else {
+
+                status = 'Active';
+                quantity = listing.quantity_listed;
+                totalPrice = listing.total_listed_price;
+            }
+            
+            csvRows.push([date, itemName, category, quantity, totalPrice, status].join(','));
         });
 
         const csvString = csvRows.join('\n');
@@ -150,7 +172,7 @@ const handleDownloadCsv = async () => {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.setAttribute('href', url);
-        link.setAttribute('download', 'sales-history.csv');
+        link.setAttribute('download', 'market-activity-history.csv');
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -162,7 +184,7 @@ const handleDownloadCsv = async () => {
     } finally {
         if (downloadSalesCsvButton) {
             downloadSalesCsvButton.disabled = false;
-            downloadSalesCsvButton.textContent = 'Download Sales CSV';
+            downloadSalesCsvButton.textContent = 'Download Sales History CSV';
         }
     }
 };

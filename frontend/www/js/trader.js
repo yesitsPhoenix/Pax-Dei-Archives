@@ -6,11 +6,10 @@ import { renderDashboard } from './modules/dashboard.js';
 
 let currentUser = null;
 
-// Define a filter object specifically for dashboard data aggregation (unfiltered)
 const dashboardListingsFilter = {
     itemName: null,
     categoryId: null,
-    status: 'all' // Assuming 'all' means no status filter for dashboard aggregates
+    status: 'all'
 };
 
 export const showCustomModal = (title, message, buttons) => {
@@ -105,7 +104,7 @@ export const loadTraderPageData = async () => {
             p_item_name: dashboardListingsFilter.itemName,
             p_category_id: dashboardListingsFilter.categoryId,
             p_status: dashboardListingsFilter.status,
-            p_limit: 999999, // Fetch a large number to ensure all for dashboard calculations
+            p_limit: 999999,
             p_offset: 0
         });
 
@@ -153,7 +152,6 @@ const addPageEventListeners = () => {
         });
     }
 };
-
 document.addEventListener('DOMContentLoaded', async () => {
     addPageEventListeners();
     await checkUser();
