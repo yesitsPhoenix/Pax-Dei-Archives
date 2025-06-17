@@ -31,7 +31,6 @@ export const loadTransactionHistory = async () => {
     try {
         const offset = (currentTransactionsPage - 1) * TRANSACTIONS_PER_PAGE;
 
-        // Fetch sales data
         const { data: salesData, error: salesError, count: salesCount } = await supabase
             .from('sales')
             .select(`
@@ -42,7 +41,6 @@ export const loadTransactionHistory = async () => {
 
         if (salesError) throw salesError;
 
-        // Fetch purchase data
         const { data: purchasesData, error: purchasesError, count: purchasesCount } = await supabase
             .from('purchases')
             .select(`
@@ -53,7 +51,6 @@ export const loadTransactionHistory = async () => {
 
         if (purchasesError) throw purchasesError;
 
-        // Fetch cancelled listings data
         const { data: cancelledListingsData, error: cancelledError, count: cancelledCount } = await supabase
             .from('market_listings')
             .select(`
@@ -64,6 +61,15 @@ export const loadTransactionHistory = async () => {
             .eq('is_cancelled', true);
 
         if (cancelledError) throw cancelledError;
+
+        const { data: pveTransactionsData, error: pveError, count: pveCount } = await supabase
+            .from('pve_transactions')
+            .select(`
+                transaction_id, transaction_date, gold_amount, description
+            `, { count: 'exact' })
+            .eq('character_id', currentCharacterId);
+
+        if (pveError) throw pveError;
 
         const allTransactions = [];
 
@@ -106,9 +112,22 @@ export const loadTransactionHistory = async () => {
             });
         });
 
+        pveTransactionsData.forEach(pve => {
+            allTransactions.push({
+                type: 'PVE Gold',
+                date: pve.transaction_date,
+                item_name: pve.description || 'N/A',
+                category_name: 'PVE',
+                quantity: 1, // PVE is typically a single transaction for a gold amount
+                price_per_unit: Math.round(pve.gold_amount || 0), // Use gold_amount as price per unit for PVE
+                total_amount: Math.round(pve.gold_amount || 0),
+                fee: 0
+            });
+        });
+
         allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        const totalCount = salesCount + purchasesCount + cancelledCount;
+        const totalCount = salesCount + purchasesCount + cancelledCount + pveCount;
         
         const paginatedTransactions = allTransactions.slice(offset, offset + TRANSACTIONS_PER_PAGE);
 
@@ -135,14 +154,22 @@ const renderTransactionTable = (transactions) => {
     transactions.forEach(transaction => {
         const row = document.createElement('tr');
         row.className = 'border-b border-gray-200 hover:bg-gray-100';
+
+        // Adjust display for PVE transactions
+        const itemNameDisplay = transaction.type === 'PVE Gold' ? transaction.item_name : (transaction.item_name || 'N/A');
+        const quantityDisplay = transaction.type === 'PVE Gold' ? 'N/A' : (transaction.quantity?.toLocaleString() || 'N/A');
+        const pricePerUnitDisplay = transaction.type === 'PVE Gold' ? transaction.total_amount?.toLocaleString() : (transaction.price_per_unit?.toLocaleString() || 'N/A');
+        const totalAmountDisplay = transaction.type === 'PVE Gold' ? transaction.total_amount?.toLocaleString() : (transaction.total_amount?.toLocaleString() || 'N/A');
+
+
         row.innerHTML = `
             <td class="py-3 px-6 text-left whitespace-nowrap">${transaction.type}</td>
             <td class="py-3 px-6 text-left">${transaction.date ? new Date(transaction.date).toLocaleDateString() : 'N/A'}</td>
-            <td class="py-3 px-6 text-left whitespace-nowrap">${transaction.item_name || 'N/A'}</td>
+            <td class="py-3 px-6 text-left whitespace-nowrap">${itemNameDisplay}</td>
             <td class="py-3 px-6 text-left">${transaction.category_name || 'N/A'}</td>
-            <td class="py-3 px-6 text-left">${transaction.quantity?.toLocaleString() || 'N/A'}</td>
-            <td class="py-3 px-6 text-left">${transaction.price_per_unit?.toLocaleString() || 'N/A'}</td>
-            <td class="py-3 px-6 text-left">${transaction.total_amount?.toLocaleString() || 'N/A'}</td>
+            <td class="py-3 px-6 text-left">${quantityDisplay}</td>
+            <td class="py-3 px-6 text-left">${pricePerUnitDisplay}</td>
+            <td class="py-3 px-6 text-left">${totalAmountDisplay}</td>
             <td class="py-3 px-6 text-left">${transaction.fee?.toLocaleString() || 'N/A'}</td>
         `;
         salesBody.appendChild(row);
@@ -192,7 +219,6 @@ const handleDownloadCsv = async () => {
     }
 
     try {
-        // Fetch all sales (no pagination)
         const { data: salesData, error: salesError } = await supabase
             .from('sales')
             .select(`
@@ -203,7 +229,6 @@ const handleDownloadCsv = async () => {
 
         if (salesError) throw salesError;
 
-        // Fetch all purchases (no pagination)
         const { data: purchasesData, error: purchasesError } = await supabase
             .from('purchases')
             .select(`
@@ -214,7 +239,6 @@ const handleDownloadCsv = async () => {
 
         if (purchasesError) throw purchasesError;
 
-        // Fetch all cancelled listings (no pagination)
         const { data: cancelledListingsData, error: cancelledError } = await supabase
             .from('market_listings')
             .select(`
@@ -225,6 +249,15 @@ const handleDownloadCsv = async () => {
             .eq('is_cancelled', true);
 
         if (cancelledError) throw cancelledError;
+
+        const { data: pveTransactionsData, error: pveError } = await supabase
+            .from('pve_transactions')
+            .select(`
+                transaction_id, transaction_date, gold_amount, description
+            `)
+            .eq('character_id', currentCharacterId);
+
+        if (pveError) throw pveError;
 
         const allTransactions = [];
 
@@ -267,6 +300,19 @@ const handleDownloadCsv = async () => {
             });
         });
 
+        pveTransactionsData.forEach(pve => {
+            allTransactions.push({
+                type: 'PVE Gold',
+                date: pve.transaction_date,
+                item_name: pve.description || 'N/A',
+                category_name: 'PVE',
+                quantity: 1,
+                price_per_unit: Math.round(pve.gold_amount || 0),
+                total_amount: Math.round(pve.gold_amount || 0),
+                fee: 0
+            });
+        });
+
         allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         const headers = ['Type', 'Date', 'Item Name', 'Category', 'Quantity', 'Price Per Unit', 'Total Amount', 'Fee'];
@@ -274,12 +320,12 @@ const handleDownloadCsv = async () => {
 
         allTransactions.forEach(transaction => {
             const date = new Date(transaction.date).toLocaleDateString();
-            const itemName = `"${transaction.item_name || 'N/A'}"`;
+            const itemName = `"${transaction.type === 'PVE Gold' ? transaction.item_name : (transaction.item_name || 'N/A').replace(/"/g, '""')}"`;
             const category = `"${transaction.category_name || 'N/A'}"`;
-            const quantity = transaction.quantity?.toLocaleString() || 'N/A';
-            const pricePerUnit = transaction.price_per_unit?.toLocaleString() || 'N/A';
-            const totalAmount = transaction.total_amount?.toLocaleString() || 'N/A';
-            const fee = transaction.fee?.toLocaleString() || 'N/A';
+            const quantity = transaction.type === 'PVE Gold' ? '' : (transaction.quantity?.toLocaleString() || '');
+            const pricePerUnit = transaction.type === 'PVE Gold' ? transaction.total_amount?.toLocaleString() : (transaction.price_per_unit?.toLocaleString() || '');
+            const totalAmount = transaction.total_amount?.toLocaleString() || '';
+            const fee = transaction.fee?.toLocaleString() || '';
 
             csvRows.push([transaction.type, date, itemName, category, quantity, pricePerUnit, totalAmount, fee].join(','));
         });

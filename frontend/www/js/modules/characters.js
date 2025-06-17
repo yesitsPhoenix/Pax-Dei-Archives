@@ -1,14 +1,18 @@
 import { supabase } from '../supabaseClient.js';
 import { showCustomModal, loadTraderPageData } from '../trader.js';
+import { loadTransactionHistory } from './sales.js';
+import { renderSalesChart } from './salesChart.js';
 
 const characterSelect = document.getElementById('character-select');
 let createCharacterModal = null;
 let createCharacterForm = null;
 let closeCreateCharacterModalBtn = null;
 let newCharacterNameInput = null;
-let newCharacterGoldInput = null; // New input for initial gold
+let newCharacterGoldInput = null;
 let deleteCharacterBtn = null;
 const setGoldBtn = document.getElementById('setGoldBtn');
+const pveBtn = document.getElementById('pveBtn');
+
 
 let currentUserId = null;
 export let currentCharacterId = null;
@@ -41,7 +45,7 @@ export const insertCharacterModalHtml = () => {
     createCharacterForm = document.getElementById('createCharacterForm');
     closeCreateCharacterModalBtn = document.getElementById('closeCreateCharacterModalBtn');
     newCharacterNameInput = document.getElementById('newCharacterNameInput');
-    newCharacterGoldInput = document.getElementById('newCharacterGoldInput'); // Get new input element
+    newCharacterGoldInput = document.getElementById('newCharacterGoldInput');
 
     if (closeCreateCharacterModalBtn) {
         closeCreateCharacterModalBtn.addEventListener('click', () => {
@@ -88,10 +92,12 @@ const loadCharacters = async (onCharacterSelectedCallback) => {
         currentCharacterId = null;
         if (deleteCharacterBtn) deleteCharacterBtn.style.display = 'none';
         if (setGoldBtn) setGoldBtn.style.display = 'none';
+        if (pveBtn) pveBtn.style.display = 'none';
     } else {
         characterSelect.disabled = false;
         if (deleteCharacterBtn) deleteCharacterBtn.style.display = 'inline-block';
         if (setGoldBtn) setGoldBtn.style.display = 'inline-block';
+        if (pveBtn) pveBtn.style.display = 'inline-block';
 
         characters.forEach(char => {
             const option = document.createElement('option');
@@ -119,7 +125,7 @@ const handleCharacterSelection = async (event) => {
 const handleCreateCharacter = async (e) => {
     e.preventDefault();
     const characterName = newCharacterNameInput.value.trim();
-    const initialGold = parseInt(newCharacterGoldInput.value, 10); // Get initial gold value
+    const initialGold = parseInt(newCharacterGoldInput.value, 10);
 
     if (!characterName) {
         await showCustomModal('Validation Error', 'Character name cannot be empty.', [{ text: 'OK', value: true }]);
@@ -133,7 +139,7 @@ const handleCreateCharacter = async (e) => {
 
     const { data, error } = await supabase
         .from('characters')
-        .insert([{ user_id: currentUserId, character_name: characterName, gold: initialGold }]) // Include gold
+        .insert([{ user_id: currentUserId, character_name: characterName, gold: initialGold }])
         .select('character_id');
 
     if (error) {
@@ -152,7 +158,7 @@ const handleCreateCharacter = async (e) => {
         createCharacterModal.classList.add('hidden');
     }
     newCharacterNameInput.value = '';
-    newCharacterGoldInput.value = '0'; // Reset gold input
+    newCharacterGoldInput.value = '0';
     await loadCharacters(loadTraderPageData);
 };
 
@@ -208,6 +214,71 @@ const updateCharacterGold = async (newGoldAmount) => {
     await loadTraderPageData();
 };
 
+const updateCharacterGoldByPveTransaction = async (newTotalGold) => {
+    if (!currentCharacterId) {
+        await showCustomModal("Error", "No character selected to record PVE gold.", [{ text: 'OK', value: true }]);
+        return;
+    }
+    if (!currentUserId) {
+        await showCustomModal("Error", "User not authenticated. Cannot record PVE transaction.", [{ text: 'OK', value: true }]);
+        console.error("Attempted PVE transaction without authenticated user_id.");
+        return;
+    }
+
+    const currentCharacter = await getCurrentCharacter();
+    if (!currentCharacter) {
+        return;
+    }
+
+    const goldChange = newTotalGold - currentCharacter.gold;
+
+    if (newTotalGold < 0) {
+        await showCustomModal("Validation Error", "PVE transaction would result in negative gold. Please enter a valid non-negative amount.", [{ text: 'OK', value: true }]);
+        return;
+    }
+
+    const { error: updateCharError } = await supabase
+        .from('characters')
+        .update({ gold: newTotalGold })
+        .eq('character_id', currentCharacterId)
+        .eq('user_id', currentUserId);
+
+    if (updateCharError) {
+        await showCustomModal('Error', `Error updating character gold for PVE: ${updateCharError.message}`, [{ text: 'OK', value: true }]);
+        console.error('Error updating character gold for PVE:', updateCharError.message);
+        return;
+    }
+
+    const description = goldChange >= 0
+        ? `PVE Gold Change: +${goldChange.toLocaleString()}`
+        : `PVE Gold Change: ${goldChange.toLocaleString()}`;
+
+    const { error: insertPveError } = await supabase
+        .from('pve_transactions')
+        .insert([
+            {
+                character_id: currentCharacterId,
+                gold_amount: goldChange,
+                description: description,
+                user_id: currentUserId
+            }
+        ]);
+
+    if (insertPveError) {
+        console.error('Error recording PVE transaction:', insertPveError.message);
+        await showCustomModal('Error', `Failed to record PVE transaction: ${insertPveError.message}. Gold updated, but transaction history might be incomplete.`, [{ text: 'OK', value: true }]);
+        return;
+    }
+
+    const message = `Character gold set to ${newTotalGold.toLocaleString()}. Recorded change: ${goldChange >= 0 ? '+' : ''}${goldChange.toLocaleString()} gold from PVE.`;
+
+    await showCustomModal('Success', message, [{ text: 'OK', value: true }]);
+    await loadTraderPageData();
+    await loadTransactionHistory();
+    await renderSalesChart();
+};
+
+
 const showSetGoldInputModal = (onConfirm, onCancel) => {
     const modalId = `setGoldInputModal-${Date.now()}`;
     const modalHtml = `
@@ -252,6 +323,56 @@ const showSetGoldInputModal = (onConfirm, onCancel) => {
     goldAmountInput.focus();
 };
 
+const showPveGoldInputModal = async (onConfirm, onCancel) => {
+    const modalId = `pveGoldInputModal-${Date.now()}`;
+
+    const currentCharacter = await getCurrentCharacter();
+    const currentGold = currentCharacter ? currentCharacter.gold : 0;
+
+    const modalHtml = `
+        <div id="${modalId}" class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50">
+            <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+                <h3 class="text-lg font-bold mb-4">Set Character Gold (PVE)</h3>
+                <p class="text-gray-600 text-sm mb-3">Current Gold: ${currentGold.toLocaleString()}</p>
+                <input type="number" id="pveGoldAmountInput" placeholder="Enter new total gold amount" class="w-full p-2 border rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-700" value="${currentGold}">
+                <div class="flex justify-end gap-2">
+                    <button id="cancelPveGold" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-full">Cancel</button>
+                    <button id="confirmPveGold" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-full">Set & Record</button>
+                </div>
+                <p id="pveGoldInputError" class="text-red-500 text-sm mt-2" style="display:none;"></p>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    const pveGoldAmountInput = document.getElementById('pveGoldAmountInput');
+    const confirmButton = document.getElementById('confirmPveGold');
+    const cancelButton = document.getElementById('cancelPveGold');
+    const errorEl = document.getElementById('pveGoldInputError');
+
+    confirmButton.onclick = null;
+    cancelButton.onclick = null;
+
+    confirmButton.addEventListener('click', () => {
+        const amount = parseInt(pveGoldAmountInput.value, 10);
+        if (!isNaN(amount) && amount >= 0) {
+            onConfirm(amount);
+            document.getElementById(modalId).remove();
+        } else {
+            errorEl.textContent = 'Please enter a valid non-negative number for the new total gold.';
+            errorEl.style.display = 'block';
+        }
+    });
+
+    cancelButton.addEventListener('click', () => {
+        onCancel();
+        document.getElementById(modalId).remove();
+    });
+
+    pveGoldAmountInput.focus();
+};
+
+
 export const getCurrentCharacter = async () => {
     if (!currentCharacterId) return null;
     const { data, error } = await supabase
@@ -287,6 +408,24 @@ const addCharacterEventListeners = () => {
                 },
                 () => {
                     console.log("Set Gold operation cancelled.");
+                }
+            );
+        });
+    }
+
+    if (pveBtn) {
+        pveBtn.addEventListener('click', async () => {
+            if (!currentCharacterId) {
+                showCustomModal("Error", "Please select a character first to record PVE gold.", [{ text: 'OK', value: true }]);
+                return;
+            }
+            
+            await showPveGoldInputModal(
+                async (newTotalGold) => {
+                    await updateCharacterGoldByPveTransaction(newTotalGold);
+                },
+                () => {
+                    console.log("PVE Gold transaction cancelled.");
                 }
             );
         });

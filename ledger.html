@@ -72,9 +72,12 @@
                 <button id="setGoldBtn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">
                     Set Gold
                 </button>
+                <button id="pveBtn" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-full">
+                    Enter Manual PVE Gold
+                </button>
             </div>
             <div id="traderDashboardAndForms" style="display: none;">
-                <h1 class="dashboard-header">Sales Dashboard</h1>
+                <h1 class="dashboard-header">Trasnsaction Dashboard</h1>
                 <em>It may be necessary to occasionally update gold manually (due to Dungeons, POIs, and manual gold pickup).</em>
                 <br>
                 <br>
@@ -103,7 +106,7 @@
 
 
                 <section class="sales-chart-section my-8">
-                    <h2 class="text-2xl font-bold mb-4 text-gray-800">Sales Trends</h2>
+                    <h2 class="text-2xl font-bold mb-4 text-gray-800">Transaction Trends</h2>
                     <div class="relative mb-4" style="height: 350px;">
                         <canvas id="salesChartCanvas"></canvas>
                     </div>
@@ -175,7 +178,7 @@
                 </section>
             </div>
                 <section class="active-listings">
-                    <h2>Active Listings</h2>
+                    <h2>Active Market Listings</h2>
                     <div class="flex flex-wrap items-center gap-4 mb-6">
                         <div class="flex-1 min-w-[200px]">
                             <label for="filter-listing-item-name" class="block text-gray-400 text-sm font-bold mb-1">Filter by Item Name:</label>
