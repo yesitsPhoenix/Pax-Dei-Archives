@@ -363,3 +363,57 @@
         min-width: 600px;
     }
 }
+
+.py-3 a {
+    color: white !important;
+    text-decoration: underline;
+}
+
+
+.autocomplete-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.autocomplete-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background-color: #b4b4b4;
+    border: 1px solid #555;
+    border-top: none;
+    max-height: 200px;
+    overflow-y: auto;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    border-radius: 0 0 8px 8px;
+    display: none;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.autocomplete-suggestion-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    color: #070707;
+    border-bottom: 1px solid #444;
+}
+
+.autocomplete-suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.autocomplete-suggestion-item.highlighted,
+.autocomplete-suggestion-item:hover {
+    background-color: #555;
+    color: #fff;
+}
+
+.autocomplete-no-results {
+    padding: 10px 15px;
+    color: #aaa;
+    text-align: center;
+    font-style: italic;
+}

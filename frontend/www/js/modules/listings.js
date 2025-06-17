@@ -120,9 +120,25 @@ const renderListingsTable = (listings) => {
     }
 
     listings.forEach(listing => {
+        const paxDeiSlug = listing.pax_dei_slug ||
+                           (listing.items && listing.items.pax_dei_slug);
+
+        const paxDeiUrl = paxDeiSlug ? `https://paxdei.gaming.tools/${paxDeiSlug}` : '#';
+        
+        const isLinkEnabled = !!paxDeiSlug; 
+        const linkClasses = isLinkEnabled ? 'text-blue-600 hover:underline' : 'text-gray-700 cursor-default';
+        const linkTarget = isLinkEnabled ? 'target="_blank"' : '';
+
+
+
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td class="py-3 px-6 text-left">${listing.item_name || 'N/A'}</td>
+            <td class="py-3 px-6 text-left">
+                <!-- Modified line to use the fetched paxDeiSlug -->
+                <a href="${paxDeiUrl}" ${linkTarget} class="${linkClasses}">
+                    ${listing.item_name || 'N/A'}
+                </a>
+            </td>
             <td class="py-3 px-6 text-left">${listing.category_name || 'N/A'}</td>
             <td class="py-3 px-6 text-left">${Math.round(listing.quantity_listed || 0).toLocaleString()}</td>
             <td class="py-3 px-6 text-left">${Math.round(listing.listed_price_per_unit || 0).toLocaleString()}</td>

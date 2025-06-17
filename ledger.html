@@ -12,6 +12,12 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.gtTooltipConfig = {
+        scale: 0.8,
+        delay: 40,
+        };
+    </script>
+    <script async src="https://paxdei.gaming.tools/embed.js"></script>
 </head>
 <body>
     <header class="header-area">
@@ -120,41 +126,47 @@
 
                 <div class="flex flex-col md:flex-row gap-8 mb-8">
                 <section class="add-listing w-full md:w-1/2">
-                <h2>Add New Listing</h2>
-                <form id="add-listing-form">
-                    <div class="form-group">
-                        <label for="item-name">Item Name</label>
-                        <input type="text" id="item-name" name="item-name" placeholder="e.g., Iron Ingot" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="item-category">Item Category</label>
-                        <select id="item-category" name="item-category" class="w-full p-2 border rounded-lg" required>
-                            <option value="">Select a category</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="item-stacks">Stacks (Number of Individual Listings)</label>
-                        <input type="number" id="item-stacks" name="item-stacks" value="1" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="item-count-per-stack">Count (per stack)</label>
-                        <input type="number" id="item-count-per-stack" name="item-count-per-stack" placeholder="e.g., 100" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="item-price-per-stack">Price (per stack)</label>
-                        <input type="number" id="item-price-per-stack" name="item-price-per-stack" placeholder="e.g., 500" required>
-                    </div>
-                    <button type="submit" class="btn">Add Listing</button>
-                </form>
+                    <h2>Add New Listing</h2>
+                    <form id="add-listing-form">
+                        <div class="form-group">
+                            <label for="item-name">Item Name</label>
+                            <div class="autocomplete-wrapper">
+                                <input type="text" id="item-name" name="item-name" placeholder="e.g., Iron Ingot" required>
+                                <div id="item-name-suggestions" class="autocomplete-suggestions"></div>
+                            </div>
+                            </div>
+                        <div class="form-group">
+                            <label for="item-category">Item Category</label>
+                            <select id="item-category" name="item-category" class="w-full p-2 border rounded-lg" required>
+                                <option value="">Select a category</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="item-stacks">Stacks (Number of Individual Listings)</label>
+                            <input type="number" id="item-stacks" name="item-stacks" value="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="item-count-per-stack">Count (per stack)</label>
+                            <input type="number" id="item-count-per-stack" name="item-count-per-stack" placeholder="e.g., 100" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="item-price-per-stack">Price (per stack)</label>
+                            <input type="number" id="item-price-per-stack" name="item-price-per-stack" placeholder="e.g., 500" required>
+                        </div>
+                        <button type="submit" class="btn">Add Listing</button>
+                    </form>
                 </section>
 
-                <section class="add-purchase w-full md:w-1/2">
+               <section class="add-purchase w-full md:w-1/2">
                     <h2>Record New Purchase</h2>
                     <form id="add-purchase-form">
                         <div class="form-group">
                             <label for="purchase-item-name">Item Name</label>
-                            <input type="text" id="purchase-item-name" name="purchase-item-name" placeholder="e.g., Copper Ore" required>
-                        </div>
+                            <div class="autocomplete-wrapper">
+                                <input type="text" id="purchase-item-name" name="purchase-item-name" placeholder="e.g., Copper Ore" required>
+                                <div id="purchase-item-name-suggestions" class="autocomplete-suggestions"></div>
+                            </div>
+                            </div>
                         <div class="form-group">
                             <label for="purchase-item-category">Item Category</label>
                             <select id="purchase-item-category" name="purchase-item-category" class="w-full p-2 border rounded-lg" required>
@@ -281,7 +293,8 @@
         </div>
     </footer>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <script type="module" src="frontend/www/js/main.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
+    <script type="module" src="frontend/www/js/main.js"></script>
     <script type="module" src="frontend/www/js/trader.js"></script>
 </body>
 </html>
