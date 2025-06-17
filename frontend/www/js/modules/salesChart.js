@@ -15,14 +15,13 @@ export const renderSalesChart = async (timeframe = 'daily') => {
     try {
         const { data: sales, error: salesError } = await supabase
             .from('sales')
-            .select('sale_date, total_sale_price')
+            .select('sale_date, total_sale_price, listing_id') 
             .eq('character_id', currentCharacterId)
             .order('sale_date', { ascending: true });
 
         if (salesError) {
             throw salesError;
         }
-
         const { data: purchases, error: purchasesError } = await supabase
             .from('purchases')
             .select('purchase_date, total_purchase_price')
@@ -33,13 +32,32 @@ export const renderSalesChart = async (timeframe = 'daily') => {
             throw purchasesError;
         }
 
+        const saleListingIds = sales.map(s => s.listing_id);
+
+        let listingFees = [];
+        if (saleListingIds.length > 0) {
+            const { data: feesData, error: feesError } = await supabase
+                .from('market_listings')
+                .select('listing_date, market_fee')
+                .in('listing_id', saleListingIds)
+                .eq('character_id', currentCharacterId)
+                .not('market_fee', 'is', null)
+                .gt('market_fee', 0);
+
+            if (feesError) {
+                throw feesError;
+            }
+            listingFees = feesData;
+        }
+
         const combinedData = [];
         sales.forEach(s => combinedData.push({ type: 'sale', date: s.sale_date, amount: s.total_sale_price }));
         purchases.forEach(p => combinedData.push({ type: 'purchase', date: p.purchase_date, amount: p.total_purchase_price }));
+        listingFees.forEach(f => combinedData.push({ type: 'fee', date: f.listing_date, amount: f.market_fee })); // Use listing_date for fee aggregation
 
         combinedData.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-        const { aggregatedSales, aggregatedPurchases, allLabels } = aggregateTransactionData(combinedData, timeframe);
+        const { aggregatedSales, aggregatedPurchases, aggregatedFees, allLabels } = aggregateTransactionData(combinedData, timeframe);
 
         const ctx = document.getElementById('salesChartCanvas').getContext('2d');
 
@@ -62,10 +80,18 @@ export const renderSalesChart = async (timeframe = 'daily') => {
                         fill: false
                     },
                     {
-                        label: 'Total Purchases',
+                        label: 'Purchases',
                         data: allLabels.map(label => Math.round(aggregatedPurchases[label] || 0)),
-                        borderColor: 'rgba(173, 76, 10, 1)',
-                        backgroundColor: 'rgba(173, 76, 10, 0.2)',
+                        borderColor: '#00CED1',
+                        backgroundColor: 'rgba(0, 206, 209, 0.2)',
+                        tension: 0.1,
+                        fill: false
+                    },
+                    {
+                        label: 'Fees Paid',
+                        data: allLabels.map(label => Math.round(aggregatedFees[label] || 0)),
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
                         tension: 0.1,
                         fill: false
                     }
@@ -146,6 +172,7 @@ export const renderSalesChart = async (timeframe = 'daily') => {
 const aggregateTransactionData = (transactions, timeframe) => {
     const aggregatedSales = {};
     const aggregatedPurchases = {};
+    const aggregatedFees = {};
     const allLabelsSet = new Set();
 
     transactions.forEach(transaction => {
@@ -179,12 +206,17 @@ const aggregateTransactionData = (transactions, timeframe) => {
                 aggregatedPurchases[key] = 0;
             }
             aggregatedPurchases[key] += Math.round(transaction.amount || 0);
+        } else if (transaction.type === 'fee') {
+            if (!aggregatedFees[key]) {
+                aggregatedFees[key] = 0;
+            }
+            aggregatedFees[key] += Math.round(transaction.amount || 0);
         }
     });
 
     const allLabels = Array.from(allLabelsSet).sort();
 
-    return { aggregatedSales, aggregatedPurchases, allLabels };
+    return { aggregatedSales, aggregatedPurchases, aggregatedFees, allLabels };
 };
 
 const getWeekNumber = (date) => {
