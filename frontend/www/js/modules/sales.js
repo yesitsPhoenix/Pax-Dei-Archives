@@ -10,6 +10,7 @@ const downloadSalesCsvButton = document.getElementById('download-sales-csv');
 
 const TRANSACTIONS_PER_PAGE = 10;
 let currentTransactionsPage = 1;
+let fullTransactionHistory = [];
 
 export const initializeSales = () => {
     if (downloadSalesCsvButton) {
@@ -17,10 +18,12 @@ export const initializeSales = () => {
     }
 };
 
-export const loadTransactionHistory = async () => {
+export const loadTransactionHistory = (transactions) => {
+    fullTransactionHistory = transactions || [];
+
     if (!currentCharacterId) {
         if (salesLoader) salesLoader.style.display = 'none';
-        if (salesTable) salesTable.style.display = 'none';
+        if (salesTable) salesTable.style.display = 'table';
         if (salesBody) salesBody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Please select a character or create one to view transaction history.</td></tr>';
         return;
     }
@@ -30,113 +33,14 @@ export const loadTransactionHistory = async () => {
 
     try {
         const offset = (currentTransactionsPage - 1) * TRANSACTIONS_PER_PAGE;
-
-        const { data: salesData, error: salesError, count: salesCount } = await supabase
-            .from('sales')
-            .select(`
-                sale_id, quantity_sold, sale_price_per_unit, total_sale_price, sale_date,
-                market_listings!sales_listing_id_fkey!inner ( listing_id, character_id, market_fee, items(item_name, item_categories(category_name)) )
-            `, { count: 'exact' })
-            .eq('market_listings.character_id', currentCharacterId);
-
-        if (salesError) throw salesError;
-
-        const { data: purchasesData, error: purchasesError, count: purchasesCount } = await supabase
-            .from('purchases')
-            .select(`
-                purchase_id, quantity_purchased, purchase_price_per_unit, total_purchase_price, purchase_date,
-                items(item_name, item_categories(category_name))
-            `, { count: 'exact' })
-            .eq('character_id', currentCharacterId);
-
-        if (purchasesError) throw purchasesError;
-
-        const { data: cancelledListingsData, error: cancelledError, count: cancelledCount } = await supabase
-            .from('market_listings')
-            .select(`
-                listing_id, listing_date, quantity_listed, listed_price_per_unit, total_listed_price, market_fee,
-                items(item_name, item_categories(category_name))
-            `, { count: 'exact' })
-            .eq('character_id', currentCharacterId)
-            .eq('is_cancelled', true);
-
-        if (cancelledError) throw cancelledError;
-
-        const { data: pveTransactionsData, error: pveError, count: pveCount } = await supabase
-            .from('pve_transactions')
-            .select(`
-                transaction_id, transaction_date, gold_amount, description
-            `, { count: 'exact' })
-            .eq('character_id', currentCharacterId);
-
-        if (pveError) throw pveError;
-
-        const allTransactions = [];
-
-        salesData.forEach(sale => {
-            allTransactions.push({
-                type: 'Sale',
-                date: sale.sale_date,
-                item_name: sale.market_listings?.items?.item_name,
-                category_name: sale.market_listings?.items?.item_categories?.category_name,
-                quantity: Math.round(sale.quantity_sold || 0),
-                price_per_unit: Math.round(sale.sale_price_per_unit || 0),
-                total_amount: Math.round(sale.total_sale_price || 0),
-                fee: Math.round(sale.market_listings?.market_fee || 0)
-            });
-        });
-
-        purchasesData.forEach(purchase => {
-            allTransactions.push({
-                type: 'Purchase',
-                date: purchase.purchase_date,
-                item_name: purchase.items?.item_name,
-                category_name: purchase.items?.item_categories?.category_name,
-                quantity: Math.round(purchase.quantity_purchased || 0),
-                price_per_unit: Math.round(purchase.purchase_price_per_unit || 0),
-                total_amount: Math.round(purchase.total_purchase_price || 0),
-                fee: 0
-            });
-        });
-
-        cancelledListingsData.forEach(listing => {
-            allTransactions.push({
-                type: 'Cancellation',
-                date: listing.listing_date,
-                item_name: listing.items?.item_name,
-                category_name: listing.items?.item_categories?.category_name,
-                quantity: Math.round(listing.quantity_listed || 0),
-                price_per_unit: Math.round(listing.listed_price_per_unit || 0),
-                total_amount: 0,
-                fee: Math.round(listing.market_fee || 0)
-            });
-        });
-
-        pveTransactionsData.forEach(pve => {
-            allTransactions.push({
-                type: 'PVE Gold',
-                date: pve.transaction_date,
-                item_name: pve.description || 'N/A',
-                category_name: 'PVE',
-                quantity: 1, // PVE is typically a single transaction for a gold amount
-                price_per_unit: Math.round(pve.gold_amount || 0), // Use gold_amount as price per unit for PVE
-                total_amount: Math.round(pve.gold_amount || 0),
-                fee: 0
-            });
-        });
-
-        allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-        const totalCount = salesCount + purchasesCount + cancelledCount + pveCount;
+        const paginatedTransactions = fullTransactionHistory.slice(offset, offset + TRANSACTIONS_PER_PAGE);
         
-        const paginatedTransactions = allTransactions.slice(offset, offset + TRANSACTIONS_PER_PAGE);
-
         renderTransactionTable(paginatedTransactions);
-        renderTransactionPagination(totalCount);
+        renderTransactionPagination(fullTransactionHistory.length);
 
     } catch (error) {
-        console.error('Error fetching transaction history:', error.message);
-        await showCustomModal('Error', 'Could not fetch transaction history.', [{ text: 'OK', value: true }]);
+        console.error('Error rendering transaction history:', error.message);
+        showCustomModal('Error', 'Could not render transaction history.', [{ text: 'OK', value: true }]);
     } finally {
         if (salesLoader) salesLoader.style.display = 'none';
         if (salesTable) salesTable.style.display = 'table';
@@ -155,12 +59,10 @@ const renderTransactionTable = (transactions) => {
         const row = document.createElement('tr');
         row.className = 'border-b border-gray-200 hover:bg-gray-100';
 
-        // Adjust display for PVE transactions
         const itemNameDisplay = transaction.type === 'PVE Gold' ? transaction.item_name : (transaction.item_name || 'N/A');
         const quantityDisplay = transaction.type === 'PVE Gold' ? 'N/A' : (transaction.quantity?.toLocaleString() || 'N/A');
         const pricePerUnitDisplay = transaction.type === 'PVE Gold' ? transaction.total_amount?.toLocaleString() : (transaction.price_per_unit?.toLocaleString() || 'N/A');
         const totalAmountDisplay = transaction.type === 'PVE Gold' ? transaction.total_amount?.toLocaleString() : (transaction.total_amount?.toLocaleString() || 'N/A');
-
 
         row.innerHTML = `
             <td class="py-3 px-6 text-left whitespace-nowrap">${transaction.type}</td>
@@ -197,7 +99,7 @@ const renderTransactionPagination = (totalCount) => {
         button.disabled = disabled;
         button.addEventListener('click', () => {
             currentTransactionsPage = page;
-            loadTransactionHistory();
+            loadTransactionHistory(fullTransactionHistory);
         });
         return button;
     };
@@ -211,7 +113,7 @@ const renderTransactionPagination = (totalCount) => {
     salesPaginationContainer.appendChild(createButton('Next', currentTransactionsPage + 1, currentTransactionsPage === totalPages));
 };
 
-const handleDownloadCsv = async () => {
+export const handleDownloadCsv = async () => {
     if (!currentCharacterId) return;
     if (downloadSalesCsvButton) {
         downloadSalesCsvButton.disabled = true;
@@ -219,106 +121,10 @@ const handleDownloadCsv = async () => {
     }
 
     try {
-        const { data: salesData, error: salesError } = await supabase
-            .from('sales')
-            .select(`
-                sale_id, quantity_sold, sale_price_per_unit, total_sale_price, sale_date,
-                market_listings!sales_listing_id_fkey!inner ( listing_id, character_id, market_fee, items(item_name, item_categories(category_name)) )
-            `)
-            .eq('market_listings.character_id', currentCharacterId);
-
-        if (salesError) throw salesError;
-
-        const { data: purchasesData, error: purchasesError } = await supabase
-            .from('purchases')
-            .select(`
-                purchase_id, quantity_purchased, purchase_price_per_unit, total_purchase_price, purchase_date,
-                items(item_name, item_categories(category_name))
-            `)
-            .eq('character_id', currentCharacterId);
-
-        if (purchasesError) throw purchasesError;
-
-        const { data: cancelledListingsData, error: cancelledError } = await supabase
-            .from('market_listings')
-            .select(`
-                listing_id, listing_date, quantity_listed, listed_price_per_unit, total_listed_price, market_fee,
-                items(item_name, item_categories(category_name))
-            `)
-            .eq('character_id', currentCharacterId)
-            .eq('is_cancelled', true);
-
-        if (cancelledError) throw cancelledError;
-
-        const { data: pveTransactionsData, error: pveError } = await supabase
-            .from('pve_transactions')
-            .select(`
-                transaction_id, transaction_date, gold_amount, description
-            `)
-            .eq('character_id', currentCharacterId);
-
-        if (pveError) throw pveError;
-
-        const allTransactions = [];
-
-        salesData.forEach(sale => {
-            allTransactions.push({
-                type: 'Sale',
-                date: sale.sale_date,
-                item_name: sale.market_listings?.items?.item_name,
-                category_name: sale.market_listings?.items?.item_categories?.category_name,
-                quantity: Math.round(sale.quantity_sold || 0),
-                price_per_unit: Math.round(sale.sale_price_per_unit || 0),
-                total_amount: Math.round(sale.total_sale_price || 0),
-                fee: Math.round(sale.market_listings?.market_fee || 0)
-            });
-        });
-
-        purchasesData.forEach(purchase => {
-            allTransactions.push({
-                type: 'Purchase',
-                date: purchase.purchase_date,
-                item_name: purchase.items?.item_name,
-                category_name: purchase.items?.item_categories?.category_name,
-                quantity: Math.round(purchase.quantity_purchased || 0),
-                price_per_unit: Math.round(purchase.purchase_price_per_unit || 0),
-                total_amount: Math.round(purchase.total_purchase_price || 0),
-                fee: 0
-            });
-        });
-
-        cancelledListingsData.forEach(listing => {
-            allTransactions.push({
-                type: 'Cancellation',
-                date: listing.listing_date,
-                item_name: listing.items?.item_name,
-                category_name: listing.items?.item_categories?.category_name,
-                quantity: Math.round(listing.quantity_listed || 0),
-                price_per_unit: Math.round(listing.listed_price_per_unit || 0),
-                total_amount: 0,
-                fee: Math.round(listing.market_fee || 0)
-            });
-        });
-
-        pveTransactionsData.forEach(pve => {
-            allTransactions.push({
-                type: 'PVE Gold',
-                date: pve.transaction_date,
-                item_name: pve.description || 'N/A',
-                category_name: 'PVE',
-                quantity: 1,
-                price_per_unit: Math.round(pve.gold_amount || 0),
-                total_amount: Math.round(pve.gold_amount || 0),
-                fee: 0
-            });
-        });
-
-        allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
-
         const headers = ['Type', 'Date', 'Item Name', 'Category', 'Quantity', 'Price Per Unit', 'Total Amount', 'Fee'];
         const csvRows = [headers.join(',')];
 
-        allTransactions.forEach(transaction => {
+        fullTransactionHistory.forEach(transaction => {
             const date = new Date(transaction.date).toLocaleDateString();
             const itemName = `"${transaction.type === 'PVE Gold' ? transaction.item_name : (transaction.item_name || 'N/A').replace(/"/g, '""')}"`;
             const category = `"${transaction.category_name || 'N/A'}"`;

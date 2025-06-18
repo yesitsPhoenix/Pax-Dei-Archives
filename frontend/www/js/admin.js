@@ -103,17 +103,12 @@ if (devCommentForm) {
         try {
             const { data: { user }, error: authError } = await supabase.auth.getUser();
             if (authError || !user) {
-                console.error("Auth Error before insert:", authError);
-                //console.log("User object before insert:", user);
                 showFormMessage(formMessage, 'Please log in to submit comments.', 'error');
                 if (submitButton) {
                     submitButton.disabled = false;
                     submitButton.textContent = 'Add Comment to DB';
                 }
                 return;
-            } else {
-                //console.log("User ID from auth.getUser() before insert:", user.id);
-                //console.log("User Role from auth.getUser() before insert:", user.role);
             }
 
             const { data, error, status } = await supabase
@@ -185,7 +180,6 @@ async function fetchDashboardStats() {
     const newsMonthCount = document.getElementById('newsMonthCount');
 
     if (!totalCommentsCount || !totalNewsCount || !commentsMonthCount || !newsMonthCount) {
-        console.warn('Dashboard elements not found. Skipping stats fetch.');
         return;
     }
 
@@ -240,7 +234,6 @@ function parseComment(text) {
     const match = text.match(mainRegex);
 
     if (!match) {
-        console.error("Main regex did not match the input text. Ensure it has 'Author — Content'.");
         return null;
     }
 
@@ -341,7 +334,6 @@ function parseComment(text) {
                 if (ampm === 'am' && hours === 12) { hours = 0; }
                 dateObject.setHours(hours, minutes, 0, 0);
             } else {
-                console.warn(`Could not parse time part for timestamp: ${timePart}`);
                 dateObject.setHours(0, 0, 0, 0);
             }
         }
@@ -365,7 +357,6 @@ function parseComment(text) {
 
 async function populateTagSelect(tagSelectElement) {
     if (!tagSelectElement) {
-        console.warn('tagSelect element not found. Cannot populate tags.');
         return;
     }
     tagSelectElement.innerHTML = '';
@@ -414,6 +405,32 @@ function slugify(text) {
         .replace(/--+/g, '-');
 }
 
+async function handleAddNewTag(newTagValue, inputElement, messageElement, tagSelectElement, loreCategorySelectElement, tagType = 'Tag') {
+    if (newTagValue) {
+        try {
+            const { error } = await supabase
+                .from('tag_list')
+                .insert([{ tag_name: newTagValue }]);
+
+            if (error && error.code !== '23505') {
+                showFormMessage(messageElement, `Error adding ${tagType}: ` + error.message, 'error');
+            } else {
+                if (error && error.code === '23505') {
+                    showFormMessage(messageElement, `${tagType} '${newTagValue}' already exists.`, 'warning');
+                } else {
+                    showFormMessage(messageElement, `${tagType} '${newTagValue}' added successfully!`, 'success');
+                }
+                inputElement.value = '';
+                populateTagSelect(tagSelectElement);
+                populateTagSelect(loreCategorySelectElement);
+            }
+        } catch (e) {
+            showFormMessage(messageElement, `An unexpected error occurred while adding ${tagType}.`, 'error');
+        }
+    } else {
+        showFormMessage(messageElement, `Please enter a ${tagType.toLowerCase()} name.`, 'warning');
+    }
+}
 
 $(document).ready(async function() {
     const currentPage = window.location.pathname.split('/').pop();
@@ -541,7 +558,6 @@ $(document).ready(async function() {
                 parseError.style.display = 'block';
                 devCommentForm.style.display = 'none';
                 commentInput.style.display = 'block';
-                parseButton.style.display = 'block';
                 parseError.style.display = 'none';
             }
         });
@@ -557,35 +573,17 @@ $(document).ready(async function() {
         });
     }
 
-    if (addNewTagButton && newTagInput && tagSelect) {
+    if (addNewTagButton && newTagInput && tagSelect && loreCategorySelect) {
         addNewTagButton.addEventListener('click', async () => {
             const newTag = newTagInput.value.trim();
-            if (newTag) {
-                try {
-                    const { data, error } = await supabase
-                        .from('tag_list')
-                        .insert([{ tag_name: newTag }]);
-
-                    if (error && error.code !== '23505') {
-                        console.error('Error adding new tag:', error.message);
-                        showFormMessage(formMessage, 'Error adding tag: ' + error.message, 'error');
-                    } else {
-                        if (error && error.code === '23505') {
-                            showFormMessage(formMessage, `Tag '${newTag}' already exists.`, 'warning');
-                        } else {
-                            showFormMessage(formMessage, `Tag '${newTag}' added successfully!`, 'success');
-                        }
-                        newTagInput.value = '';
-                        populateTagSelect(tagSelect);
-                        populateTagSelect(loreCategorySelect);
-                    }
-                } catch (e) {
-                    console.error('Unexpected error adding new tag:', e);
-                    showFormMessage(formMessage, 'An unexpected error occurred while adding tag.', 'error');
-                }
-            } else {
-                showFormMessage(formMessage, 'Please enter a tag name.', 'warning');
-            }
+            await handleAddNewTag(newTag, newTagInput, formMessage, tagSelect, loreCategorySelect, 'Tag');
+        });
+    }
+    
+    if (addNewLoreCategoryButton && newLoreCategoryInput && loreCategorySelect && tagSelect) {
+        addNewLoreCategoryButton.addEventListener('click', async () => {
+            const newCategory = newLoreCategoryInput.value.trim();
+            await handleAddNewTag(newCategory, newLoreCategoryInput, addLoreItemMessage, tagSelect, loreCategorySelect, 'Category');
         });
     }
 
@@ -610,7 +608,6 @@ $(document).ready(async function() {
                 showFormMessage(addNewsUpdateMessage, 'Error adding news update: ' + error.message, 'error');
             } else {
                 showFormMessage(addNewsUpdateMessage, 'News update added successfully!', 'success');
-                //console.log('News update added:', data);
                 newsDateInput.value = '';
                 newsTitleInput.value = '';
                 newsSummaryInput.value = '';
@@ -623,38 +620,6 @@ $(document).ready(async function() {
     if (loreTitleInput && loreSlugInput && addLoreItemForm) {
         loreTitleInput.addEventListener('input', () => {
             loreSlugInput.value = slugify(loreTitleInput.value);
-        });
-    }
-
-    if (addNewLoreCategoryButton && newLoreCategoryInput && loreCategorySelect) {
-        addNewLoreCategoryButton.addEventListener('click', async () => {
-            const newCategory = newLoreCategoryInput.value.trim();
-            if (newCategory) {
-                try {
-                    const { data, error } = await supabase
-                        .from('tag_list')
-                        .insert([{ tag_name: newCategory }]);
-
-                    if (error && error.code !== '23505') {
-                        console.error('Error adding new lore category:', error.message);
-                        showFormMessage(addLoreItemMessage, 'Error adding category: ' + error.message, 'error');
-                    } else {
-                        if (error && error.code === '23505') {
-                            showFormMessage(addLoreItemMessage, `Category '${newCategory}' already exists.`, 'warning');
-                        } else {
-                            showFormMessage(addLoreItemMessage, `Category '${newCategory}' added successfully!`, 'success');
-                        }
-                        newLoreCategoryInput.value = '';
-                        populateTagSelect(loreCategorySelect);
-                        populateTagSelect(tagSelect);
-                    }
-                } catch (e) {
-                    console.error('Unexpected error adding new lore category:', e);
-                    showFormMessage(addLoreItemMessage, 'An unexpected error occurred while adding category.', 'error');
-                }
-            } else {
-                showFormMessage(addLoreItemMessage, 'Please enter a category name.', 'warning');
-            }
         });
     }
 
@@ -679,7 +644,6 @@ $(document).ready(async function() {
                 showFormMessage(addLoreItemMessage, 'Error adding lore item: ' + error.message, 'error');
             } else {
                 showFormMessage(addLoreItemMessage, 'Lore item added successfully!', 'success');
-                //console.log('Lore item added:', data);
                 loreTitleInput.value = '';
                 loreSlugInput.value = '';
                 loreCategorySelect.value = '';
