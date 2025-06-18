@@ -1,16 +1,13 @@
 import { supabase } from './supabaseClient.js';
 import { initializeListings, loadActiveListings } from './modules/listings.js';
 import { initializeCharacters, insertCharacterModalHtml, currentCharacterId, getCurrentCharacter } from './modules/characters.js';
-import { initializeSales, loadTransactionHistory } from './modules/sales.js';
+import { initializeSales, loadTransactionHistory, handleDownloadCsv } from './modules/sales.js';
 import { renderDashboard } from './modules/dashboard.js';
 import { renderSalesChart, setupSalesChartListeners } from './modules/salesChart.js';
 
 let currentUser = null;
-const dashboardListingsFilter = {
-    itemName: null,
-    categoryId: null,
-    status: 'all'
-};
+let allCharacterActivityData = [];
+
 export const showCustomModal = (title, message, buttons) => {
     return new Promise(resolve => {
         const modalId = `customModal-${Date.now()}`;
@@ -42,13 +39,50 @@ export const showCustomModal = (title, message, buttons) => {
         });
     });
 };
-const characterSelectEl = document.getElementById('character-select');
+
 const showCreateCharacterModalBtn = document.getElementById('showCreateCharacterModalBtn');
-const deleteCharacterBtn = document.getElementById('deleteCharacterBtn');
-const traderDashboardAndForms = document.getElementById('traderDashboardAndForms');
-const traderLoginContainer = document.getElementById('traderLoginContainer');
 const traderDiscordLoginButton = document.getElementById('traderDiscordLoginButton');
 const traderLoginError = document.getElementById('traderLoginError');
+
+async function fetchAllCharacterActivity(characterId) {
+    if (!characterId) return [];
+
+    const [
+        { data: salesData, error: salesError },
+        { data: purchasesData, error: purchasesError },
+        { data: cancelledListingsData, error: cancelledError },
+        { data: pveTransactionsData, error: pveError }
+    ] = await Promise.all([
+        supabase.from('sales').select(`sale_id, quantity_sold, sale_price_per_unit, total_sale_price, sale_date, market_listings!sales_listing_id_fkey!inner(listing_id, character_id, market_fee, items(item_name, item_categories(category_name)))`).eq('market_listings.character_id', characterId),
+        supabase.from('purchases').select(`purchase_id, quantity_purchased, purchase_price_per_unit, total_purchase_price, purchase_date, items(item_name, item_categories(category_name))`).eq('character_id', characterId),
+        supabase.from('market_listings').select(`listing_id, listing_date, quantity_listed, listed_price_per_unit, total_listed_price, market_fee, items(item_name, item_categories(category_name))`).eq('character_id', characterId).eq('is_cancelled', true),
+        supabase.from('pve_transactions').select(`transaction_id, transaction_date, gold_amount, description`).eq('character_id', characterId)
+    ]);
+
+    if (salesError || purchasesError || cancelledError || pveError) {
+        console.error("Error fetching character activity:", salesError || purchasesError || cancelledError || pveError);
+        return [];
+    }
+
+    const allTransactions = [];
+
+    salesData.forEach(sale => {
+        allTransactions.push({ type: 'Sale', date: sale.sale_date, item_name: sale.market_listings?.items?.item_name, category_name: sale.market_listings?.items?.item_categories?.category_name, quantity: Math.round(sale.quantity_sold || 0), price_per_unit: Math.round(sale.sale_price_per_unit || 0), total_amount: Math.round(sale.total_sale_price || 0), fee: Math.round(sale.market_listings?.market_fee || 0) });
+    });
+    purchasesData.forEach(purchase => {
+        allTransactions.push({ type: 'Purchase', date: purchase.purchase_date, item_name: purchase.items?.item_name, category_name: purchase.items?.item_categories?.category_name, quantity: Math.round(purchase.quantity_purchased || 0), price_per_unit: Math.round(purchase.purchase_price_per_unit || 0), total_amount: Math.round(purchase.total_purchase_price || 0), fee: 0 });
+    });
+    cancelledListingsData.forEach(listing => {
+        allTransactions.push({ type: 'Cancellation', date: listing.listing_date, item_name: listing.items?.item_name, category_name: listing.items?.item_categories?.category_name, quantity: Math.round(listing.quantity_listed || 0), price_per_unit: Math.round(listing.listed_price_per_unit || 0), total_amount: 0, fee: Math.round(listing.market_fee || 0) });
+    });
+    pveTransactionsData.forEach(pve => {
+        allTransactions.push({ type: 'PVE Gold', date: pve.transaction_date, item_name: pve.description || 'N/A', category_name: 'PVE', quantity: 1, price_per_unit: Math.round(pve.gold_amount || 0), total_amount: Math.round(pve.gold_amount || 0), fee: 0 });
+    });
+
+    allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+    return allTransactions;
+}
+
 const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     const traderLoginContainer = document.getElementById('traderLoginContainer');
@@ -78,39 +112,44 @@ const checkUser = async () => {
         }
     }
 };
-export const loadTraderPageData = async () => {
 
-    if (!currentUser || !currentUser.id) {
-        renderDashboard([]);
+export const loadTraderPageData = async () => {
+    if (!currentUser || !currentUser.id || !currentCharacterId) {
+        renderDashboard({}, null);
         await loadActiveListings();
-        await loadTransactionHistory();
-        renderSalesChart(null, 'monthly');
+        loadTransactionHistory([]);
+        renderSalesChart([], 'daily');
         return;
     }
 
     try {
-        const { data: allListings, error: allListingsError } = await supabase.rpc('search_trader_listings', {
-            p_character_id: currentCharacterId,
-            p_item_name: dashboardListingsFilter.itemName,
-            p_category_id: dashboardListingsFilter.categoryId,
-            p_status: dashboardListingsFilter.status,
-            p_limit: 999999,
-            p_offset: 0
-        });
-        if (allListingsError) {
-            throw allListingsError;
-        }
-        const currentCharacterData = await getCurrentCharacter();
+        const [
+            { data: dashboardStats, error: dashboardError },
+            currentCharacterData,
+            allActivityData
+        ] = await Promise.all([
+             supabase.rpc('get_character_dashboard_stats', { p_character_id: currentCharacterId }),
+             getCurrentCharacter(),
+             fetchAllCharacterActivity(currentCharacterId)
+        ]);
 
-        renderDashboard(allListings || [], currentCharacterData);
+        if (dashboardError) {
+            throw dashboardError;
+        }
+        
+        allCharacterActivityData = allActivityData;
+
+        renderDashboard(dashboardStats ? dashboardStats[0] : {}, currentCharacterData);
         await loadActiveListings();
-        await loadTransactionHistory();
-        await renderSalesChart('daily');
+        loadTransactionHistory(allCharacterActivityData);
+        renderSalesChart(allCharacterActivityData, 'daily');
+        
     } catch (error) {
         console.error('Error loading trader page data:', error.message);
         await showCustomModal('Error', 'Failed to load trader data: ' + error.message, [{ text: 'OK', value: true }]);
     }
 };
+
 const addPageEventListeners = () => {
     if (showCreateCharacterModalBtn) {
         showCreateCharacterModalBtn.addEventListener('click', () => {
@@ -137,10 +176,8 @@ const addPageEventListeners = () => {
             }
         });
     }
-    setupSalesChartListeners();
+    setupSalesChartListeners(() => allCharacterActivityData);
 };
-
-
 
 async function populateItemData() {
     try {
@@ -321,7 +358,7 @@ function initializeAutocomplete(allItems) {
                 categorySelect.value = selectedItem.category_id;
             }
             purchaseItemNameInput.dataset.selectedItemId = selectedItem.item_id;
-            purchaseItemNameInput.dataset.selectedPaxDeiSlug = selectedItem.pax_dei_slug;
+            purchaseItemNameInput.dataset.selectedPaxDeiSlug = selectedItem.p_slug;
             purchaseItemNameInput.dataset.selectedItemCategory = selectedItem.category_id;
         });
     }

@@ -4,19 +4,17 @@ const netProfitEl = document.getElementById('dashboard-net-profit');
 const activeListingsEl = document.getElementById('dashboard-active-listings');
 const currentHoldingsEl = document.getElementById('dashboard-current-holdings');
 
-export const renderDashboard = (allListings, characterData) => {
+export const renderDashboard = (dashboardStats, characterData) => {
     if (!grossSalesEl || !feesPaidEl || !netProfitEl || !activeListingsEl || !currentHoldingsEl) {
         console.error("Dashboard elements not found.");
         return;
     }
     
-    const currentGoldHoldings = (characterData ? characterData.gold : 0);
-
-    const soldListings = allListings.filter(l => l.is_fully_sold);
-    const feesPaid = allListings.reduce((sum, l) => sum + (l.market_fee || 0), 0);
-    const grossSales = soldListings.reduce((sum, l) => sum + (l.total_listed_price || 0), 0);
+    const currentGoldHoldings = characterData ? characterData.gold : 0;
+    const grossSales = dashboardStats.gross_sales || 0;
+    const feesPaid = dashboardStats.fees_paid || 0;
+    const activeListingsCount = dashboardStats.active_listings_count || 0;
     const netProfit = grossSales - feesPaid;
-    const activeListingsCount = allListings.filter(l => !l.is_fully_sold && !l.is_cancelled).length;
 
     const formatCurrency = (amount) => amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
