@@ -232,7 +232,6 @@ const addListingsEventListeners = () => {
         document.getElementById('editListingModal').classList.add('hidden');
     });
 
-    // Add event listener for price input to show estimated fee
     const editTotalPriceInput = document.getElementById('edit-total-price');
     if (editTotalPriceInput) {
         editTotalPriceInput.addEventListener('input', updateEditFeeInfo);
@@ -640,6 +639,7 @@ const handleCancelListing = async (listingId) => {
 };
 
 let originalListingPrice = 0;
+let originalListingFee = 0;
 
 const showEditListingModal = async (listingId) => {
     currentEditingListingId = listingId;
@@ -653,7 +653,7 @@ const showEditListingModal = async (listingId) => {
     try {
         const { data: listing, error } = await supabase
             .from('market_listings')
-            .select('item_id, quantity_listed, total_listed_price, items(item_name)')
+            .select('item_id, quantity_listed, total_listed_price, market_fee, items(item_name)')
             .eq('listing_id', listingId)
             .eq('character_id', currentCharacterId)
             .single();
@@ -665,6 +665,7 @@ const showEditListingModal = async (listingId) => {
         }
 
         originalListingPrice = listing.total_listed_price || 0;
+        originalListingFee = listing.market_fee || 0;
 
         editItemNameInput.value = listing.items.item_name;
         editQuantityListedInput.value = Math.round(listing.quantity_listed || 0);
@@ -691,13 +692,15 @@ const updateEditFeeInfo = () => {
     }
 
     const priceIncrease = newPrice - originalListingPrice;
-    let estimatedFee = 0;
+    let estimatedAdditionalFee = 0;
 
     if (priceIncrease > 0) {
-        estimatedFee = Math.ceil(priceIncrease * 0.05);
-        editFeeInfo.textContent = `Increasing price by ${priceIncrease.toLocaleString()} will incur an additional fee of ${estimatedFee.toLocaleString()} gold.`;
+        estimatedAdditionalFee = Math.ceil(priceIncrease * 0.05);
+        editFeeInfo.textContent = `Increasing price by ${priceIncrease.toLocaleString()} will incur an additional fee of ${estimatedAdditionalFee.toLocaleString()} gold.`;
+    } else if (priceIncrease < 0) {
+        editFeeInfo.textContent = 'No additional fee for reducing the price (original fee will not be refunded).';
     } else {
-        editFeeInfo.textContent = 'No additional fee for reducing or maintaining the price.';
+        editFeeInfo.textContent = 'No change in price, no additional fee.';
     }
 };
 
@@ -721,24 +724,34 @@ const handleEditListingSave = async (e) => {
         }
         const { data: oldListing, error: fetchOldListingError } = await supabase
             .from('market_listings')
-            .select('total_listed_price')
+            .select('total_listed_price, market_fee')
             .eq('listing_id', currentEditingListingId)
             .eq('character_id', currentCharacterId)
             .single();
 
         if (fetchOldListingError || !oldListing) {
-            console.error('Error fetching old listing price:', fetchOldListingError);
-            await showCustomModal('Error', 'Could not retrieve original listing price for fee calculation.', [{ text: 'OK', value: true }]);
+            console.error('Error fetching old listing details:', fetchOldListingError);
+            await showCustomModal('Error', 'Could not retrieve original listing details for fee calculation.', [{ text: 'OK', value: true }]);
             return;
         }
 
         const oldPrice = oldListing.total_listed_price;
+        const currentStoredFee = oldListing.market_fee;
         const priceIncrease = total_listed_price - oldPrice;
-        let additionalFee = 0;
+        let additionalFeeToDeduct = 0;
+        let newCalculatedFee = currentStoredFee;
 
         if (priceIncrease > 0) {
-            additionalFee = Math.ceil(priceIncrease * 0.05);
+            newCalculatedFee = Math.ceil(total_listed_price * 0.05); 
+            if (newCalculatedFee < currentStoredFee) {
+                newCalculatedFee = currentStoredFee;
+            }
+            additionalFeeToDeduct = newCalculatedFee - currentStoredFee;
+        } else {
+            additionalFeeToDeduct = 0;
+            newCalculatedFee = currentStoredFee;
         }
+
 
         const { data: characterData, error: fetchCharacterError } = await supabase
             .from('characters')
@@ -754,21 +767,20 @@ const handleEditListingSave = async (e) => {
 
         let currentGold = characterData.gold || 0;
 
-        if (additionalFee > 0 && currentGold < additionalFee) {
-            await showCustomModal('Validation Error', `Not enough gold! You need ${additionalFee.toLocaleString()} gold for the additional fee but only have ${currentGold.toLocaleString()}.`, [{ text: 'OK', value: true }]);
+        if (additionalFeeToDeduct > 0 && currentGold < additionalFeeToDeduct) {
+            await showCustomModal('Validation Error', `Not enough gold! You need ${additionalFeeToDeduct.toLocaleString()} gold for the additional fee but only have ${currentGold.toLocaleString()}.`, [{ text: 'OK', value: true }]);
             return;
         }
 
         const listed_price_per_unit = total_listed_price / quantity_listed;
-        const market_fee_for_new_price = Math.ceil(total_listed_price * 0.05);
-
+        
         const { error: updateListingError } = await supabase
             .from('market_listings')
             .update({
                 quantity_listed: quantity_listed,
                 listed_price_per_unit: listed_price_per_unit,
                 total_listed_price: total_listed_price,
-                market_fee: market_fee_for_new_price
+                market_fee: newCalculatedFee
             })
             .eq('listing_id', currentEditingListingId)
             .eq('character_id', currentCharacterId); 
@@ -778,8 +790,8 @@ const handleEditListingSave = async (e) => {
             return;
         }
 
-        if (additionalFee > 0) {
-            const newGold = currentGold - additionalFee;
+        if (additionalFeeToDeduct > 0) {
+            const newGold = currentGold - additionalFeeToDeduct;
             const { error: updateGoldError } = await supabase
                 .from('characters')
                 .update({ gold: newGold })
@@ -789,7 +801,7 @@ const handleEditListingSave = async (e) => {
                 await showCustomModal('Error', 'Listing updated successfully, but failed to deduct additional gold fee: ' + updateGoldError.message, [{ text: 'OK', value: true }]);
                 console.error('Error deducting additional gold fee:', updateGoldError.message);
             } else {
-                await showCustomModal('Success', `Listing updated successfully! Additional fee of ${additionalFee.toLocaleString()} gold deducted.`, [{ text: 'OK', value: true }]);
+                await showCustomModal('Success', `Listing updated successfully! Additional fee of ${additionalFeeToDeduct.toLocaleString()} gold deducted.`, [{ text: 'OK', value: true }]);
             }
         } else {
             await showCustomModal('Success', 'Listing updated successfully!', [{ text: 'OK', value: true }]);
