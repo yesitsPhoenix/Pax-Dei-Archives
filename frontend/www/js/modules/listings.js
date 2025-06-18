@@ -144,7 +144,7 @@ const renderListingsTable = (listings) => {
             <td class="py-3 px-6 text-left">${Math.round(listing.listed_price_per_unit || 0).toLocaleString()}</td>
             <td class="py-3 px-6 text-left">${Math.round(listing.total_listed_price || 0).toLocaleString()}</td>
             <td class="py-3 px-6 text-left">${Math.round(listing.market_fee || 0).toLocaleString()}</td>
-            <td class="py-3 px-6 text-left">${new Date(listing.listing_date).toLocaleDateString()}</td>
+            <td class="py-3 px-6 text-left">${new Date(listing.listing_date).toISOString().substring(0, 10)}</td>
             <td class="py-3 px-6 text-left">
                 <div class="flex gap-2 whitespace-nowrap">
                     ${!listing.is_cancelled && !listing.is_fully_sold ? `

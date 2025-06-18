@@ -179,6 +179,13 @@ async function performSearch(searchTerm) {
 }
 
 $(document).ready(async function() {
+
+    const utcClockDisplay = document.getElementById('utc-clock-display');
+    if (utcClockDisplay) {
+        updateUtcClock(utcClockDisplay);
+        setInterval(() => updateUtcClock(utcClockDisplay), 1000);
+    }
+    
     $('.menu-trigger').on('click', function() {
         $(this).toggleClass('active');
         $('.header-area .nav').toggleClass('active');
@@ -479,3 +486,17 @@ function handleSearchKeyPress(event) {
         $('#search').trigger('submit');
     }
 }
+
+export const updateUtcClock = (element) => {
+    if (!element) return;
+    const now = new Date();
+    const month = now.getUTCMonth();
+    const day = now.getUTCDate();
+    const hours = now.getUTCHours().toString().padStart(2, '0');
+    const minutes = now.getUTCMinutes().toString().padStart(2, '0');
+    const monthNames = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ];
+    element.textContent = `${monthNames[month]} ${day}, ${hours}:${minutes} UTC`;
+};

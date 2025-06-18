@@ -51,29 +51,38 @@ async function fetchAllCharacterActivity(characterId) {
         { data: salesData, error: salesError },
         { data: purchasesData, error: purchasesError },
         { data: cancelledListingsData, error: cancelledError },
+        { data: activeListingsData, error: activeListingsError },
         { data: pveTransactionsData, error: pveError }
     ] = await Promise.all([
         supabase.from('sales').select(`sale_id, quantity_sold, sale_price_per_unit, total_sale_price, sale_date, market_listings!sales_listing_id_fkey!inner(listing_id, character_id, market_fee, items(item_name, item_categories(category_name)))`).eq('market_listings.character_id', characterId),
         supabase.from('purchases').select(`purchase_id, quantity_purchased, purchase_price_per_unit, total_purchase_price, purchase_date, items(item_name, item_categories(category_name))`).eq('character_id', characterId),
         supabase.from('market_listings').select(`listing_id, listing_date, quantity_listed, listed_price_per_unit, total_listed_price, market_fee, items(item_name, item_categories(category_name))`).eq('character_id', characterId).eq('is_cancelled', true),
+        // Fetch active listings for their upfront fees
+        supabase.from('market_listings').select(`listing_id, listing_date, quantity_listed, listed_price_per_unit, total_listed_price, market_fee, items(item_name, item_categories(category_name))`).eq('character_id', characterId).eq('is_fully_sold', false).eq('is_cancelled', false),
         supabase.from('pve_transactions').select(`transaction_id, transaction_date, gold_amount, description`).eq('character_id', characterId)
     ]);
 
-    if (salesError || purchasesError || cancelledError || pveError) {
-        console.error("Error fetching character activity:", salesError || purchasesError || cancelledError || pveError);
+    if (salesError || purchasesError || cancelledError || activeListingsError || pveError) {
+        console.error("Error fetching character activity:", salesError || purchasesError || cancelledError || activeListingsError || pveError);
         return [];
     }
 
     const allTransactions = [];
 
     salesData.forEach(sale => {
-        allTransactions.push({ type: 'Sale', date: sale.sale_date, item_name: sale.market_listings?.items?.item_name, category_name: sale.market_listings?.items?.item_categories?.category_name, quantity: Math.round(sale.quantity_sold || 0), price_per_unit: Math.round(sale.sale_price_per_unit || 0), total_amount: Math.round(sale.total_sale_price || 0), fee: Math.round(sale.market_listings?.market_fee || 0) });
+        allTransactions.push({ type: 'Sale', date: sale.sale_date, item_name: sale.market_listings?.items?.item_name, category_name: sale.market_listings?.items?.item_categories?.category_name, quantity: Math.round(sale.quantity_sold || 0), price_per_unit: Math.round(sale.sale_price_per_unit || 0), total_amount: Math.round(sale.total_sale_price || 0), fee: 0 }); // Fee is 0 here as it's already covered by 'Listing Fee'
     });
     purchasesData.forEach(purchase => {
         allTransactions.push({ type: 'Purchase', date: purchase.purchase_date, item_name: purchase.items?.item_name, category_name: purchase.items?.item_categories?.category_name, quantity: Math.round(purchase.quantity_purchased || 0), price_per_unit: Math.round(purchase.purchase_price_per_unit || 0), total_amount: Math.round(purchase.total_purchase_price || 0), fee: 0 });
     });
     cancelledListingsData.forEach(listing => {
-        allTransactions.push({ type: 'Cancellation', date: listing.listing_date, item_name: listing.items?.item_name, category_name: listing.items?.item_categories?.category_name, quantity: Math.round(listing.quantity_listed || 0), price_per_unit: Math.round(listing.listed_price_per_unit || 0), total_amount: 0, fee: Math.round(listing.market_fee || 0) });
+        allTransactions.push({ type: 'Cancellation', date: listing.listing_date, item_name: listing.items?.item_name, category_name: listing.items?.item_categories?.category_name, quantity: Math.round(listing.quantity_listed || 0), price_per_unit: Math.round(listing.listed_price_per_unit || 0), total_amount: 0, fee: 0 }); // Fee is 0 here as it's already covered by 'Listing Fee'
+    });
+    // Iterate active listings to get their upfront fees
+    activeListingsData.forEach(listing => {
+        if (listing.market_fee && listing.market_fee > 0) {
+            allTransactions.push({ type: 'Listing Fee', date: listing.listing_date, item_name: listing.items?.item_name, category_name: listing.items?.item_categories?.category_name, quantity: Math.round(listing.quantity_listed || 0), price_per_unit: Math.round(listing.listed_price_per_unit || 0), total_amount: 0, fee: Math.round(listing.market_fee || 0) });
+        }
     });
     pveTransactionsData.forEach(pve => {
         allTransactions.push({ type: 'PVE Gold', date: pve.transaction_date, item_name: pve.description || 'N/A', category_name: 'PVE', quantity: 1, price_per_unit: Math.round(pve.gold_amount || 0), total_amount: Math.round(pve.gold_amount || 0), fee: 0 });
@@ -128,9 +137,9 @@ export const loadTraderPageData = async () => {
             currentCharacterData,
             allActivityData
         ] = await Promise.all([
-             supabase.rpc('get_character_dashboard_stats', { p_character_id: currentCharacterId }),
-             getCurrentCharacter(),
-             fetchAllCharacterActivity(currentCharacterId)
+            supabase.rpc('get_character_dashboard_stats', { p_character_id: currentCharacterId }),
+            getCurrentCharacter(),
+            fetchAllCharacterActivity(currentCharacterId)
         ]);
 
         if (dashboardError) {

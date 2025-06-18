@@ -9,6 +9,7 @@
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
     <script type="module" src="frontend/www/js/supabaseClient.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script type="module" src="frontend/www/js/utils.js"></script>
 </head>
 <body>
     <header class="header-area">
@@ -196,8 +197,10 @@
             </div>
         </div>
         <div class="corner-credit">
-            <img src="https://i.postimg.cc/7L1M8TDf/phoenix.png" alt="Phoenix profile image" class="profile-image" />
-            <span class="nav-text-profile">Made by Phoenix ✨</span>
+            <div class="corner-credit-top-row"> <img src="frontend/www/assets/phoenix.png" alt="Phoenix profile image" class="profile-image" />
+                <span class="nav-text-profile">Made by Phoenix ✨</span>
+            </div>
+            <div id="utc-clock-display" class="utc-clock"></div>
         </div>
     </footer>
 

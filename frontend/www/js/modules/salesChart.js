@@ -95,7 +95,7 @@ const chartOptions = (timeframe) => ({
     },
     title: {
       display: true,
-      text: `Market & PVE Activity by ${timeframe === 'monthly' ? 'Month' : timeframe === 'weekly' ? 'Week' : 'Day'}`,
+      text: `Market & PVE Activity by ${timeframe === 'monthly' ? 'Month' : timeframe === 'weekly' ? 'Week' : 'Day'} in UTC`,
       font: { size: 18 },
       color: '#ffffff'
     }
@@ -132,7 +132,7 @@ const aggregateTransactionData = (transactions, timeframe) => {
       aggregatedSales[key] = (aggregatedSales[key] || 0) + Math.round(transaction.total_amount || 0);
     } else if (type === 'purchase') {
       aggregatedPurchases[key] = (aggregatedPurchases[key] || 0) + Math.round(transaction.total_amount || 0);
-    } else if (type === 'cancellation') {
+    } else if (type === 'listing fee') {
       aggregatedFees[key] = (aggregatedFees[key] || 0) + Math.round(transaction.fee || 0);
     } else if (type === 'pve gold') {
       aggregatedPVE[key] = (aggregatedPVE[key] || 0) + Math.round(transaction.total_amount || 0);

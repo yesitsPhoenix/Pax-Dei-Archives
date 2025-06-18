@@ -239,7 +239,7 @@
                                 <th>Price (per unit)</th>
                                 <th>Total Value</th>
                                 <th>Fee</th>
-                                <th>Listed On</th>
+                                <th>List Date (UTC)</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -260,7 +260,7 @@
                         <thead>
                             <tr class="bg-gray-200 text-gray-700 uppercase text-sm leading-normal">
                                 <th class="py-3 px-6 text-left">Type</th>
-                                <th class="py-3 px-6 text-left">Date</th>
+                                <th class="py-3 px-6 text-left">Date (UTC)</th>
                                 <th class="py-3 px-6 text-left">Item Name</th>
                                 <th class="py-3 px-6 text-left">Category</th>
                                 <th class="py-3 px-6 text-left">Quantity</th>
@@ -288,10 +288,13 @@
             </div>
         </div>
         <div class="corner-credit">
-            <img src="frontend/www/assets/phoenix.png" alt="Phoenix profile image" class="profile-image" />
-            <span class="nav-text-profile">Made by Phoenix ✨</span>
+            <div class="corner-credit-top-row"> <img src="frontend/www/assets/phoenix.png" alt="Phoenix profile image" class="profile-image" />
+                <span class="nav-text-profile">Made by Phoenix ✨</span>
+            </div>
+            <div id="utc-clock-display" class="utc-clock"></div>
         </div>
     </footer>
+
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
     <script type="module" src="frontend/www/js/main.js"></script>

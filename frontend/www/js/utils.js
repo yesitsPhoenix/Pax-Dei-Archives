@@ -50,3 +50,4 @@ export function slugify(text) {
         .replace(/[^\w-]+/g, '')
         .replace(/--+/g, '-');
 }
+

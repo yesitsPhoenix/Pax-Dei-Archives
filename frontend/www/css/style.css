@@ -581,18 +581,7 @@ footer a {
 footer a:hover {
 	color: var(--light-gold-color);
 }
-.corner-credit {
-	position: fixed;
-	bottom: 20px;
-	left: 20px;
-	display: flex;
-	align-items: center;
-	background-color: rgba(0, 0, 0, 0.3);
-	padding: 8px 12px;
-	border-radius: 10px;
-	color: white;
-	z-index: 100;
-}
+
 .profile-image {
 	height: 30px;
 	width: auto;
@@ -1259,4 +1248,42 @@ body.modal-open {
 	font-size: 30px;
 	color: var(--gold-color);
 	z-index: 0;
+}
+
+
+
+.corner-credit {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    display: flex;
+    flex-direction: column;
+    background-color: rgba(0, 0, 0, 0.3);
+    padding: 8px 12px;
+    border-radius: 10px;
+    color: white;
+    z-index: 100;
+    align-items: flex-end;
+}
+
+.corner-credit-top-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    justify-content: flex-end;
+}
+
+.utc-clock {
+    font-size: 1em;
+    color: #d1d5db; 
+    border-radius: 5px;
+    margin-top: 5px; 
+    width: 100%;
+    text-align: center;
+    font-family: 'monospace', sans-serif;
+	font-style: italic;
+}
+
+.nav-text-profile {
+    margin-left: 5px;
 }
