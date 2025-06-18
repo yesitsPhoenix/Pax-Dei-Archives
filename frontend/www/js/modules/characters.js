@@ -274,8 +274,6 @@ const updateCharacterGoldByPveTransaction = async (newTotalGold) => {
 
     await showCustomModal('Success', message, [{ text: 'OK', value: true }]);
     await loadTraderPageData();
-    await loadTransactionHistory();
-    await renderSalesChart();
 };
 
 

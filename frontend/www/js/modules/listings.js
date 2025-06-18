@@ -49,6 +49,7 @@ const editListingModalHtml = `
                 <div class="mb-4">
                     <label for="edit-total-price" class="block text-gray-700 text-sm font-bold mb-2">Total Price of Stack:</label>
                     <input type="number" step="0.01" id="edit-total-price" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                    <p id="edit-fee-info" class="text-xs text-gray-600 mt-1"></p>
                 </div>
                 <div class="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
                     <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">Save Changes</button>
@@ -121,7 +122,7 @@ const renderListingsTable = (listings) => {
 
     listings.forEach(listing => {
         const paxDeiSlug = listing.pax_dei_slug ||
-                           (listing.items && listing.items.pax_dei_slug);
+                               (listing.items && listing.items.pax_dei_slug);
 
         const paxDeiUrl = paxDeiSlug ? `https://paxdei.gaming.tools/${paxDeiSlug}` : '#';
         
@@ -129,12 +130,9 @@ const renderListingsTable = (listings) => {
         const linkClasses = isLinkEnabled ? 'text-blue-600 hover:underline' : 'text-gray-700 cursor-default';
         const linkTarget = isLinkEnabled ? 'target="_blank"' : '';
 
-
-
         const row = document.createElement('tr');
         row.innerHTML = `
             <td class="py-3 px-6 text-left">
-                <!-- Modified line to use the fetched paxDeiSlug -->
                 <a href="${paxDeiUrl}" ${linkTarget} class="${linkClasses}">
                     ${listing.item_name || 'N/A'}
                 </a>
@@ -148,6 +146,7 @@ const renderListingsTable = (listings) => {
             <td class="py-3 px-6 text-left">
                 <div class="flex gap-2 whitespace-nowrap">
                     ${!listing.is_cancelled && !listing.is_fully_sold ? `
+                        <button class="edit-btn bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-full" data-id="${listing.listing_id}">Edit</button>
                         <button class="sold-btn bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-full" data-id="${listing.listing_id}">Sold</button>
                         <button class="cancel-btn bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-3 rounded-full" data-id="${listing.listing_id}">Cancel</button>
                     ` : ''}
@@ -232,6 +231,12 @@ const addListingsEventListeners = () => {
     document.getElementById('closeEditModal').addEventListener('click', () => {
         document.getElementById('editListingModal').classList.add('hidden');
     });
+
+    // Add event listener for price input to show estimated fee
+    const editTotalPriceInput = document.getElementById('edit-total-price');
+    if (editTotalPriceInput) {
+        editTotalPriceInput.addEventListener('input', updateEditFeeInfo);
+    }
 };
 
 const handleFilterChange = (key, value) => {
@@ -372,6 +377,14 @@ const handleAddListing = async (e) => {
 
         for (let i = 0; i < itemStacks; i++) {
             totalFees += marketFeePerListing;
+        }
+
+        if (currentGold < totalFees) {
+            await showCustomModal('Validation Error', `Not enough gold! You need ${totalFees.toLocaleString()} gold for fees but only have ${currentGold.toLocaleString()}.`, [{ text: 'OK', value: true }]);
+            return;
+        }
+
+        for (let i = 0; i < itemStacks; i++) {
             const { error } = await supabase.from('market_listings').insert({
                 item_id: itemId,
                 character_id: currentCharacterId,
@@ -626,12 +639,16 @@ const handleCancelListing = async (listingId) => {
     }
 };
 
+let originalListingPrice = 0;
+
 const showEditListingModal = async (listingId) => {
     currentEditingListingId = listingId;
     const editModal = document.getElementById('editListingModal');
     const editItemNameInput = document.getElementById('edit-item-name');
     const editQuantityListedInput = document.getElementById('edit-quantity-listed');
     const editTotalPriceInput = document.getElementById('edit-total-price');
+    const editFeeInfo = document.getElementById('edit-fee-info');
+
 
     try {
         const { data: listing, error } = await supabase
@@ -647,10 +664,13 @@ const showEditListingModal = async (listingId) => {
             return;
         }
 
-        // Round values when populating the edit modal
+        originalListingPrice = listing.total_listed_price || 0;
+
         editItemNameInput.value = listing.items.item_name;
         editQuantityListedInput.value = Math.round(listing.quantity_listed || 0);
         editTotalPriceInput.value = Math.round(listing.total_listed_price || 0);
+
+        updateEditFeeInfo();
 
         editModal.classList.remove('hidden');
     } catch (e) {
@@ -659,37 +679,132 @@ const showEditListingModal = async (listingId) => {
     }
 };
 
+const updateEditFeeInfo = () => {
+    const editTotalPriceInput = document.getElementById('edit-total-price');
+    const editFeeInfo = document.getElementById('edit-fee-info');
+    
+    const newPrice = parseFloat(editTotalPriceInput.value);
+    
+    if (isNaN(newPrice) || newPrice <= 0) {
+        editFeeInfo.textContent = 'Enter a positive price to see potential fee.';
+        return;
+    }
+
+    const priceIncrease = newPrice - originalListingPrice;
+    let estimatedFee = 0;
+
+    if (priceIncrease > 0) {
+        estimatedFee = Math.ceil(priceIncrease * 0.05);
+        editFeeInfo.textContent = `Increasing price by ${priceIncrease.toLocaleString()} will incur an additional fee of ${estimatedFee.toLocaleString()} gold.`;
+    } else {
+        editFeeInfo.textContent = 'No additional fee for reducing or maintaining the price.';
+    }
+};
 
 const handleEditListingSave = async (e) => {
     e.preventDefault();
     if (!currentEditingListingId) return;
 
-    const quantity_listed = parseInt(document.getElementById('edit-quantity-listed').value, 10);
-    const total_listed_price = parseFloat(document.getElementById('edit-total-price').value);
-
-    if (isNaN(quantity_listed) || quantity_listed <= 0 || isNaN(total_listed_price) || total_listed_price <= 0) {
-        return await showCustomModal('Validation Error', 'Quantity and total price must be positive numbers.', [{ text: 'OK', value: true }]);
+    const saveButton = document.getElementById('editListingForm').querySelector('button[type="submit"]');
+    if (saveButton) {
+        saveButton.disabled = true;
+        saveButton.textContent = 'Saving...';
     }
 
-    const listed_price_per_unit = Math.round(total_listed_price / quantity_listed || 0);
-    const market_fee = Math.round(total_listed_price * 0.05 || 0);
+    try {
+        const quantity_listed = parseInt(document.getElementById('edit-quantity-listed').value, 10);
+        const total_listed_price = parseFloat(document.getElementById('edit-total-price').value);
 
-    const { error } = await supabase
-        .from('market_listings')
-        .update({
-            quantity_listed,
-            listed_price_per_unit,
-            total_listed_price,
-            market_fee
-        })
-        .eq('listing_id', currentEditingListingId)
-        .eq('character_id', currentCharacterId); 
+        if (isNaN(quantity_listed) || quantity_listed <= 0 || isNaN(total_listed_price) || total_listed_price <= 0) {
+            await showCustomModal('Validation Error', 'Quantity and total price must be positive numbers.', [{ text: 'OK', value: true }]);
+            return;
+        }
+        const { data: oldListing, error: fetchOldListingError } = await supabase
+            .from('market_listings')
+            .select('total_listed_price')
+            .eq('listing_id', currentEditingListingId)
+            .eq('character_id', currentCharacterId)
+            .single();
 
-    if (error) {
-        await showCustomModal('Error', 'Failed to update listing: ' + error.message, [{ text: 'OK', value: true }]);
-    } else {
+        if (fetchOldListingError || !oldListing) {
+            console.error('Error fetching old listing price:', fetchOldListingError);
+            await showCustomModal('Error', 'Could not retrieve original listing price for fee calculation.', [{ text: 'OK', value: true }]);
+            return;
+        }
+
+        const oldPrice = oldListing.total_listed_price;
+        const priceIncrease = total_listed_price - oldPrice;
+        let additionalFee = 0;
+
+        if (priceIncrease > 0) {
+            additionalFee = Math.ceil(priceIncrease * 0.05);
+        }
+
+        const { data: characterData, error: fetchCharacterError } = await supabase
+            .from('characters')
+            .select('gold')
+            .eq('character_id', currentCharacterId)
+            .single();
+
+        if (fetchCharacterError) {
+            await showCustomModal('Error', 'Failed to fetch character gold: ' + fetchCharacterError.message, [{ text: 'OK', value: true }]);
+            console.error('Error fetching character gold:', fetchCharacterError.message);
+            return;
+        }
+
+        let currentGold = characterData.gold || 0;
+
+        if (additionalFee > 0 && currentGold < additionalFee) {
+            await showCustomModal('Validation Error', `Not enough gold! You need ${additionalFee.toLocaleString()} gold for the additional fee but only have ${currentGold.toLocaleString()}.`, [{ text: 'OK', value: true }]);
+            return;
+        }
+
+        const listed_price_per_unit = total_listed_price / quantity_listed;
+        const market_fee_for_new_price = Math.ceil(total_listed_price * 0.05);
+
+        const { error: updateListingError } = await supabase
+            .from('market_listings')
+            .update({
+                quantity_listed: quantity_listed,
+                listed_price_per_unit: listed_price_per_unit,
+                total_listed_price: total_listed_price,
+                market_fee: market_fee_for_new_price
+            })
+            .eq('listing_id', currentEditingListingId)
+            .eq('character_id', currentCharacterId); 
+
+        if (updateListingError) {
+            await showCustomModal('Error', 'Failed to update listing: ' + updateListingError.message, [{ text: 'OK', value: true }]);
+            return;
+        }
+
+        if (additionalFee > 0) {
+            const newGold = currentGold - additionalFee;
+            const { error: updateGoldError } = await supabase
+                .from('characters')
+                .update({ gold: newGold })
+                .eq('character_id', currentCharacterId);
+
+            if (updateGoldError) {
+                await showCustomModal('Error', 'Listing updated successfully, but failed to deduct additional gold fee: ' + updateGoldError.message, [{ text: 'OK', value: true }]);
+                console.error('Error deducting additional gold fee:', updateGoldError.message);
+            } else {
+                await showCustomModal('Success', `Listing updated successfully! Additional fee of ${additionalFee.toLocaleString()} gold deducted.`, [{ text: 'OK', value: true }]);
+            }
+        } else {
+            await showCustomModal('Success', 'Listing updated successfully!', [{ text: 'OK', value: true }]);
+        }
+
         document.getElementById('editListingModal').classList.add('hidden');
-        await showCustomModal('Success', 'Listing updated successfully!', [{ text: 'OK', value: true }]);
         await loadTraderPageData();
+
+    } catch (error) {
+        console.error('Error during handleEditListingSave:', error);
+        await showCustomModal('Error', 'An unexpected error occurred while saving the listing changes.', [{ text: 'OK', value: true }]);
+    } finally {
+        if (saveButton) {
+            saveButton.disabled = false;
+            saveButton.textContent = 'Save Changes';
+        }
     }
 };
