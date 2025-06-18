@@ -10,9 +10,15 @@ const salesPaginationContainer = document.getElementById('sales-pagination');
 const downloadSalesCsvButton = document.getElementById('download-sales-csv');
 const utcClockDisplay = document.getElementById('utc-clock-display');
 
+const transactionSearchInput = document.getElementById('transaction-search-input');
+const transactionCategoryFilter = document.getElementById('transaction-category-filter');
+const transactionSortBy = document.getElementById('transaction-sort-by');
+const transactionSortDirection = document.getElementById('transaction-sort-direction');
+
 const TRANSACTIONS_PER_PAGE = 10;
 let currentTransactionsPage = 1;
 let fullTransactionHistory = [];
+let availableCategories = new Set();
 
 export const initializeSales = () => {
     if (downloadSalesCsvButton) {
@@ -22,10 +28,31 @@ export const initializeSales = () => {
         updateUtcClock(utcClockDisplay);
         setInterval(() => updateUtcClock(utcClockDisplay), 1000);
     }
+
+    if (transactionSearchInput) {
+        transactionSearchInput.addEventListener('input', applyTransactionFilters);
+    }
+    if (transactionCategoryFilter) {
+        transactionCategoryFilter.addEventListener('change', applyTransactionFilters);
+    }
+    if (transactionSortBy) {
+        transactionSortBy.addEventListener('change', applyTransactionFilters);
+    }
+    if (transactionSortDirection) {
+        transactionSortDirection.addEventListener('change', applyTransactionFilters);
+    }
 };
 
 export const loadTransactionHistory = (transactions) => {
     fullTransactionHistory = transactions || [];
+    availableCategories.clear();
+    fullTransactionHistory.forEach(transaction => {
+        if (transaction.category_name) {
+            availableCategories.add(transaction.category_name);
+        }
+    });
+    populateCategoryFilter();
+
     if (!currentCharacterId) {
         if (salesLoader) salesLoader.style.display = 'none';
         if (salesTable) salesTable.style.display = 'table';
@@ -34,18 +61,83 @@ export const loadTransactionHistory = (transactions) => {
     }
     if (salesLoader) salesLoader.style.display = 'block';
     if (salesTable) salesTable.style.display = 'none';
-    try {
-        const offset = (currentTransactionsPage - 1) * TRANSACTIONS_PER_PAGE;
-        const paginatedTransactions = fullTransactionHistory.slice(offset, offset + TRANSACTIONS_PER_PAGE);
-        renderTransactionTable(paginatedTransactions);
-        renderTransactionPagination(fullTransactionHistory.length);
-    } catch (error) {
-        console.error('Error rendering transaction history:', error.message);
-        showCustomModal('Error', 'Could not render transaction history.', [{ text: 'OK', value: true }]);
-    } finally {
-        if (salesLoader) salesLoader.style.display = 'none';
-        if (salesTable) salesTable.style.display = 'table';
+    
+    currentTransactionsPage = 1; 
+    applyTransactionFilters();
+};
+
+const populateCategoryFilter = () => {
+    if (!transactionCategoryFilter) return;
+    transactionCategoryFilter.innerHTML = '<option value="">All Categories</option>';
+    Array.from(availableCategories).sort().forEach(category => {
+        const option = document.createElement('option');
+        option.value = category;
+        option.textContent = category;
+        transactionCategoryFilter.appendChild(option);
+    });
+};
+
+const applyTransactionFilters = () => {
+    let filteredTransactions = [...fullTransactionHistory];
+
+    const searchTerm = transactionSearchInput ? transactionSearchInput.value.toLowerCase() : '';
+    if (searchTerm) {
+        filteredTransactions = filteredTransactions.filter(transaction =>
+            (transaction.item_name && transaction.item_name.toLowerCase().includes(searchTerm)) ||
+            (transaction.type && transaction.type.toLowerCase().includes(searchTerm)) ||
+            (transaction.description && transaction.description.toLowerCase().includes(searchTerm))
+        );
     }
+
+    const categoryFilter = transactionCategoryFilter ? transactionCategoryFilter.value : '';
+    if (categoryFilter) {
+        filteredTransactions = filteredTransactions.filter(transaction =>
+            transaction.category_name === categoryFilter
+        );
+    }
+
+    const sortBy = transactionSortBy ? transactionSortBy.value : 'date';
+    const sortDirection = transactionSortDirection ? transactionSortDirection.value : 'desc';
+
+    filteredTransactions.sort((a, b) => {
+        let valA, valB;
+
+        if (sortBy === 'date') {
+            valA = new Date(a.date).getTime();
+            valB = new Date(b.date).getTime();
+        } else if (sortBy === 'type') {
+            valA = a.type.toLowerCase();
+            valB = b.type.toLowerCase();
+        } else if (sortBy === 'item_name') {
+            valA = (a.item_name || '').toLowerCase();
+            valB = (b.item_name || '').toLowerCase();
+        } else if (sortBy === 'category') {
+            valA = (a.category_name || '').toLowerCase();
+            valB = (b.category_name || '').toLowerCase();
+        } else if (sortBy === 'total_amount') {
+            valA = a.total_amount || 0;
+            valB = b.total_amount || 0;
+        } else if (sortBy === 'fee') {
+            valA = a.fee || 0;
+            valB = b.fee || 0;
+        } else {
+            return 0;
+        }
+
+        if (typeof valA === 'string' && typeof valB === 'string') {
+            return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        }
+        return sortDirection === 'asc' ? valA - valB : valB - valA;
+    });
+
+    const offset = (currentTransactionsPage - 1) * TRANSACTIONS_PER_PAGE;
+    const paginatedTransactions = filteredTransactions.slice(offset, offset + TRANSACTIONS_PER_PAGE);
+
+    renderTransactionTable(paginatedTransactions);
+    renderTransactionPagination(filteredTransactions.length);
+
+    if (salesLoader) salesLoader.style.display = 'none';
+    if (salesTable) salesTable.style.display = 'table';
 };
 
 const renderTransactionTable = (transactions) => {
@@ -97,7 +189,7 @@ const renderTransactionPagination = (totalCount) => {
         button.disabled = disabled;
         button.addEventListener('click', () => {
             currentTransactionsPage = page;
-            loadTransactionHistory(fullTransactionHistory);
+            applyTransactionFilters(); // Re-apply filters to get the correct page
         });
         return button;
     };

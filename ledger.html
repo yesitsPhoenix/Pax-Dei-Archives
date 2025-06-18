@@ -250,6 +250,36 @@
                 </section>
                 <section class="sales-history my-8">
                     <h2 class="text-2xl font-bold mb-4 text-gray-800">Transaction History Ledger</h2>
+                    <div class="flex flex-wrap items-center gap-4 mb-6">
+                        <div class="flex-1 min-w-[200px]">
+                            <label for="transaction-search-input" class="block text-gray-400 text-sm font-bold mb-1">Item Name:</label>
+                            <input type="text" id="transaction-search-input" placeholder="Enter item name" class="p-2 border rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
+                        </div>
+                        <div class="flex-1 min-w-[150px]">
+                            <label for="transaction-category-filter" class="block text-gray-400 text-sm font-bold mb-1">Filter by Category:</label>
+                            <select id="transaction-category-filter" class="p-2 border rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
+                                <option value="">All Categories</option>
+                            </select>
+                        </div>
+                        <div class="flex-1 min-w-[150px]">
+                            <label for="transaction-sort-by" class="block text-gray-400 text-sm font-bold mb-1">Sort By:</label>
+                            <select id="transaction-sort-by" class="p-2 border rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
+                                <option value="date">Date</option>
+                                <option value="type">Type</option>
+                                <option value="item_name">Item Name</option>
+                                <option value="category">Category</option>
+                                <option value="total_amount">Total Amount</option>
+                                <option value="fee">Fee</option>
+                            </select>
+                        </div>
+                        <div class="flex-1 min-w-[150px]">
+                            <label for="transaction-sort-direction" class="block text-gray-400 text-sm font-bold mb-1">Sort Direction:</label>
+                            <select id="transaction-sort-direction" class="p-2 border rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
+                                <option value="desc">Descending</option>
+                                <option value="asc">Ascending</option>
+                            </select>
+                        </div>
+                    </div>
                     <div class="flex justify-end mb-4">
                         <button id="download-sales-csv" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-full shadow-md transition duration-150 ease-in-out transform hover:scale-105">
                             <i class="fas fa-download mr-2"></i> Download Market History CSV
