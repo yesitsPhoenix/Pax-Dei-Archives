@@ -1,0 +1,39 @@
+/* dungeon.css */
+
+body {
+    font-family: 'Inter', sans-serif;
+    color: #f0f2f5; 
+}
+
+/* Custom scrollbar for better aesthetics */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #444;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #aaa;
+}
+
+.newCodeBtn {
+    background-color: teal
+}
+
+#distributionResults {
+    height: 1400px !important; /* Adjust this value as needed, e.g., 500px, 600px */
+    overflow-y: auto; /* Adds a vertical scrollbar if content exceeds height */
+    /* You might already have padding, border, background, etc. */
+    padding: 1rem; /* Example padding */
+    border: 1px solid #4a5568; /* Example border */
+    background-color: #2d3748; /* Example background */
+    border-radius: 0.5rem; /* Example rounded corners */
+}

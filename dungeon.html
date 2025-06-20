@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pax Dei Archives - Dungeon Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="frontend/www/css/articles.css">
+    <link rel="stylesheet" href="frontend/www/css/dungeon.css">
+    <link rel="stylesheet" href="https://unpkg.com/swiper@7/swiper-bundle.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+    <script> window.gtTooltipConfig = {
+        scale: 0.8,
+        delay: 40,
+        };
+    </script>
+    <script async src="https://paxdei.gaming.tools/embed.js"></script>
+</head>
+<body>
+    <header class="header-area">
+        <div class="container">
+            <nav class="main-nav">
+                <a href="index.html" class="logo">
+                    <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
+                    <h1>Pax Dei Archives</h1>
+                </a>
+                <a class='menu-trigger'>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </a>
+                <div class="nav-and-search-wrapper">
+                    <ul class="nav">
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="articles.html">Articles</a></li>
+                        <li><a href="news-updates.html">News & Updates</a></li>
+                        <li><a href="developer-comments.html">Developer Comments</a></li>
+                        <li><a href="lore.html">Lore</a></li>
+                        <li><a href="ledger.html">Ledger</a></li>
+                        <li><a href="map.html">Map</a></li>
+                        <li><a href="dungeon.html" class="active">Dungeon Tracker</a></li>
+                        <li><a href="about.html">About</a></li>
+                    </ul>
+                    <div class="search-input">
+                        <form id="search" action="#">
+                            <input type="text" placeholder="Search the Archives" id='searchText' name="searchKeyword" />
+                            <button type="submit" class="search-button"><i class="fa fa-search"></i></button>
+                        </form>
+                        <div id="searchResultsDropdown" class="search-results-dropdown">
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+    <div class="container mt-8 mb-8">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="page-content">
+                    <div class="bg-[#1A202C] p-6 sm:p-8 md:p-10 rounded-lg shadow-xl w-full max-w-4xl mx-auto border border-gray-700">
+                        <h1 class="text-3xl sm:text-4xl font-bold text-center mb-6 text-yellow-400">Pax Dei Dungeon Loot Tracker</h1>
+
+                        <div class="mb-8 p-4 bg-gray-700 rounded-lg">
+                            <h2 class="text-2xl font-semibold mb-4 text-white">Save / Load Run</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="shareCodeDisplay" class="block text-gray-300 text-sm font-bold mb-2">Current Share Code:</label>
+                                    <input type="text" id="shareCodeDisplay" readonly placeholder="Click 'New Code' to generate" class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight mb-2 cursor-text select-all">
+                                    <div class="flex gap-2">
+                                        <button id="newCodeBtn" class="bg-blue-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-150 ease-in-out w-full">New Code</button>
+                                        <button id="copyCodeBtn" class="bg-green-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-150 ease-in-out w-full">Copy Code</button>
+                                    </div>
+                                    <p class="text-gray-400 text-xs mt-1">Generate a new code and save this run.</p>
+                                </div>
+                                <div>
+                                    <label for="loadCodeInput" class="block text-gray-300 text-sm font-bold mb-2">Load Run by Code:</label>
+                                    <input type="text" id="loadCodeInput" placeholder="Enter share code" class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 mb-2">
+                                    <button id="loadRunBtn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-150 ease-in-out w-full">Load Run</button>
+                                    <p class="text-gray-400 text-xs mt-1">Enter a code to load a previously saved run.</p>
+                                </div>
+                            </div>
+                            <div id="feedbackMessage" class="text-center text-sm mt-4">
+                            </div>
+                        </div>
+                        <div class="mb-8 p-4 bg-gray-700 rounded-lg">
+                            <h2 class="text-2xl font-semibold mb-4 text-white">Dungeon/Run Setup</h2>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label for="dungeonName" class="block text-gray-300 text-sm font-bold mb-2">Dungeon/Run Name:</label>
+                                    <input type="text" id="dungeonName" placeholder="e.g., Zebeum Pellipis, POI Farming" class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label for="partyMemberName" class="block text-gray-300 text-sm font-bold mb-2">Party Member Name:</label>
+                                    <div class="flex">
+                                        <input type="text" id="partyMemberName" placeholder="e.g., Sir Roland" class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 mr-2">
+                                        <button id="addMemberBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-150 ease-in-out">Add</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <h3 class="text-xl font-semibold mb-2 text-gray-200">Party Members (<span id="memberCount">0</span>/6)</h3>
+                                <ul id="partyMembersList" class="max-h-56 overflow-y-auto bg-gray-600 p-3 rounded-lg border border-gray-500">
+                                </ul>
+                            </div>
+                        </div>
+
+                            <div class="mb-8 p-4 bg-gray-700 rounded-lg relative">
+                                <h2 class="text-2xl font-semibold mb-4 text-white">Loot Tracking</h2>
+
+                                <div class="flex flex-wrap -mx-2 mb-4">
+                                    <div class="w-full md:w-1/2 px-2 mb-4 relative">
+                                        <label for="lootItemName" class="block text-gray-300 text-sm font-bold mb-2">Loot Item:</label>
+                                        <input type="text" id="lootItemName" placeholder="e.g., Dragon Scale Chestplate" class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                                        <div id="lootSearchResults" class="absolute z-10 w-full bg-gray-700 border border-gray-500 rounded-b-md shadow-lg max-h-60 overflow-y-auto hidden top-full left-0 mt-1">
+                                        </div>
+                                    </div>
+
+                                    <div class="w-full md:w-1/2 px-2 mb-4">
+                                        <label for="lootItemQuantity" class="block text-gray-300 text-sm font-bold mb-2">Quantity:</label>
+                                        <input type="number" id="lootItemQuantity" value="1" min="1" class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                                    </div>
+                                </div>
+                                <button id="addLootBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-150 ease-in-out w-full mb-4">Add Item(s)</button>
+
+                                <div class="mb-4">
+                                    <h3 class="text-xl font-semibold mb-2 text-gray-200">Current Loot</h3>
+                                    <ul id="currentLootList" class="max-h-64 overflow-y-auto bg-gray-600 p-3 rounded-lg border border-gray-500">
+                                        </ul>
+                                </div>
+                            </div>
+                        <div class="mb-8 p-4 bg-gray-700 rounded-lg">
+                            <h2 class="text-2xl font-semibold mb-4 text-white">Gold Management</h2>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label for="addGoldAmount" class="block text-gray-300 text-sm font-bold mb-2">Add Gold:</label>
+                                    <div class="flex">
+                                        <input type="number" id="addGoldAmount" placeholder="e.g., 500" class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 mr-2">
+                                        <button id="addGoldBtn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-150 ease-in-out">Add Gold</button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="setGoldAmount" class="block text-gray-300 text-sm font-bold mb-2">Set Total Gold:</label>
+                                    <div class="flex">
+                                        <input type="number" id="setGoldAmount" placeholder="e.g., 1200" class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 mr-2">
+                                        <button id="setGoldBtn" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-150 ease-in-out">Set Gold</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center text-xl font-bold text-gray-200">
+                                <span>Current Total Gold:</span>
+                                <span id="totalGoldDisplay" class="text-yellow-400">0</span>
+                            </div>
+                        </div>
+                        <div class="p-4 bg-gray-700 rounded-lg">
+                            <h2 class="text-2xl font-semibold mb-4 text-white">Loot Distribution</h2>
+                            <div class="flex flex-col sm:flex-row justify-center gap-4 mb-4">
+                                <button id="distributeLootBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-75">Assign Loot (Round Robin)</button>
+                                <button id="distributeGoldBtn" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-75">Distribute Gold Evenly</button>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-semibold mb-2 text-gray-200">Distributed Results</h3>
+                                <div id="distributionResults" class="max-h-96 overflow-y-auto bg-gray-600 p-3 rounded-lg border border-gray-500">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="reservePlayerModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-96 border border-gray-700">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold text-white">Reserve Item For: <span id="itemToReserveName" class="text-yellow-400"></span></h3>
+                <button id="closeReserveModalBtn" class="text-gray-400 hover:text-gray-200 text-2xl">&times;</button>
+            </div>
+            <div id="reservePlayerSelection" class="max-h-60 overflow-y-auto bg-gray-700 p-2 rounded mb-4">
+            </div>
+            <div class="mb-4">
+                <label for="reserveQuantity" class="block text-gray-300 text-sm font-bold mb-2">Quantity to Reserve:</label>
+                <input type="number" id="reserveQuantity" value="1" min="1" class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+            </div>
+            <div class="flex justify-end gap-3">
+                <button id="confirmAllReservesBtn"
+                                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150 ease-in-out"
+                                disabled>
+                            Confirm All Reserves
+                </button>
+                <button id="closeReserveModalBtnBottom"
+                                class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150 ease-in-out">
+                            Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12">
+                    <p>Copyright © 2025 Pax Dei Archives. All rights reserved.</p>
+                    <a href="admin.html">Admin</a>
+                    <a href="ledger.html">Ledger</a>
+                </div>
+            </div>
+        </div>
+        <div class="corner-credit">
+            <div class="corner-credit-top-row"> <img src="frontend/www/assets/phoenix.png" alt="Phoenix profile image" class="profile-image" />
+                <span class="nav-text-profile">Made by Phoenix ✨</span>
+            </div>
+            <div id="utc-clock-display" class="utc-clock"></div>
+        </div>
+    </footer>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script type="module" src="frontend/www/js/supabaseClient.js"></script>
+    <script type="module" src="frontend/www/js/utils.js"></script>
+    <script type="module" src="frontend/www/js/main.js"></script>
+    <script type="module" src="frontend/www/js/dungeon.js"></script>
+</body>
+</html>
