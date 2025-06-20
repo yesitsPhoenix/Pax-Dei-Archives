@@ -17,7 +17,10 @@ export function setupEventListeners({
             state.partyMemberNameInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    if (state.addMemberBtn) state.addMemberBtn.click();
+                    // Directly call addPartyMember and then focus
+                    addPartyMember(state.partyMemberNameInput.value);
+                    state.partyMemberNameInput.value = ''; // Clear the input field
+                    state.partyMemberNameInput.focus(); // Return cursor to the input field
                 }
             });
         }
@@ -25,6 +28,8 @@ export function setupEventListeners({
         if (state.addMemberBtn) {
             state.addMemberBtn.addEventListener('click', () => {
                 addPartyMember(state.partyMemberNameInput.value);
+                state.partyMemberNameInput.value = ''; // Clear the input field
+                state.partyMemberNameInput.focus(); // Return cursor to the input field
             });
         }
 
@@ -227,12 +232,12 @@ export function setupEventListeners({
                         const li = document.createElement('li');
                         li.className = 'flex justify-between items-center py-1 px-2 border-b border-gray-500 last:border-b-0 text-gray-200';
                         li.innerHTML = `
-                            <span>${runName}</span>
-                            <div>
-                                <button data-run-name="${runName}" class="load-saved-run-btn bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs mr-2 transition duration-150 ease-in-out">Load</button>
-                                <button data-run-name="${runName}" class="delete-saved-run-btn text-red-400 hover:text-red-500 text-sm transition duration-150 ease-in-out">Delete</button>
-                            </div>
-                        `;
+                                <span>${runName}</span>
+                                <div>
+                                    <button data-run-name="${runName}" class="load-saved-run-btn bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs mr-2 transition duration-150 ease-in-out">Load</button>
+                                    <button data-run-name="${runName}" class="delete-saved-run-btn text-red-400 hover:text-red-500 text-sm transition duration-150 ease-in-out">Delete</button>
+                                </div>
+                            `;
                         savedRunsList.appendChild(li);
                     });
                 }
