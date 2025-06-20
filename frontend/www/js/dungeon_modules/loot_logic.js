@@ -1,6 +1,6 @@
 import { state, markChanges } from './state.js';
 import { showFeedback, updatePartyMembersList, updateCurrentLootList, updateDistributionResults, showReserveModal, hideReserveModal, updateReservePlayerSelection, updateConfirmButtonState } from './ui_updates.js';
-import { fetchAllItemsForDropdown } from './data_management.js';
+import { fetchAllItemsForDropdown, updateDungeonRunInSupabase } from './data_management.js';
 
 export function addPartyMember(memberName) {
     if (!memberName || memberName.trim() === "") {
@@ -148,8 +148,7 @@ export function setGold(goldAmount) {
     }
 }
 
-
-export function distributeGold() {
+export async function distributeGold() {
     if (state.partyMembers.length === 0) {
         showFeedback('Please add party members first to distribute gold!', 'error');
         return;
@@ -163,9 +162,22 @@ export function distributeGold() {
     let remainingGold = state.totalGold % state.partyMembers.length;
     const totalGoldForLog = state.totalGold;
 
-    appendLogEntry(state.distributionResults, '<p class="py-1 border-b border-gray-500 text-yellow-400 font-bold mt-2">--- Gold Distribution Event ---</p>');
-    appendLogEntry(state.distributionResults, `<p class="py-1 border-b border-gray-500 text-gray-200">Total Gold Distributed: <span class="text-yellow-400">${totalGoldForLog.toLocaleString()}</span></p>`);
-    appendLogEntry(state.distributionResults, `<p class="py-1 border-b border-gray-500 text-gray-200">Each member received a base of: <span class="text-yellow-400">${goldPerMember.toLocaleString()}</span> gold.</p>`);
+    let distributionHtmlLog = '';
+    state.lastGoldDistributionLog = [];
+
+    const timestamp = new Date().toLocaleString();
+    const headerHtml = `<p class="py-1 border-b border-gray-500 text-yellow-400 font-bold mt-2">--- Gold Distribution Event (${timestamp}) ---</p>`;
+    distributionHtmlLog += headerHtml;
+    state.lastGoldDistributionLog.push({ type: 'header', text: headerHtml, timestamp: timestamp });
+
+    const totalGoldEntryHtml = `<p class="py-1 border-b border-gray-500 text-gray-200">Total Gold Distributed: <span class="text-yellow-400">${totalGoldForLog.toLocaleString()}</span></p>`;
+    distributionHtmlLog += totalGoldEntryHtml;
+    state.lastGoldDistributionLog.push({ type: 'total_gold', amount: totalGoldForLog, timestamp: new Date().toLocaleString() });
+
+    const basePerMemberHtml = `<p class="py-1 border-b border-gray-500 text-gray-200">Each member received a base of: <span class="text-yellow-400">${goldPerMember.toLocaleString()}</span> gold.</p>`;
+    distributionHtmlLog += basePerMemberHtml;
+    state.lastGoldDistributionLog.push({ type: 'base_gold_per_member', amount: goldPerMember, timestamp: new Date().toLocaleString() });
+
 
     state.partyMembers.forEach((member) => { 
         let memberGold = goldPerMember;
@@ -174,30 +186,35 @@ export function distributeGold() {
             remainingGold--;
         }
         member.goldShare += memberGold;
-        appendLogEntry(state.distributionResults, `<strong>${member.name}</strong> received: <span class="text-yellow-400">${memberGold.toLocaleString()}</span> gold. (Total: ${member.goldShare.toLocaleString()})`);
+        const memberLogHtml = `<strong>${member.name}</strong> received: <span class="text-yellow-400">${memberGold.toLocaleString()}</span> gold. (Total: ${member.goldShare.toLocaleString()})`;
+        distributionHtmlLog += `<p>${memberLogHtml}</p>`;
+        state.lastGoldDistributionLog.push({
+            type: 'member_gold',
+            memberName: member.name,
+            amount: memberGold,
+            totalMemberGold: member.goldShare,
+            timestamp: new Date().toLocaleString()
+        });
     });
 
     state.totalGold = 0;
     if (state.totalGoldDisplay) {
         state.totalGoldDisplay.textContent = state.totalGold.toLocaleString(); 
     }
+    state.distribution_results_html = (state.distribution_results_html || '') + distributionHtmlLog;
 
     showFeedback('Gold distributed successfully!', 'success');
     updateDistributionResults();
     markChanges();
+
+    if (state.currentShareableCode) {
+        await updateDungeonRunInSupabase(state.currentShareableCode);
+    } else {
+        showFeedback("Gold distributed locally, but not saved to shared run (no share code).", "info");
+    }
 }
 
-function appendLogEntry(element, html) {
-    if (!element) return;
-    const p = document.createElement('p');
-    p.className = 'py-1 border-b border-gray-500 last:border-b-0 text-gray-200';
-    p.innerHTML = html;
-    element.appendChild(p);
-    element.scrollTop = element.scrollHeight;
-}
-
-
-export function distributeLoot() {
+export async function distributeLoot() {
     if (state.partyMembers.length === 0) {
         showFeedback('Please add party members first to distribute loot!', 'error');
         return;
@@ -240,9 +257,15 @@ export function distributeLoot() {
         const j = Math.floor(Math.random() * (i + 1));
         [itemsToDistributeIndividual[i], itemsToDistributeIndividual[j]] = [itemsToDistributeIndividual[j], itemsToDistributeIndividual[i]];
     }
-    
+
+    let distributionHtmlLog = '';
+    state.lastLootDistributionLog = [];
+
     if (itemsToDistributeIndividual.length > 0) {
-        appendLogEntry(state.distributionResults, '<p class="py-1 border-b border-gray-500 text-yellow-400 font-bold mt-2">--- Loot Distribution Event ---</p>');
+        const timestamp = new Date().toLocaleString();
+        const headerHtml = `<p class="py-1 border-b border-gray-500 text-yellow-400 font-bold mt-2">--- Loot Distribution Event (${timestamp}) ---</p>`;
+        distributionHtmlLog += headerHtml;
+        state.lastLootDistributionLog.push({ type: 'header', text: headerHtml, timestamp: timestamp });
     }
 
     let currentMemberIndex = state.nextLootRecipientIndex % state.partyMembers.length;
@@ -259,16 +282,31 @@ export function distributeLoot() {
             recipient.items.push({ name: item.name, slug: item.slug, quantity: 1 });
         }
 
-        appendLogEntry(state.distributionResults, `<strong>${recipient.name}</strong> receives <span class="text-green-300">"${item.name}"</span>`);
+        const logEntryHtml = `<strong>${recipient.name}</strong> receives <span class="text-green-300">"${item.name}"</span>`;
+        distributionHtmlLog += `<p>${logEntryHtml}</p>`;
+        state.lastLootDistributionLog.push({
+            type: 'item_received',
+            itemName: item.name,
+            itemSlug: item.slug,
+            recipient: recipient.name,
+            timestamp: new Date().toLocaleString()
+        });
         currentMemberIndex = (currentMemberIndex + 1) % state.partyMembers.length;
     }
 
     state.nextLootRecipientIndex = currentMemberIndex;
+    state.distribution_results_html = (state.distribution_results_html || '') + distributionHtmlLog;
 
     showFeedback('Unreserved loot distributed successfully!', 'success');
     updateCurrentLootList();
     updateDistributionResults();
     markChanges();
+
+    if (state.currentShareableCode) {
+        await updateDungeonRunInSupabase(state.currentShareableCode);
+    } else {
+        showFeedback("Loot distributed locally, but not saved to shared run (no share code).", "info");
+    }
 }
 
 export function handleReserveLoot(item) {

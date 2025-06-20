@@ -42,7 +42,9 @@ export const state = {
     currentItemToReserve: null,
     reservedItems: {},
     allItemsForDropdown: [],
-    
+    lastLootDistributionLog: [],
+    lastGoldDistributionLog: [],
+    distribution_results_html: '',
 
     _debounceTimer: null,
     _debounceDelay: 500 

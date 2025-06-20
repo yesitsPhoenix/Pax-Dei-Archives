@@ -121,22 +121,25 @@ export function deleteDungeonRun(dungeonName) {
 export async function generateShareCode() {
     let newCode;
     let isUnique = false;
-    while (!isUnique) {
+       while (!isUnique) {
         newCode = Math.random().toString(36).substring(2, 9);
         const { data, error } = await supabase
             .from('dungeon_runs')
             .select('id')
-            .eq('id', newCode)
-            .single();
+            .eq('id', newCode); // Removed .single()
 
-        if (error && error.code === 'PGRST116') {
-            isUnique = true;
-        } else if (data) {
-            isUnique = false;
-        } else {
+        if (error) {
             console.error('Error checking share code uniqueness:', error);
             showFeedback('Error generating share code. Please try again.', 'error');
             return null;
+        }
+
+        // Check if data array is empty (meaning no existing ID)
+        if (data.length === 0) {
+            isUnique = true;
+        } else {
+            // Data array is not empty, means ID exists
+            isUnique = false;
         }
     }
 
