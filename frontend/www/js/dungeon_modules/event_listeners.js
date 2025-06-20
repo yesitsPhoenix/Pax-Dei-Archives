@@ -161,8 +161,8 @@ export function setupEventListeners({
 
         if (state.copyCodeBtn) {
             state.copyCodeBtn.addEventListener('click', () => {
-                const newUrl = window.location.origin + '/view_dungeon.html#code-' + state.currentShareableCode;
-                navigator.clipboard.writeText(newUrl) // Corrected line
+                const newUrl = window.location.origin + 'Pax-Dei-Archives/view_dungeon.html#code-' + state.currentShareableCode;
+                navigator.clipboard.writeText(newUrl)
                     .then(() => showFeedback('Share link copied to clipboard!', 'success'))
                     .catch(err => console.error('Failed to copy text: ', err));
             });

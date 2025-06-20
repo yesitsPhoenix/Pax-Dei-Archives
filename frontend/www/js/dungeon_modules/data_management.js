@@ -200,7 +200,7 @@ export async function loadDungeonRunFromShareCode(shareCode) {
             state.dungeonNameInput.value = supabaseData.dungeon_name || '';
         } else if (state.dungeonNameDisplay) {
             state.dungeonNameDisplay.textContent = supabaseData.dungeon_name || 'Shared Dungeon Run';
-            document.title = `Dungeon Master - ${supabaseData.dungeon_name || 'Shared Run'}`;
+            document.title = `Dungeon Tracker - ${supabaseData.dungeon_name || 'Shared Run'}`;
         }
 
         state.partyMembers = (supabaseData.party_members || []).map(memberData => ({
