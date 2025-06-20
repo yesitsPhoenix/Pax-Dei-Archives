@@ -161,9 +161,8 @@ export function setupEventListeners({
 
         if (state.copyCodeBtn) {
             state.copyCodeBtn.addEventListener('click', () => {
-                // Modified to copy the full URL with the share code
-                const fullShareUrl = window.location.origin + window.location.pathname + '#code-' + state.currentShareableCode;
-                navigator.clipboard.writeText(fullShareUrl)
+                const newUrl = window.location.origin + '/view_dungeon.html#code-' + state.currentShareableCode;
+                navigator.clipboard.writeText(newUrl) // Corrected line
                     .then(() => showFeedback('Share link copied to clipboard!', 'success'))
                     .catch(err => console.error('Failed to copy text: ', err));
             });

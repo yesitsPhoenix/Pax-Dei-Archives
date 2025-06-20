@@ -106,15 +106,17 @@ export function refreshPaxDeiTooltips() {
 
 export function waitForGtTooltipAndRefresh() {
     let attempts = 0;
-    const maxAttempts = 20; 
+    const maxAttempts = 50; // Increased from 20 to 50 (5 seconds total wait)
     const intervalTime = 100; 
 
     const intervalId = setInterval(() => {
         if (window.gtTooltip && (typeof window.gtTooltip.refresh === 'function' || typeof window.gtTooltip.init === 'function')) {
             clearInterval(intervalId); 
             refreshPaxDeiTooltips(); 
+            console.log('Pax Dei Tooltip script detected and refreshed!');
         } else if (attempts >= maxAttempts) {
             clearInterval(intervalId); 
+            console.warn('Pax Dei Tooltip script not detected after multiple attempts.');
         }
         attempts++;
     }, intervalTime);
@@ -128,9 +130,11 @@ export function updateCurrentLootList() {
         state.lootItems.forEach((item, index) => {
             const listItem = document.createElement('li');
             listItem.className = 'flex justify-between items-center py-1 px-2 border-b border-gray-500 last:border-b-0 text-gray-200';
-            const paxDeiUrl = item.slug ? `/${item.slug}` : '';
+            const paxDeiSlug = item.pax_dei_slug || item.slug;
             const quantityDisplay = item.quantity > 1 ? ` (x${item.quantity})` : '';
-            
+
+            const paxDeiItemUrl = paxDeiSlug ? `https://paxdei.gaming.tools/${paxDeiSlug}` : '#';
+
             let totalReservedForItem = 0;
             for (const player in state.reservedItems) {
                 const playerReserves = state.reservedItems[player] || [];
@@ -149,7 +153,7 @@ export function updateCurrentLootList() {
             ` : '';
 
             listItem.innerHTML = `
-                <span ${paxDeiUrl ? `data-gt-tooltip="${paxDeiUrl}"` : ''}>${item.name}${quantityDisplay}${reservedDisplay}</span>
+                <a href="${paxDeiItemUrl}" class="gt-tooltip cursor-help" target="_blank" rel="noopener noreferrer">${item.name}${quantityDisplay}${reservedDisplay}</a>
                 ${buttonsHtml}
             `;
             state.currentLootList.appendChild(listItem);
@@ -158,7 +162,6 @@ export function updateCurrentLootList() {
     if (document.getElementById('dungeonName')) {
         markChanges();
     }
-    waitForGtTooltipAndRefresh(); 
 }
 
 export function updateDistributionResults() {
@@ -202,7 +205,7 @@ export function updateDistributionResults() {
             }
             const remainingQty = item.quantity - totalReserved;
             if (remainingQty > 0) {
-                     logHtml.push(`<p class="py-1 border-b border-gray-500 text-gray-200">"${item.name}" (x${remainingQty})</p>`);
+                    logHtml.push(`<p class="py-1 border-b border-gray-500 text-gray-200">"${item.name}" (x${remainingQty})</p>`);
             }
         });
     } else if (state.lootItems.length > 0 && nonReservedLoot.length === 0) {
