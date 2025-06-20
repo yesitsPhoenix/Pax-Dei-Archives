@@ -148,7 +148,7 @@ export async function generateShareCode() {
         current_loot_items: state.lootItems,
         current_total_gold: state.totalGold,
         next_loot_recipient_index: state.nextLootRecipientIndex,
-        reservedItems: state.reservedItems
+        reserved_items: state.reservedItems
     };
 
     const { error } = await supabase
