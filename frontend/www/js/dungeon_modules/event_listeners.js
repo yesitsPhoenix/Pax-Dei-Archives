@@ -92,7 +92,7 @@ export function setupEventListeners({
                 }
             });
         }
-        
+
         if (state.lootItemQuantityInput) {
             state.lootItemQuantityInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
@@ -161,9 +161,10 @@ export function setupEventListeners({
 
         if (state.copyCodeBtn) {
             state.copyCodeBtn.addEventListener('click', () => {
-                if (state.shareCodeDisplay) state.shareCodeDisplay.select();
-                navigator.clipboard.writeText(state.shareCodeDisplay ? state.shareCodeDisplay.value : '')
-                    .then(() => showFeedback('Share code copied to clipboard!', 'success'))
+                // Modified to copy the full URL with the share code
+                const fullShareUrl = window.location.origin + window.location.pathname + '#code-' + state.currentShareableCode;
+                navigator.clipboard.writeText(fullShareUrl)
+                    .then(() => showFeedback('Share link copied to clipboard!', 'success'))
                     .catch(err => console.error('Failed to copy text: ', err));
             });
         }
