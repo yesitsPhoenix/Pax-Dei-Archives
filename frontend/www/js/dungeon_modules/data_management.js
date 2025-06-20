@@ -266,7 +266,7 @@ export async function updateDungeonRunInSupabase(shareCode) {
         showFeedback('Failed to update run in real-time.', 'error');
         return false;
     } else {
-        console.log('Run updated in Supabase:', shareCode);
+        //console.log('Run updated in Supabase:', shareCode);
         return true;
     }
 }
