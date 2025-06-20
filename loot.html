@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="frontend/www/css/style.css">
     <link rel="stylesheet" href="frontend/www/css/articles.css">
     <link rel="stylesheet" href="frontend/www/css/dungeon.css">
+    <link rel="stylesheet" href="frontend/www/css/style.css">
     <link rel="stylesheet" href="https://unpkg.com/swiper@7/swiper-bundle.min.css"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
@@ -35,12 +36,12 @@
                     <ul class="nav">
                         <li><a href="index.html">Home</a></li>
                         <li><a href="articles.html">Articles</a></li>
-                        <li><a href="news-updates.html">News & Updates</a></li>
-                        <li><a href="developer-comments.html">Developer Comments</a></li>
+                        <li><a href="news-updates.html">News</a></li>
+                        <li><a href="developer-comments.html">Dev Comments</a></li>
+                        <li><a href="loot.html" class="active">Loot Tracker</a></li>
                         <li><a href="lore.html">Lore</a></li>
                         <li><a href="ledger.html">Ledger</a></li>
                         <li><a href="map.html">Map</a></li>
-                        <li><a href="dungeon.html" class="active">Dungeon Tracker</a></li>
                         <li><a href="about.html">About</a></li>
                     </ul>
                     <div class="search-input">
@@ -63,22 +64,22 @@
                         <h1 class="text-3xl sm:text-4xl font-bold text-center mb-6 text-yellow-400">Pax Dei Dungeon Loot Tracker</h1>
 
                         <div class="mb-8 p-4 bg-gray-700 rounded-lg">
-                            <h2 class="text-2xl font-semibold mb-4 text-white">Save / Load Run</h2>
+                            <h2 class="text-2xl font-semibold mb-4 text-white">Start a New Run</h2>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label for="shareCodeDisplay" class="block text-gray-300 text-sm font-bold mb-2">Create a new Code:</label>
+                                    <label for="shareCodeDisplay" class="block text-gray-300 text-sm font-bold mb-2">Create a new Code to start a new run:</label>
                                     <input type="text" id="shareCodeDisplay" readonly placeholder="Click 'New Code' to generate" class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight mb-2 cursor-text select-all">
                                     <div class="flex gap-2">
                                         <button id="newCodeBtn" class="bg-blue-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-150 ease-in-out w-full">New Code</button>
                                         <button id="copyCodeBtn" class="bg-green-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-150 ease-in-out w-full">Copy Code</button>
                                     </div>
-                                    <p class="text-gray-400 text-xs mt-1">Generate a new code and save this run.</p>
+                                    <p class="text-gray-400 text-xs mt-1">Select the New Code button to generate a new code.<br>Then, copy and share this code with others.</p>
                                 </div>
                                 <div>
                                     <label for="loadCodeInput" class="block text-gray-300 text-sm font-bold mb-2">Enter a Shared Run Code from another player:</label>
                                     <input type="text" id="loadCodeInput" placeholder="Enter share code" class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 mb-2">
                                     <button id="loadRunBtn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-150 ease-in-out w-full">Load Run</button>
-                                    <p class="text-gray-400 text-xs mt-1">Enter a code to load a saved run.</p>
+                                    <p class="text-gray-400 text-xs mt-1">Enter a shared code to load an existing run.</p>
                                 </div>
                             </div>
                             <div id="feedbackMessage" class="text-center text-sm mt-4">
