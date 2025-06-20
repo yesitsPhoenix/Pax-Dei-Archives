@@ -1250,8 +1250,6 @@ body.modal-open {
 	z-index: 0;
 }
 
-
-
 .corner-credit {
     position: fixed;
     bottom: 20px;
@@ -1262,7 +1260,7 @@ body.modal-open {
     padding: 8px 12px;
     border-radius: 10px;
     color: white;
-    z-index: 100;
+    z-index: 900;
     align-items: flex-end;
 }
 
@@ -1282,6 +1280,7 @@ body.modal-open {
     text-align: center;
     font-family: 'monospace', sans-serif;
 	font-style: italic;
+	z-index: 1000;;
 }
 
 .nav-text-profile {

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pax Dei Archives</title>
+    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+    <meta content="width=device-width, initial-scale=1" name="viewport">
+    <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
+    <link href="frontend/www/css/coord_styles.css" rel="stylesheet">
+    <link href="frontend/www/css/map_styles.css" rel="stylesheet">
+    <link href="frontend/www/css/style.css" rel="stylesheet">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+
+    <style>
+        .leaflet-container {
+            background: none !important;
+        }
+    </style>
+</head>
+<body>
+    <header class="header-area">
+        <div class="container">
+            <nav class="main-nav">
+                <a href="index.html" class="logo">
+                    <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
+                    <h1>Pax Dei Archives</h1>
+                </a>
+                <a class='menu-trigger'>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </a>
+                <div class="nav-and-search-wrapper">
+                    <ul class="nav">
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="articles.html">Articles</a></li>
+                        <li><a href="news-updates.html">News & Updates</a></li>
+                        <li><a href="developer-comments.html">Developer Comments</a></li>
+                        <li><a href="lore.html">Lore</a></li>
+                        <li><a href="ledger.html" class="active">Ledger</a></li>
+                        <li><a href="about.html">About</a></li>
+                    </ul>
+                    <div class="search-input">
+                        <form id="search" action="#">
+                            <input type="text" placeholder="Search the Archives" id='searchText' name="searchKeyword" />
+                            <button type="submit" class="search-button"><i class="fa fa-search"></i></button>
+                        </form>
+                        <div id="searchResultsDropdown" class="search-results-dropdown">
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div id="map-container">
+            <div id="map" style="width: 100%; height: 100vh;"></div>
+
+            <div id="info-box" class="info-box">
+                <div id="text-info-box" class="text-info-box">
+                    Left-click to add temporary markers<br>
+                    Ctrl+Left-click to remove them<br><br>
+                    For questions or feedback,<br>
+                    visit us on Discord!<br>
+                    <a href="https://discord.gg/rWpsquDXqA" target="_blank">
+                        <img src='frontend/www/assets/discord.png' style="width: 40px; height: 40px;" alt="Discord Icon">
+                    </a>
+                </div>
+            </div>
+
+            <div id="mouse-coordinates" class="mouse-coordinates">
+                <span class="dynamic-coordinates"></span>
+            </div>
+
+            <div class="corner-credit">
+                <div class="corner-credit-top-row"> <img src="frontend/www/assets/phoenix.png" alt="Phoenix profile image" class="profile-image" />
+                    <span class="nav-text-profile">Made by Phoenix ✨</span>
+                </div>
+                <div id="utc-clock-display" class="utc-clock"></div>
+            </div>
+
+            <div id="map-overlay"></div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12">
+                    <p>Copyright © 2025 Pax Dei Archives. All rights reserved.</p>
+                    <a href="admin.html">Admin</a>
+                    <a href="ledger.html">Ledger</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="frontend/www/js/map.js"></script>
+    <script type="module" src="frontend/www/js/main.js"></script>
+</body>
+</html>
