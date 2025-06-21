@@ -4,6 +4,7 @@ import { fetchAndRenderDeveloperComments } from './devComments.js';
 import { fetchAndRenderNewsUpdates } from './newsUpdates.js';
 import { fetchAndRenderLorePosts } from './lorePosts.js';
 import { fetchAndRenderArticles, fetchAndRenderArticleCategories, setupArticleModalListeners, fetchSingleArticle } from './articles.js';
+import { fetchAbilitiesForSearch, normalizeAbilityNameForHash } from './abilities.js';
 import DOMPurify from 'https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.es.min.js';
 
 const TAG_LIST_CACHE_KEY = 'paxDeiTagList';
@@ -37,11 +38,12 @@ async function performSearch(searchTerm) {
     searchResultsDropdown.addClass('active');
 
     try {
-        const [comments, newsUpdates, lorePosts, articles] = await Promise.all([
+        const [comments, newsUpdates, lorePosts, articles, abilities] = await Promise.all([
             fetchAndRenderDeveloperComments(null, null, searchTerm),
             fetchAndRenderNewsUpdates(null, null, searchTerm),
             fetchAndRenderLorePosts(null, null, searchTerm),
-            fetchAndRenderArticles(null, null, searchTerm)
+            fetchAndRenderArticles(null, null, searchTerm),
+            fetchAbilitiesForSearch(searchTerm)
         ]);
 
         const allResults = [];
@@ -96,6 +98,20 @@ async function performSearch(searchTerm) {
             });
         });
 
+        // Process abilities
+        abilities.forEach(ability => {
+            const abilityLink = `abilities.html#${normalizeAbilityNameForHash(ability.name)}`;
+            allResults.push({
+                type: 'Ability',
+                title: ability.name,
+                content: ability.description,
+                date: null,
+                author: null,
+                source: null,
+                link: abilityLink
+            });
+        });
+
 
         allResults.sort((a, b) => {
             const dateA = a.date ? new Date(a.date) : new Date(0);
@@ -130,7 +146,7 @@ async function performSearch(searchTerm) {
                 const mainLink = item.link ? item.link : '#';
 
                 let displayedContent = item.content;
-                if (item.type === 'Lore Post' && typeof marked !== 'undefined') {
+                if ((item.type === 'Lore Post' || item.type === 'Ability') && typeof marked !== 'undefined') {
                     const snippetLength = 200;
                     let snippet = item.content.substring(0, snippetLength);
                     if (item.content.length > snippetLength) {
@@ -155,17 +171,18 @@ async function performSearch(searchTerm) {
                     headingContent = `${authorPrefix}${dateSuffix}`;
                 } else if (item.type === 'Article') {
                     headingContent = `${item.title} - ${item.author || 'Unknown'} ${dateSuffix}`;
+                } else if (item.type === 'Ability') {
+                    headingContent = `${item.title}`;
                 } else {
                     headingContent = `${titleDisplay} ${dateSuffix}`;
                 }
-
 
                 const resultHtml = `
                                 <div class="search-result-item ${item.type.toLowerCase().replace(/\s/g, '-')}-item">
                                     <div class="down-content">
                                         ${item.link ? `<h6><a href="${mainLink}">${headingContent}</a></h6>` : `<h6>${headingContent}</h6>`}
                                         <p>${displayedContent}</p> ${sourceDisplay ? sourceDisplay : ''}
-                                        ${item.link && (item.type === 'News Update' || item.type === 'Lore Post' || item.type === 'Article') ? `<div class="main-button"><a href="${mainLink}" ${item.type === 'News Update' || item.type === 'Article' ? 'target="_blank"' : ''}>Read More</a></div>` : ''}
+                                        ${item.link && (item.type === 'News Update' || item.type === 'Lore Post' || item.type === 'Article' || item.type === 'Ability') ? `<div class="main-button"><a href="${mainLink}" ${item.type === 'News Update' || item.type === 'Article' ? 'target="_blank"' : ''}>Read More</a></div>` : ''}
                                     </div>
                                 </div>
                             `;

@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient.js';
 
-function normalizeAbilityNameForHash(name) {
+// Exported for use in other modules, like main.js for search
+export function normalizeAbilityNameForHash(name) {
     let normalized = name.toLowerCase();
     if (normalized.includes('/')) {
         normalized = normalized.split('/')[0].trim();
@@ -11,6 +12,30 @@ function normalizeAbilityNameForHash(name) {
     normalized = normalized.replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_').replace(/_+/g, '_');
     return normalized;
 }
+
+// New function to fetch abilities specifically for search, with optional term
+export async function fetchAbilitiesForSearch(searchTerm = '') {
+    if (!supabase) {
+        console.error('Supabase client not initialized in abilities.js.');
+        return [];
+    }
+
+    let query = supabase.from('abilities').select('*');
+
+    if (searchTerm) {
+        // Search by name (case-insensitive) or description (case-insensitive)
+        query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+        console.error('Error fetching abilities for search:', error.message);
+        return [];
+    }
+    return data;
+}
+
 
 function createAbilitySection(title, abilities, targetElementId) {
     const container = document.getElementById(targetElementId);
@@ -114,7 +139,9 @@ function hidePopup() {
     }
 }
 
-async function fetchAndRenderAbilities() {
+// Renamed from fetchAndRenderAbilities to avoid confusion and allow separate search fetching
+// This function will still be used by abilities.js itself for its dedicated page
+export async function fetchAllAbilities() { // Renamed and exported
     if (!supabase) {
         console.error('Supabase client not initialized. Ensure supabaseClient.js is loaded correctly and exports supabase.');
         return null;
@@ -128,6 +155,13 @@ async function fetchAndRenderAbilities() {
         console.error('Error fetching abilities:', error.message);
         return null;
     }
+    return data;
+}
+
+// This function remains internal to abilities.js for rendering its page
+export async function fetchAndRenderAbilities() { // Re-added to maintain existing functionality
+    const data = await fetchAllAbilities();
+    if (!data) return;
 
     const armorAbilitiesGrouped = {};
     const weaponAbilitiesGrouped = {};
@@ -182,10 +216,11 @@ async function fetchAndRenderAbilities() {
         }
     }
 
-    return data;
+    return data; // Return data for handleUrlHash
 }
 
 async function handleUrlHash() {
+    // Use the specific render function for the abilities page
     const allAbilities = await fetchAndRenderAbilities();
 
     if (!allAbilities) {
