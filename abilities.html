@@ -3,12 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pax Dei Archives - About</title>
+    <title>Pax Dei Archives - Abilities</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script async src="https://paxdei.gaming.tools/embed.js"></script>
     <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="frontend/www/css/articles.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="frontend/www/css/abilities.css">
+    <link rel="stylesheet" href="https://unpkg.com/swiper@7/swiper-bundle.min.css"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
-    <script type="module" src="frontend/www/js/supabaseClient.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script> window.gtTooltipConfig = {
+        scale: 0.8,
+        delay: 40,
+        };
+    </script>
 </head>
 <body>
     <header class="header-area">
@@ -23,8 +32,10 @@
                     <span></span>
                     <span></span>
                 </a>
-                <div class="nav-and-search-wrapper"> <ul class="nav">
+                <div class="nav-and-search-wrapper">
+                    <ul class="nav">
                         <li><a href="index.html">Home</a></li>
+                        <li><a href="abilities.html" class="active">Abilities</a></li>
                         <li><a href="articles.html">Articles</a></li>
                         <li><a href="news-updates.html">News</a></li>
                         <li><a href="developer-comments.html">Dev Comments</a></li>
@@ -32,7 +43,6 @@
                         <li><a href="lore.html">Lore</a></li>
                         <li><a href="ledger.html">Ledger</a></li>
                         <li><a href="map.html">Map</a></li>
-                        <li><a href="about.html">About</a></li>
                     </ul>
                     <div class="search-input">
                         <form id="search" action="#">
@@ -46,16 +56,25 @@
             </nav>
         </div>
     </header>
-    <div class="container">
+
+    <div class="container mt-8 mb-8">
         <div class="row">
             <div class="col-lg-12">
                 <div class="page-content">
-                    <div class="heading-section">
-                        <h4><em>About</em> Pax Dei Archives</h4>
+                    <div class="bg-[#1A202C] p-6 sm:p-8 md:p-10 rounded-lg shadow-xl w-full max-w-6xl mx-auto border border-gray-700">
+                        <h1 class="text-3xl sm:text-4xl font-bold text-center mb-6 text-yellow-400">Armor & Weapon Abilities</h1>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div id="armor-abilities" class="mb-8 p-4 bg-gray-700 rounded-lg">
+                                <h2 class="text-2xl font-semibold mb-4 text-white">Armor Abilities</h2>
+                            </div>
+
+                            <div id="weapon-abilities" class="mb-8 p-4 bg-gray-700 rounded-lg">
+                                <h2 class="text-2xl font-semibold mb-4 text-white">Weapon Abilities</h2>
+                                <p class="text-gray-400">Weapon abilities coming soon!</p>
+                            </div>
+                        </div>
                     </div>
-                    <p>Pax Dei Archives is an unofficial fan-run website dedicated to providing the latest news, updates, and developer insights for the game Pax Dei. Our goal is to be a reliable source of information for the community, offering quick snapshots of important developer comments and keeping players informed about the game's progress.</p>
-                    <p>We believe in transparency and aim to document key statements from the developers to ensure the community has easy access to important information. Whether it's news about upcoming features, patch notes, or clarifications from the development team, you'll find it here.</p>
-                    <p>Thank you for visiting Pax Dei Archives. We hope you find this website helpful in staying up-to-date with everything happening in the world of Pax Dei!</p>
                 </div>
             </div>
         </div>
@@ -79,7 +98,12 @@
         </div>
     </footer>
 
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <div id="ability-popup-overlay" class="popup-overlay"></div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script type="module" src="frontend/www/js/supabaseClient.js"></script>
+    <script type="module" src="frontend/www/js/utils.js"></script>
     <script type="module" src="frontend/www/js/main.js"></script>
+    <script type="module" src="frontend/www/js/abilities.js"></script>
 </body>
 </html>
