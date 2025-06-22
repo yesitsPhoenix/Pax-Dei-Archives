@@ -1418,3 +1418,15 @@ body.modal-open {
 #auth-modal .logout-button:hover {
     background-color: #333;
 }
+
+
+.js-floating-avatar {
+    opacity: 0;
+    transition: opacity .75s ease-in-out;/
+}
+
+
+.js-floating-avatar.loaded {
+    opacity: 1;
+
+}

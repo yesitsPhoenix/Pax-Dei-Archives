@@ -7,6 +7,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const authModal = document.getElementById('auth-modal');
     const modalContentWrapper = document.getElementById('modal-content-wrapper');
 
+    const storedAvatarUrl = sessionStorage.getItem('userAvatarUrl');
+    if (storedAvatarUrl) {
+        floatingAvatar.src = storedAvatarUrl;
+        floatingAvatar.classList.add('loaded');
+    } else {
+        floatingAvatar.classList.remove('loaded');
+    }
+
     const updateAuthUI = async () => {
         if (await isLoggedIn()) {
             const userProfile = await getUserProfile();
@@ -14,6 +22,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const avatarUrl = userProfile ? (userProfile.avatar_url || 'https://cdn.discordapp.com/embed/avatars/0.png') : 'https://cdn.discordapp.com/embed/avatars/0.png';
 
             floatingAvatar.src = avatarUrl;
+            floatingAvatar.classList.add('loaded');e
+            sessionStorage.setItem('userAvatarUrl', avatarUrl);
+
             modalContentWrapper.innerHTML = `
                 <img src="${avatarUrl}" alt="User Avatar" class="modal-avatar">
                 <h4>Welcome, ${userName}!</h4>
@@ -26,11 +37,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
             document.getElementById('logoutButton').addEventListener('click', async () => {
                 await logout();
+                sessionStorage.removeItem('userAvatarUrl');
                 authModal.classList.remove('open');
                 updateAuthUI();
             });
         } else {
             floatingAvatar.src = 'https://cdn.discordapp.com/embed/avatars/0.png';
+            floatingAvatar.classList.remove('loaded');
+            sessionStorage.removeItem('userAvatarUrl');
             modalContentWrapper.innerHTML = `
                 <h4>Join the Archives!</h4>
                 <button id="discordLoginButton" class="login-button modal-button">
