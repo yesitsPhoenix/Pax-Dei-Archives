@@ -1,6 +1,5 @@
 import { supabase } from './supabaseClient.js';
 
-// Exported for use in other modules, like main.js for search
 export function normalizeAbilityNameForHash(name) {
     let normalized = name.toLowerCase();
     if (normalized.includes('/')) {
@@ -13,7 +12,6 @@ export function normalizeAbilityNameForHash(name) {
     return normalized;
 }
 
-// New function to fetch abilities specifically for search, with optional term
 export async function fetchAbilitiesForSearch(searchTerm = '') {
     if (!supabase) {
         console.error('Supabase client not initialized in abilities.js.');
@@ -23,7 +21,6 @@ export async function fetchAbilitiesForSearch(searchTerm = '') {
     let query = supabase.from('abilities').select('*');
 
     if (searchTerm) {
-        // Search by name (case-insensitive) or description (case-insensitive)
         query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
     }
 
@@ -99,7 +96,7 @@ function showPopup(ability) {
             <p class="popup-description">${renderedDescription}</p>
             <div class="flex flex-col items-center mt-6">
                 <button id="copy-ability-link" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors duration-200">
-                    Copy Link to Ability
+                    Copy Link
                 </button>
                 <span id="copy-feedback" class="mt-2 text-sm text-green-400 opacity-0 transition-opacity duration-300">Copied!</span>
             </div>
@@ -139,9 +136,7 @@ function hidePopup() {
     }
 }
 
-// Renamed from fetchAndRenderAbilities to avoid confusion and allow separate search fetching
-// This function will still be used by abilities.js itself for its dedicated page
-export async function fetchAllAbilities() { // Renamed and exported
+export async function fetchAllAbilities() {
     if (!supabase) {
         console.error('Supabase client not initialized. Ensure supabaseClient.js is loaded correctly and exports supabase.');
         return null;
@@ -158,8 +153,7 @@ export async function fetchAllAbilities() { // Renamed and exported
     return data;
 }
 
-// This function remains internal to abilities.js for rendering its page
-export async function fetchAndRenderAbilities() { // Re-added to maintain existing functionality
+export async function fetchAndRenderAbilities() {
     const data = await fetchAllAbilities();
     if (!data) return;
 
@@ -216,11 +210,10 @@ export async function fetchAndRenderAbilities() { // Re-added to maintain existi
         }
     }
 
-    return data; // Return data for handleUrlHash
+    return data;
 }
 
 async function handleUrlHash() {
-    // Use the specific render function for the abilities page
     const allAbilities = await fetchAndRenderAbilities();
 
     if (!allAbilities) {
