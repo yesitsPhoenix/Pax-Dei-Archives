@@ -6,7 +6,6 @@ let dashboardStatsCache = null;
 let lastStatsFetchTime = 0;
 const STATS_CACHE_DURATION = 60 * 5000;
 
-
 function showFormMessage(messageElement, message, type) {
     messageElement.textContent = message;
     messageElement.className = '';
@@ -156,30 +155,39 @@ if (devCommentForm) {
 }
 
 async function isAuthorizedAdmin(userId) {
-    if (!userId) return false;
+    if (!userId) {
+        return false;
+    }
     try {
         const { data, error } = await supabase
             .from('admin_users')
-            .select('user_id')
+            .select('role')
             .eq('user_id', userId)
-            .eq('role', 'comment_adder')
             .single();
 
-        return !!data;
-    } catch (error) {
-        console.error('Error checking admin authorization:', error.message);
+        if (error && error.code === 'PGRST116') {
+            return false;
+        }
+        if (error) {
+            console.error('Error checking admin authorization:', error.message);
+            return false;
+        }
+
+        return data && data.role === 'comment_adder';
+    } catch (e) {
+        console.error('Unexpected error in isAuthorizedAdmin:', e);
         return false;
     }
 }
-
 
 async function fetchDashboardStats() {
     const totalCommentsCount = document.getElementById('totalCommentsCount');
     const totalNewsCount = document.getElementById('totalNewsCount');
     const commentsMonthCount = document.getElementById('commentsMonthCount');
     const newsMonthCount = document.getElementById('newsMonthCount');
+    const totalLoreCount = document.getElementById('totalLoreCount');
 
-    if (!totalCommentsCount || !totalNewsCount || !commentsMonthCount || !newsMonthCount) {
+    if (!totalCommentsCount || !totalNewsCount || !commentsMonthCount || !newsMonthCount || !totalLoreCount) {
         return;
     }
 
@@ -189,6 +197,7 @@ async function fetchDashboardStats() {
         totalNewsCount.textContent = dashboardStatsCache.newsTotal;
         commentsMonthCount.textContent = dashboardStatsCache.commentsThisMonth;
         newsMonthCount.textContent = dashboardStatsCache.newsThisMonth;
+        totalLoreCount.textContent = dashboardStatsCache.loreTotal;
         return;
     }
 
@@ -196,29 +205,32 @@ async function fetchDashboardStats() {
     const endOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59, 999).toISOString();
 
     const [{ count: commentsTotal, error: commentsTotalError },
-            { count: newsTotal, error: newsTotalError },
-            { count: commentsThisMonth, error: commentsMonthError },
-            { count: newsThisMonth, error: newsMonthError }] = await Promise.all([
+        { count: newsTotal, error: newsTotalError },
+        { count: commentsThisMonth, error: commentsMonthError },
+        { count: newsThisMonth, error: newsMonthError },
+        { count: loreTotal, error: loreTotalError }] = await Promise.all([
         supabase.from('developer_comments').select('*', { count: 'exact', head: true }),
         supabase.from('news_updates').select('*', { count: 'exact', head: true }),
         supabase.from('developer_comments').select('*', { count: 'exact', head: true }).gte('comment_date', startOfMonth).lte('comment_date', endOfMonth),
-        supabase.from('news_updates').select('*', { count: 'exact', head: true }).gte('news_date', startOfMonth).lte('news_date', endOfMonth)
+        supabase.from('news_updates').select('*', { count: 'exact', head: true }).gte('news_date', startOfMonth).lte('news_date', endOfMonth),
+        supabase.from('lore_items').select('*', { count: 'exact', head: true })
     ]);
 
-    if (commentsTotalError || newsTotalError || commentsMonthError || newsMonthError) {
-        console.error('Error fetching dashboard stats:', commentsTotalError || newsTotalError || commentsMonthError || newsMonthError);
+    if (commentsTotalError || newsTotalError || commentsMonthError || newsMonthError || loreTotalError) {
+        console.error('Error fetching dashboard stats:', commentsTotalError || newsTotalError || commentsMonthError || newsMonthError || loreTotalError);
         totalCommentsCount.textContent = 'Error';
         totalNewsCount.textContent = 'Error';
         commentsMonthCount.textContent = 'Error';
         newsMonthCount.textContent = 'Error';
+        totalLoreCount.textContent = 'Error';
         dashboardStatsCache = null;
     } else {
-
         dashboardStatsCache = {
             commentsTotal,
             newsTotal,
             commentsThisMonth,
-            newsThisMonth
+            newsThisMonth,
+            loreTotal
         };
         lastStatsFetchTime = now;
 
@@ -226,6 +238,7 @@ async function fetchDashboardStats() {
         totalNewsCount.textContent = newsTotal;
         commentsMonthCount.textContent = commentsThisMonth;
         newsMonthCount.textContent = newsThisMonth;
+        totalLoreCount.textContent = loreTotal;
     }
 }
 
@@ -354,7 +367,6 @@ function parseComment(text) {
     }
 }
 
-
 async function populateTagSelect(tagSelectElement) {
     if (!tagSelectElement) {
         return;
@@ -391,7 +403,6 @@ async function populateTagSelect(tagSelectElement) {
         console.error('Unexpected error populating tags for admin form:', e);
     }
 }
-
 
 function slugify(text) {
     return text
@@ -432,11 +443,149 @@ async function handleAddNewTag(newTagValue, inputElement, messageElement, tagSel
     }
 }
 
+async function fetchAndPopulateLoreItems(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = 'Loading lore items...';
+
+    try {
+        const { data: loreItems, error } = await supabase
+            .from('lore_items')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            container.innerHTML = `Error loading lore items: ${error.message}`;
+            console.error('Error fetching lore items:', error.message);
+            return;
+        }
+
+        if (loreItems.length === 0) {
+            container.innerHTML = 'No lore items found.';
+            return;
+        }
+
+        container.innerHTML = '';
+        const list = document.createElement('ul');
+        list.classList.add('lore-item-list');
+        loreItems.forEach(item => {
+            const listItem = document.createElement('li');
+            listItem.classList.add('lore-item');
+            listItem.innerHTML = `
+                <div class="lore-item-header">
+                    <h3>${item.title}</h3>
+                    <span class="lore-item-category">${item.category}</span>
+                </div>
+                <p class="lore-item-slug">Slug: ${item.slug}</p>
+                <div class="lore-item-content">
+                    <p>${item.content.substring(0, 150)}...</p>
+                </div>
+                <div class="lore-item-actions">
+                    <button class="edit-lore-item" data-id="${item.id}">Edit</button>
+                    <button class="delete-lore-item" data-id="${item.id}">Delete</button>
+                </div>
+            `;
+            list.appendChild(listItem);
+        });
+        container.appendChild(list);
+
+        container.querySelectorAll('.edit-lore-item').forEach(button => {
+            button.addEventListener('click', (e) => editLoreItem(e.target.dataset.id));
+        });
+        container.querySelectorAll('.delete-lore-item').forEach(button => {
+            button.addEventListener('click', (e) => deleteLoreItem(e.target.dataset.id));
+        });
+
+    } catch (e) {
+        container.innerHTML = `An unexpected error occurred: ${e.message}`;
+        console.error('Unexpected error in fetchAndPopulateLoreItems:', e);
+    }
+}
+
+async function editLoreItem(id) {
+    const { data: loreItem, error } = await supabase
+        .from('lore_items')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+    if (error) {
+        console.error('Error fetching lore item for edit:', error.message);
+        showFormMessage(document.getElementById('addLoreItemMessage'), `Error fetching lore item: ${error.message}`, 'error');
+        return;
+    }
+
+    if (loreItem) {
+        document.getElementById('loreTitle').value = loreItem.title;
+        document.getElementById('loreSlug').value = loreItem.slug;
+        document.getElementById('loreCategory').value = loreItem.category;
+        document.getElementById('loreContent').value = loreItem.content;
+        document.getElementById('addLoreItemForm').dataset.editingId = loreItem.id;
+        document.getElementById('addLoreItemForm').querySelector('button[type="submit"]').textContent = 'Update Lore Item';
+        document.getElementById('cancelEditLoreItemButton').style.display = 'inline-block';
+        document.getElementById('newLoreCategoryInput').style.display = 'none';
+        document.getElementById('addNewLoreCategoryButton').style.display = 'none';
+
+        document.getElementById('addLoreItemMessage').textContent = 'Editing Lore Item';
+        document.getElementById('addLoreItemMessage').className = 'form-message info';
+        document.getElementById('addLoreItemMessage').style.display = 'block';
+    }
+}
+
+async function deleteLoreItem(id) {
+    if (!confirm('Are you sure you want to delete this lore item?')) {
+        return;
+    }
+
+    const { error } = await supabase
+        .from('lore_items')
+        .delete()
+        .eq('id', id);
+
+    if (error) {
+        console.error('Error deleting lore item:', error.message);
+        showFormMessage(document.getElementById('addLoreItemMessage'), `Error deleting lore item: ${error.message}`, 'error');
+    } else {
+        showFormMessage(document.getElementById('addLoreItemMessage'), 'Lore item deleted successfully!', 'success');
+        fetchAndPopulateLoreItems('loreItemsList');
+        fetchDashboardStats();
+    }
+}
+
+function resetLoreForm() {
+    const addLoreItemForm = document.getElementById('addLoreItemForm');
+    addLoreItemForm.reset();
+    addLoreItemForm.removeAttribute('data-editing-id');
+    addLoreItemForm.querySelector('button[type="submit"]').textContent = 'Add Lore Item';
+    document.getElementById('cancelEditLoreItemButton').style.display = 'none';
+    document.getElementById('newLoreCategoryInput').style.display = 'block';
+    document.getElementById('addNewLoreCategoryButton').style.display = 'inline-block';
+    showFormMessage(document.getElementById('addLoreItemMessage'), '', '');
+}
+
+// Function to hide all admin elements, ensuring nothing is visible initially
+function hideAllAdminElements() {
+    const loginFormContainer = document.getElementById('loginFormContainer');
+    const loginHeading = document.getElementById('loginHeading');
+    const adminDashboardAndForm = document.getElementById('adminDashboardAndForm');
+    const loginError = document.getElementById('loginError');
+
+    if (loginFormContainer) loginFormContainer.style.display = 'none';
+    if (loginHeading) loginHeading.style.display = 'none';
+    if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none';
+    if (loginError) loginError.style.display = 'none';
+}
+
+
 $(document).ready(async function() {
     const currentPage = window.location.pathname.split('/').pop();
     if (currentPage !== 'admin.html') {
         return;
     }
+
+    // Immediately hide all admin-related content on page load
+    hideAllAdminElements(); //
 
     const discordLoginButton = document.getElementById('discordLoginButton');
     const loginError = document.getElementById('loginError');
@@ -474,181 +623,211 @@ $(document).ready(async function() {
     const addNewLoreCategoryButton = document.getElementById('addNewLoreCategoryButton');
     const loreContentInput = document.getElementById('loreContent');
     const addLoreItemMessage = document.getElementById('addLoreItemMessage');
+    const cancelEditLoreItemButton = document.getElementById('cancelEditLoreItemButton');
+    const loreItemsList = document.getElementById('loreItemsList');
 
 
     async function checkAuth() {
         const { data: { user } = {} } = await supabase.auth.getUser();
 
-        if (user) {
-            const authorized = await isAuthorizedAdmin(user.id);
+        if (user) { // User is logged in
+            const authorized = await isAuthorizedAdmin(user.id); //
 
-            if (authorized) {
-                if (loginFormContainer) loginFormContainer.style.display = 'none';
-                if (loginHeading) loginHeading.style.display = 'none';
-                if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'block';
-                fetchDashboardStats();
-                if (!initialAuthCheckComplete) {
-                    populateTagSelect(tagSelect);
-                    populateTagSelect(loreCategorySelect);
-                    initialAuthCheckComplete = true;
+            if (authorized) { // User is authorized (comment_adder role)
+                if (loginFormContainer) loginFormContainer.style.display = 'none'; //
+                if (loginHeading) loginHeading.style.display = 'none'; //
+                if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'block'; //
+                fetchDashboardStats(); //
+                if (!initialAuthCheckComplete) { //
+                    populateTagSelect(tagSelect); //
+                    populateTagSelect(loreCategorySelect); //
+                    fetchAndPopulateLoreItems('loreItemsList'); //
+                    initialAuthCheckComplete = true; //
                 }
-            } else {
-                if (loginFormContainer) loginFormContainer.style.display = 'block';
-                if (loginHeading) loginHeading.style.display = 'none';
-                if (loginError) {
-                    loginError.textContent = 'You are logged in but not authorized to add comments.';
-                    loginError.style.display = 'block';
+            } else { // User is logged in but NOT authorized
+                if (loginFormContainer) loginFormContainer.style.display = 'block'; //
+                if (loginHeading) loginHeading.style.display = 'none'; //
+                if (loginError) { //
+                    loginError.textContent = 'You are logged in but not authorized to view this page. Redirecting to home...'; //
+                    loginError.style.display = 'block'; //
                 }
-                if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none';
+                if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none'; //
+                
+                // Redirect after 8 seconds if not authorized
+                setTimeout(() => { //
+                    window.location.href = 'index.html'; //
+                }, 8000); // 8000 milliseconds = 8 seconds
             }
-        } else {
-            if (loginFormContainer) loginFormContainer.style.display = 'block';
-            if (loginHeading) loginHeading.style.display = 'block';
-            if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none';
-            if (loginError) loginError.style.display = 'none';
+        } else { // User is NOT logged in
+            if (loginFormContainer) loginFormContainer.style.display = 'block'; //
+            if (loginHeading) loginHeading.style.display = 'block'; //
+            if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none'; //
+            if (loginError) { //
+                 loginError.textContent = 'Please log in to view this page. Redirecting to home...'; //
+                 loginError.style.display = 'block'; //
+            }
+           
+            // Redirect after 8 seconds if not logged in
+            setTimeout(() => { //
+                window.location.href = 'index.html'; //
+            }, 8000); // 8000 milliseconds = 8 seconds
         }
     }
 
-    checkAuth();
+    checkAuth(); // Initial check
 
-    supabase.auth.onAuthStateChange((event, session) => {
-        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-            initialAuthCheckComplete = false;
-            checkAuth();
+    supabase.auth.onAuthStateChange((event, session) => { //
+        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') { //
+            initialAuthCheckComplete = false; //
+            checkAuth(); //
         }
     });
 
-    if (discordLoginButton) {
-        discordLoginButton.addEventListener('click', async () => {
-            const { data, error } = await supabase.auth.signInWithOAuth({
-                provider: 'discord',
-                options: {
-                    redirectTo: 'https://yesitsphoenix.github.io/Pax-Dei-Archives/admin.html'
+    if (discordLoginButton) { //
+        discordLoginButton.addEventListener('click', async () => { //
+            const { data, error } = await supabase.auth.signInWithOAuth({ //
+                provider: 'discord', //
+                options: { //
+                    redirectTo: 'https://yesitsphoenix.github.io/Pax-Dei-Archives/admin.html' //
                 }
             });
 
-            if (error) {
-                console.error('Discord login error:', error);
-                if (loginError) {
-                    loginError.textContent = 'Login failed: ' + error.message;
-                    loginError.style.display = 'block';
+            if (error) { //
+                console.error('Discord login error:', error); //
+                if (loginError) { //
+                    loginError.textContent = 'Login failed: ' + error.message; //
+                    loginError.style.display = 'block'; //
                 }
             }
         });
     }
 
-    if (parseButton && commentInput && devCommentForm && parseError) {
-        parseButton.addEventListener('click', () => {
-            showFormMessage(formMessage, '', '');
-            const inputText = commentInput.value;
-            const parsedData = parseComment(inputText);
+    if (parseButton && commentInput && devCommentForm && parseError) { //
+        parseButton.addEventListener('click', () => { //
+            showFormMessage(formMessage, '', ''); //
+            const inputText = commentInput.value; //
+            const parsedData = parseComment(inputText); //
 
-            if (parsedData) {
-                if (authorField) authorField.value = parsedData.author;
-                if (sourceField) sourceField.value = parsedData.source;
-                if (timestampField) timestampField.value = parsedData.timestamp;
-                if (commentContentField) commentContentField.value = parsedData.content;
+            if (parsedData) { //
+                if (authorField) authorField.value = parsedData.author; //
+                if (sourceField) sourceField.value = parsedData.source; //
+                if (timestampField) timestampField.value = parsedData.timestamp; //
+                if (commentContentField) commentContentField.value = parsedData.content; //
 
-                devCommentForm.style.display = 'block';
-                commentInput.style.display = 'none';
-                parseButton.style.display = 'none';
-                parseError.style.display = 'none';
-            } else {
-                parseError.textContent = 'Could not parse the input. Please ensure it matches one of the expected formats: "Author — Timestamp Content [Optional URL]" or "Author — Content [Optional URL]"';
-                parseError.style.display = 'block';
-                devCommentForm.style.display = 'none';
-                commentInput.style.display = 'block';
-                parseError.style.display = 'none';
+                devCommentForm.style.display = 'block'; //
+                commentInput.style.display = 'none'; //
+                parseButton.style.display = 'none'; //
+                parseError.style.display = 'none'; //
+            } else { //
+                parseError.textContent = 'Could not parse the input. Please ensure it matches one of the expected formats: "Author — Timestamp Content [Optional URL]" or "Author — Content [Optional URL]"'; //
+                parseError.style.display = 'block'; //
+                devCommentForm.style.display = 'none'; //
+                commentInput.style.display = 'block'; //
+                parseError.style.display = 'none'; //
             }
         });
     }
 
-    if (editButton && devCommentForm && commentInput && parseButton && parseError) {
-        editButton.addEventListener('click', () => {
-            showFormMessage(formMessage, '', '');
-            devCommentForm.style.display = 'none';
-            commentInput.style.display = 'block';
-            parseButton.style.display = 'block';
-            parseError.style.display = 'none';
+    if (editButton && devCommentForm && commentInput && parseButton && parseError) { //
+        editButton.addEventListener('click', () => { //
+            showFormMessage(formMessage, '', ''); //
+            devCommentForm.style.display = 'none'; //
+            commentInput.style.display = 'block'; //
+            parseButton.style.display = 'block'; //
+            parseError.style.display = 'none'; //
         });
     }
 
-    if (addNewTagButton && newTagInput && tagSelect && loreCategorySelect) {
-        addNewTagButton.addEventListener('click', async () => {
-            const newTag = newTagInput.value.trim();
-            await handleAddNewTag(newTag, newTagInput, formMessage, tagSelect, loreCategorySelect, 'Tag');
+    if (addNewTagButton && newTagInput && tagSelect && loreCategorySelect) { //
+        addNewTagButton.addEventListener('click', async () => { //
+            const newTag = newTagInput.value.trim(); //
+            await handleAddNewTag(newTag, newTagInput, formMessage, tagSelect, loreCategorySelect, 'Tag'); //
         });
     }
     
-    if (addNewLoreCategoryButton && newLoreCategoryInput && loreCategorySelect && tagSelect) {
-        addNewLoreCategoryButton.addEventListener('click', async () => {
-            const newCategory = newLoreCategoryInput.value.trim();
-            await handleAddNewTag(newCategory, newLoreCategoryInput, addLoreItemMessage, tagSelect, loreCategorySelect, 'Category');
+    if (addNewLoreCategoryButton && newLoreCategoryInput && loreCategorySelect && tagSelect) { //
+        addNewLoreCategoryButton.addEventListener('click', async () => { //
+            const newCategory = newLoreCategoryInput.value.trim(); //
+            await handleAddNewTag(newCategory, newLoreCategoryInput, addLoreItemMessage, tagSelect, loreCategorySelect, 'Category'); //
         });
     }
 
-    if (addNewsUpdateForm) {
-        addNewsUpdateForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            showFormMessage(addNewsUpdateMessage, '', '');
+    if (addNewsUpdateForm) { //
+        addNewsUpdateForm.addEventListener('submit', async (event) => { //
+            event.preventDefault(); //
+            showFormMessage(addNewsUpdateMessage, '', ''); //
 
-            const newNewsUpdate = {
-                news_date: newsDateInput.value,
-                title: newsTitleInput.value,
-                summary: newsSummaryInput.value,
-                full_article_link: fullArticleLinkInput.value || null
+            const newNewsUpdate = { //
+                news_date: newsDateInput.value, //
+                title: newsTitleInput.value, //
+                summary: newsSummaryInput.value, //
+                full_article_link: fullArticleLinkInput.value || null //
             };
 
-            const { data, error } = await supabase
-                .from('news_updates')
-                .insert([newNewsUpdate]);
+            const { data, error } = await supabase //
+                .from('news_updates') //
+                .insert([newNewsUpdate]); //
 
-            if (error) {
-                console.error('Error inserting news update:', error);
-                showFormMessage(addNewsUpdateMessage, 'Error adding news update: ' + error.message, 'error');
-            } else {
-                showFormMessage(addNewsUpdateMessage, 'News update added successfully!', 'success');
-                newsDateInput.value = '';
-                newsTitleInput.value = '';
-                newsSummaryInput.value = '';
-                fullArticleLinkInput.value = '';
-                fetchDashboardStats();
+            if (error) { //
+                console.error('Error inserting news update:', error); //
+                showFormMessage(addNewsUpdateMessage, 'Error adding news update: ' + error.message, 'error'); //
+            } else { //
+                showFormMessage(addNewsUpdateMessage, 'News update added successfully!', 'success'); //
+                newsDateInput.value = ''; //
+                newsTitleInput.value = ''; //
+                newsSummaryInput.value = ''; //
+                fullArticleLinkInput.value = ''; //
+                fetchDashboardStats(); //
             }
         });
     }
 
-    if (loreTitleInput && loreSlugInput && addLoreItemForm) {
-        loreTitleInput.addEventListener('input', () => {
-            loreSlugInput.value = slugify(loreTitleInput.value);
+    if (loreTitleInput && loreSlugInput && addLoreItemForm) { //
+        loreTitleInput.addEventListener('input', () => { //
+            loreSlugInput.value = slugify(loreTitleInput.value); //
         });
     }
 
-    if (addLoreItemForm) {
-        addLoreItemForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            showFormMessage(addLoreItemMessage, '', '');
+    if (addLoreItemForm) { //
+        addLoreItemForm.addEventListener('submit', async (event) => { //
+            event.preventDefault(); //
+            showFormMessage(addLoreItemMessage, '', ''); //
 
-            const newLoreItem = {
-                title: loreTitleInput.value,
-                slug: loreSlugInput.value,
-                category: loreCategorySelect.value,
-                content: loreContentInput.value
+            const editingId = addLoreItemForm.dataset.editingId; //
+            const newLoreItem = { //
+                title: loreTitleInput.value, //
+                slug: loreSlugInput.value, //
+                category: loreCategorySelect.value, //
+                content: loreContentInput.value //
             };
 
-            const { data, error } = await supabase
-                .from('lore_items')
-                .insert([newLoreItem]);
+            let error; //
+            if (editingId) { //
+                const { error: updateError } = await supabase //
+                    .from('lore_items') //
+                    .update(newLoreItem) //
+                    .eq('id', editingId); //
+                error = updateError; //
+            } else { //
+                const { error: insertError } = await supabase //
+                    .from('lore_items') //
+                    .insert([newLoreItem]); //
+                error = insertError; //
+            }
 
-            if (error) {
-                console.error('Error inserting lore item:', error);
-                showFormMessage(addLoreItemMessage, 'Error adding lore item: ' + error.message, 'error');
-            } else {
-                showFormMessage(addLoreItemMessage, 'Lore item added successfully!', 'success');
-                loreTitleInput.value = '';
-                loreSlugInput.value = '';
-                loreCategorySelect.value = '';
-                loreContentInput.value = '';
+            if (error) { //
+                console.error('Error saving lore item:', error); //
+                showFormMessage(addLoreItemMessage, 'Error saving lore item: ' + error.message, 'error'); //
+            } else { //
+                showFormMessage(addLoreItemMessage, `Lore item ${editingId ? 'updated' : 'added'} successfully!`, 'success'); //
+                resetLoreForm(); //
+                fetchAndPopulateLoreItems('loreItemsList'); //
+                fetchDashboardStats(); //
             }
         });
+    }
+
+    if (cancelEditLoreItemButton) { //
+        cancelEditLoreItemButton.addEventListener('click', resetLoreForm); //
     }
 });

@@ -62,18 +62,25 @@ async function fetchAndDisplayDungeonRun(shareCode) {
     try {
         const { data: supabaseData, error } = await supabase
             .from('dungeon_runs')
-            .select('dungeon_name, party_members, current_loot_items, current_total_gold, next_loot_recipient_index, reserved_items, owner_id')
+            .select('dungeon_name, party_members, current_loot_items, current_total_gold, next_loot_recipient_index, reserved_items, user_id')
             .eq('id', shareCode)
             .single();
 
         if (error) {
             console.error('Supabase query error:', error);
-            showFeedback(`Error loading run: ${error.message || 'Please try again.'}`, 'error');
+            if (error.code === 'PGRST116') {
+                 showFeedback(`No saved run found with code: ${shareCode}. It might have expired or been deleted. Redirecting to home...`, "error");
+                 setTimeout(() => { window.location.href = 'index.html'; }, 5000);
+            } else {
+                 showFeedback(`Error loading run: ${error.message || 'Please try again.'} Redirecting to home...`, 'error');
+                 setTimeout(() => { window.location.href = 'index.html'; }, 5000);
+            }
             return false;
         }
 
         if (!supabaseData) {
-            showFeedback(`No saved run found with code: ${shareCode}.`, "error");
+            showFeedback(`No saved run found with code: ${shareCode}. Redirecting to home...`, "error");
+            setTimeout(() => { window.location.href = 'index.html'; }, 5000);
             return false;
         }
 
@@ -98,7 +105,7 @@ async function fetchAndDisplayDungeonRun(shareCode) {
         state.totalGold = supabaseData.current_total_gold || 0;
         state.nextLootRecipientIndex = supabaseData.next_loot_recipient_index || 0;
         state.reservedItems = supabaseData.reserved_items || {};
-        state.userId = supabaseData.owner_id || crypto.randomUUID();
+        state.userId = supabaseData.user_id || crypto.randomUUID();
         state.currentShareableCode = shareCode;
 
         updatePartyMembersList();
@@ -114,7 +121,8 @@ async function fetchAndDisplayDungeonRun(shareCode) {
 
     } catch (e) {
         console.error('Unexpected error loading run from share code:', e);
-        showFeedback(`Error loading run: ${e.message || 'Please try again.'}`, 'error');
+        showFeedback(`Error loading run: ${e.message || 'Please try again.'} Redirecting to home...`, 'error');
+        setTimeout(() => { window.location.href = 'index.html'; }, 5000);
         return false;
     }
 }
@@ -124,19 +132,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     initializeUI();
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const shareCodeFromUrl = urlParams.get('code');
+    const hash = window.location.hash;
+    let shareCodeFromUrl = null;
+
+    if (hash.startsWith('#code-')) {
+        shareCodeFromUrl = hash.substring('#code-'.length);
+    }
 
     if (shareCodeFromUrl) {
         await fetchAndDisplayDungeonRun(shareCodeFromUrl);
         subscribeToDungeonRun(shareCodeFromUrl);
     } else {
-        showFeedback('No run code found in URL. Please use a shared link.', 'error');
+        showFeedback('No run code found in URL. Please use a shared link. Redirecting to home...', 'error');
         if (state.dungeonNameDisplay) state.dungeonNameDisplay.textContent = 'No Run Loaded';
         if (state.partyMembersList) state.partyMembersList.innerHTML = '<li class="text-gray-400 italic">No party members to display.</li>';
         if (state.currentLootList) state.currentLootList.innerHTML = '<li class="text-gray-400 italic">No loot to display.</li>';
         if (state.totalGoldDisplay) state.totalGoldDisplay.textContent = '0';
         if (state.distributionResults) state.distributionResults.innerHTML = '<p class="text-gray-400 italic p-2">No distribution data to display.</p>';
+        setTimeout(() => { window.location.href = 'index.html'; }, 5000);
     }
 });
 

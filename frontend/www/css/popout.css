@@ -119,6 +119,7 @@
     position: relative;
     border: 1px solid #444;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    max-width: 20vw;
 }
 
 .run-card:hover {

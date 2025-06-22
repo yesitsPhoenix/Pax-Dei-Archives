@@ -7,6 +7,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const authModal = document.getElementById('auth-modal');
     const modalContentWrapper = document.getElementById('modal-content-wrapper');
 
+    const profileMessage = document.getElementById('profileMessage');
+
     const DEFAULT_AVATAR_URL = 'https://cdn.discordapp.com/embed/avatars/0.png';
 
     const setFloatingAvatar = (url, loaded = true) => {
@@ -19,6 +21,32 @@ document.addEventListener('DOMContentLoaded', async () => {
             sessionStorage.removeItem('userAvatarUrl');
         }
     };
+
+    function showProfileMessage(messageElement, message, type) {
+        messageElement.textContent = message;
+        messageElement.className = '';
+        messageElement.style.display = 'none';
+
+        if (message) {
+            messageElement.style.display = 'block';
+            messageElement.classList.add('px-4', 'py-3', 'rounded', 'mb-4', 'border');
+
+            if (type === 'success') {
+                messageElement.classList.add('bg-green-100', 'border-green-400', 'text-green-700');
+            } else if (type === 'error') {
+                messageElement.classList.add('bg-red-100', 'border-red-400', 'text-red-700');
+            } else {
+                messageElement.classList.add('bg-blue-100', 'border-blue-400', 'text-blue-700');
+            }
+
+            setTimeout(() => {
+                messageElement.style.display = 'none';
+                messageElement.textContent = '';
+                messageElement.className = '';
+                messageElement.classList.add('hidden');
+            }, 5000);
+        }
+    }
 
     if (await isLoggedIn()) {
         const storedAvatarUrl = sessionStorage.getItem('userAvatarUrl');
@@ -114,22 +142,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         closeEditRunModalButton.addEventListener('click', () => {
             editRunModalOverlay.classList.remove('active');
+            showProfileMessage(profileMessage, '', '');
         });
 
         cancelDeleteButton.addEventListener('click', () => {
             confirmModalOverlay.classList.remove('active');
             runIdToDelete = null;
+            showProfileMessage(profileMessage, '', '');
         });
 
         confirmDeleteButton.addEventListener('click', async () => {
             if (runIdToDelete) {
                 const success = await deleteDungeonRun(runIdToDelete);
                 if (success) {
-                    alert('Run deleted successfully!');
+                    showProfileMessage(profileMessage, 'Run deleted successfully!', 'success');
                     confirmModalOverlay.classList.remove('active');
                     loadSavedRuns();
                 } else {
-                    alert('Failed to delete run.');
+                    showProfileMessage(profileMessage, 'Failed to delete run.', 'error');
                 }
             }
             runIdToDelete = null;
@@ -158,21 +188,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const reservedItemsInput = document.getElementById('editReservedItems').value;
                 updatedData.reserved_items = reservedItemsInput ? JSON.parse(reservedItemsInput) : {};
             } catch (e) {
-                alert('Invalid JSON for Reserved Items. Please check the format. Error: ' + e.message);
+                showProfileMessage(profileMessage, 'Invalid JSON for Reserved Items. Please check the format. Error: ' + e.message, 'error');
                 return;
             }
 
             const result = await updateDungeonRun(runId, updatedData);
             if (result) {
-                alert('Run updated successfully!');
+                showProfileMessage(profileMessage, 'Run updated successfully!', 'success');
                 editRunModalOverlay.classList.remove('active');
                 loadSavedRuns();
             } else {
-                alert('Failed to update run.');
+                showProfileMessage(profileMessage, 'Failed to update run.', 'error');
             }
         });
 
         const loadSavedRuns = async () => {
+            showProfileMessage(profileMessage, '', '');
             savedRunsList.innerHTML = '<div class="loading-indicator">Loading saved runs...</div>';
             const user = await supabase.auth.getUser();
             if (user.data.user) {
@@ -216,10 +247,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         const viewRun = (runId, allRuns) => {
-            console.log('Attempting to view run with ID:', runId);
+            //console.log('Attempting to view run with ID:', runId);
             const run = allRuns.find(r => r.id === runId);
             if (run) {
-                console.log('Found run for viewing:', run);
+                //console.log('Found run for viewing:', run);
                 const partyMembersDisplay = run.party_members && Array.isArray(run.party_members)
                     ? run.party_members.map(member => member.name).filter(name => name).join(', ')
                     : 'N/A';
@@ -258,7 +289,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <p><strong>Last Loot Distribution Log:</strong> <pre><code>${run.last_loot_distribution_log || 'N/A'}</code></pre></p>
                     <p><strong>Last Gold Distribution Log:</strong> <pre><code>${run.last_gold_distribution_log || 'N/A'}</code></pre></p>
                     <p><strong>Timestamp:</strong> <pre><code>${new Date(run.timestamp).toLocaleString()}</code></pre></p>
-                    <p><strong>Owner ID:</strong> <pre><code>${run.owner_id}</code></pre></p>
+                    <p><strong>User ID:</strong> <pre><code>${run.user_id}</code></pre></p>
                     <p><strong>Reserved Items:</strong> <pre><code>${reservedItemsDisplay}</code></pre></p>
                     <p><strong>Distribution Results HTML:</strong> <pre><code>${run.distribution_results_html || 'N/A'}</code></pre></p>
                     <p><strong>Next Loot Recipient Index:</strong> <pre><code>${run.next_loot_recipient_index}</code></pre></p>
@@ -266,14 +297,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 viewRunModalOverlay.classList.add('active');
             } else {
                 console.error('Run not found for viewing:', runId);
+                showProfileMessage(profileMessage, 'Error: Run not found for viewing.', 'error');
             }
         };
 
         const editRun = (runId, allRuns) => {
-            console.log('Attempting to edit run with ID:', runId);
+            //console.log('Attempting to edit run with ID:', runId);
             const run = allRuns.find(r => r.id === runId);
             if (run) {
-                console.log('Found run for editing:', run);
+                //console.log('Found run for editing:', run);
                 document.getElementById('editRunId').value = run.id;
                 document.getElementById('editDungeonName').value = run.dungeon_name;
 
@@ -299,11 +331,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 editRunModalOverlay.classList.add('active');
             } else {
                 console.error('Run not found for editing:', runId);
+                showProfileMessage(profileMessage, 'Error: Run not found for editing.', 'error');
             }
         };
 
         const showConfirmDeleteModal = (runId) => {
-            console.log('Delete button clicked for run ID:', runId);
+            //console.log('Delete button clicked for run ID:', runId);
             runIdToDelete = runId;
             confirmModalOverlay.classList.add('active');
         };
@@ -314,9 +347,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             if (event.target === editRunModalOverlay) {
                 editRunModalOverlay.classList.remove('active');
+                showProfileMessage(profileMessage, '', '');
             }
             if (event.target === confirmModalOverlay) {
                 confirmModalOverlay.classList.remove('active');
+                showProfileMessage(profileMessage, '', '');
             }
         };
 
@@ -341,8 +376,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             } else {
                 profileLoading.innerText = 'Failed to load profile. Please ensure you are logged in correctly.';
+                showProfileMessage(profileMessage, 'Failed to load profile. Please ensure you are logged in correctly.', 'error');
             }
         } else {
+            showProfileMessage(profileMessage, 'You must be logged in to view your profile.', 'error');
             alert('You must be logged in to view your profile.');
             window.location.href = 'index.html';
         }

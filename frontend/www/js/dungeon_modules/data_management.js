@@ -144,7 +144,7 @@ export async function generateShareCode() {
 
     const runDataToSave = {
         id: newCode,
-        owner_id: state.userId,
+        user_id: state.userId,
         dungeon_name: state.dungeonNameInput ? state.dungeonNameInput.value : 'Unnamed Run',
         party_members: state.partyMembers,
         current_loot_items: state.lootItems,
@@ -196,7 +196,7 @@ export async function loadDungeonRunFromShareCode(shareCode) {
             return false;
         }
 
-        window.location.href = `view_dungeon.html?code=${shareCode}`;
+        window.location.href = `view_dungeon.html#code-${shareCode}`;
         return true;
 
     } catch (e) {
@@ -213,7 +213,7 @@ export async function updateDungeonRunInSupabase(shareCode) {
     }
 
     const runDataToUpdate = {
-        owner_id: state.userId,
+        user_id: state.userId,
         dungeon_name: state.dungeonNameInput ? state.dungeonNameInput.value : 'Unnamed Run',
         party_members: state.partyMembers,
         current_loot_items: state.lootItems,

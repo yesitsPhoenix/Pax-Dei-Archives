@@ -120,7 +120,7 @@ export async function getDungeonRuns(userId) {
     const { data, error } = await supabase
         .from('dungeon_runs')
         .select('*')
-        .eq('owner_id', userId)
+        .eq('user_id', userId)
         .order('timestamp', { ascending: false });
 
     if (error) {
