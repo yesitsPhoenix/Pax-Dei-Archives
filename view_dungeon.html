@@ -7,8 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script async src="https://paxdei.gaming.tools/embed.js"></script>
     <link rel="stylesheet" href="frontend/www/css/style.css">
-    <link rel="stylesheet" href="frontend/www/css/articles.css">
     <link rel="stylesheet" href="frontend/www/css/dungeon.css">
+    <link rel="stylesheet" href="frontend/www/css/popout.css">
     <link rel="stylesheet" href="https://unpkg.com/swiper@7/swiper-bundle.min.css"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
@@ -123,10 +123,18 @@
             <div id="utc-clock-display" class="utc-clock"></div>
         </div>
     </footer>
+    <div id="floating-avatar-container">
+        <img id="floating-avatar" src="https://cdn.discordapp.com/embed/avatars/0.png" alt="User Avatar" class="floating-avatar">
+    </div>
 
+    <div id="auth-modal">
+        <div class="modal-content-wrapper" id="modal-content-wrapper">
+        </div>
+    </div>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script type="module" src="frontend/www/js/supabaseClient.js"></script>
     <script type="module" src="frontend/www/js/utils.js"></script>
     <script type="module" src="frontend/www/js/main.js"></script>
     <script type="module" src="frontend/www/js/dungeon_modules/view_dungeon.js"></script> </body>
+    <script type="module" src="frontend/www/js/popoutAuth.js"></script>
 </html>

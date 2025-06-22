@@ -41,7 +41,7 @@
 
 .profile-details {
     padding: 20px;
-    background-color: #2a2a2a; /* Matched trader.js background */
+    background-color: #2a2a2a;
     border-radius: 15px;
     text-align: center;
     color: #fff;
@@ -53,7 +53,7 @@
     height: 120px;
     border-radius: 50%;
     object-fit: cover;
-    border: 3px solid #FFD700; /* Matched trader.js primary color */
+    border: 3px solid #FFD700;
     margin-bottom: 15px;
     display: block;
     margin-left: auto;
@@ -61,7 +61,7 @@
 }
 
 .profile-details h3 {
-    color: #FFD700; /* Matched trader.js primary color */
+    color: #FFD700;
     font-size: 24px;
     margin-bottom: 10px;
 }
@@ -101,135 +101,6 @@
     grid-column: 1 / -1;
 }
 
-#floating-avatar-container {
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    z-index: 1000;
-    cursor: pointer;
-    transition: transform 0.3s ease-in-out;
-}
-
-#floating-avatar-container:hover {
-    transform: scale(1.05);
-}
-
-.floating-avatar {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 3px solid #FFD700; /* Matched trader.js primary color */
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
-}
-
-#auth-modal {
-    position: fixed;
-    top: 0;
-    right: 0;
-    width: 300px;
-    height: 100%;
-    background-color: #1f2122;
-    box-shadow: -5px 0 15px rgba(0, 0, 0, 0.5);
-    z-index: 999;
-    transform: translateX(100%);
-    transition: transform 0.3s ease-in-out;
-    padding: 20px;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    color: #fff;
-    visibility: hidden;
-    opacity: 0;
-    transition: transform 0.3s ease-in-out, visibility 0s linear 0.3s, opacity 0.3s ease-in-out;
-}
-
-#auth-modal.open {
-    transform: translateX(0);
-    visibility: visible;
-    opacity: 1;
-    transition: transform 0.3s ease-in-out, visibility 0s linear 0s, opacity 0.3s ease-in-out;
-}
-
-#auth-modal .modal-content-wrapper {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 15px;
-}
-
-#auth-modal .modal-avatar {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 3px solid #FFD700; /* Matched trader.js primary color */
-    margin-bottom: 10px;
-}
-
-#auth-modal h4 {
-    font-size: 1.2em;
-    color: #FFD700; /* Matched trader.js primary color */
-    margin-bottom: 10px;
-}
-
-#auth-modal .modal-button {
-    width: 80%;
-    padding: 12px 20px;
-    border-radius: 25px;
-    font-size: 16px;
-    font-weight: 700;
-    text-transform: capitalize;
-    color: #fff;
-    border: none;
-    cursor: pointer;
-    transition: all .3s;
-    text-decoration: none;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-#auth-modal .modal-button i {
-    margin-right: 8px;
-    margin-bottom: 0;
-    font-size: 1em;
-    flex-shrink: 0;
-}
-
-#auth-modal .login-button {
-    background-color: #FFD700; /* Matched trader.js primary button background */
-    color: #1a1a1a; /* Matched trader.js primary button text color */
-}
-
-#auth-modal .login-button:hover {
-    background-color: #e0a800; /* Matched trader.js primary button hover */
-}
-
-#auth-modal .profile-button {
-    background-color: #FFD700; /* Matched trader.js primary button background */
-    color: #1a1a1a; /* Matched trader.js primary button text color */
-}
-
-#auth-modal .profile-button:hover {
-    background-color: #e0a800; /* Matched trader.js primary button hover */
-}
-
-#auth-modal .logout-button {
-    background-color: #555;
-}
-
-#auth-modal .logout-button:hover {
-    background-color: #333;
-}
 
 .header-area .container {
     position: relative;
@@ -237,33 +108,33 @@
 }
 
 .run-card {
-    background-color: #2a2a2a; /* Matched dashboard-card background */
+    background-color: #2a2a2a; 
     padding: 20px;
-    border-radius: 8px; /* Matched dashboard-card border-radius */
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* Matched dashboard-card shadow */
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     color: #fff;
     display: flex;
     flex-direction: column;
     gap: 10px;
     position: relative;
-    border: 1px solid #444; /* Added border for separation */
-    transition: transform 0.2s ease, box-shadow 0.2s ease; /* Matched dashboard-card transition */
+    border: 1px solid #444;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .run-card:hover {
-    transform: translateY(-5px); /* Matched dashboard-card hover transform */
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12); /* Matched dashboard-card hover shadow */
+    transform: translateY(-5px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
 }
 
 .run-card h5 {
-    color: #FFD700; /* Matched trader.js primary color for titles */
+    color: #FFD700;
     font-size: 1.1em;
     margin-bottom: 5px;
 }
 
 .run-card p {
     font-size: 0.9em;
-    color: #a0a0a0; /* Kept for general text for readability */
+    color: #a0a0a0;
 }
 
 .run-actions {
@@ -276,50 +147,47 @@
 
 .run-actions .modal-button {
     padding: 8px 12px;
-    font-size: 0.8rem; /* Matched trader.js action button font size */
-    border-radius: 4px; /* Matched trader.js action button border-radius */
+    font-size: 0.8rem;
+    border-radius: 4px;
     width: 100%;
     text-transform: none;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Matched trader.js action button shadow */
-    transition: all 0.15s ease-in-out; /* Matched trader.js action button transition */
-    transform: scale(1); /* Matched trader.js action button transform */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.15s ease-in-out; 
+    transform: scale(1);
     white-space: nowrap;
-    color: #fff; /* Default white text for these buttons unless specified */
+    color: #fff;
 }
 
 .run-actions .modal-button:hover {
-    transform: scale(1.05); /* Matched trader.js action button hover transform */
+    transform: scale(1.05); 
 }
 
 .view-run-button {
-    background-color: #5a5a5a; /* Retained neutral grey */
+    background-color: #5a5a5a;
 }
 .view-run-button:hover {
-    background-color: #4a4a4a; /* Retained neutral grey */
+    background-color: #4a4a4a;
 }
 
 .edit-run-button {
-    background-color: #007bff; /* Matched trader.js .edit-btn */
+    background-color: #007bff;
 }
 .edit-run-button:hover {
-    background-color: #0069d9; /* Matched trader.js .edit-btn hover */
+    background-color: #0069d9;
 }
 
 .delete-run-button {
-    background-color: #dc3545; /* Matched trader.js .cancel-btn */
+    background-color: #dc3545;
 }
 .delete-run-button:hover {
-    background-color: #c82333; /* Matched trader.js .cancel-btn hover */
+    background-color: #c82333;
 }
 
-/* Specific overrides for modal-overlay to ensure they work with style.css's .active class */
 #viewRunModalOverlay,
 #editRunModalOverlay,
 #confirmModalOverlay {
-    /* These properties are now intentionally removed from here */
-    /* as they are controlled by .modal-overlay and .modal-overlay.active in style.css */
-    /* z-index remains here as it's specific to overlay stacking */
-    z-index: 1000; /* Matched style.css z-index */
+
+    z-index: 1000;/
 }
 
 .modal-content {
@@ -341,18 +209,18 @@
     right: 15px;
     background: none;
     border: none;
-    font-size: 30px; /* Matched style.css font-size */
+    font-size: 30px; 
     color: #fff;
     cursor: pointer;
-    padding: 0 10px; /* Matched style.css padding */
+    padding: 0 10px;
     line-height: 1;
-    border-radius: 50%; /* Matched style.css for round button */
-    transition: background-color 0.2s ease, color 0.2s ease; /* Matched style.css transition */
+    border-radius: 50%; 
+    transition: background-color 0.2s ease, color 0.2s ease; 
 }
 
 .modal-close-button:hover {
-    color: #e75e8d; /* Matched style.css hover color */
-    background-color: rgba(255, 255, 255, 0.1); /* Matched style.css hover background */
+    color: #e75e8d;
+    background-color: rgba(255, 255, 255, 0.1); 
 }
 
 .modal-title {
