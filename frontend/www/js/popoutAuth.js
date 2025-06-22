@@ -1,5 +1,5 @@
 import { isLoggedIn, logout, getUserProfile, getDungeonRuns, deleteDungeonRun, updateDungeonRun } from 'frontend/www/js/utils.js';
-import { supabase } from 'frontend/www/js/supabaseClient.js';
+import { supabase } from './frontend/www/js/supabaseClient.js';
 
 
 document.addEventListener('DOMContentLoaded', async () => {
