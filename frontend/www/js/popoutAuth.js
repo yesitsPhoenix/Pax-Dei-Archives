@@ -1,30 +1,45 @@
 import { isLoggedIn, logout, getUserProfile, getDungeonRuns, deleteDungeonRun, updateDungeonRun } from './utils.js';
 import { supabase } from './supabaseClient.js';
 
-
 document.addEventListener('DOMContentLoaded', async () => {
     const floatingAvatarContainer = document.getElementById('floating-avatar-container');
     const floatingAvatar = document.getElementById('floating-avatar');
     const authModal = document.getElementById('auth-modal');
     const modalContentWrapper = document.getElementById('modal-content-wrapper');
 
-    const storedAvatarUrl = sessionStorage.getItem('userAvatarUrl');
-    if (storedAvatarUrl) {
-        floatingAvatar.src = storedAvatarUrl;
-        floatingAvatar.classList.add('loaded');
+    const DEFAULT_AVATAR_URL = 'https://cdn.discordapp.com/embed/avatars/0.png';
+
+    const setFloatingAvatar = (url, loaded = true) => {
+        floatingAvatar.src = url;
+        if (loaded) {
+            floatingAvatar.classList.add('loaded');
+            sessionStorage.setItem('userAvatarUrl', url);
+        } else {
+            floatingAvatar.classList.remove('loaded');
+            sessionStorage.removeItem('userAvatarUrl');
+        }
+    };
+
+    if (await isLoggedIn()) {
+        const storedAvatarUrl = sessionStorage.getItem('userAvatarUrl');
+        if (storedAvatarUrl) {
+            setFloatingAvatar(storedAvatarUrl);
+        } else {
+            const userProfile = await getUserProfile();
+            const avatarUrl = userProfile ? (userProfile.avatar_url || DEFAULT_AVATAR_URL) : DEFAULT_AVATAR_URL;
+            setFloatingAvatar(avatarUrl);
+        }
     } else {
-        floatingAvatar.classList.remove('loaded');
+        setFloatingAvatar(DEFAULT_AVATAR_URL, false);
     }
 
     const updateAuthUI = async () => {
         if (await isLoggedIn()) {
             const userProfile = await getUserProfile();
             const userName = userProfile ? userProfile.username : 'Guest';
-            const avatarUrl = userProfile ? (userProfile.avatar_url || 'https://cdn.discordapp.com/embed/avatars/0.png') : 'https://cdn.discordapp.com/embed/avatars/0.png';
+            const avatarUrl = userProfile ? (userProfile.avatar_url || DEFAULT_AVATAR_URL) : DEFAULT_AVATAR_URL;
 
-            floatingAvatar.src = avatarUrl;
-            floatingAvatar.classList.add('loaded');
-            sessionStorage.setItem('userAvatarUrl', avatarUrl);
+            setFloatingAvatar(avatarUrl);
 
             modalContentWrapper.innerHTML = `
                 <img src="${avatarUrl}" alt="User Avatar" class="modal-avatar">
@@ -43,9 +58,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 updateAuthUI();
             });
         } else {
-            floatingAvatar.src = 'https://cdn.discordapp.com/embed/avatars/0.png';
-            floatingAvatar.classList.remove('loaded');
-            sessionStorage.removeItem('userAvatarUrl');
+            setFloatingAvatar(DEFAULT_AVATAR_URL, false);
+
             modalContentWrapper.innerHTML = `
                 <h4>Join the Archives!</h4>
                 <button id="discordLoginButton" class="login-button modal-button">
@@ -56,7 +70,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await supabase.auth.signInWithOAuth({
                     provider: 'discord',
                     options: {
-                        redirectTo: window.location.origin + '/profile.html',
+                        redirectTo: window.location.href,
                         scopes: 'identify'
                     }
                 });
@@ -124,7 +138,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         editRunForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             const runId = document.getElementById('editRunId').value;
-            
+
             const updatedData = {
                 dungeon_name: document.getElementById('editDungeonName').value,
                 current_total_gold: parseFloat(document.getElementById('editCurrentTotalGold').value) || 0,
@@ -135,7 +149,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
 
             const partyMembersInput = document.getElementById('editPartyMembers').value;
-            updatedData.party_members = partyMembersInput ? partyMembersInput.split(',').map(name => ({name: name.trim(), items: [], goldShare: 0, reservedItems: []})) : [];
+            updatedData.party_members = partyMembersInput ? partyMembersInput.split(',').map(name => ({ name: name.trim(), items: [], goldShare: 0, reservedItems: [] })) : [];
 
             const currentLootItemsInput = document.getElementById('editCurrentLootItems').value;
             updatedData.current_loot_items = currentLootItemsInput ? currentLootItemsInput.split(',').map(item => item.trim()) : [];
@@ -147,7 +161,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 alert('Invalid JSON for Reserved Items. Please check the format. Error: ' + e.message);
                 return;
             }
-            
+
             const result = await updateDungeonRun(runId, updatedData);
             if (result) {
                 alert('Run updated successfully!');
@@ -262,7 +276,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.log('Found run for editing:', run);
                 document.getElementById('editRunId').value = run.id;
                 document.getElementById('editDungeonName').value = run.dungeon_name;
-                
+
                 document.getElementById('editPartyMembers').value = run.party_members ? run.party_members.map(member => member.name).filter(name => name).join(', ') : '';
                 document.getElementById('editCurrentLootItems').value = run.current_loot_items ? run.current_loot_items.map(item => {
                     if (typeof item === 'string') {
@@ -277,9 +291,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 document.getElementById('editLastLootDistributionLog').value = run.last_loot_distribution_log || '';
                 document.getElementById('editLastGoldDistributionLog').value = run.last_gold_distribution_log || '';
                 document.getElementById('editNextLootRecipientIndex').value = run.next_loot_recipient_index;
-                
+
                 document.getElementById('editReservedItems').value = run.reserved_items ? JSON.stringify(run.reserved_items, null, 2) : '{}';
-                
+
                 document.getElementById('editDistributionResultsHtml').value = run.distribution_results_html || '';
 
                 editRunModalOverlay.classList.add('active');
@@ -314,7 +328,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const userProfile = await getUserProfile();
 
             if (userProfile) {
-                document.getElementById('user-avatar').src = userProfile.avatar_url || 'https://cdn.discordapp.com/embed/avatars/0.png';
+                document.getElementById('user-avatar').src = userProfile.avatar_url || DEFAULT_AVATAR_URL;
                 document.getElementById('user-discord-name').innerText = userProfile.username;
                 document.getElementById('user-discord-id').innerText = userProfile.discord_user_id;
                 document.getElementById('user-created-at').innerText = new Date(userProfile.created_at).toLocaleDateString();
