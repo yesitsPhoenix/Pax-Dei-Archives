@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pax Dei Archives</title>
     <link rel="stylesheet" href="frontend/www/css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="frontend/www/css/popout.css"> <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
-    <script type="module" src="frontend/www/js/supabaseClient.js"></script>
+    <script type="module" src="/frontend/www/js/supabaseClient.js"></script>
+    <script type="module" src="/frontend/www/js/utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script type="module" src="frontend/www/js/utils.js"></script>
 </head>
 <body>
     <header class="header-area">
@@ -24,10 +24,11 @@
                     <span></span>
                     <span></span>
                 </a>
-                <div class="nav-and-search-wrapper"> <ul class="nav">
+                <div class="nav-and-search-wrapper">
+                    <ul class="nav">
                         <li><a href="index.html" class="active">Home</a></li>
                         <li><a href="abilities.html">Abilities</a></li>
-                        <li><a href="articles.html">Articles</a></li>
+                        <li><a href="articles..html">Articles</a></li>
                         <li><a href="news-updates.html">News</a></li>
                         <li><a href="developer-comments.html">Dev Comments</a></li>
                         <li><a href="loot.html">Loot Tracker</a></li>
@@ -43,7 +44,7 @@
                         <div id="searchResultsDropdown" class="search-results-dropdown">
                         </div>
                     </div>
-                </div>
+                    </div>
             </nav>
         </div>
     </header>
@@ -197,7 +198,6 @@
                 <div class="col-lg-12">
                     <p>Copyright © 2025 Pax Dei Archives. All rights reserved.</p>
                     <a href="admin.html">Admin</a>
-                    <a href="ledger.html">Ledger</a>
                 </div>
             </div>
         </div>
@@ -216,7 +216,16 @@
         </div>
     </div>
 
+    <div id="floating-avatar-container">
+        <img id="floating-avatar" src="https://cdn.discordapp.com/embed/avatars/0.png" alt="User Avatar" class="floating-avatar">
+    </div>
+
+    <div id="auth-modal">
+        <div class="modal-content-wrapper" id="modal-content-wrapper">
+            </div>
+    </div>
+
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script type="module" src="frontend/www/js/main.js"></script>
-</body>
+    <script type="module" src="frontend/www/js/popoutAuth.js"></script> </body>
 </html>

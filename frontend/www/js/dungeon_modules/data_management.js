@@ -181,7 +181,7 @@ export async function loadDungeonRunFromShareCode(shareCode) {
     try {
         const { data: supabaseData, error } = await supabase
             .from('dungeon_runs')
-            .select('dungeon_name, party_members, current_loot_items, current_total_gold, next_loot_recipient_index, reserved_items, owner_id')
+            .select('dungeon_name')
             .eq('id', shareCode)
             .single();
 
@@ -196,43 +196,7 @@ export async function loadDungeonRunFromShareCode(shareCode) {
             return false;
         }
 
-        if (state.dungeonNameInput) {
-            state.dungeonNameInput.value = supabaseData.dungeon_name || '';
-        } else if (state.dungeonNameDisplay) {
-            state.dungeonNameDisplay.textContent = supabaseData.dungeon_name || 'Shared Dungeon Run';
-            document.title = `Dungeon Tracker - ${supabaseData.dungeon_name || 'Shared Run'}`;
-        }
-
-        state.partyMembers = (supabaseData.party_members || []).map(memberData => ({
-            name: memberData.name || String(memberData),
-            items: memberData.items || [],
-            goldShare: memberData.goldShare || 0,
-            reservedItems: memberData.reservedItems || []
-        }));
-
-        state.lootItems = (supabaseData.current_loot_items || []).map(itemData => ({
-            name: itemData.name || String(itemData),
-            slug: itemData.slug || '',
-            quantity: itemData.quantity || 0
-        }));
-
-        state.totalGold = supabaseData.current_total_gold || 0;
-        state.nextLootRecipientIndex = supabaseData.next_loot_recipient_index || 0;
-        state.reservedItems = supabaseData.reserved_items || {};
-        state.userId = supabaseData.owner_id || crypto.randomUUID();
-        state.currentShareableCode = shareCode;
-
-        initializeUI();
-        updatePartyMembersList();
-        updateCurrentLootList();
-        updateDistributionResults();
-
-        if (state.totalGoldDisplay) {
-            state.totalGoldDisplay.textContent = state.totalGold.toLocaleString();
-        }
-
-        showFeedback(`Dungeon run "${supabaseData.dungeon_name || 'shared run'}" loaded from share code.`, "success");
-        state.hasUnsavedChanges = false;
+        window.location.href = `view_dungeon.html?code=${shareCode}`;
         return true;
 
     } catch (e) {
@@ -268,7 +232,6 @@ export async function updateDungeonRunInSupabase(shareCode) {
         showFeedback('Failed to update run in real-time.', 'error');
         return false;
     } else {
-        //console.log('Run updated in Supabase:', shareCode);
         return true;
     }
 }

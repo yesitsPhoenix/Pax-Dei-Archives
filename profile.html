@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile - Pax Dei Archives</title>
+    <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="frontend/www/css/popout.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+    <script type="module" src="/frontend/www/js/supabaseClient.js"></script>
+    <script type="module" src="/frontend/www/js/utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+</head>
+<body class="profile-page">
+    <header class="header-area">
+        <div class="container">
+            <nav class="main-nav">
+                <a href="index.html" class="logo">
+                    <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
+                    <h1>Pax Dei Archives</h1>
+                </a>
+                <a class='menu-trigger'>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </a>
+                <div class="nav-and-search-wrapper">
+                    <ul class="nav">
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="abilities.html">Abilities</a></li>
+                        <li><a href="articles.html">Articles</a></li>
+                        <li><a href="news-updates.html">News</a></li>
+                        <li><a href="developer-comments.html">Dev Comments</a></li>
+                        <li><a href="loot.html">Loot Tracker</a></li>
+                        <li><a href="ledger.html">Ledger</a></li>
+                        <li><a href="map.html">Map</a></li>
+                    </ul>
+                    <div class="search-input">
+                        <form id="search" action="#">
+                            <input type="text" placeholder="Search the Archives" id='searchText' name="searchKeyword" />
+                            <button type="submit" class="search-button"><i class="fa fa-search"></i></button>
+                        </form>
+                        <div id="searchResultsDropdown" class="search-results-dropdown">
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="page-content">
+                    <div class="main-profile-section">
+                        <div class="heading-section">
+                            <h4>Your <em>Profile</em></h4>
+                        </div>
+                        <div class="profile-details">
+                            <div class="loading-indicator" id="profileLoading">Loading profile data...</div>
+                            <div id="profile-info" style="display: none;">
+                                <img id="user-avatar" src="" alt="User Avatar" class="profile-avatar">
+                                <h3 id="user-discord-name"></h3>
+                                <p><strong>Discord ID:</strong> <span id="user-discord-id"></span></p>
+                                <p><strong>Member Since:</strong> <span id="user-created-at"></span></p>
+                                <p><strong>Last Login:</strong> <span id="user-last-login-at"></span></p>
+                            </div>
+                        </div>
+
+                        <div class="saved-runs-section" style="margin-top: 30px;">
+                            <div class="heading-section">
+                                <h4>Your <em>Saved Runs</em></h4>
+                            </div>
+                            <div id="saved-runs-list" class="data-list">
+                                <div class="loading-indicator">Loading saved runs...</div>
+                                <p>No saved runs yet. Start tracking your loot!</p>
+                            </div>
+                        </div>
+
+                        <div class="transaction-summary-section" style="margin-top: 30px;">
+                            <div class="heading-section">
+                                <h4>Your <em>Transaction Summary</em></h4>
+                            </div>
+                            <div id="transaction-summary-list" class="data-list">
+                                <div class="loading-indicator">Loading transaction summary...</div>
+                                <p>No transactions recorded yet.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12">
+                    <p>Copyright © 2025 Pax Dei Archives. All rights reserved.</p>
+                    <a href="admin.html">Admin</a>
+                </div>
+            </div>
+        </div>
+        <div class="corner-credit">
+            <div class="corner-credit-top-row"> <img src="frontend/www/assets/phoenix.png" alt="Phoenix profile image" class="profile-image" />
+                <span class="nav-text-profile">Made by Phoenix ✨</span>
+            </div>
+            <div id="utc-clock-display" class="utc-clock"></div>
+        </div>
+    </footer>
+
+    <!-- Floating Avatar and Auth Modal -->
+    <div id="floating-avatar-container">
+        <img id="floating-avatar" src="https://cdn.discordapp.com/embed/avatars/0.png" alt="User Avatar" class="floating-avatar">
+    </div>
+
+    <div id="auth-modal">
+        <div class="modal-content-wrapper" id="modal-content-wrapper">
+            <!-- Content dynamically injected here -->
+        </div>
+    </div>
+
+    <!-- View Run Modal -->
+    <div class="modal-overlay" id="viewRunModalOverlay">
+        <div class="modal-content">
+            <button class="modal-close-button" id="closeViewRunModal">&times;</button>
+            <h3 class="modal-title">Dungeon Run Details</h3>
+            <div id="viewRunDetails">
+                <!-- Details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Run Modal -->
+    <div class="modal-overlay" id="editRunModalOverlay">
+        <div class="modal-content">
+            <button class="modal-close-button" id="closeEditRunModal">&times;</button>
+            <h3 class="modal-title">Edit Dungeon Run</h3>
+            <form id="editRunForm" class="run-form">
+                <input type="hidden" id="editRunId">
+
+                <label for="editDungeonName">Dungeon Name:</label>
+                <input type="text" id="editDungeonName" required>
+
+                <label for="editPartyMembers">Party Members (comma-separated names):</label>
+                <input type="text" id="editPartyMembers" placeholder="e.g., Player1, Player2, Player3">
+
+                <label for="editCurrentLootItems">Current Loot Items (comma-separated items):</label>
+                <input type="text" id="editCurrentLootItems" placeholder="e.g., Gold, Iron Ore, Leather">
+
+                <label for="editCurrentTotalGold">Current Total Gold:</label>
+                <input type="number" id="editCurrentTotalGold">
+
+                <label for="editLastLootDistributionLog">Last Loot Distribution Log:</label>
+                <textarea id="editLastLootDistributionLog" rows="3"></textarea>
+
+                <label for="editLastGoldDistributionLog">Last Gold Distribution Log:</label>
+                <textarea id="editLastGoldDistributionLog" rows="3"></textarea>
+
+                <label for="editNextLootRecipientIndex">Next Loot Recipient Index:</label>
+                <input type="number" id="editNextLootRecipientIndex">
+
+                <label for="editReservedItems">Reserved Items (JSON Object):</label>
+                <textarea id="editReservedItems" rows="3" placeholder='e.g., {"item1": "PlayerA", "item2": "PlayerB"}'></textarea>
+
+                <label for="editDistributionResultsHtml">Distribution Results HTML:</label>
+                <textarea id="editDistributionResultsHtml" rows="5"></textarea>
+
+                <button type="submit" class="save-button modal-button">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Custom Confirmation Modal for Delete -->
+    <div class="modal-overlay" id="confirmModalOverlay">
+        <div class="modal-content">
+            <h3 class="modal-title">Confirm Deletion</h3>
+            <p id="confirmMessage" style="text-align:center; margin-bottom: 20px;">Are you sure you want to delete this run? This action cannot be undone.</p>
+            <div style="display:flex; justify-content:center; gap:15px;">
+                <button id="confirmDeleteButton" class="modal-button delete-run-button">Delete</button>
+                <button id="cancelDeleteButton" class="modal-button view-run-button">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script type="module" src="frontend/www/js/main.js"></script>
+    <script type="module" src="frontend/www/js/popoutAuth.js"></script>
+</body>
+</html>

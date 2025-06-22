@@ -1,7 +1,30 @@
+/* frontend/www/css/abilities.css */
+
+.custom-scrollbar-styling::-webkit-scrollbar {
+    width: 8px;
+}
+.custom-scrollbar-styling::-webkit-scrollbar-track {
+    background: #2D3748;
+    border-radius: 4px;
+}
+.custom-scrollbar-styling::-webkit-scrollbar-thumb {
+    background-color: #4A5568;
+    border-radius: 4px;
+    border: 2px solid #2D3748;
+}
+.custom-scrollbar-styling::-webkit-scrollbar-thumb:hover {
+    background-color: #6B7280;
+}
+
+.custom-scrollbar-styling {
+    scrollbar-width: thin;
+    scrollbar-color: #4A5568 #2D3748;
+}
+
 .ability-card {
     background-color: #2D3748;
     border-radius: 0.5rem;
-    padding: 0.5rem;
+    padding: 1rem;
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
     display: flex;
@@ -9,33 +32,20 @@
     align-items: center;
     text-align: center;
     border: 1px solid #4A5568;
-    height: 100%;
-    /* Ensure cards don't stretch fully in the grid */
-    min-width: 80px; /* Minimum width to prevent shrinking too much */
-    max-width: 120px; /* Max width for a smaller card size */
-    width: 100%; /* Allows it to shrink within grid columns if needed */
+    box-sizing: border-box;
+    height: auto;
+    min-height: 220px;
+    width: 100%;
+    justify-content: space-between;
 }
+
 .ability-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
 }
-.ability-image {
-    width: 48px;
-    height: 48px;
-    object-fit: cover;
-    border-radius: 0.25rem;
-    margin-bottom: 0.25rem;
-    border: 1px solid #CBD5E0;
-}
-.ability-name {
-    color: #FBD38D;
-    font-weight: 600;
-    font-size: 0.8rem;
-    flex-grow: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1.1;
+
+.hidden {
+    display: none !important;
 }
 
 .popup-overlay {

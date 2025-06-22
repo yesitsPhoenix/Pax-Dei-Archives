@@ -163,6 +163,9 @@ const renderListingsPagination = (totalCount) => {
     listingsPaginationContainer.innerHTML = '';
     if (totalPages <= 1) return;
     
+    const MAX_VISIBLE_PAGES = 7; 
+    const halfVisiblePages = Math.floor(MAX_VISIBLE_PAGES / 2);
+
     const createButton = (text, page, disabled = false, isCurrent = false) => {
         const button = document.createElement('button');
         button.textContent = text;
@@ -176,17 +179,52 @@ const renderListingsPagination = (totalCount) => {
         }
         button.className = classes;
         button.disabled = disabled;
-        button.addEventListener('click', () => {
-            currentListingsPage = page;
-            loadActiveListings();
-        });
+        if (!disabled) {
+            button.addEventListener('click', () => {
+                currentListingsPage = page;
+                loadActiveListings();
+            });
+        }
         return button;
     };
     
     listingsPaginationContainer.appendChild(createButton('Previous', currentListingsPage - 1, currentListingsPage === 1));
 
-    for (let i = 1; i <= totalPages; i++) {
+    let startPage = Math.max(1, currentListingsPage - halfVisiblePages);
+    let endPage = Math.min(totalPages, currentListingsPage + halfVisiblePages);
+
+    if (endPage - startPage + 1 < MAX_VISIBLE_PAGES) {
+        if (currentListingsPage <= halfVisiblePages) {
+            endPage = Math.min(totalPages, MAX_VISIBLE_PAGES);
+            startPage = 1;
+        } else if (currentListingsPage > totalPages - halfVisiblePages) {
+            startPage = Math.max(1, totalPages - MAX_VISIBLE_PAGES + 1);
+            endPage = totalPages;
+        }
+    }
+
+    if (startPage > 1) {
+        listingsPaginationContainer.appendChild(createButton('1', 1));
+        if (startPage > 2) {
+            const ellipsis = document.createElement('span');
+            ellipsis.textContent = '...';
+            ellipsis.className = 'px-2 py-2 text-gray-400';
+            listingsPaginationContainer.appendChild(ellipsis);
+        }
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
         listingsPaginationContainer.appendChild(createButton(i, i, false, i === currentListingsPage));
+    }
+
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            const ellipsis = document.createElement('span');
+            ellipsis.textContent = '...';
+            ellipsis.className = 'px-2 py-2 text-gray-400';
+            listingsPaginationContainer.appendChild(ellipsis);
+        }
+        listingsPaginationContainer.appendChild(createButton(totalPages, totalPages));
     }
     
     listingsPaginationContainer.appendChild(createButton('Next', currentListingsPage + 1, currentListingsPage === totalPages));

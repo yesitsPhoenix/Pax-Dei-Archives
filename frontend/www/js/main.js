@@ -4,7 +4,7 @@ import { fetchAndRenderDeveloperComments } from './devComments.js';
 import { fetchAndRenderNewsUpdates } from './newsUpdates.js';
 import { fetchAndRenderLorePosts } from './lorePosts.js';
 import { fetchAndRenderArticles, fetchAndRenderArticleCategories, setupArticleModalListeners, fetchSingleArticle } from './articles.js';
-import { fetchAbilitiesForSearch, normalizeAbilityNameForHash } from './abilities.js';
+
 import DOMPurify from 'https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.es.min.js';
 
 const TAG_LIST_CACHE_KEY = 'paxDeiTagList';
