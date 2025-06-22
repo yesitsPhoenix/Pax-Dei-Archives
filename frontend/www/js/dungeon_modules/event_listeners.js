@@ -17,10 +17,9 @@ export function setupEventListeners({
             state.partyMemberNameInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    // Directly call addPartyMember and then focus
                     addPartyMember(state.partyMemberNameInput.value);
-                    state.partyMemberNameInput.value = ''; // Clear the input field
-                    state.partyMemberNameInput.focus(); // Return cursor to the input field
+                    state.partyMemberNameInput.value = '';
+                    state.partyMemberNameInput.focus();
                 }
             });
         }
@@ -28,8 +27,8 @@ export function setupEventListeners({
         if (state.addMemberBtn) {
             state.addMemberBtn.addEventListener('click', () => {
                 addPartyMember(state.partyMemberNameInput.value);
-                state.partyMemberNameInput.value = ''; // Clear the input field
-                state.partyMemberNameInput.focus(); // Return cursor to the input field
+                state.partyMemberNameInput.value = '';
+                state.partyMemberNameInput.focus();
             });
         }
 

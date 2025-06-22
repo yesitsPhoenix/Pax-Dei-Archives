@@ -32,21 +32,19 @@ export async function fetchAndRenderArticleCategories(containerId) {
             .not('category', 'is', null);
 
         if (error) {
-            console.error('Error fetching article categories from Supabase:', error.message); // Temporarily re-added for debugging
+            console.error('Error fetching article categories from Supabase:', error.message);
             return [];
         }
 
         const uniqueCategories = [...new Set(data.map(item => item.category))].sort();
         
-        // TEMPORARY: Re-add this console.log to see the fetched categories
-        console.log("Fetched and processed unique categories:", uniqueCategories); 
 
         localStorage.setItem(ARTICLE_CATEGORIES_CACHE_KEY, JSON.stringify({ data: uniqueCategories, timestamp: Date.now() }));
         renderCategoryButtons(container, uniqueCategories);
         return uniqueCategories;
 
     } catch (e) {
-        console.error('Unexpected error fetching article categories:', e); // Temporarily re-added for debugging
+        console.error('Unexpected error fetching article categories:', e);
         return [];
     }
 }
