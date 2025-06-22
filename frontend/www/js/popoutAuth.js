@@ -1,5 +1,5 @@
-import { isLoggedIn, logout, getUserProfile, getDungeonRuns, deleteDungeonRun, updateDungeonRun } from 'frontend/www/js/utils.js';
-import { supabase } from './frontend/www/js/supabaseClient.js';
+import { isLoggedIn, logout, getUserProfile, getDungeonRuns, deleteDungeonRun, updateDungeonRun } from '/frontend/www/js/utils.js';
+import { supabase } from '/frontend/www/js/supabaseClient.js';
 
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const avatarUrl = userProfile ? (userProfile.avatar_url || 'https://cdn.discordapp.com/embed/avatars/0.png') : 'https://cdn.discordapp.com/embed/avatars/0.png';
 
             floatingAvatar.src = avatarUrl;
-            floatingAvatar.classList.add('loaded');e
+            floatingAvatar.classList.add('loaded');
             sessionStorage.setItem('userAvatarUrl', avatarUrl);
 
             modalContentWrapper.innerHTML = `
