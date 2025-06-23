@@ -401,9 +401,8 @@ ul {
 	}
 }
 .page-content {
-
 	padding: 40px;
-	margin-top: 40px;
+	/* margin-top: 40px; */
 	border-radius: 20px;
 }
 .heading-section h4 {
@@ -592,7 +591,7 @@ footer a:hover {
 	font-size: 1em;
 }
 .admin-form-container {
-    background-color: rgb(31 41 55 / var(--tw-bg-opacity, 1));
+	background-color: #2a2c2d;
 	padding: 30px;
 	border-radius: 15px;
 	margin-top: 30px;
@@ -1215,7 +1214,7 @@ body.modal-open {
 
 
 .admin-dashboard-card {
-    background-color: rgb(31 41 55 / var(--tw-bg-opacity, 1));
+    background-color: #2a2c2d;
     padding: 25px;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
