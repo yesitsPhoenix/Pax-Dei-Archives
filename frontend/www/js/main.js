@@ -32,6 +32,48 @@ function showFormMessage(messageElement, message, type) {
     }
 }
 
+function normalizeAbilityNameForHash(name) {
+    return name.toLowerCase().replace(/\s+/g, '-').replace(/'/g, '');
+}
+
+async function fetchAbilitiesForSearch(searchTerm) {
+    if (!searchTerm) {
+        return [];
+    }
+    try {
+        const { data: abilitiesByName, error: errorName } = await supabase
+            .from('abilities')
+            .select('*')
+            .ilike('name', `%${searchTerm}%`);
+
+        if (errorName) {
+            console.error('Error fetching abilities by name:', errorName.message);
+            return [];
+        }
+
+        const { data: abilitiesByDescription, error: errorDescription } = await supabase
+            .from('abilities')
+            .select('*')
+            .ilike('description', `%${searchTerm}%`);
+
+        if (errorDescription) {
+            console.error('Error fetching abilities by description:', errorDescription.message);
+            return [];
+        }
+
+        const combinedAbilitiesMap = new Map();
+        abilitiesByName.forEach(ability => combinedAbilitiesMap.set(ability.name, ability));
+        abilitiesByDescription.forEach(ability => combinedAbilitiesMap.set(ability.name, ability));
+
+        return Array.from(combinedAbilitiesMap.values());
+
+    } catch (e) {
+        console.error('Unexpected error in fetchAbilitiesForSearch:', e);
+        return [];
+    }
+}
+
+
 async function performSearch(searchTerm) {
     const searchResultsDropdown = $('#searchResultsDropdown');
     searchResultsDropdown.html('<div class="search-loading-indicator">Searching...</div>');
@@ -98,7 +140,6 @@ async function performSearch(searchTerm) {
             });
         });
 
-        // Process abilities
         abilities.forEach(ability => {
             const abilityLink = `abilities.html#${normalizeAbilityNameForHash(ability.name)}`;
             allResults.push({
@@ -191,6 +232,7 @@ async function performSearch(searchTerm) {
         }
 
     } catch (error) {
+        console.error('Search error:', error);
         searchResultsDropdown.html('<div class="search-error-message">An error occurred during search. Please try again.</div>');
     }
 }
