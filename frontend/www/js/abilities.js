@@ -5,6 +5,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const abilityFilterContainer = document.getElementById('ability-filters');
     const abilityPopupOverlay = document.getElementById('ability-popup-overlay');
 
+    const GITHUB_PAGES_BASE_URL = "https://yesitsphoenix.github.io/Pax-Dei-Archives";
+
     if (!abilitiesListContainer || !abilityFilterContainer || !abilityPopupOverlay) {
         console.error('Required containers (abilities-list, ability-filters, or ability-popup-overlay) not found!');
         return;
@@ -51,7 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const renderFilters = () => {
         let armorFilterOptions = Array.from(allArmorTypes).sort().map(type => `<option value="${type}">${type}</option>`).join('');
-        let weaponFilterOptions = Array.from(allWeaponTypes).sort().map(type => `<option value="${type}">${type}</option>`).join('');
+        let weaponFilterOptions = Array.from(allWeaponTypes).sort().map(type => `<option value="">All Weapon Types</option>`).join('');
 
         abilityFilterContainer.innerHTML = `
             <div class="mb-6 flex flex-col md:flex-row gap-4 justify-center items-center">
@@ -118,7 +120,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const showPopup = (abilityData, abilityId) => {
         const parsedDescription = marked.parse(abilityData.description);
         const appliesToArray = Array.from(abilityData.applies_to).sort();
-        const currentUrl = window.location.origin + window.location.pathname + '#' + abilityId;
+        
+        // Ensure slug creation in JS matches Python script for consistency
+        const slug = abilityId.toLowerCase().replace(/\s+/g, '-').replace(/'/g, ''); // Fix: Added /g for global replace of apostrophes
+        const currentUrl = `${GITHUB_PAGES_BASE_URL}/abilities/${slug}.html`;
 
         abilityPopupOverlay.innerHTML = `
             <div class="popup-content">
@@ -127,7 +132,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="text-center mb-4">
                     <img src="${abilityData.image_url}" alt="${abilityData.name} icon" class="w-24 h-24 mx-auto rounded-md border-2 border-yellow-500 object-cover mb-2">
                 </div>
-                    <div class="popup-description text-gray-300 mb-4 overflow-y-auto max-h-48 custom-scrollbar-styling">${parsedDescription}</div>
+                <div class="popup-description text-gray-300 mb-4 overflow-y-auto max-h-48 custom-scrollbar-styling">${parsedDescription}</div>
                 <div class="applies-to w-full text-center mb-4">
                     <p class="text-gray-400 text-sm font-semibold mb-1">Applies to:</p>
                     <div class="flex flex-wrap justify-center gap-1">
@@ -174,7 +179,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const abilityData = groupedAbilities[abilityName];
         const appliesToArray = Array.from(abilityData.applies_to).sort();
         const parsedDescription = marked.parse(abilityData.description);
-        const abilityId = abilityName.toLowerCase().replace(/\s+/g, '-');
+        
+        // Ensure abilityId (slug for element ID) matches Python script for consistency
+        const abilityId = abilityName.toLowerCase().replace(/\s+/g, '-').replace(/'/g, ''); // Fix: Added /g for global replace of apostrophes
 
         const abilityCard = document.createElement('div');
         abilityCard.className = 'ability-card bg-gray-800 p-4 rounded-lg shadow-md border border-gray-700 flex flex-col items-center text-center';
@@ -185,7 +192,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         abilityCard.innerHTML = `
             <img src="${abilityData.image_url}" alt="${abilityName} icon" class="w-16 h-16 mb-3 rounded-md border-2 border-yellow-500 object-cover">
             <h3 class="text-lg font-bold text-yellow-400 mb-2">${abilityName}</h3>
-            <p class="text-gray-300 text-sm mb-3 text-left w-full max-h-24 overflow-y-auto custom-scrollbar-styling">${parsedDescription}</p>
             <div class="applies-to mt-auto w-full">
                 <p class="text-gray-400 text-xs font-semibold mb-1">Applies to:</p>
                 <div class="flex flex-wrap justify-center gap-1">
@@ -209,7 +215,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (targetElement) {
             targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-            const foundAbilityName = Object.keys(groupedAbilities).find(name => name.toLowerCase().replace(/\s+/g, '-') === targetId);
+            const foundAbilityName = Object.keys(groupedAbilities).find(name => 
+                name.toLowerCase().replace(/\s+/g, '-').replace(/'/g, '') === targetId // Fix: Added /g for global replace of apostrophes
+            );
             if (foundAbilityName) {
                 setTimeout(() => {
                     showPopup(groupedAbilities[foundAbilityName], targetId);
