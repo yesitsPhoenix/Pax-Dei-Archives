@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pax Dei Archives - Lore</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="frontend/www/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
     <script type="module" src="frontend/www/js/supabaseClient.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
     <header class="header-area">
@@ -52,113 +53,114 @@
         <div class="row">
             <div class="col-lg-12">
                 <div class="page-content">
-                    <div class="feature-cards-section" id="lore-categories-section">
-                        <div class="row">
-                            <div class="col-lg-12">
-                                <div class="heading-section">
-                                    <h4><em>Lore</em> Categories</h4>
+                    <div class="bg-[#1A202C] p-6 sm:p-8 md:p-10 rounded-lg shadow-xl w-full max-w-6xl mx-auto border border-gray-700">
+                        <div class="feature-cards-section" id="lore-categories-section">
+                            <div class="row">
+                                <div class="col-lg-12">
+                                    <div class="heading-section">
+                                        <h4><em>Lore</em> Categories</h4>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="col-lg-2 col-md-4 col-sm-6">
-                                <div class="feature-card">
-                                    <a href="lore.html?category=World">
-                                        <i class="fa-solid fa-earth-americas"></i>
-                                        <h5>World</h5>
-                                    </a>
+                                <div class="col-lg-2 col-md-4 col-sm-6">
+                                    <div class="feature-card">
+                                        <a href="lore.html?category=World">
+                                            <i class="fa-solid fa-earth-americas"></i>
+                                            <h5>World</h5>
+                                        </a>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="col-lg-2 col-md-4 col-sm-6">
-                                <div class="feature-card">
-                                    <a href="lore.html?category=Creation">
-                                        <i class="fa-solid fa-scroll"></i>
-                                        <h5>Creation</h5>
-                                    </a>
+                                <div class="col-lg-2 col-md-4 col-sm-6">
+                                    <div class="feature-card">
+                                        <a href="lore.html?category=Creation">
+                                            <i class="fa-solid fa-scroll"></i>
+                                            <h5>Creation</h5>
+                                        </a>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="col-lg-2 col-md-4 col-sm-6">
-                                <div class="feature-card">
-                                    <a href="lore.html?category=Divine">
-                                        <i class="fa-solid fa-star"></i>
-                                        <h5>Divine</h5>
-                                    </a>
+                                <div class="col-lg-2 col-md-4 col-sm-6">
+                                    <div class="feature-card">
+                                        <a href="lore.html?category=Divine">
+                                            <i class="fa-solid fa-star"></i>
+                                            <h5>Divine</h5>
+                                        </a>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="col-lg-2 col-md-4 col-sm-6">
-                                <div class="feature-card">
-                                    <a href="lore.html?category=Factions">
-                                        <i class="fa-solid fa-users-gear"></i>
-                                        <h5>Factions</h5>
-                                    </a>
+                                <div class="col-lg-2 col-md-4 col-sm-6">
+                                    <div class="feature-card">
+                                        <a href="lore.html?category=Factions">
+                                            <i class="fa-solid fa-users-gear"></i>
+                                            <h5>Factions</h5>
+                                        </a>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="col-lg-2 col-md-4 col-sm-6">
-                                <div class="feature-card">
-                                    <a href="lore.html?category=Known Figures">
-                                        <i class="fa-solid fa-user-tie"></i>
-                                        <h5>Known Figures</h5>
-                                    </a>
+                                <div class="col-lg-2 col-md-4 col-sm-6">
+                                    <div class="feature-card">
+                                        <a href="lore.html?category=Known Figures">
+                                            <i class="fa-solid fa-user-tie"></i>
+                                            <h5>Known Figures</h5>
+                                        </a>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="col-lg-2 col-md-4 col-sm-6">
-                                <div class="feature-card">
-                                    <a href="lore.html?category=Placeholder 1">
-                                        <i class="fa-solid fa-book"></i>
-                                        <h5>Placeholder 1</h5>
-                                    </a>
+                                <div class="col-lg-2 col-md-4 col-sm-6">
+                                    <div class="feature-card">
+                                        <a href="lore.html?category=Placeholder 1">
+                                            <i class="fa-solid fa-book"></i>
+                                            <h5>Placeholder 1</h5>
+                                        </a>
+                                    </div>
                                 </div>
-                            </div>
-                             <div class="col-lg-2 col-md-4 col-sm-6">
-                                <div class="feature-card">
-                                    <a href="lore.html?category=Placeholder 2">
-                                        <i class="fa-solid fa-dragon"></i>
-                                        <h5>Placeholder 2</h5>
-                                    </a>
+                                <div class="col-lg-2 col-md-4 col-sm-6">
+                                    <div class="feature-card">
+                                        <a href="lore.html?category=Placeholder 2">
+                                            <i class="fa-solid fa-dragon"></i>
+                                            <h5>Placeholder 2</h5>
+                                        </a>
+                                    </div>
                                 </div>
-                            </div>
-                             <div class="col-lg-2 col-md-4 col-sm-6">
-                                <div class="feature-card">
-                                    <a href="lore.html?category=Placeholder 3">
-                                        <i class="fa-solid fa-flask"></i>
-                                        <h5>Placeholder 3</h5>
-                                    </a>
+                                <div class="col-lg-2 col-md-4 col-sm-6">
+                                    <div class="feature-card">
+                                        <a href="lore.html?category=Placeholder 3">
+                                            <i class="fa-solid fa-flask"></i>
+                                            <h5>Placeholder 3</h5>
+                                        </a>
+                                    </div>
                                 </div>
-                            </div>
-                             <div class="col-lg-2 col-md-4 col-sm-6">
-                                <div class="feature-card">
-                                    <a href="lore.html?category=Placeholder 4">
-                                        <i class="fa-solid fa-gavel"></i>
-                                        <h5>Placeholder 4</h5>
-                                    </a>
+                                <div class="col-lg-2 col-md-4 col-sm-6">
+                                    <div class="feature-card">
+                                        <a href="lore.html?category=Placeholder 4">
+                                            <i class="fa-solid fa-gavel"></i>
+                                            <h5>Placeholder 4</h5>
+                                        </a>
+                                    </div>
                                 </div>
-                            </div>
-                             <div class="col-lg-2 col-md-4 col-sm-6">
-                                <div class="feature-card">
-                                    <a href="lore.html?category=Placeholder 5">
-                                        <i class="fa-solid fa-cloud"></i>
-                                        <h5>Placeholder 5</h5>
-                                    </a>
+                                <div class="col-lg-2 col-md-4 col-sm-6">
+                                    <div class="feature-card">
+                                        <a href="lore.html?category=Placeholder 5">
+                                            <i class="fa-solid fa-cloud"></i>
+                                            <h5>Placeholder 5</h5>
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="lore-content-wrapper" id="dynamic-lore-content-wrapper" style="display: none;">
-                        <div class="small-feature-cards-section">
-                            <div class="row" id="small-lore-category-cards">
+                        <div class="lore-content-wrapper" id="dynamic-lore-content-wrapper" style="display: none;">
+                            <div class="small-feature-cards-section">
+                                <div class="row" id="small-lore-category-cards">
                                 </div>
-                        </div>
+                            </div>
 
-                        <div class="lore-flex-container"> <div class="lore-sidebar" id="lore-sidebar">
-                                <h5 style="margin-top: 20px;">Lore Entries</h5>
-                                <ul id="lore-item-list">
+                            <div class="lore-flex-container"> <div class="lore-sidebar" id="lore-sidebar">
+                                    <h5 style="margin-top: 20px;">Lore Entries</h5>
+                                    <ul id="lore-item-list">
                                     </ul>
-                            </div>
-                            <div class="dynamic-lore-main-content" id="dynamic-lore-main-content">
-                                <div class="lore-loading-indicator">Loading lore...</div>
+                                </div>
+                                <div class="dynamic-lore-main-content" id="dynamic-lore-main-content">
+                                    <div class="lore-loading-indicator">Loading lore...</div>
+                                </div>
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>

@@ -564,7 +564,6 @@ function resetLoreForm() {
     showFormMessage(document.getElementById('addLoreItemMessage'), '', '');
 }
 
-// Function to hide all admin elements, ensuring nothing is visible initially
 function hideAllAdminElements() {
     const loginFormContainer = document.getElementById('loginFormContainer');
     const loginHeading = document.getElementById('loginHeading');
@@ -584,8 +583,7 @@ $(document).ready(async function() {
         return;
     }
 
-    // Immediately hide all admin-related content on page load
-    hideAllAdminElements(); //
+    hideAllAdminElements();
 
     const discordLoginButton = document.getElementById('discordLoginButton');
     const loginError = document.getElementById('loginError');
@@ -630,204 +628,212 @@ $(document).ready(async function() {
     async function checkAuth() {
         const { data: { user } = {} } = await supabase.auth.getUser();
 
-        if (user) { // User is logged in
-            const authorized = await isAuthorizedAdmin(user.id); //
+        if (user) {
+            const authorized = await isAuthorizedAdmin(user.id);
 
-            if (authorized) { // User is authorized (comment_adder role)
-                if (loginFormContainer) loginFormContainer.style.display = 'none'; //
-                if (loginHeading) loginHeading.style.display = 'none'; //
-                if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'block'; //
-                fetchDashboardStats(); //
-                if (!initialAuthCheckComplete) { //
-                    populateTagSelect(tagSelect); //
-                    populateTagSelect(loreCategorySelect); //
-                    fetchAndPopulateLoreItems('loreItemsList'); //
-                    initialAuthCheckComplete = true; //
+            if (authorized) {
+                if (loginFormContainer) loginFormContainer.style.display = 'none';
+                if (loginHeading) loginHeading.style.display = 'none';
+                if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'block';
+                fetchDashboardStats();
+                if (!initialAuthCheckComplete) {
+                    populateTagSelect(tagSelect);
+                    populateTagSelect(loreCategorySelect);
+                    fetchAndPopulateLoreItems('loreItemsList');
+                    initialAuthCheckComplete = true;
                 }
-            } else { // User is logged in but NOT authorized
-                if (loginFormContainer) loginFormContainer.style.display = 'block'; //
-                if (loginHeading) loginHeading.style.display = 'none'; //
-                if (loginError) { //
-                    loginError.textContent = 'You are logged in but not authorized to view this page. Redirecting to home...'; //
-                    loginError.style.display = 'block'; //
+            } else {
+                if (loginFormContainer) loginFormContainer.style.display = 'block';
+                if (loginHeading) loginHeading.style.display = 'none';
+                if (loginError) {
+                    loginError.textContent = 'You are logged in but not authorized to view this page. Redirecting to home...';
+                    loginError.style.display = 'block';
                 }
-                if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none'; //
+                if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none';
                 
-                // Redirect after 8 seconds if not authorized
-                setTimeout(() => { //
-                    window.location.href = 'index.html'; //
-                }, 8000); // 8000 milliseconds = 8 seconds
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 8000);
             }
-        } else { // User is NOT logged in
-            if (loginFormContainer) loginFormContainer.style.display = 'block'; //
-            if (loginHeading) loginHeading.style.display = 'block'; //
-            if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none'; //
-            if (loginError) { //
-                 loginError.textContent = 'Please log in to view this page. Redirecting to home...'; //
-                 loginError.style.display = 'block'; //
+        } else {
+            if (loginFormContainer) loginFormContainer.style.display = 'block';
+            if (loginHeading) loginHeading.style.display = 'block';
+            if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none';
+            if (loginError) {
+                 loginError.textContent = 'Please log in to view this page. Redirecting to home...';
+                 loginError.style.display = 'block';
             }
            
-            // Redirect after 8 seconds if not logged in
-            setTimeout(() => { //
-                window.location.href = 'index.html'; //
-            }, 8000); // 8000 milliseconds = 8 seconds
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 8000);
         }
     }
 
-    checkAuth(); // Initial check
+    checkAuth();
 
-    supabase.auth.onAuthStateChange((event, session) => { //
-        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') { //
-            initialAuthCheckComplete = false; //
-            checkAuth(); //
+    supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+            initialAuthCheckComplete = false;
+            checkAuth();
         }
     });
 
-    if (discordLoginButton) { //
-        discordLoginButton.addEventListener('click', async () => { //
-            const { data, error } = await supabase.auth.signInWithOAuth({ //
-                provider: 'discord', //
-                options: { //
-                    redirectTo: 'https://yesitsphoenix.github.io/Pax-Dei-Archives/admin.html' //
+    if (discordLoginButton) {
+        discordLoginButton.addEventListener('click', async () => {
+            const { data, error } = await supabase.auth.signInWithOAuth({
+                provider: 'discord',
+                options: {
+                    redirectTo: 'https://yesitsphoenix.github.io/Pax-Dei-Archives/admin.html'
                 }
             });
 
-            if (error) { //
-                console.error('Discord login error:', error); //
-                if (loginError) { //
-                    loginError.textContent = 'Login failed: ' + error.message; //
-                    loginError.style.display = 'block'; //
+            if (error) {
+                console.error('Discord login error:', error);
+                if (loginError) {
+                    loginError.textContent = 'Login failed: ' + error.message;
+                    loginError.style.display = 'block';
                 }
             }
         });
     }
 
-    if (parseButton && commentInput && devCommentForm && parseError) { //
-        parseButton.addEventListener('click', () => { //
-            showFormMessage(formMessage, '', ''); //
-            const inputText = commentInput.value; //
-            const parsedData = parseComment(inputText); //
+    if (parseButton && commentInput && devCommentForm && parseError) {
+        parseButton.addEventListener('click', () => {
+            showFormMessage(formMessage, '', '');
+            const inputText = commentInput.value;
+            const parsedData = parseComment(inputText);
 
-            if (parsedData) { //
-                if (authorField) authorField.value = parsedData.author; //
-                if (sourceField) sourceField.value = parsedData.source; //
-                if (timestampField) timestampField.value = parsedData.timestamp; //
-                if (commentContentField) commentContentField.value = parsedData.content; //
+            if (parsedData) {
+                if (authorField) authorField.value = parsedData.author;
+                if (sourceField) sourceField.value = parsedData.source;
+                if (timestampField) timestampField.value = parsedData.timestamp;
+                if (commentContentField) commentContentField.value = parsedData.content;
 
-                devCommentForm.style.display = 'block'; //
-                commentInput.style.display = 'none'; //
-                parseButton.style.display = 'none'; //
-                parseError.style.display = 'none'; //
-            } else { //
-                parseError.textContent = 'Could not parse the input. Please ensure it matches one of the expected formats: "Author — Timestamp Content [Optional URL]" or "Author — Content [Optional URL]"'; //
-                parseError.style.display = 'block'; //
-                devCommentForm.style.display = 'none'; //
-                commentInput.style.display = 'block'; //
-                parseError.style.display = 'none'; //
+                devCommentForm.style.display = 'block';
+                commentInput.style.display = 'none';
+                parseButton.style.display = 'none';
+                parseError.style.display = 'none';
+            } else {
+                parseError.textContent = 'Could not parse the input. Please ensure it matches one of the expected formats: "Author — Timestamp Content [Optional URL]" or "Author — Content [Optional URL]"';
+                parseError.style.display = 'block';
+                devCommentForm.style.display = 'none';
+                commentInput.style.display = 'block';
+                parseError.style.display = 'none';
             }
         });
     }
 
-    if (editButton && devCommentForm && commentInput && parseButton && parseError) { //
-        editButton.addEventListener('click', () => { //
-            showFormMessage(formMessage, '', ''); //
-            devCommentForm.style.display = 'none'; //
-            commentInput.style.display = 'block'; //
-            parseButton.style.display = 'block'; //
-            parseError.style.display = 'none'; //
+    if (editButton && devCommentForm && commentInput && parseButton && parseError) {
+        editButton.addEventListener('click', () => {
+            showFormMessage(formMessage, '', '');
+            devCommentForm.style.display = 'none';
+            commentInput.style.display = 'block';
+            parseButton.style.display = 'block';
+            parseError.style.display = 'none';
         });
     }
 
-    if (addNewTagButton && newTagInput && tagSelect && loreCategorySelect) { //
-        addNewTagButton.addEventListener('click', async () => { //
-            const newTag = newTagInput.value.trim(); //
-            await handleAddNewTag(newTag, newTagInput, formMessage, tagSelect, loreCategorySelect, 'Tag'); //
+    if (addNewTagButton && newTagInput && tagSelect && loreCategorySelect) {
+        addNewTagButton.addEventListener('click', async () => {
+            const newTag = newTagInput.value.trim();
+            await handleAddNewTag(newTag, newTagInput, formMessage, tagSelect, loreCategorySelect, 'Tag');
         });
     }
     
-    if (addNewLoreCategoryButton && newLoreCategoryInput && loreCategorySelect && tagSelect) { //
-        addNewLoreCategoryButton.addEventListener('click', async () => { //
-            const newCategory = newLoreCategoryInput.value.trim(); //
-            await handleAddNewTag(newCategory, newLoreCategoryInput, addLoreItemMessage, tagSelect, loreCategorySelect, 'Category'); //
+    if (addNewLoreCategoryButton && newLoreCategoryInput && loreCategorySelect && tagSelect) {
+        addNewLoreCategoryButton.addEventListener('click', async () => {
+            const newCategory = newLoreCategoryInput.value.trim();
+            await handleAddNewTag(newCategory, newLoreCategoryInput, addLoreItemMessage, tagSelect, loreCategorySelect, 'Category');
         });
     }
 
-    if (addNewsUpdateForm) { //
-        addNewsUpdateForm.addEventListener('submit', async (event) => { //
-            event.preventDefault(); //
-            showFormMessage(addNewsUpdateMessage, '', ''); //
+    if (addNewsUpdateForm) {
+        addNewsUpdateForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            showFormMessage(addNewsUpdateMessage, '', '');
 
-            const newNewsUpdate = { //
-                news_date: newsDateInput.value, //
-                title: newsTitleInput.value, //
-                summary: newsSummaryInput.value, //
-                full_article_link: fullArticleLinkInput.value || null //
+            const newNewsUpdate = {
+                news_date: newsDateInput.value,
+                title: newsTitleInput.value,
+                summary: newsSummaryInput.value,
+                full_article_link: fullArticleLinkInput.value || null
             };
 
-            const { data, error } = await supabase //
-                .from('news_updates') //
-                .insert([newNewsUpdate]); //
+            const { data, error } = await supabase
+                .from('news_updates')
+                .insert([newNewsUpdate]);
 
-            if (error) { //
-                console.error('Error inserting news update:', error); //
-                showFormMessage(addNewsUpdateMessage, 'Error adding news update: ' + error.message, 'error'); //
-            } else { //
-                showFormMessage(addNewsUpdateMessage, 'News update added successfully!', 'success'); //
-                newsDateInput.value = ''; //
-                newsTitleInput.value = ''; //
-                newsSummaryInput.value = ''; //
-                fullArticleLinkInput.value = ''; //
-                fetchDashboardStats(); //
+            if (error) {
+                console.error('Error inserting news update:', error);
+                showFormMessage(addNewsUpdateMessage, 'Error adding news update: ' + error.message, 'error');
+            } else {
+                showFormMessage(addNewsUpdateMessage, 'News update added successfully!', 'success');
+                newsDateInput.value = '';
+                newsTitleInput.value = '';
+                newsSummaryInput.value = '';
+                fullArticleLinkInput.value = '';
+                fetchDashboardStats();
             }
         });
     }
 
-    if (loreTitleInput && loreSlugInput && addLoreItemForm) { //
-        loreTitleInput.addEventListener('input', () => { //
-            loreSlugInput.value = slugify(loreTitleInput.value); //
+    if (loreTitleInput && loreSlugInput && addLoreItemForm) {
+        loreTitleInput.addEventListener('input', () => {
+            loreSlugInput.value = slugify(loreTitleInput.value);
         });
     }
 
-    if (addLoreItemForm) { //
-        addLoreItemForm.addEventListener('submit', async (event) => { //
-            event.preventDefault(); //
-            showFormMessage(addLoreItemMessage, '', ''); //
+    if (addLoreItemForm) {
+        addLoreItemForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            showFormMessage(addLoreItemMessage, '', '');
 
-            const editingId = addLoreItemForm.dataset.editingId; //
-            const newLoreItem = { //
-                title: loreTitleInput.value, //
-                slug: loreSlugInput.value, //
-                category: loreCategorySelect.value, //
-                content: loreContentInput.value //
+            const title = loreTitleInput.value.trim();
+            const slug = loreSlugInput.value.trim() || slugify(title);
+            const category = loreCategorySelect.value;
+            const content = loreContentInput.value.trim();
+            const editingId = addLoreItemForm.dataset.editingId;
+
+            if (!title || !slug || !category || !content) {
+                showFormMessage(addLoreItemMessage, 'Please fill in all required lore item fields (Title, Slug, Category, Content).', 'error');
+                return;
+            }
+
+            const newLoreItem = {
+                title: loreTitleInput.value,
+                slug: loreSlugInput.value,
+                category: loreCategorySelect.value,
+                content: loreContentInput.value
             };
 
-            let error; //
-            if (editingId) { //
-                const { error: updateError } = await supabase //
-                    .from('lore_items') //
-                    .update(newLoreItem) //
-                    .eq('id', editingId); //
-                error = updateError; //
-            } else { //
-                const { error: insertError } = await supabase //
-                    .from('lore_items') //
-                    .insert([newLoreItem]); //
-                error = insertError; //
+            let error;
+            if (editingId) {
+                const { error: updateError } = await supabase
+                    .from('lore_items')
+                    .update(newLoreItem)
+                    .eq('id', editingId);
+                error = updateError;
+            } else {
+                const { error: insertError } = await supabase
+                    .from('lore_items')
+                    .insert([newLoreItem]);
+                error = insertError;
             }
 
-            if (error) { //
-                console.error('Error saving lore item:', error); //
-                showFormMessage(addLoreItemMessage, 'Error saving lore item: ' + error.message, 'error'); //
-            } else { //
-                showFormMessage(addLoreItemMessage, `Lore item ${editingId ? 'updated' : 'added'} successfully!`, 'success'); //
-                resetLoreForm(); //
-                fetchAndPopulateLoreItems('loreItemsList'); //
-                fetchDashboardStats(); //
+            if (error) {
+                console.error('Error saving lore item:', error);
+                showFormMessage(addLoreItemMessage, 'Error saving lore item: ' + error.message, 'error');
+            } else {
+                showFormMessage(addLoreItemMessage, `Lore item ${editingId ? 'updated' : 'added'} successfully!`, 'success');
+                resetLoreForm();
+                fetchAndPopulateLoreItems('loreItemsList');
+                fetchDashboardStats();
             }
         });
     }
 
-    if (cancelEditLoreItemButton) { //
-        cancelEditLoreItemButton.addEventListener('click', resetLoreForm); //
+    if (cancelEditLoreItemButton) {
+        cancelEditLoreItemButton.addEventListener('click', resetLoreForm);
     }
 });
