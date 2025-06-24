@@ -121,8 +121,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const parsedDescription = marked.parse(abilityData.description);
         const appliesToArray = Array.from(abilityData.applies_to).sort();
         
-        // Ensure slug creation in JS matches Python script for consistency
-        const slug = abilityId.toLowerCase().replace(/\s+/g, '-').replace(/'/g, ''); // Fix: Added /g for global replace of apostrophes
+        const slug = abilityId.toLowerCase().replace(/\s+/g, '-').replace(/'/g, '');
         const currentUrl = `${GITHUB_PAGES_BASE_URL}/abilities/${slug}.html`;
 
         abilityPopupOverlay.innerHTML = `
@@ -180,8 +179,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const appliesToArray = Array.from(abilityData.applies_to).sort();
         const parsedDescription = marked.parse(abilityData.description);
         
-        // Ensure abilityId (slug for element ID) matches Python script for consistency
-        const abilityId = abilityName.toLowerCase().replace(/\s+/g, '-').replace(/'/g, ''); // Fix: Added /g for global replace of apostrophes
+
+        const abilityId = abilityName.toLowerCase().replace(/\s+/g, '-').replace(/'/g, '');
 
         const abilityCard = document.createElement('div');
         abilityCard.className = 'ability-card bg-gray-800 p-4 rounded-lg shadow-md border border-gray-700 flex flex-col items-center text-center';
@@ -192,7 +191,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         abilityCard.innerHTML = `
             <img src="${abilityData.image_url}" alt="${abilityName} icon" class="w-16 h-16 mb-3 rounded-md border-2 border-yellow-500 object-cover">
             <h3 class="text-lg font-bold text-yellow-400 mb-2">${abilityName}</h3>
-            <div class="applies-to mt-auto w-full">
+
                 <p class="text-gray-400 text-xs font-semibold mb-1">Applies to:</p>
                 <div class="flex flex-wrap justify-center gap-1">
                     ${appliesToArray.map(type => `<span class="bg-gray-700 text-gray-200 px-3 py-1 rounded-full text-xs whitespace-nowrap">${type}</span>`).join('')}
@@ -216,7 +215,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
             const foundAbilityName = Object.keys(groupedAbilities).find(name => 
-                name.toLowerCase().replace(/\s+/g, '-').replace(/'/g, '') === targetId // Fix: Added /g for global replace of apostrophes
+                name.toLowerCase().replace(/\s+/g, '-').replace(/'/g, '') === targetId
             );
             if (foundAbilityName) {
                 setTimeout(() => {
