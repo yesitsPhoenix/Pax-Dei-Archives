@@ -173,7 +173,7 @@ const addPageEventListeners = () => {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'discord',
                 options: {
-                    redirectTo: window.location.origin + '/ledger.html'
+                    redirectTo: window.location.origin + '/Pax-Dei-Archives/ledger.html'
                 }
             });
             if (error) {
