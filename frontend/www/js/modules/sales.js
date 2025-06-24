@@ -12,13 +12,15 @@ const utcClockDisplay = document.getElementById('utc-clock-display');
 
 const transactionSearchInput = document.getElementById('transaction-search-input');
 const transactionCategoryFilter = document.getElementById('transaction-category-filter');
+const transactionTypeFilter = document.getElementById('transaction-type-filter');
 const transactionSortBy = document.getElementById('transaction-sort-by');
 const transactionSortDirection = document.getElementById('transaction-sort-direction');
 
-const TRANSACTIONS_PER_PAGE = 10;
+const TRANSACTIONS_PER_PAGE = 15;
 let currentTransactionsPage = 1;
 let fullTransactionHistory = [];
 let availableCategories = new Set();
+let availableTransactionTypes = new Set();
 
 export const initializeSales = () => {
     if (downloadSalesCsvButton) {
@@ -35,6 +37,9 @@ export const initializeSales = () => {
     if (transactionCategoryFilter) {
         transactionCategoryFilter.addEventListener('change', applyTransactionFilters);
     }
+    if (transactionTypeFilter) { 
+        transactionTypeFilter.addEventListener('change', applyTransactionFilters);
+    }
     if (transactionSortBy) {
         transactionSortBy.addEventListener('change', applyTransactionFilters);
     }
@@ -46,12 +51,17 @@ export const initializeSales = () => {
 export const loadTransactionHistory = (transactions) => {
     fullTransactionHistory = transactions || [];
     availableCategories.clear();
+    availableTransactionTypes.clear(); 
     fullTransactionHistory.forEach(transaction => {
         if (transaction.category_name) {
             availableCategories.add(transaction.category_name);
         }
+        if (transaction.type) { 
+            availableTransactionTypes.add(transaction.type);
+        }
     });
     populateCategoryFilter();
+    populateTypeFilter(); 
 
     if (!currentCharacterId) {
         if (salesLoader) salesLoader.style.display = 'none';
@@ -77,6 +87,18 @@ const populateCategoryFilter = () => {
     });
 };
 
+const populateTypeFilter = () => {
+    if (!transactionTypeFilter) return;
+    transactionTypeFilter.innerHTML = '<option value="">All Types</option>';
+    Array.from(availableTransactionTypes).sort().forEach(type => {
+        const option = document.createElement('option');
+        option.value = type;
+        option.textContent = type;
+        transactionTypeFilter.appendChild(option);
+    });
+};
+
+
 const applyTransactionFilters = () => {
     let filteredTransactions = [...fullTransactionHistory];
 
@@ -93,6 +115,13 @@ const applyTransactionFilters = () => {
     if (categoryFilter) {
         filteredTransactions = filteredTransactions.filter(transaction =>
             transaction.category_name === categoryFilter
+        );
+    }
+
+    const typeFilter = transactionTypeFilter ? transactionTypeFilter.value : '';
+    if (typeFilter) {
+        filteredTransactions = filteredTransactions.filter(transaction =>
+            transaction.type === typeFilter
         );
     }
 

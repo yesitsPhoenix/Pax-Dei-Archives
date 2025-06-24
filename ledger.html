@@ -181,7 +181,7 @@
                         </div>
                         <div class="form-group">
                             <label for="purchase-item-count-per-stack">Count (per stack)</label>
-                            <input type="number" id="purchase-item-count-per-stack" name="purchase-item-count-per-stack" placeholder="e.g., 50" required>
+                            <input type="number" id="purchase-item-count-per-stack" name="item-count-per-stack" placeholder="e.g., 50" required>
                         </div>
                         <div class="form-group">
                             <label for="purchase-item-price-per-stack">Price (per stack)</label>
@@ -258,6 +258,12 @@
                             <input type="text" id="transaction-search-input" placeholder="Enter item name" class="p-2 border rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
                         </div>
                         <div class="flex-1 min-w-[150px]">
+                            <label for="transaction-type-filter" class="block text-gray-400 text-sm font-bold mb-1">Filter by Type:</label>
+                            <select id="transaction-type-filter" class="p-2 border rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
+                                <option value="">All Types</option>
+                            </select>
+                        </div>
+                        <div class="flex-1 min-w-[150px]">
                             <label for="transaction-category-filter" class="block text-gray-400 text-sm font-bold mb-1">Filter by Category:</label>
                             <select id="transaction-category-filter" class="p-2 border rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
                                 <option value="">All Categories</option>
@@ -282,11 +288,6 @@
                             </select>
                         </div>
                     </div>
-                    <div class="flex justify-end mb-4">
-                        <button id="download-sales-csv" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-full shadow-md transition duration-150 ease-in-out transform hover:scale-105">
-                            <i class="fas fa-download mr-2"></i> Download Market History CSV
-                        </button>
-                    </div>
                     <div id="sales-loader">Loading sales data...</div>
                     <table id="sales-table" class="min-w-full bg-white shadow-md rounded-lg overflow-hidden" style="display:none;">
                         <thead>
@@ -304,7 +305,14 @@
                         <tbody id="sales-body" class="text-gray-600 text-sm font-light">
                         </tbody>
                     </table>
-                    <div id="sales-pagination" class="flex justify-center items-center space-x-2 mt-4 text-white"></div>
+                    <div class="flex items-center mt-4">
+                        <div class="flex-grow flex justify-center">
+                            <div id="sales-pagination" class="flex items-center space-x-2 text-white"></div>
+                        </div>
+                        <button id="download-sales-csv" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-full shadow-md transition duration-150 ease-in-out transform hover:scale-105 ml-auto">
+                            <i class="fas fa-download mr-2"></i> Download Market History CSV
+                        </button>
+                    </div>
                 </section>
             </div>
         </div>
