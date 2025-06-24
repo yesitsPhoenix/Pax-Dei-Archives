@@ -139,7 +139,7 @@ const renderListingsTable = (listings) => {
             </td>
             <td class="py-3 px-6 text-left">${listing.category_name || 'N/A'}</td>
             <td class="py-3 px-6 text-left">${Math.round(listing.quantity_listed || 0).toLocaleString()}</td>
-            <td class="py-3 px-6 text-left">${Math.round(listing.listed_price_per_unit || 0).toLocaleString()}</td>
+            <td class="py-3 px-6 text-left">${(parseFloat(listing.listed_price_per_unit) || 0).toFixed(2)}</td>
             <td class="py-3 px-6 text-left">${Math.round(listing.total_listed_price || 0).toLocaleString()}</td>
             <td class="py-3 px-6 text-left">${Math.round(listing.market_fee || 0).toLocaleString()}</td>
             <td class="py-3 px-6 text-left">${new Date(listing.listing_date).toISOString().substring(0, 10)}</td>
