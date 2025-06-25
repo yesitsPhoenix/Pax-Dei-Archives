@@ -1,5 +1,8 @@
 import { supabase } from './supabaseClient.js';
 
+const ABILITIES_CACHE_KEY = 'paxDeiAbilities';
+const ABILITIES_CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
+
 document.addEventListener('DOMContentLoaded', async () => {
     const abilitiesListContainer = document.getElementById('abilities-list');
     const abilityFilterContainer = document.getElementById('ability-filters');
@@ -12,14 +15,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    const { data: abilities, error } = await supabase
-        .from('abilities')
-        .select('*');
+    let abilities = [];
+    const cachedData = localStorage.getItem(ABILITIES_CACHE_KEY);
 
-    if (error) {
-        console.error('Error fetching abilities:', error.message);
-        abilitiesListContainer.innerHTML = `<p class="text-red-500 text-center">Failed to load abilities. Please try again later.</p>`;
-        return;
+    if (cachedData) {
+        try {
+            const { data, timestamp } = JSON.parse(cachedData);
+            if (Date.now() - timestamp < ABILITIES_CACHE_EXPIRY_MS) {
+                abilities = data;
+                console.log('Abilities loaded from cache.');
+            } else {
+                localStorage.removeItem(ABILITIES_CACHE_KEY);
+                console.log('Abilities cache expired, fetching new data.');
+            }
+        } catch (e) {
+            console.error('Error parsing cached abilities data:', e);
+            localStorage.removeItem(ABILITIES_CACHE_KEY);
+        }
+    }
+
+    if (abilities.length === 0) {
+        const { data, error } = await supabase
+            .from('abilities')
+            .select('*');
+
+        if (error) {
+            console.error('Error fetching abilities:', error.message);
+            abilitiesListContainer.innerHTML = `<p class="text-red-500 text-center">Failed to load abilities. Please try again later.</p>`;
+            return;
+        }
+
+        abilities = data;
+        localStorage.setItem(ABILITIES_CACHE_KEY, JSON.stringify({ data: abilities, timestamp: Date.now() }));
+        console.log('Abilities fetched from Supabase and cached.');
     }
 
     if (!abilities || abilities.length === 0) {

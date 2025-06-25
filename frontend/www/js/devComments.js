@@ -1,9 +1,6 @@
-// devComments.js
-
 import { supabase } from './supabaseClient.js';
 import { authorRoleColors, formatCommentDateTime } from './utils.js';
 import DOMPurify from 'https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.es.min.js';
-
 
 export async function fetchAndRenderDeveloperComments(containerId, limit = null, searchTerm = null, cacheKey = null, cacheExpiryMs = null) {
     const container = containerId ? document.getElementById(containerId) : null;
@@ -14,6 +11,7 @@ export async function fetchAndRenderDeveloperComments(containerId, limit = null,
 
     let commentsData = [];
 
+    // Prioritize sessionStorage cache for dev comments
     if (cacheKey && cacheExpiryMs && !searchTerm) {
         const cachedData = sessionStorage.getItem(cacheKey);
         if (cachedData) {
@@ -36,6 +34,7 @@ export async function fetchAndRenderDeveloperComments(containerId, limit = null,
                 query = query.or(`content.ilike.%${searchTerm}%,author.ilike.%${searchTerm}%`);
             }
 
+            // Using 'comment_date' for ordering based on your table schema for dev_comments
             query = query.order('comment_date', { ascending: false });
 
             if (limit) {
@@ -72,7 +71,10 @@ export async function fetchAndRenderDeveloperComments(containerId, limit = null,
         } else {
             renderComments(container, commentsData);
         }
-        $(container).trigger('commentsRendered');
+        // Trigger a custom event for other modules that might need to react to comments being rendered
+        // This is typically handled by jQuery's `$(container).trigger('commentsRendered');` in your current main.js
+        // For vanilla JS, you'd dispatch a custom event:
+        // container.dispatchEvent(new CustomEvent('commentsRendered'));
     }
 
     return commentsData;
@@ -108,7 +110,6 @@ function renderComments(container, comments) {
                 const day = String(dateObj.getDate()).padStart(2, '0');
                 formattedDateForData = `${year}-${month}-${day}`;
             } catch (e) {
-                // If parsing fails, use original date or empty string
                 formattedDateForData = comment.comment_date || '';
             }
         }
@@ -116,7 +117,8 @@ function renderComments(container, comments) {
         const authorColor = authorRoleColors[authorType] || authorRoleColors['default'];
 
         const rawCommentContent = comment.content || '';
-        const markdownHtml = marked.parse(rawCommentContent);
+
+        const markdownHtml = typeof marked !== 'undefined' ? marked.parse(rawCommentContent) : rawCommentContent;
 
         const sanitizedHtmlContent = DOMPurify.sanitize(markdownHtml);
 

@@ -1,12 +1,129 @@
 import { supabase } from './supabaseClient.js';
 import { initializeListings, loadActiveListings } from './modules/listings.js';
-import { initializeCharacters, insertCharacterModalHtml, currentCharacterId, getCurrentCharacter } from './modules/characters.js';
+import { initializeCharacters, insertCharacterModalHtml, currentCharacterId, getCurrentCharacter, setCurrentCharacterContext } from './modules/characters.js';
 import { initializeSales, loadTransactionHistory, handleDownloadCsv } from './modules/sales.js';
 import { renderDashboard } from './modules/dashboard.js';
 import { renderSalesChart, setupSalesChartListeners } from './modules/salesChart.js';
 
 let currentUser = null;
 let allCharacterActivityData = [];
+
+const CACHE_BASE_URL = 'https://homecraftlodge.serveminecraft.net/cache'; 
+
+export const get_from_quart_cache = async (key) => {
+    try {
+        const response = await fetch(`${CACHE_BASE_URL}/get/${key}`);
+
+        if (response.status === 503) {
+            console.error(`🚨 Cache service (GET) unavailable: ${response.status} - ${await response.text()}`);
+            return null;
+        }
+
+        if (response.status === 404) {
+            return null; 
+        }
+
+        const data = await response.json();
+
+        if (response.ok) {
+            if (data.status === "success") {
+                try {
+                    return JSON.parse(data.value);
+                } catch (e) {
+                    return data.value;
+                }
+            } else if (data.status === "cache_miss") {
+                return null;
+            } else if (data.status === "error") {
+                console.error(`🚨 Cache service (GET) error for key '${key}': ${data.message || 'Unknown error from Quart app'}`);
+                return null;
+            } else {
+                console.error(`🚨 Unexpected response status from cache service for GET '${key}':`, data);
+                return null;
+            }
+        } else {
+            console.warn(`⚠️ Unexpected HTTP status for '${key}': ${response.status} - ${data.message || await response.text()}`);
+            return null;
+        }
+    } catch (e) {
+        console.error(`🚨 Could not connect to cache service (GET): ${e}.`);
+        return null; 
+    }
+};
+
+export const set_in_quart_cache = async (key, value, ttl = 300) => { 
+    try {
+        const response = await fetch(`${CACHE_BASE_URL}/set`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ key, value: JSON.stringify(value), ttl }) 
+        });
+
+        const data = await response.json();
+
+        if (response.status === 503) {
+            console.error(`🚨 Cache service (SET) unavailable: ${data.message || 'Service Unavailable'}.`);
+            return false;
+        }
+
+        if (response.ok && data.status === "success") {
+            return true;
+        } else {
+            console.warn(`⚠️ Failed to set cache for key '${key}': ${data.message || response.status + ' - ' + await response.text()}`);
+            return false;
+        }
+    } catch (e) {
+        console.error(`🚨 Could not connect to cache service (SET): ${e}.`);
+        return false;
+    }
+};
+
+export const invalidate_quart_cache = async (key) => {
+    try {
+        const response = await fetch(`${CACHE_BASE_URL}/delete/${key}`, {
+            method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (response.status === 503) {
+            console.error(`🚨 Cache service (DELETE) unavailable: ${data.message || 'Service Unavailable'}.`);
+            return false;
+        }
+
+        if (response.ok) {
+            return true;
+        } else {
+            console.warn(`⚠️ Failed to invalidate cache for key '${key}': ${data.message || response.status + ' - ' + await response.text()}`);
+            return false;
+        }
+    } catch (e) {
+        console.error(`🚨 Could not connect to cache service (INVALIDATE): ${e}.`);
+        return false;
+    }
+};
+
+export const invalidateDashboardStatsCache = async (characterId) => {
+    if (characterId) {
+        const cacheKey = `pax_dashboard_stats:${characterId}`;
+        await invalidate_quart_cache(cacheKey);
+    }
+};
+
+export const invalidateTransactionHistoryCache = async (characterId) => {
+    if (characterId) {
+        const cacheKey = `pax_transactions:${characterId}`;
+        await invalidate_quart_cache(cacheKey);
+        await invalidate_quart_cache(`pax_daily_avg_sale_price:${characterId}`);
+        await invalidate_quart_cache(`pax_daily_total_sales:${characterId}`);
+        await invalidate_quart_cache(`pax_highest_sale:${characterId}`);
+        await invalidate_quart_cache(`pax_most_sold_qty:${characterId}`);
+        await invalidate_quart_cache(`pax_sales_vol_cat:${characterId}`);
+        await invalidate_quart_cache(`pax_top_profit:${characterId}`);
+    }
+};
 
 export const showCustomModal = (title, message, buttons) => {
     return new Promise(resolve => {
@@ -47,46 +164,46 @@ const traderLoginError = document.getElementById('traderLoginError');
 async function fetchAllCharacterActivity(characterId) {
     if (!characterId) return [];
 
-    const [
-        { data: salesData, error: salesError },
-        { data: purchasesData, error: purchasesError },
-        { data: cancelledListingsData, error: cancelledError },
-        { data: activeListingsData, error: activeListingsError },
-        { data: pveTransactionsData, error: pveError }
-    ] = await Promise.all([
-        supabase.from('sales').select(`sale_id, quantity_sold, sale_price_per_unit, total_sale_price, sale_date, market_listings!sales_listing_id_fkey!inner(listing_id, character_id, market_fee, items(item_name, item_categories(category_name)))`).eq('market_listings.character_id', characterId),
-        supabase.from('purchases').select(`purchase_id, quantity_purchased, purchase_price_per_unit, total_purchase_price, purchase_date, items(item_name, item_categories(category_name))`).eq('character_id', characterId),
-        supabase.from('market_listings').select(`listing_id, listing_date, quantity_listed, listed_price_per_unit, total_listed_price, market_fee, items(item_name, item_categories(category_name))`).eq('character_id', characterId).eq('is_cancelled', true),
-        supabase.from('market_listings').select(`listing_id, listing_date, quantity_listed, listed_price_per_unit, total_listed_price, market_fee, items(item_name, item_categories(category_name))`).eq('character_id', characterId).eq('is_fully_sold', false).eq('is_cancelled', false),
-        supabase.from('pve_transactions').select(`transaction_id, transaction_date, gold_amount, description`).eq('character_id', characterId)
-    ]);
+    const cacheKey = `pax_transactions:${characterId}`;
+    
+    const cachedData = await get_from_quart_cache(cacheKey);
+    if (cachedData) {
+        return cachedData;
+    }
 
-    if (salesError || purchasesError || cancelledError || activeListingsError || pveError) {
-        console.error("Error fetching character activity:", salesError || purchasesError || cancelledError || activeListingsError || pveError);
+    const { data: combinedActivity, error: combinedError } = await supabase.rpc('get_all_character_activity_json', { p_character_id: characterId });
+
+    if (combinedError) {
+        console.error('Error fetching combined character activity:', combinedError);
         return [];
     }
 
     const allTransactions = [];
 
-    salesData.forEach(sale => {
-        allTransactions.push({ type: 'Sale', date: sale.sale_date, item_name: sale.market_listings?.items?.item_name, category_name: sale.market_listings?.items?.item_categories?.category_name, quantity: Math.round(sale.quantity_sold || 0), price_per_unit: (sale.sale_price_per_unit || 0), total_amount: Math.round(sale.total_sale_price || 0), fee: 0 });
-    });
-    purchasesData.forEach(purchase => {
-        allTransactions.push({ type: 'Purchase', date: purchase.purchase_date, item_name: purchase.items?.item_name, category_name: purchase.items?.item_categories?.category_name, quantity: Math.round(purchase.quantity_purchased || 0), price_per_unit: (purchase.purchase_price_per_unit || 0), total_amount: Math.round(purchase.total_purchase_price || 0), fee: 0 });
-    });
-    cancelledListingsData.forEach(listing => {
-        allTransactions.push({ type: 'Cancellation', date: listing.listing_date, item_name: listing.items?.item_name, category_name: listing.items?.item_categories?.category_name, quantity: Math.round(listing.quantity_listed || 0), price_per_unit: (listing.listed_price_per_unit || 0), total_amount: 0, fee: 0 });
-    });
-    activeListingsData.forEach(listing => {
-        if (listing.market_fee && listing.market_fee > 0) {
-            allTransactions.push({ type: 'Listing Fee', date: listing.listing_date, item_name: listing.items?.item_name, category_name: listing.items?.item_categories?.category_name, quantity: Math.round(listing.quantity_listed || 0), price_per_unit: (listing.listed_price_per_unit || 0), total_amount: 0, fee: Math.round(listing.market_fee || 0) });
+    if (combinedActivity) {
+        const { sales, purchases, cancellations, listing_fees, pve_transactions } = combinedActivity;
+
+        if (sales) {
+            sales.forEach(sale => allTransactions.push(sale));
         }
-    });
-    pveTransactionsData.forEach(pve => {
-        allTransactions.push({ type: 'PVE Gold', date: pve.transaction_date, item_name: pve.description || 'N/A', category_name: 'PVE', quantity: 1, price_per_unit: (pve.gold_amount || 0), total_amount: Math.round(pve.gold_amount || 0), fee: 0 });
-    });
+        if (purchases) {
+            purchases.forEach(purchase => allTransactions.push(purchase));
+        }
+        if (cancellations) {
+            cancellations.forEach(listing => allTransactions.push(listing));
+        }
+        if (listing_fees) {
+            listing_fees.forEach(listing => allTransactions.push(listing));
+        }
+        if (pve_transactions) {
+            pve_transactions.forEach(pve => allTransactions.push(pve));
+        }
+    }
 
     allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    await set_in_quart_cache(cacheKey, allTransactions, 180); 
+    
     return allTransactions;
 }
 
@@ -96,6 +213,7 @@ const checkUser = async () => {
     const traderDashboardAndForms = document.getElementById('traderDashboardAndForms');
     if (user) {
         currentUser = user;
+        setCurrentCharacterContext(currentUser.id, null);
         if (traderLoginContainer) {
             traderLoginContainer.style.display = 'none';
         }
@@ -129,31 +247,35 @@ export const loadTraderPageData = async () => {
     }
 
     try {
-        //console.log('Character ID being sent to RPC:', currentCharacterId);
+        const currentCharacterData = await getCurrentCharacter(true); 
+        allCharacterActivityData = await fetchAllCharacterActivity(currentCharacterId);
 
-        const [
-            { data: dashboardStats, error: dashboardError },
-            currentCharacterData,
-            allActivityData
-        ] = await Promise.all([
-            supabase.rpc('get_character_dashboard_stats', { p_character_id: currentCharacterId }),
-            getCurrentCharacter(),
-            fetchAllCharacterActivity(currentCharacterId)
-        ]);
+        const dashboardStatsCacheKey = `pax_dashboard_stats:${currentCharacterId}`;
+        let dashboardStats = await get_from_quart_cache(dashboardStatsCacheKey);
 
-        if (dashboardError) {
-            throw dashboardError;
+        if (!dashboardStats) {
+            const { data, error } = await supabase.rpc('get_character_dashboard_stats', { p_character_id: currentCharacterId });
+
+            if (error) {
+                throw error;
+            }
+            dashboardStats = data ? data[0] : {};
+            await set_in_quart_cache(dashboardStatsCacheKey, dashboardStats, 300); 
         }
         
-        allCharacterActivityData = allActivityData;
-
-        renderDashboard(dashboardStats ? dashboardStats[0] : {}, currentCharacterData);
+        renderDashboard(dashboardStats, currentCharacterData);
         await loadActiveListings();
         loadTransactionHistory(allCharacterActivityData);
         renderSalesChart(allCharacterActivityData, 'daily');
+
+        await loadDailyAverageSalePrice(currentCharacterId);
+        await loadDailyTotalSales(currentCharacterId);
+        await loadHighestIndividualSale(currentCharacterId);
+        await loadMostItemsSoldByQuantity(currentCharacterId);
+        await loadSalesVolumeByCategory(currentCharacterId);
+        await loadTopProfitableItems(currentCharacterId);
         
     } catch (error) {
-        console.error('Error loading trader page data:', error.message);
         await showCustomModal('Error', 'Failed to load trader data: ' + error.message, [{ text: 'OK', value: true }]);
     }
 };
@@ -176,7 +298,6 @@ const addPageEventListeners = () => {
                 }
             });
             if (error) {
-                console.error('Error logging in with Discord:', error.message);
                 if (traderLoginError) {
                     traderLoginError.textContent = 'Login failed: ' + error.message;
                     traderLoginError.style.display = 'block';
@@ -188,23 +309,107 @@ const addPageEventListeners = () => {
 };
 
 async function populateItemData() {
-    try {
-        const { data, error } = await supabase.rpc('get_all_items_for_dropdown');
+    const cacheKey = 'pax_all_items_dropdown';
+    let allItems = await get_from_quart_cache(cacheKey);
 
-        if (error) {
-            console.error('Error fetching items for dropdowns:', error);
-            console.error('Supabase RPC error details:', error.message, error.details, error.hint);
+    if (!allItems) {
+        try {
+            const { data, error } = await supabase.rpc('get_all_items_for_dropdown');
+
+            if (error) {
+                console.error('Error fetching all items for dropdown:', error.message);
+                return;
+            }
+
+            allItems = data || [];
+            await set_in_quart_cache(cacheKey, allItems, 3600 * 24); 
+        } catch (err) {
+            console.error('Error during populateItemData:', err);
             return;
         }
-
-        const allItems = data;
-
-        initializeAutocomplete(allItems);
-
-    } catch (err) {
-        console.error('An unexpected error occurred while fetching item data:', err);
     }
+    initializeAutocomplete(allItems);
 }
+
+
+export async function loadDailyAverageSalePrice(characterId) {
+    if (!characterId) return [];
+    const cacheKey = `pax_daily_avg_sale_price:${characterId}`;
+    let data = await get_from_quart_cache(cacheKey);
+    if (data) return data;
+
+    const { data: supabaseData, error } = await supabase.rpc('get_daily_average_sale_price');
+    if (error) { console.error('Error fetching daily average sale price:', error.message); return []; }
+    data = supabaseData || [];
+    await set_in_quart_cache(cacheKey, data, 600); 
+    return data;
+}
+
+export async function loadDailyTotalSales(characterId) {
+    if (!characterId) return [];
+    const cacheKey = `pax_daily_total_sales:${characterId}`;
+    let data = await get_from_quart_cache(cacheKey);
+    if (data) return data;
+
+    const { data: supabaseData, error } = await supabase.rpc('get_daily_total_sales');
+    if (error) { console.error('Error fetching daily total sales:', error.message); return []; }
+    data = supabaseData || [];
+    await set_in_quart_cache(cacheKey, data, 600); 
+    return data;
+}
+
+export async function loadHighestIndividualSale(characterId) {
+    if (!characterId) return [];
+    const cacheKey = `pax_highest_sale:${characterId}`;
+    let data = await get_from_quart_cache(cacheKey);
+    if (data) return data;
+
+    const { data: supabaseData, error } = await supabase.rpc('get_highest_individual_sale', { top_n_sales: 5 }); 
+    if (error) { console.error('Error fetching highest individual sale:', error.message); return []; }
+    data = supabaseData || [];
+    await set_in_quart_cache(cacheKey, data, 600); 
+    return data;
+}
+
+export async function loadMostItemsSoldByQuantity(characterId) {
+    if (!characterId) return [];
+    const cacheKey = `pax_most_sold_qty:${characterId}`;
+    let data = await get_from_quart_cache(cacheKey);
+    if (data) return data;
+
+    const { data: supabaseData, error } = await supabase.rpc('get_most_items_sold_by_quantity', { top_n_items: 10 }); 
+    if (error) { console.error('Error fetching most items sold by quantity:', error.message); return []; }
+    data = supabaseData || [];
+    await set_in_quart_cache(cacheKey, data, 600); 
+    return data;
+}
+
+export async function loadSalesVolumeByCategory(characterId) {
+    if (!characterId) return [];
+    const cacheKey = `pax_sales_vol_cat:${characterId}`;
+    let data = await get_from_quart_cache(cacheKey);
+    if (data) return data;
+
+    const { data: supabaseData, error } = await supabase.rpc('get_sales_volume_by_category', { top_n_categories: 5 }); 
+    if (error) { console.error('Error fetching sales volume by category:', error.message); return []; }
+    data = supabaseData || [];
+    await set_in_quart_cache(cacheKey, data, 600); 
+    return data;
+}
+
+export async function loadTopProfitableItems(characterId) {
+    if (!characterId) return [];
+    const cacheKey = `pax_top_profit:${characterId}`;
+    let data = await get_from_quart_cache(cacheKey);
+    if (data) return data;
+
+    const { data: supabaseData, error } = await supabase.rpc('get_top_profitable_items', { top_n_items: 5 }); 
+    if (error) { console.error('Error fetching top profitable items:', error.message); return []; }
+    data = supabaseData || [];
+    await set_in_quart_cache(cacheKey, data, 600); 
+    return data;
+}
+
 
 function setupCustomAutocomplete(inputElement, suggestionsContainerElement, dataArray, selectionCallback) {
     let currentFocus = -1;
@@ -265,7 +470,7 @@ function setupCustomAutocomplete(inputElement, suggestionsContainerElement, data
             if (nameB === lowerCaseInput) return 1;
             if (nameA.startsWith(lowerCaseInput) && !nameB.startsWith(lowerCaseInput)) return 1;
             if (!nameA.startsWith(lowerCaseInput) && nameB.startsWith(lowerCaseInput)) return -1;
-            return nameA.localeCompare(nameB);
+            return nameA.localeCompare(b.item_name.toLowerCase());
         });
     }
 
