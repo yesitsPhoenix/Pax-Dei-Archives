@@ -3,9 +3,10 @@ const feesPaidEl = document.getElementById('dashboard-fees-paid');
 const netProfitEl = document.getElementById('dashboard-net-profit');
 const activeListingsEl = document.getElementById('dashboard-active-listings');
 const currentHoldingsEl = document.getElementById('dashboard-current-holdings');
+const earnedPveGoldEl = document.getElementById('dashboard-earned-pve-gold');
 
 export const renderDashboard = (dashboardStats, characterData) => {
-    if (!grossSalesEl || !feesPaidEl || !netProfitEl || !activeListingsEl || !currentHoldingsEl) {
+    if (!grossSalesEl || !feesPaidEl || !netProfitEl || !activeListingsEl || !currentHoldingsEl || !earnedPveGoldEl) {
         console.error("Dashboard elements not found.");
         return;
     }
@@ -15,6 +16,7 @@ export const renderDashboard = (dashboardStats, characterData) => {
     const feesPaid = dashboardStats.fees_paid || 0;
     const activeListingsCount = dashboardStats.active_listings_count || 0;
     const netProfit = grossSales - feesPaid;
+    const pveGoldTotal = dashboardStats.pve_gold_total || 0;
 
     const formatCurrency = (amount) => amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
@@ -23,4 +25,5 @@ export const renderDashboard = (dashboardStats, characterData) => {
     netProfitEl.innerHTML = `${formatCurrency(netProfit)} <i class="fas fa-coins"></i>`;
     activeListingsEl.innerHTML = `${activeListingsCount} <i class="fa-solid fa-list"></i>`;
     currentHoldingsEl.innerHTML = `${formatCurrency(currentGoldHoldings)} <i class="fa-solid fa-sack-dollar"></i>`;
+    earnedPveGoldEl.innerHTML = `${formatCurrency(pveGoldTotal)} <i class="fa-solid fa-hand-holding-dollar"></i>`;
 };
