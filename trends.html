@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pax Dei Archives - Sales Trends</title>
+    <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="frontend/www/css/trader.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.30.0/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script type="module" src="frontend/www/js/supabaseClient.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script async src="https://paxdei.gaming.tools/embed.js"></script>
+</head>
+<body>
+    <header class="header-area">
+        <div class="container">
+            <nav class="main-nav">
+                <a href="index.html" class="logo">
+                    <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
+                    <h1>Pax Dei Archives</h1>
+                </a>
+                <a class='menu-trigger'>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </a>
+                <div class="nav-and-search-wrapper">
+                    <ul class="nav">
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="abilities.html">Abilities</a></li>
+                        <li><a href="articles.html">Articles</a></li>
+                        <li><a href="news-updates.html">News</a></li>
+                        <li><a href="developer-comments.html">Dev Comments</a></li>
+                        <li><a href="loot.html">Loot Tracker</a></li>
+                        <li><a href="lore.html">Lore</a></li>
+                        <li><a href="ledger.html">Ledger</a></li>
+                        <li><a href="trends.html" class="active">Sales Trends</a></li>
+                        <li><a href="map.html">Map</a></li>
+                    </ul>
+                    <div class="search-input">
+                        <form id="search" action="#">
+                            <input type="text" placeholder="Search the Archives" id='searchText' name="searchKeyword" />
+                            <button type="submit" class="search-button"><i class="fa fa-search"></i></button>
+                        </form>
+                        <div id="searchResultsDropdown" class="search-results-dropdown">
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+<main class="trader-container">
+    <div class="container">
+        <h1 class="text-xl font-semibold mt-6 mb-3 text-white text-center">Market Trends Over Time</h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <section class="mb-4 p-3 bg-gray-800 rounded-md shadow-md">
+                <h2 class="text-lg font-semibold mb-2 text-white">Daily Total Sales (Gold)</h2>
+                <div class="relative h-48">
+                    <canvas id="daily-sales-chart"></canvas>
+                </div>
+            </section>
+
+            <section class="mb-4 p-3 bg-gray-800 rounded-md shadow-md">
+                <h2 class="text-lg font-semibold mb-2 text-white">Daily Average Item Price</h2>
+                <div class="relative h-48">
+                    <canvas id="daily-avg-price-chart"></canvas>
+                </div>
+            </section>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+            <section class="mb-4 p-3 bg-gray-800 rounded-md shadow-md">
+                <h2 class="text-lg font-semibold mb-2 text-white">Highest Individual Sales</h2>
+                <div id="highest-sales-list" class="space-y-2 text-xs">
+                    <p class="text-white">Loading highest sales...</p>
+                </div>
+            </section>
+
+            <section class="mb-4 p-3 bg-gray-800 rounded-md shadow-md">
+                <h2 class="text-lg font-semibold mb-2 text-white">Most Sold Items by Total Quantity</h2>
+                <div id="most-sold-quantity-list" class="space-y-2 text-xs">
+                    <p class="text-white">Loading most sold items...</p>
+                </div>
+            </section>
+
+            <section class="mb-4 p-3 bg-gray-800 rounded-md shadow-md">
+                <h2 class="text-lg font-semibold mb-2 text-white">Top Profitable Items</h2>
+                <div id="top-profitable-items-list" class="space-y-2 text-xs">
+                    <p class="text-white">Loading profitable items...</p>
+                </div>
+            </section>
+
+            <section class="mb-4 p-3 bg-gray-800 rounded-md shadow-md">
+                <h2 class="text-lg font-semibold mb-2 text-white">Sales Volume by Category</h2>
+                <div id="sales-volume-by-category-list" class="space-y-2 text-xs">
+                    <p class="text-white">Loading sales volume...</p>
+                </div>
+            </section>
+        </div>
+    </div>
+</main>
+
+
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12">
+                    <p>Copyright © 2025 Pax Dei Archives. All rights reserved.</p>
+                    <a href="admin.html">Admin</a>
+                </div>
+            </div>
+        </div>
+        <div class="corner-credit">
+            <div class="corner-credit-top-row">
+                <img src="frontend/www/assets/phoenix.png" alt="Phoenix profile image" class="profile-image" />
+                <span class="nav-text-profile">Made by Phoenix ✨</span>
+            </div>
+            <div id="utc-clock-display" class="utc-clock"></div>
+        </div>
+    </footer>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script type="module" src="frontend/www/js/main.js"></script>
+    <script type="module" src="frontend/www/js/trending_sales.js"></script>
+</body>
+</html>
