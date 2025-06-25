@@ -8,7 +8,7 @@ import { fetchAndRenderArticles, fetchAndRenderArticleCategories, setupArticleMo
 import DOMPurify from 'https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.es.min.js';
 
 const TAG_LIST_CACHE_KEY = 'paxDeiTagList';
-const TAG_LIST_CACHE_EXPIRY_MS = 10 * 1000; 
+const TAG_LIST_CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; 
 
 const DEV_COMMENTS_CACHE_KEY = 'paxDeiDevComments';
 const DEV_COMMENTS_CACHE_EXPIRY_MS = 5 * 60 * 1000;

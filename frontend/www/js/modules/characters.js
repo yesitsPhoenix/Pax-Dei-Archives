@@ -3,6 +3,9 @@ import { showCustomModal, loadTraderPageData } from '../trader.js';
 import { loadTransactionHistory } from './sales.js';
 import { renderSalesChart } from './salesChart.js';
 
+const CHARACTER_CACHE_KEY_PREFIX = 'paxDeiCharacters_';
+const CHARACTER_CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000;
+
 const characterSelect = document.getElementById('character-select');
 let createCharacterModal = null;
 let createCharacterForm = null;
@@ -69,18 +72,35 @@ export const initializeCharacters = async (userId, onCharacterSelectedCallback) 
 };
 
 const loadCharacters = async (onCharacterSelectedCallback) => {
-    const { data, error } = await supabase
-        .from('characters')
-        .select('character_id, character_name, gold')
-        .eq('user_id', currentUserId);
+    const cacheKey = CHARACTER_CACHE_KEY_PREFIX + currentUserId;
+    let characters = [];
 
-    if (error) {
-        console.error('Error fetching characters:', error.message);
-        await showCustomModal('Error', 'Failed to load characters: ' + error.message, [{ text: 'OK', value: true }]);
-        return;
+    const cachedData = localStorage.getItem(cacheKey);
+    if (cachedData) {
+        const { data, timestamp } = JSON.parse(cachedData);
+        if (Date.now() - timestamp < CHARACTER_CACHE_EXPIRY_MS) {
+            characters = data;
+        } else {
+            localStorage.removeItem(cacheKey);
+        }
     }
 
-    const characters = data || [];
+    if (characters.length === 0) {
+        const { data, error } = await supabase
+            .from('characters')
+            .select('character_id, character_name, gold')
+            .eq('user_id', currentUserId);
+
+        if (error) {
+            console.error('Error fetching characters:', error.message);
+            await showCustomModal('Error', 'Failed to load characters: ' + error.message, [{ text: 'OK', value: true }]);
+            return;
+        }
+
+        characters = data || [];
+        localStorage.setItem(cacheKey, JSON.stringify({ data: characters, timestamp: Date.now() }));
+    }
+    
     characterSelect.innerHTML = '';
 
     if (characters.length === 0) {
@@ -159,6 +179,8 @@ const handleCreateCharacter = async (e) => {
     }
     newCharacterNameInput.value = '';
     newCharacterGoldInput.value = '0';
+    // Invalidate cache and reload characters
+    localStorage.removeItem(CHARACTER_CACHE_KEY_PREFIX + currentUserId);
     await loadCharacters(loadTraderPageData);
 };
 
@@ -188,6 +210,8 @@ const handleDeleteCharacter = async () => {
         }
 
         await showCustomModal('Success', 'Character deleted successfully!', [{ text: 'OK', value: true }]);
+        // Invalidate cache and reload characters
+        localStorage.removeItem(CHARACTER_CACHE_KEY_PREFIX + currentUserId);
         await loadCharacters(loadTraderPageData);
     }
 };
@@ -211,6 +235,8 @@ const updateCharacterGold = async (newGoldAmount) => {
     }
 
     await showCustomModal('Success', `Gold updated to ${newGoldAmount.toLocaleString()}.`, [{ text: 'OK', value: true }]);
+    // Invalidate cache as character gold has changed
+    localStorage.removeItem(CHARACTER_CACHE_KEY_PREFIX + currentUserId);
     await loadTraderPageData();
 };
 
@@ -273,6 +299,8 @@ const updateCharacterGoldByPveTransaction = async (newTotalGold) => {
     const message = `Character gold set to ${newTotalGold.toLocaleString()}. Recorded change: ${goldChange >= 0 ? '+' : ''}${goldChange.toLocaleString()} gold from PVE.`;
 
     await showCustomModal('Success', message, [{ text: 'OK', value: true }]);
+    // Invalidate cache as character gold has changed
+    localStorage.removeItem(CHARACTER_CACHE_KEY_PREFIX + currentUserId);
     await loadTraderPageData();
 };
 
@@ -373,6 +401,20 @@ const showPveGoldInputModal = async (onConfirm, onCancel) => {
 
 export const getCurrentCharacter = async () => {
     if (!currentCharacterId) return null;
+
+    const cacheKey = CHARACTER_CACHE_KEY_PREFIX + currentUserId;
+    const cachedData = localStorage.getItem(cacheKey);
+
+    if (cachedData) {
+        const { data: allCharacters, timestamp } = JSON.parse(cachedData);
+        if (Date.now() - timestamp < CHARACTER_CACHE_EXPIRY_MS) {
+            const foundCharacter = allCharacters.find(char => char.character_id === currentCharacterId);
+            if (foundCharacter) {
+                return foundCharacter;
+            }
+        }
+    }
+    
     const { data, error } = await supabase
         .from('characters')
         .select('character_id, character_name, gold')

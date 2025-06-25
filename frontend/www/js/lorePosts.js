@@ -1,6 +1,8 @@
-// lorePosts.js
 import { supabase } from './supabaseClient.js';
 import { formatCommentDateTime } from './utils.js';
+
+const LORE_POSTS_CACHE_KEY = 'paxDeiLorePosts';
+const LORE_POSTS_CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 export async function fetchAndRenderLorePosts(containerId, limit = null, searchTerm = null) {
   const container = document.getElementById(containerId);
@@ -10,40 +12,68 @@ export async function fetchAndRenderLorePosts(containerId, limit = null, searchT
     container.innerHTML = '<div class="loading-indicator">Loading lore posts...</div>';
   }
 
-  try {
-    let query = supabase
-      .from('lore_items')
-      .select('*');
+  let lorePostsData = [];
 
-    if (searchTerm) {
-      query = query.or(`title.ilike.%${searchTerm}%,content.ilike.%${searchTerm}%,slug.ilike.%${searchTerm}%`);
+  if (!searchTerm && LORE_POSTS_CACHE_KEY) {
+    const cachedData = localStorage.getItem(LORE_POSTS_CACHE_KEY);
+    if (cachedData) {
+      const { data, timestamp } = JSON.parse(cachedData);
+      if (Date.now() - timestamp < LORE_POSTS_CACHE_EXPIRY_MS) {
+        lorePostsData = data;
+      } else {
+        localStorage.removeItem(LORE_POSTS_CACHE_KEY);
+      }
     }
+  }
 
-    query = query.order('created_at', { ascending: false });
+  if (lorePostsData.length === 0 || searchTerm) {
+    try {
+      let query = supabase
+        .from('lore_items')
+        .select('*');
 
-    if (limit) {
-      query = query.limit(limit);
-    }
+      if (searchTerm) {
+        query = query.or(`title.ilike.%${searchTerm}%,content.ilike.%${searchTerm}%,slug.ilike.%${searchTerm}%`);
+      }
 
-    const { data, error } = await query;
+      query = query.order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching lore posts:', error.message);
+      if (limit) {
+        query = query.limit(limit);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching lore posts:', error.message);
+        if (!searchTerm && container) {
+          container.innerHTML = '<div class="error-message">Failed to load lore posts. Please try again later.</div>';
+        }
+        return [];
+      }
+
+      lorePostsData = data || [];
+      if (!searchTerm && LORE_POSTS_CACHE_KEY && lorePostsData.length > 0) {
+        localStorage.setItem(LORE_POSTS_CACHE_KEY, JSON.stringify({ data: lorePostsData, timestamp: Date.now() }));
+      }
+    } catch (error) {
+      console.error('Unexpected error in fetchAndRenderLorePosts:', error);
       if (!searchTerm && container) {
-        container.innerHTML = '<div class="error-message">Failed to load lore posts. Please try again later.</div>';
+        container.innerHTML = '<div class="error-message">An unexpected error occurred.</div>';
       }
       return [];
     }
+  }
 
-    if (data.length === 0 && !searchTerm && container) {
+  if (container) {
+    if (lorePostsData.length === 0 && !searchTerm) {
       container.innerHTML = '<div class="no-content-message">No lore posts found.</div>';
       return [];
     }
 
-    if (!searchTerm && container) {
-      container.innerHTML = '';
-      data.forEach(post => {
-        const postHtml = `
+    container.innerHTML = '';
+    lorePostsData.forEach(post => {
+      const postHtml = `
                         <div class="col-lg-12 mb-4 lore-post-item">
                             <div class="lore-post-content">
                                 <h4>${post.title}</h4>
@@ -53,15 +83,8 @@ export async function fetchAndRenderLorePosts(containerId, limit = null, searchT
                             </div>
                         </div>
                 `;
-        container.insertAdjacentHTML('beforeend', postHtml);
-      });
-    }
-    return data;
-  } catch (error) {
-    console.error('Unexpected error in fetchAndRenderLorePosts:', error);
-    if (!searchTerm && container) {
-      container.innerHTML = '<div class="error-message">An unexpected error occurred.</div>';
-    }
-    return [];
+      container.insertAdjacentHTML('beforeend', postHtml);
+    });
   }
+  return lorePostsData;
 }
