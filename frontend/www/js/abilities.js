@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         if (ability.applies_to_weapon) {
             groupedAbilities[abilityName].applies_to.weapon.add(ability.applies_to_weapon);
-            allWeaponTypes.add(ability.applies_to_weapon);
+            allWeaponTypes.add(ability.applies_to.weapon);
         }
         if (ability.category) {
             groupedAbilities[abilityName].applies_to.category.add(ability.category);
@@ -177,14 +177,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.body.classList.remove('modal-open');
     };
 
-    document.getElementById('closeAbilityModal').addEventListener('click', closePopup);
-    abilityPopupOverlay.addEventListener('click', (event) => {
-        if (event.target === abilityPopupOverlay) {
-            closePopup();
-        }
-    });
+    const closeAbilityModalBtn = document.getElementById('closeAbilityModal');
+
+    if (closeAbilityModalBtn) {
+        closeAbilityModalBtn.addEventListener('click', closePopup);
+    }
+    
+    if (abilityPopupOverlay) {
+        abilityPopupOverlay.addEventListener('click', (event) => {
+            if (event.target === abilityPopupOverlay) {
+                closePopup();
+            }
+        });
+    }
+
     document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && abilityPopupOverlay.classList.contains('active')) {
+        if (event.key === 'Escape' && abilityPopupOverlay && abilityPopupOverlay.classList.contains('active')) {
             closePopup();
         }
     });
