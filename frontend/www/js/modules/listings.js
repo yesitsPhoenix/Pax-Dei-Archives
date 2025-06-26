@@ -1,5 +1,5 @@
 import { supabase } from '../supabaseClient.js';
-import { showCustomModal, loadTraderPageData } from '../trader.js';
+import { showCustomModal, loadTraderPageData, invalidateTransactionHistoryCache } from '../trader.js';
 import { currentCharacterId } from './characters.js';
 
 const addListingForm = document.getElementById('add-listing-form');
@@ -391,7 +391,6 @@ const handleAddListing = async (e) => {
         const totalListedPricePerListing = itemPricePerStack;
         const rawMarketFeePerListing = totalListedPricePerListing * 0.05; 
         const marketFeePerListing = Math.ceil(rawMarketFeePerListing);
-        const pricePerUnitPerListing = totalListedPricePerListing / quantityPerListing;
 
         let successCount = 0;
         let failedCount = 0;
@@ -426,7 +425,7 @@ const handleAddListing = async (e) => {
                 item_id: itemId,
                 character_id: currentCharacterId,
                 quantity_listed: quantityPerListing,
-                listed_price_per_unit: pricePerUnitPerListing,
+                listed_price_per_unit: totalListedPricePerListing / quantityPerListing, // Calculated here
                 total_listed_price: totalListedPricePerListing,
                 market_fee: marketFeePerListing
             });
@@ -453,6 +452,8 @@ const handleAddListing = async (e) => {
             } else {
                 await showCustomModal('Success', `Successfully created ${successCount} new listing(s) and deducted ${totalFees.toLocaleString()} gold in fees!`, [{ text: 'OK', value: true }]);
                 e.target.reset();
+                // Invalidate character gold and transaction history cache after listing
+                await invalidateTransactionHistoryCache(currentCharacterId);
                 await loadTraderPageData();
             }
         } else {
@@ -501,7 +502,6 @@ const handleRecordPurchase = async (e) => {
 
         const quantityPerPurchase = itemCountPerStack;
         const totalPurchasePricePerPurchase = itemPricePerStack;
-        const purchasePricePerUnitPerPurchase = totalPurchasePricePerPurchase / quantityPerPurchase;
 
         let successCount = 0;
         let failedCount = 0;
@@ -536,7 +536,7 @@ const handleRecordPurchase = async (e) => {
                 item_id: itemId,
                 character_id: currentCharacterId,
                 quantity_purchased: quantityPerPurchase,
-                purchase_price_per_unit: purchasePricePerUnitPerPurchase,
+                purchase_price_per_unit: totalPurchasePricePerPurchase / quantityPerPurchase, // Calculated here
                 total_purchase_price: totalPurchasePricePerPurchase
             });
 
@@ -562,6 +562,8 @@ const handleRecordPurchase = async (e) => {
             } else {
                 await showCustomModal('Success', `Successfully recorded ${successCount} new purchase(s) and deducted ${totalCost.toLocaleString()} gold!`, [{ text: 'OK', value: true }]);
                 e.target.reset();
+                // Invalidate character gold and transaction history cache after purchase
+                await invalidateTransactionHistoryCache(currentCharacterId);
                 await loadTraderPageData();
             }
         } else {
@@ -645,9 +647,11 @@ const handleMarkAsSold = async (listingId) => {
                     await showCustomModal('Warning', 'Listing marked as sold, but failed to update character gold. Please manually adjust gold if needed.', [{ text: 'OK', value: true }]);
                 } else {
                     await showCustomModal('Success', `Listing marked as sold and character gold updated by ${listing.total_listed_price.toLocaleString()}!`, [{ text: 'OK', value: true }]);
+                    // Invalidate character gold and transaction history cache after sale
+                    await invalidateTransactionHistoryCache(currentCharacterId);
+                    await loadTraderPageData(); 
                 }
             }
-            await loadTraderPageData(); 
         }
     }
 };
@@ -671,6 +675,8 @@ const handleCancelListing = async (listingId) => {
             await showCustomModal('Error', 'Failed to cancel listing: ' + error.message, [{ text: 'OK', value: true }]);
         } else {
             await showCustomModal('Success', 'Listing canceled successfully!', [{ text: 'OK', value: true }]);
+            // Invalidate transaction history cache after cancellation
+            await invalidateTransactionHistoryCache(currentCharacterId);
             await loadTraderPageData();
         }
     }
@@ -846,6 +852,7 @@ const handleEditListingSave = async (e) => {
         }
 
         document.getElementById('editListingModal').classList.add('hidden');
+        await invalidateTransactionHistoryCache(currentCharacterId);
         await loadTraderPageData();
 
     } catch (error) {

@@ -3,6 +3,7 @@ import { showCustomModal } from '../trader.js';
 import { currentCharacterId } from './characters.js';
 import { updateUtcClock } from '../main.js';
 
+
 const salesLoader = document.getElementById('sales-loader');
 const salesBody = document.getElementById('sales-body');
 const salesTable = document.getElementById('sales-table');

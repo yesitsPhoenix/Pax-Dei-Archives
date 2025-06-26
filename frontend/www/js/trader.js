@@ -8,6 +8,84 @@ import { renderSalesChart, setupSalesChartListeners } from './modules/salesChart
 let currentUser = null;
 let allCharacterActivityData = [];
 
+
+const CACHE_BASE_URL = 'http://homecraftlodge.serveminecraft.net:5000/cache'; 
+
+
+
+export const get_from_quart_cache = async (key) => {
+    try {
+        const response = await fetch(`${CACHE_BASE_URL}/get/${key}`);
+        if (response.ok) {
+            const data = await response.json();
+
+            try {
+                return JSON.parse(data.value);
+            } catch (e) {
+                return data.value;
+            }
+        } else if (response.status === 404) {
+            return null;
+        } else {
+            console.warn(`⚠️ Error from cache service for '${key}': ${response.status} - ${await response.text()}`);
+            return null;
+        }
+    } catch (e) {
+        console.error(`🚨 Could not connect to cache service (GET): ${e}.`);
+        return null; 
+    }
+};
+
+export const set_in_quart_cache = async (key, value, ttl = 300) => { 
+    try {
+        const response = await fetch(`${CACHE_BASE_URL}/set`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ key, value: JSON.stringify(value), ttl }) 
+        });
+        if (response.ok) {
+            return true;
+        } else {
+            console.warn(`⚠️ Failed to set cache for key '${key}': ${response.status} - ${await response.text()}`);
+            return false;
+        }
+    } catch (e) {
+        console.error(`🚨 Could not connect to cache service (SET): ${e}.`);
+        return false;
+    }
+};
+
+export const invalidate_quart_cache = async (key) => {
+    try {
+        const response = await fetch(`${CACHE_BASE_URL}/delete/${key}`, {
+            method: 'DELETE'
+        });
+        if (response.ok) {
+            //console.log(`🗑️ Cache invalidated for key '${key}'.`);
+            return true;
+        } else if (response.status === 404) {
+            //console.log(`🗑️ Cache key '${key}' not found, no need to invalidate.`);
+            return true; // Still considered successful invalidation if not present
+        } else {
+            console.warn(`⚠️ Failed to invalidate cache for key '${key}': ${response.status} - ${await response.text()}`);
+            return false;
+        }
+    } catch (e) {
+        console.error(`🚨 Could not connect to cache service (INVALIDATE): ${e}.`);
+        return false;
+    }
+};
+
+// New function to explicitly invalidate the aggregated transaction history cache
+export const invalidateTransactionHistoryCache = async (characterId) => {
+    if (characterId) {
+        const cacheKey = `pax_transactions:${characterId}`;
+        await invalidate_quart_cache(cacheKey);
+    }
+};
+
 export const showCustomModal = (title, message, buttons) => {
     return new Promise(resolve => {
         const modalId = `customModal-${Date.now()}`;
@@ -47,6 +125,17 @@ const traderLoginError = document.getElementById('traderLoginError');
 async function fetchAllCharacterActivity(characterId) {
     if (!characterId) return [];
 
+    const cacheKey = `pax_transactions:${characterId}`;
+    
+    // 1. Try to get from Quart cache first
+    const cachedTransactions = await get_from_quart_cache(cacheKey);
+    if (cachedTransactions) {
+        //console.log(`Using cached aggregated transactions for character ${characterId}.`);
+        return cachedTransactions;
+    }
+
+    // 2. If not in cache, fetch from Supabase and aggregate
+    //console.log(`Cache miss for transactions for character ${characterId}, fetching from Supabase...`);
     const [
         { data: salesData, error: salesError },
         { data: purchasesData, error: purchasesError },
@@ -62,6 +151,7 @@ async function fetchAllCharacterActivity(characterId) {
     ]);
 
     if (salesError || purchasesError || cancelledError || activeListingsError || pveError) {
+        console.error('Error fetching character activity:', salesError, purchasesError, cancelledError, activeListingsError, pveError);
         return [];
     }
 
@@ -86,6 +176,10 @@ async function fetchAllCharacterActivity(characterId) {
     });
 
     allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    // 3. Store the aggregated result in Quart cache
+    await set_in_quart_cache(cacheKey, allTransactions, 180); // Cache for 3 minutes
+    
     return allTransactions;
 }
 
@@ -129,22 +223,18 @@ export const loadTraderPageData = async () => {
     }
 
     try {
-        const currentCharacterData = await getCurrentCharacter(true);
+        // getCurrentCharacter itself now uses the cache
+        const currentCharacterData = await getCurrentCharacter(true); // Force refresh here to get latest gold
+        
+        // fetchAllCharacterActivity now uses the cache
+        allCharacterActivityData = await fetchAllCharacterActivity(currentCharacterId);
 
-        const [
-            { data: dashboardStats, error: dashboardError },
-            allActivityData
-        ] = await Promise.all([
-            supabase.rpc('get_character_dashboard_stats', { p_character_id: currentCharacterId }),
-            fetchAllCharacterActivity(currentCharacterId)
-        ]);
+        const { data: dashboardStats, error: dashboardError } = await supabase.rpc('get_character_dashboard_stats', { p_character_id: currentCharacterId });
 
         if (dashboardError) {
             throw dashboardError;
         }
         
-        allCharacterActivityData = allActivityData;
-
         renderDashboard(dashboardStats ? dashboardStats[0] : {}, currentCharacterData);
         await loadActiveListings();
         loadTransactionHistory(allCharacterActivityData);

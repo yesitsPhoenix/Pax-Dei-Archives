@@ -1,6 +1,5 @@
 import { supabase } from '../supabaseClient.js';
-import { showCustomModal } from '../trader.js';
-import { loadTraderPageData } from '../trader.js';
+import { showCustomModal, loadTraderPageData, get_from_quart_cache, set_in_quart_cache, invalidate_quart_cache, invalidateTransactionHistoryCache } from '../trader.js';
 
 const CHARACTER_CACHE_KEY_PREFIX = 'paxDeiCharacters_';
 const CHARACTER_CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000;
@@ -299,6 +298,8 @@ const handleDeleteCharacter = async () => {
 
         await showCustomModal('Success', 'Character deleted successfully!', [{ text: 'OK', value: true }]);
         localStorage.removeItem(CHARACTER_CACHE_KEY_PREFIX + currentUserId);
+        await invalidate_quart_cache(`pax_character:${currentCharacterId}`);
+        await invalidateTransactionHistoryCache(currentCharacterId);
         localStorage.removeItem('selectedCharacterId');
         localStorage.removeItem('selectedUserId');
         await loadCharacters(loadTraderPageData);
@@ -341,7 +342,7 @@ const handlePveGoldInput = async (e) => {
         return;
     }
 
-    const currentCharacter = await getCurrentCharacter(true);
+    const currentCharacter = await getCurrentCharacter(true); 
     if (!currentCharacter) {
         await showCustomModal('Error', 'Could not retrieve current character gold. Please try again.', [{ text: 'OK', value: true }]);
         return;
@@ -361,6 +362,8 @@ const handlePveGoldInput = async (e) => {
     document.getElementById('pveGoldInputModal').classList.add('hidden');
     pveGoldAmountInput.value = '';
     pveDescriptionInput.value = '';
+    
+    await invalidateTransactionHistoryCache(currentCharacterId);
 };
 
 
@@ -378,6 +381,7 @@ const updateCharacterGold = async (newGoldAmount) => {
 
     await showCustomModal('Success', `Gold updated to ${newGoldAmount.toLocaleString()}.`, [{ text: 'OK', value: true }]);
     localStorage.removeItem(CHARACTER_CACHE_KEY_PREFIX + currentUserId);
+    await invalidate_quart_cache(`pax_character:${currentCharacterId}`);
     await loadTraderPageData();
 };
 
@@ -396,7 +400,8 @@ const updateCharacterGoldByPveTransaction = async (newTotalGold, goldChange) => 
     const message = `Character gold set to ${newTotalGold.toLocaleString()}. Recorded change: ${goldChange >= 0 ? '+' : ''}${goldChange.toLocaleString()} gold from PVE.`;
 
     await showCustomModal('Success', message, [{ text: 'OK', value: true }]);
-    localStorage.removeItem(CHARACTER_CACHE_KEY_PREFIX + currentUserId);
+    localStorage.removeItem(CHARACTER_CACHE_KEY_PREFIX + currentUserId); 
+    await invalidate_quart_cache(`pax_character:${currentCharacterId}`);
     await loadTraderPageData();
 };
 
@@ -406,21 +411,12 @@ export const getCurrentCharacter = async (forceRefresh = false) => {
         return null;
     }
 
-    const cacheKey = CHARACTER_CACHE_KEY_PREFIX + currentUserId;
+    const characterCacheKey = `pax_character:${currentCharacterId}`;
     
     if (!forceRefresh) {
-        const cachedData = localStorage.getItem(cacheKey);
-
-        if (cachedData) {
-            const { data: allCharacters, timestamp } = JSON.parse(cachedData);
-            if (Date.now() - timestamp < CHARACTER_CACHE_EXPIRY_MS) {
-                const foundCharacter = allCharacters.find(char => char.character_id === currentCharacterId);
-                if (foundCharacter) {
-                    return foundCharacter;
-                }
-            } else {
-                localStorage.removeItem(cacheKey);
-            }
+        const cachedCharacter = await get_from_quart_cache(characterCacheKey);
+        if (cachedCharacter) {
+            return cachedCharacter;
         }
     }
     
@@ -431,7 +427,12 @@ export const getCurrentCharacter = async (forceRefresh = false) => {
         .single();
 
     if (error) {
+        console.error('Error fetching current character from Supabase:', error.message);
         return null;
+    }
+    
+    if (data) {
+        await set_in_quart_cache(characterCacheKey, data, 60);
     }
     return data;
 };
