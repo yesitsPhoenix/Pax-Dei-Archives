@@ -13,17 +13,33 @@ const CACHE_BASE_URL = 'https://homecraftlodge.serveminecraft.net/cache';
 export const get_from_quart_cache = async (key) => {
     try {
         const response = await fetch(`${CACHE_BASE_URL}/get/${key}`);
-        if (response.ok) {
-            const data = await response.json();
-            try {
-                return JSON.parse(data.value);
-            } catch (e) {
-                return data.value;
-            }
-        } else if (response.status === 404) {
+        const data = await response.json();
+
+        if (response.status === 503) {
+            console.error(`🚨 Cache service (GET) unavailable: ${data.message || 'Service Unavailable'}.`);
+            alert("The cache service is temporarily unavailable. Please try again later.");
             return null;
+        }
+
+        if (response.ok) {
+            if (data.status === "success") {
+                try {
+                    return JSON.parse(data.value);
+                } catch (e) {
+                    return data.value;
+                }
+            } else if (data.status === "cache_miss") {
+                console.warn(`⚠️ Cache miss/expired for key '${key}'.`);
+                return null;
+            } else if (data.status === "error") {
+                console.error(`🚨 Cache service (GET) error for key '${key}': ${data.message || 'Unknown error from Quart app'}`);
+                return null;
+            } else {
+                console.error(`🚨 Unexpected response status from cache service for GET '${key}':`, data);
+                return null;
+            }
         } else {
-            console.warn(`⚠️ Error from cache service for '${key}': ${response.status} - ${await response.text()}`);
+            console.warn(`⚠️ Error from cache service for '${key}': ${response.status} - ${data.message || await response.text()}`);
             return null;
         }
     } catch (e) {
@@ -41,10 +57,19 @@ export const set_in_quart_cache = async (key, value, ttl = 300) => {
             },
             body: JSON.stringify({ key, value: JSON.stringify(value), ttl }) 
         });
-        if (response.ok) {
+
+        const data = await response.json();
+
+        if (response.status === 503) {
+            console.error(`🚨 Cache service (SET) unavailable: ${data.message || 'Service Unavailable'}.`);
+            alert("The cache service is temporarily unavailable. Please try again later.");
+            return false;
+        }
+
+        if (response.ok && data.status === "success") {
             return true;
         } else {
-            console.warn(`⚠️ Failed to set cache for key '${key}': ${response.status} - ${await response.text()}`);
+            console.warn(`⚠️ Failed to set cache for key '${key}': ${data.message || response.status + ' - ' + await response.text()}`);
             return false;
         }
     } catch (e) {
@@ -58,12 +83,19 @@ export const invalidate_quart_cache = async (key) => {
         const response = await fetch(`${CACHE_BASE_URL}/delete/${key}`, {
             method: 'DELETE'
         });
+
+        const data = await response.json();
+
+        if (response.status === 503) {
+            console.error(`🚨 Cache service (DELETE) unavailable: ${data.message || 'Service Unavailable'}.`);
+            alert("The cache service is temporarily unavailable. Please try again later.");
+            return false;
+        }
+
         if (response.ok) {
             return true;
-        } else if (response.status === 404) {
-            return true; 
         } else {
-            console.warn(`⚠️ Failed to invalidate cache for key '${key}': ${response.status} - ${await response.text()}`);
+            console.warn(`⚠️ Failed to invalidate cache for key '${key}': ${data.message || response.status + ' - ' + await response.text()}`);
             return false;
         }
     } catch (e) {
