@@ -8,7 +8,7 @@ import { renderSalesChart, setupSalesChartListeners } from './modules/salesChart
 let currentUser = null;
 let allCharacterActivityData = [];
 
-const CACHE_BASE_URL = 'http://homecraftlodge.serveminecraft.net:5000/cache'; 
+const CACHE_BASE_URL = 'https://homecraftlodge.serveminecraft.net/cache'; 
 
 export const get_from_quart_cache = async (key) => {
     try {

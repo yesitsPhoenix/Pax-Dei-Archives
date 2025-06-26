@@ -40,7 +40,6 @@ export function formatNewsDate(dateString) {
   }
 }
 
-// Centralized slugify function
 export function slugify(text) {
   return text
     .toString()
@@ -53,15 +52,14 @@ export function slugify(text) {
     .replace(/--+/g, '-');
 }
 
-// Centralized showFormMessage function
 export function showFormMessage(messageElement, message, type) {
     messageElement.textContent = message;
     messageElement.className = '';
-    messageElement.style.display = 'none'; // Ensure it's hidden by default
+    messageElement.style.display = 'none';
 
     if (message) {
         messageElement.style.display = 'block';
-        messageElement.classList.add('form-message'); // Base class for styling
+        messageElement.classList.add('form-message');
 
         if (type === 'success') {
             messageElement.classList.add('success-message'); // Specific success style
