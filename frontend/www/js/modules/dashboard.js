@@ -7,11 +7,13 @@ const earnedPveGoldEl = document.getElementById('dashboard-earned-pve-gold');
 
 export const renderDashboard = (dashboardStats, characterData) => {
     if (!grossSalesEl || !feesPaidEl || !netProfitEl || !activeListingsEl || !currentHoldingsEl || !earnedPveGoldEl) {
-        console.error("Dashboard elements not found.");
+        console.error("dashboard.js: Dashboard elements not found on page load.");
         return;
     }
     
     const currentGoldHoldings = characterData ? characterData.gold : 0;
+
+
     const grossSales = dashboardStats.gross_sales || 0;
     const feesPaid = dashboardStats.fees_paid || 0;
     const activeListingsCount = dashboardStats.active_listings_count || 0;
@@ -24,6 +26,8 @@ export const renderDashboard = (dashboardStats, characterData) => {
     feesPaidEl.innerHTML = `${formatCurrency(feesPaid)} <i class="fa-solid fa-arrow-trend-down"></i>`;
     netProfitEl.innerHTML = `${formatCurrency(netProfit)} <i class="fas fa-coins"></i>`;
     activeListingsEl.innerHTML = `${activeListingsCount} <i class="fa-solid fa-list"></i>`;
+    
     currentHoldingsEl.innerHTML = `${formatCurrency(currentGoldHoldings)} <i class="fa-solid fa-sack-dollar"></i>`;
+
     earnedPveGoldEl.innerHTML = `${formatCurrency(pveGoldTotal)} <i class="fa-solid fa-hand-holding-dollar"></i>`;
 };

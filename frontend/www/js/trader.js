@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient.js';
 import { initializeListings, loadActiveListings } from './modules/listings.js';
-import { initializeCharacters, insertCharacterModalHtml, currentCharacterId, getCurrentCharacter } from './modules/characters.js';
+import { initializeCharacters, insertCharacterModalHtml, currentCharacterId, getCurrentCharacter, setCurrentCharacterContext } from './modules/characters.js';
 import { initializeSales, loadTransactionHistory, handleDownloadCsv } from './modules/sales.js';
 import { renderDashboard } from './modules/dashboard.js';
 import { renderSalesChart, setupSalesChartListeners } from './modules/salesChart.js';
@@ -62,7 +62,6 @@ async function fetchAllCharacterActivity(characterId) {
     ]);
 
     if (salesError || purchasesError || cancelledError || activeListingsError || pveError) {
-        console.error("Error fetching character activity:", salesError || purchasesError || cancelledError || activeListingsError || pveError);
         return [];
     }
 
@@ -96,6 +95,7 @@ const checkUser = async () => {
     const traderDashboardAndForms = document.getElementById('traderDashboardAndForms');
     if (user) {
         currentUser = user;
+        setCurrentCharacterContext(currentUser.id, null);
         if (traderLoginContainer) {
             traderLoginContainer.style.display = 'none';
         }
@@ -129,15 +129,13 @@ export const loadTraderPageData = async () => {
     }
 
     try {
-        //console.log('Character ID being sent to RPC:', currentCharacterId);
+        const currentCharacterData = await getCurrentCharacter(true);
 
         const [
             { data: dashboardStats, error: dashboardError },
-            currentCharacterData,
             allActivityData
         ] = await Promise.all([
             supabase.rpc('get_character_dashboard_stats', { p_character_id: currentCharacterId }),
-            getCurrentCharacter(),
             fetchAllCharacterActivity(currentCharacterId)
         ]);
 
@@ -153,7 +151,6 @@ export const loadTraderPageData = async () => {
         renderSalesChart(allCharacterActivityData, 'daily');
         
     } catch (error) {
-        console.error('Error loading trader page data:', error.message);
         await showCustomModal('Error', 'Failed to load trader data: ' + error.message, [{ text: 'OK', value: true }]);
     }
 };
@@ -176,7 +173,6 @@ const addPageEventListeners = () => {
                 }
             });
             if (error) {
-                console.error('Error logging in with Discord:', error.message);
                 if (traderLoginError) {
                     traderLoginError.textContent = 'Login failed: ' + error.message;
                     traderLoginError.style.display = 'block';
@@ -192,8 +188,6 @@ async function populateItemData() {
         const { data, error } = await supabase.rpc('get_all_items_for_dropdown');
 
         if (error) {
-            console.error('Error fetching items for dropdowns:', error);
-            console.error('Supabase RPC error details:', error.message, error.details, error.hint);
             return;
         }
 
@@ -202,7 +196,7 @@ async function populateItemData() {
         initializeAutocomplete(allItems);
 
     } catch (err) {
-        console.error('An unexpected error occurred while fetching item data:', err);
+        return;
     }
 }
 
@@ -265,7 +259,7 @@ function setupCustomAutocomplete(inputElement, suggestionsContainerElement, data
             if (nameB === lowerCaseInput) return 1;
             if (nameA.startsWith(lowerCaseInput) && !nameB.startsWith(lowerCaseInput)) return 1;
             if (!nameA.startsWith(lowerCaseInput) && nameB.startsWith(lowerCaseInput)) return -1;
-            return nameA.localeCompare(nameB);
+            return nameA.localeCompare(b.item_name.toLowerCase());
         });
     }
 
