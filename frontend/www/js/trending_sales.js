@@ -273,7 +273,7 @@ async function loadDailyTotalSalesChart() {
             'daily-sales-chart',
             labels,
             totalSales,
-            'Total Gold Sold',
+            'Daily Sales Revenue',
             'rgb(75, 192, 192)',
             'rgba(75, 192, 192, 0.2)'
         );
