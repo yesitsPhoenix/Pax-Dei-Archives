@@ -8,17 +8,13 @@ import { renderSalesChart, setupSalesChartListeners } from './modules/salesChart
 let currentUser = null;
 let allCharacterActivityData = [];
 
-
 const CACHE_BASE_URL = 'http://homecraftlodge.serveminecraft.net:5000/cache'; 
-
-
 
 export const get_from_quart_cache = async (key) => {
     try {
         const response = await fetch(`${CACHE_BASE_URL}/get/${key}`);
         if (response.ok) {
             const data = await response.json();
-
             try {
                 return JSON.parse(data.value);
             } catch (e) {
@@ -63,11 +59,9 @@ export const invalidate_quart_cache = async (key) => {
             method: 'DELETE'
         });
         if (response.ok) {
-            //console.log(`🗑️ Cache invalidated for key '${key}'.`);
             return true;
         } else if (response.status === 404) {
-            //console.log(`🗑️ Cache key '${key}' not found, no need to invalidate.`);
-            return true; // Still considered successful invalidation if not present
+            return true; 
         } else {
             console.warn(`⚠️ Failed to invalidate cache for key '${key}': ${response.status} - ${await response.text()}`);
             return false;
@@ -78,11 +72,23 @@ export const invalidate_quart_cache = async (key) => {
     }
 };
 
-// New function to explicitly invalidate the aggregated transaction history cache
+export const invalidateDashboardStatsCache = async (characterId) => {
+    if (characterId) {
+        const cacheKey = `pax_dashboard_stats:${characterId}`;
+        await invalidate_quart_cache(cacheKey);
+    }
+};
+
 export const invalidateTransactionHistoryCache = async (characterId) => {
     if (characterId) {
         const cacheKey = `pax_transactions:${characterId}`;
         await invalidate_quart_cache(cacheKey);
+        await invalidate_quart_cache(`pax_daily_avg_sale_price:${characterId}`);
+        await invalidate_quart_cache(`pax_daily_total_sales:${characterId}`);
+        await invalidate_quart_cache(`pax_highest_sale:${characterId}`);
+        await invalidate_quart_cache(`pax_most_sold_qty:${characterId}`);
+        await invalidate_quart_cache(`pax_sales_vol_cat:${characterId}`);
+        await invalidate_quart_cache(`pax_top_profit:${characterId}`);
     }
 };
 
@@ -127,15 +133,11 @@ async function fetchAllCharacterActivity(characterId) {
 
     const cacheKey = `pax_transactions:${characterId}`;
     
-    // 1. Try to get from Quart cache first
     const cachedTransactions = await get_from_quart_cache(cacheKey);
     if (cachedTransactions) {
-        //console.log(`Using cached aggregated transactions for character ${characterId}.`);
         return cachedTransactions;
     }
 
-    // 2. If not in cache, fetch from Supabase and aggregate
-    //console.log(`Cache miss for transactions for character ${characterId}, fetching from Supabase...`);
     const [
         { data: salesData, error: salesError },
         { data: purchasesData, error: purchasesError },
@@ -177,8 +179,7 @@ async function fetchAllCharacterActivity(characterId) {
 
     allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
     
-    // 3. Store the aggregated result in Quart cache
-    await set_in_quart_cache(cacheKey, allTransactions, 180); // Cache for 3 minutes
+    await set_in_quart_cache(cacheKey, allTransactions, 180); 
     
     return allTransactions;
 }
@@ -223,22 +224,33 @@ export const loadTraderPageData = async () => {
     }
 
     try {
-        // getCurrentCharacter itself now uses the cache
-        const currentCharacterData = await getCurrentCharacter(true); // Force refresh here to get latest gold
-        
-        // fetchAllCharacterActivity now uses the cache
+        const currentCharacterData = await getCurrentCharacter(true); 
         allCharacterActivityData = await fetchAllCharacterActivity(currentCharacterId);
 
-        const { data: dashboardStats, error: dashboardError } = await supabase.rpc('get_character_dashboard_stats', { p_character_id: currentCharacterId });
+        const dashboardStatsCacheKey = `pax_dashboard_stats:${currentCharacterId}`;
+        let dashboardStats = await get_from_quart_cache(dashboardStatsCacheKey);
 
-        if (dashboardError) {
-            throw dashboardError;
+        if (!dashboardStats) {
+            const { data, error } = await supabase.rpc('get_character_dashboard_stats', { p_character_id: currentCharacterId });
+
+            if (error) {
+                throw error;
+            }
+            dashboardStats = data ? data[0] : {};
+            await set_in_quart_cache(dashboardStatsCacheKey, dashboardStats, 300); 
         }
         
-        renderDashboard(dashboardStats ? dashboardStats[0] : {}, currentCharacterData);
+        renderDashboard(dashboardStats, currentCharacterData);
         await loadActiveListings();
         loadTransactionHistory(allCharacterActivityData);
         renderSalesChart(allCharacterActivityData, 'daily');
+
+        await loadDailyAverageSalePrice(currentCharacterId);
+        await loadDailyTotalSales(currentCharacterId);
+        await loadHighestIndividualSale(currentCharacterId);
+        await loadMostItemsSoldByQuantity(currentCharacterId);
+        await loadSalesVolumeByCategory(currentCharacterId);
+        await loadTopProfitableItems(currentCharacterId);
         
     } catch (error) {
         await showCustomModal('Error', 'Failed to load trader data: ' + error.message, [{ text: 'OK', value: true }]);
@@ -274,21 +286,107 @@ const addPageEventListeners = () => {
 };
 
 async function populateItemData() {
-    try {
-        const { data, error } = await supabase.rpc('get_all_items_for_dropdown');
+    const cacheKey = 'pax_all_items_dropdown';
+    let allItems = await get_from_quart_cache(cacheKey);
 
-        if (error) {
+    if (!allItems) {
+        try {
+            const { data, error } = await supabase.rpc('get_all_items_for_dropdown');
+
+            if (error) {
+                console.error('Error fetching all items for dropdown:', error.message);
+                return;
+            }
+
+            allItems = data || [];
+            await set_in_quart_cache(cacheKey, allItems, 3600 * 24); 
+        } catch (err) {
+            console.error('Error during populateItemData:', err);
             return;
         }
-
-        const allItems = data;
-
-        initializeAutocomplete(allItems);
-
-    } catch (err) {
-        return;
     }
+    initializeAutocomplete(allItems);
 }
+
+
+export async function loadDailyAverageSalePrice(characterId) {
+    if (!characterId) return [];
+    const cacheKey = `pax_daily_avg_sale_price:${characterId}`;
+    let data = await get_from_quart_cache(cacheKey);
+    if (data) return data;
+
+    const { data: supabaseData, error } = await supabase.rpc('get_daily_average_sale_price');
+    if (error) { console.error('Error fetching daily average sale price:', error.message); return []; }
+    data = supabaseData || [];
+    await set_in_quart_cache(cacheKey, data, 600); 
+    return data;
+}
+
+export async function loadDailyTotalSales(characterId) {
+    if (!characterId) return [];
+    const cacheKey = `pax_daily_total_sales:${characterId}`;
+    let data = await get_from_quart_cache(cacheKey);
+    if (data) return data;
+
+    const { data: supabaseData, error } = await supabase.rpc('get_daily_total_sales');
+    if (error) { console.error('Error fetching daily total sales:', error.message); return []; }
+    data = supabaseData || [];
+    await set_in_quart_cache(cacheKey, data, 600); 
+    return data;
+}
+
+export async function loadHighestIndividualSale(characterId) {
+    if (!characterId) return [];
+    const cacheKey = `pax_highest_sale:${characterId}`;
+    let data = await get_from_quart_cache(cacheKey);
+    if (data) return data;
+
+    const { data: supabaseData, error } = await supabase.rpc('get_highest_individual_sale', { top_n_sales: 5 }); 
+    if (error) { console.error('Error fetching highest individual sale:', error.message); return []; }
+    data = supabaseData || [];
+    await set_in_quart_cache(cacheKey, data, 600); 
+    return data;
+}
+
+export async function loadMostItemsSoldByQuantity(characterId) {
+    if (!characterId) return [];
+    const cacheKey = `pax_most_sold_qty:${characterId}`;
+    let data = await get_from_quart_cache(cacheKey);
+    if (data) return data;
+
+    const { data: supabaseData, error } = await supabase.rpc('get_most_items_sold_by_quantity', { top_n_items: 10 }); 
+    if (error) { console.error('Error fetching most items sold by quantity:', error.message); return []; }
+    data = supabaseData || [];
+    await set_in_quart_cache(cacheKey, data, 600); 
+    return data;
+}
+
+export async function loadSalesVolumeByCategory(characterId) {
+    if (!characterId) return [];
+    const cacheKey = `pax_sales_vol_cat:${characterId}`;
+    let data = await get_from_quart_cache(cacheKey);
+    if (data) return data;
+
+    const { data: supabaseData, error } = await supabase.rpc('get_sales_volume_by_category', { top_n_categories: 5 }); 
+    if (error) { console.error('Error fetching sales volume by category:', error.message); return []; }
+    data = supabaseData || [];
+    await set_in_quart_cache(cacheKey, data, 600); 
+    return data;
+}
+
+export async function loadTopProfitableItems(characterId) {
+    if (!characterId) return [];
+    const cacheKey = `pax_top_profit:${characterId}`;
+    let data = await get_from_quart_cache(cacheKey);
+    if (data) return data;
+
+    const { data: supabaseData, error } = await supabase.rpc('get_top_profitable_items', { top_n_items: 5 }); 
+    if (error) { console.error('Error fetching top profitable items:', error.message); return []; }
+    data = supabaseData || [];
+    await set_in_quart_cache(cacheKey, data, 600); 
+    return data;
+}
+
 
 function setupCustomAutocomplete(inputElement, suggestionsContainerElement, dataArray, selectionCallback) {
     let currentFocus = -1;

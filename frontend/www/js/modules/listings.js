@@ -1,5 +1,5 @@
 import { supabase } from '../supabaseClient.js';
-import { showCustomModal, loadTraderPageData, invalidateTransactionHistoryCache } from '../trader.js';
+import { showCustomModal, loadTraderPageData, invalidateTransactionHistoryCache, invalidateDashboardStatsCache, get_from_quart_cache, set_in_quart_cache } from '../trader.js';
 import { currentCharacterId } from './characters.js';
 
 const addListingForm = document.getElementById('add-listing-form');
@@ -285,43 +285,54 @@ const handleFilterChange = (key, value) => {
 const fetchAndPopulateCategories = async () => {
     if (!itemCategorySelect || !filterListingCategorySelect || !purchaseItemCategorySelect) return;
 
-    try {
-        const { data, error } = await supabase
-            .from('item_categories')
-            .select('category_id, category_name')
-            .order('category_name', { ascending: true });
+    const cacheKey = 'pax_item_categories';
+    let categories = await get_from_quart_cache(cacheKey);
 
-        if (error) throw error;
+    if (!categories) { 
+        try {
+            const { data, error } = await supabase
+                .from('item_categories')
+                .select('category_id, category_name')
+                .order('category_name', { ascending: true });
 
-        itemCategorySelect.innerHTML = '<option value="">Select a category</option>';
-        data.forEach(category => {
-            const option = document.createElement('option');
-            option.value = category.category_id;
-            option.textContent = category.category_name;
-            itemCategorySelect.appendChild(option);
-        });
+            if (error) {
+                console.error('Error fetching categories:', error.message);
+                return;
+            }
 
-        filterListingCategorySelect.innerHTML = '<option value="">All Categories</option>';
-        data.forEach(category => {
-            const option = document.createElement('option');
-            option.value = category.category_id;
-            option.textContent = category.category_name;
-            filterListingCategorySelect.appendChild(option);
-        });
-        filterListingCategorySelect.value = listingsFilter.categoryId;
-
-        purchaseItemCategorySelect.innerHTML = '<option value="">Select a category</option>';
-        data.forEach(category => {
-            const option = document.createElement('option');
-            option.value = category.category_id;
-            option.textContent = category.category_name;
-            purchaseItemCategorySelect.appendChild(option);
-        });
-
-    } catch (e) {
-        console.error("Error fetching categories:", e);
-        await showCustomModal('Error', 'An unexpected error occurred while loading categories.', [{ text: 'OK', value: true }]);
+            categories = data || [];
+            await set_in_quart_cache(cacheKey, categories, 3600 * 24 * 7);
+        } catch (e) {
+            console.error("Error during fetchAndPopulateCategories:", e);
+            await showCustomModal('Error', 'An unexpected error occurred while loading categories.', [{ text: 'OK', value: true }]);
+            return;
+        }
     }
+
+    itemCategorySelect.innerHTML = '<option value="">Select a category</option>';
+    categories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category.category_id;
+        option.textContent = category.category_name;
+        itemCategorySelect.appendChild(option);
+    });
+
+    filterListingCategorySelect.innerHTML = '<option value="">All Categories</option>';
+    categories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category.category_id;
+        option.textContent = category.category_name;
+        filterListingCategorySelect.appendChild(option);
+    });
+    filterListingCategorySelect.value = listingsFilter.categoryId;
+
+    purchaseItemCategorySelect.innerHTML = '<option value="">Select a category</option>';
+    categories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category.category_id;
+        option.textContent = category.category_name;
+        purchaseItemCategorySelect.appendChild(option);
+    });
 };
 
 const getOrCreateItemId = async (itemName, categoryId) => {
@@ -425,7 +436,7 @@ const handleAddListing = async (e) => {
                 item_id: itemId,
                 character_id: currentCharacterId,
                 quantity_listed: quantityPerListing,
-                listed_price_per_unit: totalListedPricePerListing / quantityPerListing, // Calculated here
+                listed_price_per_unit: totalListedPricePerListing / quantityPerListing,
                 total_listed_price: totalListedPricePerListing,
                 market_fee: marketFeePerListing
             });
@@ -452,8 +463,8 @@ const handleAddListing = async (e) => {
             } else {
                 await showCustomModal('Success', `Successfully created ${successCount} new listing(s) and deducted ${totalFees.toLocaleString()} gold in fees!`, [{ text: 'OK', value: true }]);
                 e.target.reset();
-                // Invalidate character gold and transaction history cache after listing
                 await invalidateTransactionHistoryCache(currentCharacterId);
+                await invalidateDashboardStatsCache(currentCharacterId);
                 await loadTraderPageData();
             }
         } else {
@@ -536,7 +547,7 @@ const handleRecordPurchase = async (e) => {
                 item_id: itemId,
                 character_id: currentCharacterId,
                 quantity_purchased: quantityPerPurchase,
-                purchase_price_per_unit: totalPurchasePricePerPurchase / quantityPerPurchase, // Calculated here
+                purchase_price_per_unit: totalPurchasePricePerPurchase / quantityPerPurchase,
                 total_purchase_price: totalPurchasePricePerPurchase
             });
 
@@ -562,8 +573,8 @@ const handleRecordPurchase = async (e) => {
             } else {
                 await showCustomModal('Success', `Successfully recorded ${successCount} new purchase(s) and deducted ${totalCost.toLocaleString()} gold!`, [{ text: 'OK', value: true }]);
                 e.target.reset();
-                // Invalidate character gold and transaction history cache after purchase
                 await invalidateTransactionHistoryCache(currentCharacterId);
+                await invalidateDashboardStatsCache(currentCharacterId);
                 await loadTraderPageData();
             }
         } else {
@@ -647,8 +658,8 @@ const handleMarkAsSold = async (listingId) => {
                     await showCustomModal('Warning', 'Listing marked as sold, but failed to update character gold. Please manually adjust gold if needed.', [{ text: 'OK', value: true }]);
                 } else {
                     await showCustomModal('Success', `Listing marked as sold and character gold updated by ${listing.total_listed_price.toLocaleString()}!`, [{ text: 'OK', value: true }]);
-                    // Invalidate character gold and transaction history cache after sale
                     await invalidateTransactionHistoryCache(currentCharacterId);
+                    await invalidateDashboardStatsCache(currentCharacterId);
                     await loadTraderPageData(); 
                 }
             }
@@ -675,8 +686,8 @@ const handleCancelListing = async (listingId) => {
             await showCustomModal('Error', 'Failed to cancel listing: ' + error.message, [{ text: 'OK', value: true }]);
         } else {
             await showCustomModal('Success', 'Listing canceled successfully!', [{ text: 'OK', value: true }]);
-            // Invalidate transaction history cache after cancellation
             await invalidateTransactionHistoryCache(currentCharacterId);
+            await invalidateDashboardStatsCache(currentCharacterId);
             await loadTraderPageData();
         }
     }
@@ -711,7 +722,7 @@ const showEditListingModal = async (listingId) => {
         originalListingPrice = listing.total_listed_price || 0;
         originalListingFee = listing.market_fee || 0;
 
-        editItemNameInput.value = listing.items.item_name;
+        editItemNameInput.value = Math.round(listing.items.item_name || '');
         editQuantityListedInput.value = Math.round(listing.quantity_listed || 0);
         editTotalPriceInput.value = Math.round(listing.total_listed_price || 0);
 
@@ -853,6 +864,7 @@ const handleEditListingSave = async (e) => {
 
         document.getElementById('editListingModal').classList.add('hidden');
         await invalidateTransactionHistoryCache(currentCharacterId);
+        await invalidateDashboardStatsCache(currentCharacterId);
         await loadTraderPageData();
 
     } catch (error) {

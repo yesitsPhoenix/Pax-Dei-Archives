@@ -1,5 +1,5 @@
 import { supabase } from '../supabaseClient.js';
-import { showCustomModal, loadTraderPageData, get_from_quart_cache, set_in_quart_cache, invalidate_quart_cache, invalidateTransactionHistoryCache } from '../trader.js';
+import { showCustomModal, loadTraderPageData, get_from_quart_cache, set_in_quart_cache, invalidate_quart_cache, invalidateTransactionHistoryCache, invalidateDashboardStatsCache } from '../trader.js';
 
 const CHARACTER_CACHE_KEY_PREFIX = 'paxDeiCharacters_';
 const CHARACTER_CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000;
@@ -191,7 +191,7 @@ export const insertCharacterModalHtml = () => {
                     <h3 class="text-xl font-bold mb-4 text-gray-800">Enter Manual PVE Gold</h3>
                     <form id="pveGoldInputForm">
                         <div class="mb-4">
-                            <label for="pve-gold-amount" class="block text-gray-700 text-sm font-bold mb-2">Gold Amount:</label>
+                            <label for="pve-gold-amount" class="block text-gray-700 text-sm font-bold mb-2">New Total Gold Amount:</label>
                             <input type="number" id="pve-gold-amount" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
                         </div>
                         <div class="mb-6">
@@ -271,6 +271,9 @@ const handleCreateCharacter = async (e) => {
     newCharacterNameInput.value = '';
     newCharacterGoldInput.value = '0';
     localStorage.removeItem(CHARACTER_CACHE_KEY_PREFIX + currentUserId);
+    await invalidate_quart_cache(`pax_character:${data[0].character_id}`); 
+    await invalidateDashboardStatsCache(data[0].character_id);
+    await invalidateTransactionHistoryCache(data[0].character_id);
     await loadCharacters(loadTraderPageData);
 };
 
@@ -299,6 +302,7 @@ const handleDeleteCharacter = async () => {
         await showCustomModal('Success', 'Character deleted successfully!', [{ text: 'OK', value: true }]);
         localStorage.removeItem(CHARACTER_CACHE_KEY_PREFIX + currentUserId);
         await invalidate_quart_cache(`pax_character:${currentCharacterId}`);
+        await invalidateDashboardStatsCache(currentCharacterId);
         await invalidateTransactionHistoryCache(currentCharacterId);
         localStorage.removeItem('selectedCharacterId');
         localStorage.removeItem('selectedUserId');
@@ -324,10 +328,10 @@ const handlePveGoldInput = async (e) => {
     e.preventDefault();
     const pveGoldAmountInput = document.getElementById('pve-gold-amount');
     const pveDescriptionInput = document.getElementById('pve-description');
-    const goldAmount = parseInt(pveGoldAmountInput.value, 10);
+    const newTotalGoldEntered = parseInt(pveGoldAmountInput.value, 10);
     const description = pveDescriptionInput.value;
 
-    if (isNaN(goldAmount)) {
+    if (isNaN(newTotalGoldEntered)) {
         await showCustomModal('Error', 'Please enter a valid number for gold.', [{ text: 'OK', value: true }]);
         return;
     }
@@ -347,23 +351,27 @@ const handlePveGoldInput = async (e) => {
         await showCustomModal('Error', 'Could not retrieve current character gold. Please try again.', [{ text: 'OK', value: true }]);
         return;
     }
-    const newTotalGold = currentCharacter.gold + goldAmount;
+    
+    // Calculate the difference for the PVE transaction
+    const goldAmountDifference = newTotalGoldEntered - currentCharacter.gold;
 
     const { error: transactionError } = await supabase
         .from('pve_transactions')
-        .insert([{ character_id: currentCharacterId, gold_amount: goldAmount, description: description, user_id: currentUserId }]);
+        .insert([{ character_id: currentCharacterId, gold_amount: goldAmountDifference, description: description, user_id: currentUserId }]);
 
     if (transactionError) {
         await showCustomModal('Error', 'Failed to record PVE transaction: ' + transactionError.message, [{ text: 'OK', value: true }]);
         return;
     }
 
-    await updateCharacterGoldByPveTransaction(newTotalGold, goldAmount);
+    // Update the character's total gold to the new value entered by the user
+    await updateCharacterGoldByPveTransaction(newTotalGoldEntered, goldAmountDifference);
     document.getElementById('pveGoldInputModal').classList.add('hidden');
     pveGoldAmountInput.value = '';
     pveDescriptionInput.value = '';
     
     await invalidateTransactionHistoryCache(currentCharacterId);
+    await invalidateDashboardStatsCache(currentCharacterId);
 };
 
 
@@ -382,6 +390,8 @@ const updateCharacterGold = async (newGoldAmount) => {
     await showCustomModal('Success', `Gold updated to ${newGoldAmount.toLocaleString()}.`, [{ text: 'OK', value: true }]);
     localStorage.removeItem(CHARACTER_CACHE_KEY_PREFIX + currentUserId);
     await invalidate_quart_cache(`pax_character:${currentCharacterId}`);
+    await invalidateDashboardStatsCache(currentCharacterId);
+    await invalidateTransactionHistoryCache(currentCharacterId);
     await loadTraderPageData();
 };
 
@@ -402,6 +412,8 @@ const updateCharacterGoldByPveTransaction = async (newTotalGold, goldChange) => 
     await showCustomModal('Success', message, [{ text: 'OK', value: true }]);
     localStorage.removeItem(CHARACTER_CACHE_KEY_PREFIX + currentUserId); 
     await invalidate_quart_cache(`pax_character:${currentCharacterId}`);
+    await invalidateDashboardStatsCache(currentCharacterId);
+    await invalidateTransactionHistoryCache(currentCharacterId);
     await loadTraderPageData();
 };
 
@@ -453,8 +465,14 @@ export const showSetGoldInputModal = async (onConfirm, onCancel) => {
 
 export const showPveGoldInputModal = async (onConfirm, onCancel) => {
     const pveGoldInputModal = document.getElementById('pveGoldInputModal');
+    const pveGoldAmountInput = document.getElementById('pve-gold-amount');
     if (pveGoldInputModal) {
-        document.getElementById('pve-gold-amount').value = '';
+        const currentCharacter = await getCurrentCharacter(true); // Fetch current gold to pre-fill
+        if (currentCharacter && typeof currentCharacter.gold === 'number') {
+            pveGoldAmountInput.value = currentCharacter.gold;
+        } else {
+            pveGoldAmountInput.value = '';
+        }
         document.getElementById('pve-description').value = '';
         pveGoldInputModal.classList.remove('hidden');
     }
