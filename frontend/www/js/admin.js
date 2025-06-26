@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient.js';
-import { authorRoleColors } from './utils.js';
+import { authorRoleColors, showFormMessage, slugify } from './utils.js'; // Import from utils.js
 
 let initialAuthCheckComplete = false;
 let dashboardStatsCache = null;
@@ -9,27 +9,10 @@ const STATS_CACHE_DURATION = 3600 * 1000;
 const ADMIN_ROLE_CACHE_KEY_PREFIX = 'paxDeiAdminRole_';
 const ADMIN_ROLE_CACHE_DURATION = 5 * 60 * 1000;
 
-function showFormMessage(messageElement, message, type) {
-    messageElement.textContent = message;
-    messageElement.className = '';
-    if (type) {
-        messageElement.classList.add('form-message', type);
-        messageElement.style.display = 'block';
-
-        if (message) {
-            setTimeout(() => {
-                messageElement.style.display = 'none';
-                messageElement.textContent = '';
-            }, 5000);
-        }
-    } else {
-        messageElement.style.display = 'none';
-        messageElement.textContent = '';
-    }
-}
+// showFormMessage and slugify functions are now imported from utils.js
 
 const authorTypeDropdown = document.getElementById('author_type');
-const formMessage = document.getElementById('formMessage');
+const formMessage = document.getElementById('formMessage'); // This is the element to pass to showFormMessage
 
 if (authorTypeDropdown) {
     const defaultOption = document.createElement('option');
@@ -56,8 +39,7 @@ if (devCommentForm) {
         event.preventDefault();
 
         if (formMessage) {
-            formMessage.textContent = '';
-            formMessage.className = '';
+            showFormMessage(formMessage, '', ''); // Clear previous message
         }
 
         const author = document.getElementById('author').value;
@@ -139,6 +121,7 @@ if (devCommentForm) {
 
                 const currentPage = window.location.pathname.split('/').pop();
                 if (currentPage === 'developer-comments.html' && typeof fetchAndRenderDeveloperComments === 'function' && document.getElementById('dev-comments-container')) {
+                    // Assuming fetchAndRenderDeveloperComments is imported or globally available
                     fetchAndRenderDeveloperComments('dev-comments-container');
                 } else if ((currentPage === 'index.html' || currentPage === '') && typeof fetchAndRenderDeveloperComments === 'function' && document.getElementById('recent-comments-home')) {
                     fetchAndRenderDeveloperComments('recent-comments-home', 6);
@@ -434,17 +417,6 @@ async function populateTagSelect(tagSelectElement) {
     }
 }
 
-function slugify(text) {
-    return text
-        .toString()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase()
-        .trim()
-        .replace(/\s+/g, '-')
-        .replace(/[^\w-]+/g, '')
-        .replace(/--+/g, '-');
-}
 
 async function handleAddNewTag(newTagValue, inputElement, messageElement, tagSelectElement, loreCategorySelectElement, tagType = 'Tag') {
     if (newTagValue) {
@@ -557,9 +529,7 @@ async function editLoreItem(id) {
         document.getElementById('newLoreCategoryInput').style.display = 'none';
         document.getElementById('addNewLoreCategoryButton').style.display = 'none';
 
-        document.getElementById('addLoreItemMessage').textContent = 'Editing Lore Item';
-        document.getElementById('addLoreItemMessage').className = 'form-message info';
-        document.getElementById('addLoreItemMessage').style.display = 'block';
+        showFormMessage(document.getElementById('addLoreItemMessage'), 'Editing Lore Item', 'info');
     }
 }
 
@@ -676,8 +646,7 @@ $(document).ready(async function() {
                 if (loginFormContainer) loginFormContainer.style.display = 'block';
                 if (loginHeading) loginHeading.style.display = 'none';
                 if (loginError) {
-                    loginError.textContent = 'You are logged in but not authorized to view this page. Redirecting to home...';
-                    loginError.style.display = 'block';
+                    showFormMessage(loginError, 'You are logged in but not authorized to view this page. Redirecting to home...', 'error');
                 }
                 if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none';
                 
@@ -690,8 +659,7 @@ $(document).ready(async function() {
             if (loginHeading) loginHeading.style.display = 'block';
             if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none';
             if (loginError) {
-                 loginError.textContent = 'Please log in to view this page. Redirecting to home...';
-                 loginError.style.display = 'block';
+                showFormMessage(loginError, 'Please log in to view this page. Redirecting to home...', 'error');
             }
            
             setTimeout(() => {
@@ -724,8 +692,7 @@ $(document).ready(async function() {
             if (error) {
                 console.error('Discord login error:', error);
                 if (loginError) {
-                    loginError.textContent = 'Login failed: ' + error.message;
-                    loginError.style.display = 'block';
+                    showFormMessage(loginError, 'Login failed: ' + error.message, 'error');
                 }
             }
         });
@@ -748,11 +715,10 @@ $(document).ready(async function() {
                 parseButton.style.display = 'none';
                 parseError.style.display = 'none';
             } else {
-                parseError.textContent = 'Could not parse the input. Please ensure it matches one of the expected formats: "Author — Timestamp Content [Optional URL]" or "Author — Content [Optional URL]"';
-                parseError.style.display = 'block';
+                showFormMessage(parseError, 'Could not parse the input. Please ensure it matches one of the expected formats: "Author — Timestamp Content [Optional URL]" or "Author — Content [Optional URL]"', 'error');
                 devCommentForm.style.display = 'none';
                 commentInput.style.display = 'block';
-                parseError.style.display = 'none';
+                // parseError is now managed by showFormMessage, so no direct style.display manipulation here
             }
         });
     }
@@ -763,7 +729,7 @@ $(document).ready(async function() {
             devCommentForm.style.display = 'none';
             commentInput.style.display = 'block';
             parseButton.style.display = 'block';
-            parseError.style.display = 'none';
+            showFormMessage(parseError, '', ''); // Clear parseError as well
         });
     }
 
