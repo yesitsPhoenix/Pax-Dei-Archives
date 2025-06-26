@@ -17,7 +17,6 @@ export const get_from_quart_cache = async (key) => {
 
         if (response.status === 503) {
             console.error(`🚨 Cache service (GET) unavailable: ${data.message || 'Service Unavailable'}.`);
-            alert("The cache service is temporarily unavailable. Please try again later.");
             return null;
         }
 
@@ -29,7 +28,6 @@ export const get_from_quart_cache = async (key) => {
                     return data.value;
                 }
             } else if (data.status === "cache_miss") {
-                console.warn(`⚠️ Cache miss/expired for key '${key}'.`);
                 return null;
             } else if (data.status === "error") {
                 console.error(`🚨 Cache service (GET) error for key '${key}': ${data.message || 'Unknown error from Quart app'}`);
@@ -62,7 +60,6 @@ export const set_in_quart_cache = async (key, value, ttl = 300) => {
 
         if (response.status === 503) {
             console.error(`🚨 Cache service (SET) unavailable: ${data.message || 'Service Unavailable'}.`);
-            alert("The cache service is temporarily unavailable. Please try again later.");
             return false;
         }
 
@@ -88,7 +85,6 @@ export const invalidate_quart_cache = async (key) => {
 
         if (response.status === 503) {
             console.error(`🚨 Cache service (DELETE) unavailable: ${data.message || 'Service Unavailable'}.`);
-            alert("The cache service is temporarily unavailable. Please try again later.");
             return false;
         }
 
