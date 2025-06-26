@@ -84,6 +84,17 @@ export const loadActiveListings = async () => {
     loader.style.display = 'block';
     listingsTable.style.display = 'none';
 
+    const cacheKey = `pax_listings:${currentCharacterId}_${listingsFilter.itemName || 'no_item'}_${listingsFilter.categoryId || 'no_cat'}_${listingsFilter.status}_${currentListingsPage}_${currentSort.column}_${currentSort.direction}`;
+    let cachedListingsData = await get_from_quart_cache(cacheKey);
+
+    if (cachedListingsData) {
+        renderListingsTable(cachedListingsData.listings);
+        renderListingsPagination(cachedListingsData.totalCount);
+        loader.style.display = 'none';
+        listingsTable.style.display = 'table';
+        return;
+    }
+
     try {
         const { data, error } = await supabase.rpc('search_trader_listings', {
             p_character_id: currentCharacterId, 
@@ -103,6 +114,8 @@ export const loadActiveListings = async () => {
 
         renderListingsTable(listings);
         renderListingsPagination(totalCount);
+        
+        await set_in_quart_cache(cacheKey, { listings, totalCount }, 60);
 
     } catch (err) {
         console.error('Error loading listings:', err.message);
@@ -465,6 +478,7 @@ const handleAddListing = async (e) => {
                 e.target.reset();
                 await invalidateTransactionHistoryCache(currentCharacterId);
                 await invalidateDashboardStatsCache(currentCharacterId);
+                await loadActiveListings();
                 await loadTraderPageData();
             }
         } else {
@@ -575,6 +589,7 @@ const handleRecordPurchase = async (e) => {
                 e.target.reset();
                 await invalidateTransactionHistoryCache(currentCharacterId);
                 await invalidateDashboardStatsCache(currentCharacterId);
+                await loadActiveListings();
                 await loadTraderPageData();
             }
         } else {
@@ -660,6 +675,7 @@ const handleMarkAsSold = async (listingId) => {
                     await showCustomModal('Success', `Listing marked as sold and character gold updated by ${listing.total_listed_price.toLocaleString()}!`, [{ text: 'OK', value: true }]);
                     await invalidateTransactionHistoryCache(currentCharacterId);
                     await invalidateDashboardStatsCache(currentCharacterId);
+                    await invalidateListingCacheForCurrentFilters(); 
                     await loadTraderPageData(); 
                 }
             }
@@ -688,6 +704,7 @@ const handleCancelListing = async (listingId) => {
             await showCustomModal('Success', 'Listing canceled successfully!', [{ text: 'OK', value: true }]);
             await invalidateTransactionHistoryCache(currentCharacterId);
             await invalidateDashboardStatsCache(currentCharacterId);
+            await invalidateListingCacheForCurrentFilters();
             await loadTraderPageData();
         }
     }
@@ -722,9 +739,9 @@ const showEditListingModal = async (listingId) => {
         originalListingPrice = listing.total_listed_price || 0;
         originalListingFee = listing.market_fee || 0;
 
-        editItemNameInput.value = Math.round(listing.items.item_name || '');
-        editQuantityListedInput.value = Math.round(listing.quantity_listed || 0);
-        editTotalPriceInput.value = Math.round(listing.total_listed_price || 0);
+        editItemNameInput.value = listing.items.item_name || '';
+        editQuantityListedInput.value = listing.quantity_listed || 0;
+        editTotalPriceInput.value = listing.total_listed_price || 0;
 
         updateEditFeeInfo();
 
@@ -865,6 +882,7 @@ const handleEditListingSave = async (e) => {
         document.getElementById('editListingModal').classList.add('hidden');
         await invalidateTransactionHistoryCache(currentCharacterId);
         await invalidateDashboardStatsCache(currentCharacterId);
+        await invalidateListingCacheForCurrentFilters();
         await loadTraderPageData();
 
     } catch (error) {
@@ -876,4 +894,9 @@ const handleEditListingSave = async (e) => {
             saveButton.textContent = 'Save Changes';
         }
     }
+};
+
+const invalidateListingCacheForCurrentFilters = async () => {
+    const cacheKey = `pax_listings:${currentCharacterId}_${listingsFilter.itemName || 'no_item'}_${listingsFilter.categoryId || 'no_cat'}_${listingsFilter.status}_${currentListingsPage}_${currentSort.column}_${currentSort.direction}`;
+    await invalidate_quart_cache(cacheKey);
 };

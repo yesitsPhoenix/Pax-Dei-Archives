@@ -13,12 +13,17 @@ const CACHE_BASE_URL = 'https://homecraftlodge.serveminecraft.net/cache';
 export const get_from_quart_cache = async (key) => {
     try {
         const response = await fetch(`${CACHE_BASE_URL}/get/${key}`);
-        const data = await response.json();
 
         if (response.status === 503) {
-            console.error(`🚨 Cache service (GET) unavailable: ${data.message || 'Service Unavailable'}.`);
+            console.error(`🚨 Cache service (GET) unavailable: ${response.status} - ${await response.text()}`);
             return null;
         }
+
+        if (response.status === 404) {
+            return null; 
+        }
+
+        const data = await response.json();
 
         if (response.ok) {
             if (data.status === "success") {
@@ -37,7 +42,7 @@ export const get_from_quart_cache = async (key) => {
                 return null;
             }
         } else {
-            console.warn(`⚠️ Error from cache service for '${key}': ${response.status} - ${data.message || await response.text()}`);
+            console.warn(`⚠️ Unexpected HTTP status for '${key}': ${response.status} - ${data.message || await response.text()}`);
             return null;
         }
     } catch (e) {
@@ -161,49 +166,39 @@ async function fetchAllCharacterActivity(characterId) {
 
     const cacheKey = `pax_transactions:${characterId}`;
     
-    const cachedTransactions = await get_from_quart_cache(cacheKey);
-    if (cachedTransactions) {
-        return cachedTransactions;
+    const cachedData = await get_from_quart_cache(cacheKey);
+    if (cachedData) {
+        return cachedData;
     }
 
-    const [
-        { data: salesData, error: salesError },
-        { data: purchasesData, error: purchasesError },
-        { data: cancelledListingsData, error: cancelledError },
-        { data: activeListingsData, error: activeListingsError },
-        { data: pveTransactionsData, error: pveError }
-    ] = await Promise.all([
-        supabase.from('sales').select(`sale_id, quantity_sold, sale_price_per_unit, total_sale_price, sale_date, market_listings!sales_listing_id_fkey!inner(listing_id, character_id, market_fee, items(item_name, item_categories(category_name)))`).eq('market_listings.character_id', characterId),
-        supabase.from('purchases').select(`purchase_id, quantity_purchased, purchase_price_per_unit, total_purchase_price, purchase_date, items(item_name, item_categories(category_name))`).eq('character_id', characterId),
-        supabase.from('market_listings').select(`listing_id, listing_date, quantity_listed, listed_price_per_unit, total_listed_price, market_fee, items(item_name, item_categories(category_name))`).eq('character_id', characterId).eq('is_cancelled', true),
-        supabase.from('market_listings').select(`listing_id, listing_date, quantity_listed, listed_price_per_unit, total_listed_price, market_fee, items(item_name, item_categories(category_name))`).eq('character_id', characterId).eq('is_fully_sold', false).eq('is_cancelled', false),
-        supabase.from('pve_transactions').select(`transaction_id, transaction_date, gold_amount, description`).eq('character_id', characterId)
-    ]);
+    const { data: combinedActivity, error: combinedError } = await supabase.rpc('get_all_character_activity_json', { p_character_id: characterId });
 
-    if (salesError || purchasesError || cancelledError || activeListingsError || pveError) {
-        console.error('Error fetching character activity:', salesError, purchasesError, cancelledError, activeListingsError, pveError);
+    if (combinedError) {
+        console.error('Error fetching combined character activity:', combinedError);
         return [];
     }
 
     const allTransactions = [];
 
-    salesData.forEach(sale => {
-        allTransactions.push({ type: 'Sale', date: sale.sale_date, item_name: sale.market_listings?.items?.item_name, category_name: sale.market_listings?.items?.item_categories?.category_name, quantity: Math.round(sale.quantity_sold || 0), price_per_unit: (sale.sale_price_per_unit || 0), total_amount: Math.round(sale.total_sale_price || 0), fee: 0 });
-    });
-    purchasesData.forEach(purchase => {
-        allTransactions.push({ type: 'Purchase', date: purchase.purchase_date, item_name: purchase.items?.item_name, category_name: purchase.items?.item_categories?.category_name, quantity: Math.round(purchase.quantity_purchased || 0), price_per_unit: (purchase.purchase_price_per_unit || 0), total_amount: Math.round(purchase.total_purchase_price || 0), fee: 0 });
-    });
-    cancelledListingsData.forEach(listing => {
-        allTransactions.push({ type: 'Cancellation', date: listing.listing_date, item_name: listing.items?.item_name, category_name: listing.items?.item_categories?.category_name, quantity: Math.round(listing.quantity_listed || 0), price_per_unit: (listing.listed_price_per_unit || 0), total_amount: 0, fee: 0 });
-    });
-    activeListingsData.forEach(listing => {
-        if (listing.market_fee && listing.market_fee > 0) {
-            allTransactions.push({ type: 'Listing Fee', date: listing.listing_date, item_name: listing.items?.item_name, category_name: listing.items?.item_categories?.category_name, quantity: Math.round(listing.quantity_listed || 0), price_per_unit: (listing.listed_price_per_unit || 0), total_amount: 0, fee: Math.round(listing.market_fee || 0) });
+    if (combinedActivity) {
+        const { sales, purchases, cancellations, listing_fees, pve_transactions } = combinedActivity;
+
+        if (sales) {
+            sales.forEach(sale => allTransactions.push(sale));
         }
-    });
-    pveTransactionsData.forEach(pve => {
-        allTransactions.push({ type: 'PVE Gold', date: pve.transaction_date, item_name: pve.description || 'N/A', category_name: 'PVE', quantity: 1, price_per_unit: (pve.gold_amount || 0), total_amount: Math.round(pve.gold_amount || 0), fee: 0 });
-    });
+        if (purchases) {
+            purchases.forEach(purchase => allTransactions.push(purchase));
+        }
+        if (cancellations) {
+            cancellations.forEach(listing => allTransactions.push(listing));
+        }
+        if (listing_fees) {
+            listing_fees.forEach(listing => allTransactions.push(listing));
+        }
+        if (pve_transactions) {
+            pve_transactions.forEach(pve => allTransactions.push(pve));
+        }
+    }
 
     allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
     
