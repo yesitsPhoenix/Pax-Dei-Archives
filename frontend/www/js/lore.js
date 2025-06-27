@@ -1,6 +1,9 @@
-// lore.js
-
 import { supabase } from './supabaseClient.js';
+
+const LORE_CATEGORIES_CACHE_KEY = 'paxDeiLoreCategories';
+const LORE_ITEMS_CACHE_PREFIX = 'paxDeiLoreItems_';
+const LORE_ITEM_DETAIL_CACHE_PREFIX = 'paxDeiLoreItemDetail_';
+const LORE_CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 const renderMarkdown = (markdownText) => {
     if (typeof marked === 'undefined') {
@@ -22,6 +25,16 @@ function getQueryParams() {
 }
 
 async function fetchLoreCategories() {
+    const cachedData = localStorage.getItem(LORE_CATEGORIES_CACHE_KEY);
+    if (cachedData) {
+        const { data, timestamp } = JSON.parse(cachedData);
+        if (Date.now() - timestamp < LORE_CACHE_EXPIRY_MS) {
+            return data;
+        } else {
+            localStorage.removeItem(LORE_CATEGORIES_CACHE_KEY);
+        }
+    }
+
     const { data, error } = await supabase
         .from('lore_items')
         .select('category')
@@ -33,10 +46,22 @@ async function fetchLoreCategories() {
     }
 
     const uniqueCategories = [...new Set(data.map(item => item.category))];
+    localStorage.setItem(LORE_CATEGORIES_CACHE_KEY, JSON.stringify({ data: uniqueCategories, timestamp: Date.now() }));
     return uniqueCategories;
 }
 
 async function fetchLoreItems(category = null) {
+    const cacheKey = LORE_ITEMS_CACHE_PREFIX + (category ? encodeURIComponent(category) : 'all');
+    const cachedData = localStorage.getItem(cacheKey);
+    if (cachedData) {
+        const { data, timestamp } = JSON.parse(cachedData);
+        if (Date.now() - timestamp < LORE_CACHE_EXPIRY_MS) {
+            return data;
+        } else {
+            localStorage.removeItem(cacheKey);
+        }
+    }
+
     let query = supabase
         .from('lore_items')
         .select('title, slug, category')
@@ -52,10 +77,23 @@ async function fetchLoreItems(category = null) {
         console.error('Error fetching lore items:', error.message);
         return [];
     }
-    return data;
+    const items = data || [];
+    localStorage.setItem(cacheKey, JSON.stringify({ data: items, timestamp: Date.now() }));
+    return items;
 }
 
 async function fetchLoreItemDetail(slug) {
+    const cacheKey = LORE_ITEM_DETAIL_CACHE_PREFIX + encodeURIComponent(slug);
+    const cachedData = localStorage.getItem(cacheKey);
+    if (cachedData) {
+        const { data, timestamp } = JSON.parse(cachedData);
+        if (Date.now() - timestamp < LORE_CACHE_EXPIRY_MS) {
+            return data;
+        } else {
+            localStorage.removeItem(cacheKey);
+        }
+    }
+
     const { data, error } = await supabase
         .from('lore_items')
         .select('*')
@@ -68,7 +106,11 @@ async function fetchLoreItemDetail(slug) {
         }
         return null;
     }
-    return data;
+    const itemDetail = data;
+    if (itemDetail) {
+        localStorage.setItem(cacheKey, JSON.stringify({ data: itemDetail, timestamp: Date.now() }));
+    }
+    return itemDetail;
 }
 
 function getCategoryIcon(category) {
