@@ -2,11 +2,13 @@ import { isLoggedIn, getUserProfile, getDungeonRuns, deleteDungeonRun, updateDun
 import { supabase } from './supabaseClient.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // This script only runs on the profile page
     if (document.body.classList.contains('profile-page')) {
         const profileMessage = document.getElementById('profileMessage');
         const profileLoading = document.getElementById('profileLoading');
         const profileInfoDiv = document.getElementById('profile-info');
 
+        // Select the elements to hide
         const savedRunsList = document.getElementById('saved-runs-list');
         const transactionSummaryList = document.getElementById('transaction-summary-list');
 
@@ -111,12 +113,58 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (result) {
                 showProfileMessage(profileMessage, 'Run updated successfully!', 'success');
                 editRunModalOverlay.classList.remove('active');
+                // loadSavedRuns(); // No need to reload if section is hidden
             } else {
                 showProfileMessage(profileMessage, 'Failed to update run.', 'error');
             }
         });
 
+        // The following functions are commented out or modified to hide the sections
+        /*
+        const loadSavedRuns = async () => {
+            showProfileMessage(profileMessage, '', '');
+            savedRunsList.innerHTML = '<div class="loading-indicator">Loading saved runs...</div>';
+            const user = await supabase.auth.getUser();
+            if (user.data.user) {
+                const runs = await getDungeonRuns(user.data.user.id);
+                renderRuns(runs);
+            } else {
+                savedRunsList.innerHTML = '<p>Please log in to view your saved runs.</p>';
+            }
+        };
 
+        const renderRuns = (runs) => {
+            if (runs && runs.length > 0) {
+                savedRunsList.innerHTML = '';
+                runs.forEach(run => {
+                    const runCard = document.createElement('div');
+                    runCard.classList.add('run-card');
+                    runCard.innerHTML = `
+                        <h5>${run.dungeon_name}</h5>
+                        <p>Last Updated: ${new Date(run.timestamp).toLocaleString()}</p>
+                        <div class="run-actions">
+                            <button class="view-run-button modal-button" data-id="${run.id}">View</button>
+                            <button class="edit-run-button modal-button" data-id="${run.id}">Edit</button>
+                            <button class="delete-run-button modal-button" data-id="${run.id}">Delete</button>
+                        </div>
+                    `;
+                    savedRunsList.appendChild(runCard);
+                });
+
+                document.querySelectorAll('.view-run-button').forEach(button => {
+                    button.addEventListener('click', (event) => viewRun(event.target.dataset.id, runs));
+                });
+                document.querySelectorAll('.edit-run-button').forEach(button => {
+                    button.addEventListener('click', (event) => editRun(event.target.dataset.id, runs));
+                });
+                document.querySelectorAll('.delete-run-button').forEach(button => {
+                    button.addEventListener('click', (event) => showConfirmDeleteModal(event.target.dataset.id));
+                });
+            } else {
+                savedRunsList.innerHTML = '<p>No saved runs yet. Start tracking your loot!</p>';
+            }
+        };
+        */
         
         const viewRun = (runId, allRuns) => {
             const run = allRuns.find(r => r.id === runId);

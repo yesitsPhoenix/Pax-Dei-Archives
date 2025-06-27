@@ -1,279 +1,164 @@
 import { supabase } from '../supabaseClient.js';
-import { showCustomModal, loadTraderPageData, get_from_quart_cache, set_in_quart_cache, invalidate_quart_cache, invalidateTransactionHistoryCache, invalidateDashboardStatsCache } from '../trader.js';
-
-const CHARACTER_CACHE_KEY_PREFIX = 'paxDeiCharacters_';
-const CHARACTER_CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000;
-
-let currentUserId = null;
-export let currentCharacterId = null;
-
-export const setCurrentCharacterContext = (userId, characterId) => {
-    currentUserId = userId;
-    currentCharacterId = characterId;
-};
+import { showCustomModal, loadTraderPageData } from '../trader.js';
+import { loadTransactionHistory } from './sales.js';
+import { renderSalesChart } from './salesChart.js';
 
 const characterSelect = document.getElementById('character-select');
 let createCharacterModal = null;
 let createCharacterForm = null;
+let closeCreateCharacterModalBtn = null;
+let newCharacterNameInput = null;
+let newCharacterGoldInput = null;
+let deleteCharacterBtn = null;
+const setGoldBtn = document.getElementById('setGoldBtn');
+const pveBtn = document.getElementById('pveBtn');
 
-export const initializeCharacters = async (userId, onCharacterSelectedCallback) => {
-    currentUserId = userId;
-    insertCharacterModalHtml();
-    await loadCharacters(onCharacterSelectedCallback);
 
-    if (characterSelect) {
-        characterSelect.addEventListener('change', async (event) => {
-            const selectedCharacterId = event.target.value;
-            if (selectedCharacterId) {
-                currentCharacterId = selectedCharacterId;
-                localStorage.setItem('selectedCharacterId', selectedCharacterId);
-                localStorage.setItem('selectedUserId', currentUserId);
-                if (onCharacterSelectedCallback) {
-                    await onCharacterSelectedCallback();
-                }
+let currentUserId = null;
+export let currentCharacterId = null;
+
+export const insertCharacterModalHtml = () => {
+    const createCharacterModalHtml = `
+        <div id="createCharacterModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md mx-4 sm:mx-auto font-inter">
+                <h3 class="text-2xl font-bold mb-6 text-gray-800">Create New Character</h3>
+                <form id="createCharacterForm">
+                    <div class="mb-4">
+                        <label for="newCharacterNameInput" class="block text-gray-700 text-sm font-bold mb-2">Character Name:</label>
+                        <input type="text" id="newCharacterNameInput" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Enter character name" required>
+                    </div>
+                    <div class="mb-4">
+                        <label for="newCharacterGoldInput" class="block text-gray-700 text-sm font-bold mb-2">Starting Gold:</label>
+                        <input type="number" id="newCharacterGoldInput" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Enter starting gold (e.g., 100)" value="0" required min="0">
+                    </div>
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
+                        <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">Create Character</button>
+                        <button type="button" id="closeCreateCharacterModalBtn" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-full">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', createCharacterModalHtml);
+
+    createCharacterModal = document.getElementById('createCharacterModal');
+    createCharacterForm = document.getElementById('createCharacterForm');
+    closeCreateCharacterModalBtn = document.getElementById('closeCreateCharacterModalBtn');
+    newCharacterNameInput = document.getElementById('newCharacterNameInput');
+    newCharacterGoldInput = document.getElementById('newCharacterGoldInput');
+
+    if (closeCreateCharacterModalBtn) {
+        closeCreateCharacterModalBtn.addEventListener('click', () => {
+            if (createCharacterModal) {
+                createCharacterModal.classList.add('hidden');
             }
         });
     }
 
-    const storedSelectedCharacterId = localStorage.getItem('selectedCharacterId');
-    const storedSelectedUserId = localStorage.getItem('selectedUserId');
-
-    if (storedSelectedCharacterId && storedSelectedUserId === currentUserId) {
-        const optionExists = Array.from(characterSelect.options).some(option => option.value === storedSelectedCharacterId);
-        if (optionExists) {
-            characterSelect.value = storedSelectedCharacterId;
-            currentCharacterId = storedSelectedCharacterId;
-            if (onCharacterSelectedCallback) {
-                await onCharacterSelectedCallback();
-            }
-        } else {
-            localStorage.removeItem('selectedCharacterId');
-            localStorage.removeItem('selectedUserId');
-            await showCustomModal('Welcome', 'Please create or select a character.', [{ text: 'OK', value: true }]);
-            if (characterSelect && characterSelect.options.length <= 1) {
-                const createCharacterModalEl = document.getElementById('createCharacterModal');
-                if (createCharacterModalEl) createCharacterModalEl.classList.remove('hidden');
-            }
-        }
-    } else {
-        localStorage.removeItem('selectedCharacterId');
-        localStorage.removeItem('selectedUserId');
-        if (characterSelect && characterSelect.options.length <= 1) {
-            await showCustomModal('Welcome', 'Please create or select a character.', [{ text: 'OK', value: true }]);
-            const createCharacterModalEl = document.getElementById('createCharacterModal');
-            if (createCharacterModalEl) createCharacterModalEl.classList.remove('hidden');
-        } else if (characterSelect && characterSelect.options.length > 1) {
-             characterSelect.selectedIndex = 1;
-             currentCharacterId = characterSelect.value;
-             localStorage.setItem('selectedCharacterId', currentCharacterId);
-             localStorage.setItem('selectedUserId', currentUserId);
-             if (onCharacterSelectedCallback) {
-                 await onCharacterSelectedCallback();
-             }
-        }
+    if (createCharacterForm) {
+        createCharacterForm.addEventListener('submit', handleCreateCharacter);
     }
 };
 
-const loadCharacters = async (onCharacterSelectedCallback) => {
-    const cacheKey = CHARACTER_CACHE_KEY_PREFIX + currentUserId;
-    let characters = [];
-
-    const cachedData = localStorage.getItem(cacheKey);
-    if (cachedData) {
-        const { data, timestamp } = JSON.parse(cachedData);
-        if (Date.now() - timestamp < CHARACTER_CACHE_EXPIRY_MS) {
-            characters = data;
-        } else {
-            localStorage.removeItem(cacheKey);
-        }
-    }
-
-    if (characters.length === 0) { 
-        const { data, error } = await supabase
-            .from('characters')
-            .select('character_id, character_name, gold')
-            .eq('user_id', currentUserId);
-
-        if (error) {
-            await showCustomModal('Error', 'Failed to load characters: ' + error.message, [{ text: 'OK', value: true }]);
-            return;
-        }
-
-        characters = data || [];
-        localStorage.setItem(cacheKey, JSON.stringify({ data: characters, timestamp: Date.now() }));
-    }
+export const initializeCharacters = async (userId, onCharacterSelectedCallback) => {
+    currentUserId = userId;
+    deleteCharacterBtn = document.getElementById('deleteCharacterBtn');
     
+    addCharacterEventListeners();
+    await loadCharacters(onCharacterSelectedCallback);
+};
+
+const loadCharacters = async (onCharacterSelectedCallback) => {
+    const { data, error } = await supabase
+        .from('characters')
+        .select('character_id, character_name, gold')
+        .eq('user_id', currentUserId);
+
+    if (error) {
+        console.error('Error fetching characters:', error.message);
+        await showCustomModal('Error', 'Failed to load characters: ' + error.message, [{ text: 'OK', value: true }]);
+        return;
+    }
+
+    const characters = data || [];
     characterSelect.innerHTML = '';
-    const defaultOption = document.createElement('option');
-    defaultOption.value = '';
-    defaultOption.textContent = 'Select a character...';
-    characterSelect.appendChild(defaultOption);
 
     if (characters.length === 0) {
-        await showCustomModal('Welcome', 'No characters found. Please create one!', [{ text: 'OK', value: true }]);
-        if (createCharacterModal) createCharacterModal.classList.remove('hidden');
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'No characters available. Create one!';
+        characterSelect.appendChild(option);
+        characterSelect.disabled = true;
+        currentCharacterId = null;
+        if (deleteCharacterBtn) deleteCharacterBtn.style.display = 'none';
+        if (setGoldBtn) setGoldBtn.style.display = 'none';
+        if (pveBtn) pveBtn.style.display = 'none';
     } else {
+        characterSelect.disabled = false;
+        if (deleteCharacterBtn) deleteCharacterBtn.style.display = 'inline-block';
+        if (setGoldBtn) setGoldBtn.style.display = 'inline-block';
+        if (pveBtn) pveBtn.style.display = 'inline-block';
+
         characters.forEach(char => {
             const option = document.createElement('option');
             option.value = char.character_id;
             option.textContent = char.character_name;
             characterSelect.appendChild(option);
         });
-    }
 
-    const storedSelectedCharacterId = localStorage.getItem('selectedCharacterId');
-    if (storedSelectedCharacterId && Array.from(characterSelect.options).some(option => option.value === storedSelectedCharacterId)) {
-        characterSelect.value = storedSelectedCharacterId;
-        currentCharacterId = storedSelectedCharacterId;
-    } else {
-        if (characters.length > 0) {
-            characterSelect.selectedIndex = 1;
-            currentCharacterId = characterSelect.value;
-            localStorage.setItem('selectedCharacterId', currentCharacterId);
-            localStorage.setItem('selectedUserId', currentUserId);
-        } else {
-            currentCharacterId = null;
+        if (!currentCharacterId || !characters.some(char => char.character_id === currentCharacterId)) {
+            currentCharacterId = characters[0].character_id;
         }
+        characterSelect.value = currentCharacterId;
     }
 
-    if (onCharacterSelectedCallback && currentCharacterId) {
+    if (onCharacterSelectedCallback) {
         await onCharacterSelectedCallback();
     }
 };
 
-export const insertCharacterModalHtml = () => {
-    if (!document.getElementById('createCharacterModal')) {
-        const modalHtml = `
-            <div id="createCharacterModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center z-50">
-                <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm mx-4 sm:mx-auto font-inter">
-                    <h3 class="text-xl font-bold mb-4 text-gray-800">Create New Character</h3>
-                    <form id="createCharacterForm">
-                        <div class="mb-4">
-                            <label for="new-character-name" class="block text-gray-700 text-sm font-bold mb-2">Character Name:</label>
-                            <input type="text" id="new-character-name" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
-                        </div>
-                        <div class="mb-6">
-                            <label for="new-character-gold" class="block text-gray-700 text-sm font-bold mb-2">Starting Gold:</label>
-                            <input type="number" id="new-character-gold" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" value="0" required>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">
-                                Create Character
-                            </button>
-                            <button type="button" id="cancelCreateCharacter" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-full">
-                                Cancel
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-            <div id="setGoldModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center z-50">
-                <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm mx-4 sm:mx-auto font-inter">
-                    <h3 class="text-xl font-bold mb-4 text-gray-800">Set Gold Amount</h3>
-                    <form id="setGoldForm">
-                        <div class="mb-4">
-                            <label for="gold-amount-input" class="block text-gray-700 text-sm font-bold mb-2">New Gold Amount:</label>
-                            <input type="number" id="gold-amount-input" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">
-                                Set Gold
-                            </button>
-                            <button type="button" id="cancelSetGold" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-full">
-                                Cancel
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-            <div id="pveGoldInputModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center z-50">
-                <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm mx-4 sm:mx-auto font-inter">
-                    <h3 class="text-xl font-bold mb-4 text-gray-800">Enter Manual PVE Gold</h3>
-                    <form id="pveGoldInputForm">
-                        <div class="mb-4">
-                            <label for="pve-gold-amount" class="block text-gray-700 text-sm font-bold mb-2">New Total Gold Amount:</label>
-                            <input type="number" id="pve-gold-amount" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
-                        </div>
-                        <div class="mb-6">
-                            <label for="pve-description" class="block text-gray-700 text-sm font-bold mb-2">Description (optional):</label>
-                            <input type="text" id="pve-description" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-full">
-                                Record PVE Gold
-                            </button>
-                            <button type="button" id="cancelPveGoldInput" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-full">
-                                Cancel
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        `;
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-
-        createCharacterModal = document.getElementById('createCharacterModal');
-        createCharacterForm = document.getElementById('createCharacterForm');
-        
-        const setGoldModal = document.getElementById('setGoldModal');
-        const setGoldForm = document.getElementById('setGoldForm');
-        const cancelSetGoldBtn = document.getElementById('cancelSetGold');
-
-        const pveGoldInputModal = document.getElementById('pveGoldInputModal');
-        const pveGoldInputForm = document.getElementById('pveGoldInputForm');
-        const cancelPveGoldInputBtn = document.getElementById('cancelPveGoldInput');
-
-        if (createCharacterForm) {
-            createCharacterForm.addEventListener('submit', handleCreateCharacter);
-            document.getElementById('cancelCreateCharacter').addEventListener('click', () => {
-                if (createCharacterModal) createCharacterModal.classList.add('hidden');
-            });
-        }
-        if (setGoldForm) {
-            setGoldForm.addEventListener('submit', handleSetGold);
-            cancelSetGoldBtn.addEventListener('click', () => {
-                if (setGoldModal) setGoldModal.classList.add('hidden');
-            });
-        }
-        if (pveGoldInputForm) {
-            pveGoldInputForm.addEventListener('submit', handlePveGoldInput);
-            cancelPveGoldInputBtn.addEventListener('click', () => {
-                if (pveGoldInputModal) pveGoldInputModal.classList.add('hidden');
-            });
-        }
-    }
+const handleCharacterSelection = async (event) => {
+    currentCharacterId = event.target.value;
+    await loadTraderPageData();
 };
 
 const handleCreateCharacter = async (e) => {
     e.preventDefault();
-    const newCharacterNameInput = document.getElementById('new-character-name');
-    const newCharacterGoldInput = document.getElementById('new-character-gold');
-    const characterName = newCharacterNameInput.value;
+    const characterName = newCharacterNameInput.value.trim();
     const initialGold = parseInt(newCharacterGoldInput.value, 10);
 
     if (!characterName) {
-        await showCustomModal('Error', 'Character name cannot be empty.', [{ text: 'OK', value: true }]);
+        await showCustomModal('Validation Error', 'Character name cannot be empty.', [{ text: 'OK', value: true }]);
+        return;
+    }
+
+    if (isNaN(initialGold) || initialGold < 0) {
+        await showCustomModal('Validation Error', 'Starting gold must be a non-negative number.', [{ text: 'OK', value: true }]);
         return;
     }
 
     const { data, error } = await supabase
         .from('characters')
         .insert([{ user_id: currentUserId, character_name: characterName, gold: initialGold }])
-        .select();
+        .select('character_id');
 
     if (error) {
-        await showCustomModal('Error', 'Failed to create character: ' + error.message, [{ text: 'OK', value: true }]);
+        if (error.code === '23505') {
+            await showCustomModal('Error', `A character with the name "${characterName}" already exists for your account.`, [{ text: 'OK', value: true }]);
+        } else {
+            await showCustomModal('Error', 'Error creating character: ' + error.message, [{ text: 'OK', value: true }]);
+        }
+        console.error('Error creating character:', error.message);
         return;
     }
 
-    await showCustomModal('Success', `${characterName} created successfully with ${initialGold.toLocaleString()} gold!`, [{ text: 'OK', value: true }]);
-    if (createCharacterModal) createCharacterModal.classList.add('hidden');
+    currentCharacterId = data[0].character_id;
+    await showCustomModal('Success', `Character "${characterName}" created successfully with ${initialGold.toLocaleString()} gold!`, [{ text: 'OK', value: true }]);
+    if (createCharacterModal) {
+        createCharacterModal.classList.add('hidden');
+    }
     newCharacterNameInput.value = '';
     newCharacterGoldInput.value = '0';
-    localStorage.removeItem(CHARACTER_CACHE_KEY_PREFIX + currentUserId);
-    await invalidate_quart_cache(`pax_character:${data[0].character_id}`); 
-    await invalidateDashboardStatsCache(data[0].character_id);
-    await invalidateTransactionHistoryCache(data[0].character_id);
     await loadCharacters(loadTraderPageData);
 };
 
@@ -283,155 +168,211 @@ const handleDeleteCharacter = async () => {
         return;
     }
 
-    const confirmDelete = await showCustomModal('Confirm Delete', 'Are you sure you want to delete this character and all its data? This cannot be undone.', [
-        { text: 'Cancel', value: false, type: 'cancel' },
-        { text: 'Delete', value: true, type: 'confirm' }
-    ]);
+    const confirmed = await showCustomModal(
+        'Confirmation',
+        'Are you sure you want to delete this character and all associated data? This action cannot be undone.',
+        [{ text: 'Yes, Delete', value: true, type: 'confirm' }, { text: 'No', value: false, type: 'cancel' }]
+    );
 
-    if (confirmDelete) {
+    if (confirmed) {
         const { error } = await supabase
             .from('characters')
             .delete()
-            .eq('character_id', currentCharacterId);
+            .eq('character_id', currentCharacterId)
+            .eq('user_id', currentUserId);
 
         if (error) {
             await showCustomModal('Error', 'Failed to delete character: ' + error.message, [{ text: 'OK', value: true }]);
+            console.error('Error deleting character:', error.message);
             return;
         }
 
         await showCustomModal('Success', 'Character deleted successfully!', [{ text: 'OK', value: true }]);
-        localStorage.removeItem(CHARACTER_CACHE_KEY_PREFIX + currentUserId);
-        await invalidate_quart_cache(`pax_character:${currentCharacterId}`);
-        await invalidateDashboardStatsCache(currentCharacterId);
-        await invalidateTransactionHistoryCache(currentCharacterId);
-        localStorage.removeItem('selectedCharacterId');
-        localStorage.removeItem('selectedUserId');
         await loadCharacters(loadTraderPageData);
     }
 };
 
-const handleSetGold = async (e) => {
-    e.preventDefault();
-    const goldAmountInput = document.getElementById('gold-amount-input');
-    const newGoldAmount = parseInt(goldAmountInput.value, 10);
-
-    if (isNaN(newGoldAmount)) {
-        await showCustomModal('Error', 'Please enter a valid number for gold.', [{ text: 'OK', value: true }]);
-        return;
-    }
-
-    await updateCharacterGold(newGoldAmount);
-    document.getElementById('setGoldModal').classList.add('hidden');
-};
-
-const handlePveGoldInput = async (e) => {
-    e.preventDefault();
-    const pveGoldAmountInput = document.getElementById('pve-gold-amount');
-    const pveDescriptionInput = document.getElementById('pve-description');
-    const newTotalGoldEntered = parseInt(pveGoldAmountInput.value, 10);
-    const description = pveDescriptionInput.value;
-
-    if (isNaN(newTotalGoldEntered)) {
-        await showCustomModal('Error', 'Please enter a valid number for gold.', [{ text: 'OK', value: true }]);
-        return;
-    }
-
-    if (!currentCharacterId) {
-        await showCustomModal('Error', 'Please select a character first.', [{ text: 'OK', value: true }]);
-        return;
-    }
-    
-    if (!currentUserId) {
-        await showCustomModal('Error', 'User not logged in. Please log in to record PVE gold.', [{ text: 'OK', value: true }]);
-        return;
-    }
-
-    const currentCharacter = await getCurrentCharacter(true); 
-    if (!currentCharacter) {
-        await showCustomModal('Error', 'Could not retrieve current character gold. Please try again.', [{ text: 'OK', value: true }]);
-        return;
-    }
-    
-    // Calculate the difference for the PVE transaction
-    const goldAmountDifference = newTotalGoldEntered - currentCharacter.gold;
-
-    const { error: transactionError } = await supabase
-        .from('pve_transactions')
-        .insert([{ character_id: currentCharacterId, gold_amount: goldAmountDifference, description: description, user_id: currentUserId }]);
-
-    if (transactionError) {
-        await showCustomModal('Error', 'Failed to record PVE transaction: ' + transactionError.message, [{ text: 'OK', value: true }]);
-        return;
-    }
-
-    // Update the character's total gold to the new value entered by the user
-    await updateCharacterGoldByPveTransaction(newTotalGoldEntered, goldAmountDifference);
-    document.getElementById('pveGoldInputModal').classList.add('hidden');
-    pveGoldAmountInput.value = '';
-    pveDescriptionInput.value = '';
-    
-    await invalidateTransactionHistoryCache(currentCharacterId);
-    await invalidateDashboardStatsCache(currentCharacterId);
-};
-
-
 const updateCharacterGold = async (newGoldAmount) => {
-    const { data, error } = await supabase
+    if (!currentCharacterId) {
+        await showCustomModal("Error", "No character selected.", [{ text: 'OK', value: true }]);
+        return;
+    }
+
+    const { error } = await supabase
         .from('characters')
         .update({ gold: newGoldAmount })
         .eq('character_id', currentCharacterId)
-        .select();
+        .eq('user_id', currentUserId);
 
     if (error) {
-        await showCustomModal('Error', 'Failed to update gold: ' + error.message, [{ text: 'OK', value: true }]);
+        await showCustomModal('Error', `Error updating gold: ${error.message}`, [{ text: 'OK', value: true }]);
+        console.error('Error updating character gold:', error.message);
         return;
     }
 
     await showCustomModal('Success', `Gold updated to ${newGoldAmount.toLocaleString()}.`, [{ text: 'OK', value: true }]);
-    localStorage.removeItem(CHARACTER_CACHE_KEY_PREFIX + currentUserId);
-    await invalidate_quart_cache(`pax_character:${currentCharacterId}`);
-    await invalidateDashboardStatsCache(currentCharacterId);
-    await invalidateTransactionHistoryCache(currentCharacterId);
     await loadTraderPageData();
 };
 
-const updateCharacterGoldByPveTransaction = async (newTotalGold, goldChange) => {
-    const { data, error } = await supabase
+const updateCharacterGoldByPveTransaction = async (newTotalGold) => {
+    if (!currentCharacterId) {
+        await showCustomModal("Error", "No character selected to record PVE gold.", [{ text: 'OK', value: true }]);
+        return;
+    }
+    if (!currentUserId) {
+        await showCustomModal("Error", "User not authenticated. Cannot record PVE transaction.", [{ text: 'OK', value: true }]);
+        console.error("Attempted PVE transaction without authenticated user_id.");
+        return;
+    }
+
+    const currentCharacter = await getCurrentCharacter();
+    if (!currentCharacter) {
+        return;
+    }
+
+    const goldChange = newTotalGold - currentCharacter.gold;
+
+    if (newTotalGold < 0) {
+        await showCustomModal("Validation Error", "PVE transaction would result in negative gold. Please enter a valid non-negative amount.", [{ text: 'OK', value: true }]);
+        return;
+    }
+
+    const { error: updateCharError } = await supabase
         .from('characters')
         .update({ gold: newTotalGold })
         .eq('character_id', currentCharacterId)
-        .select();
+        .eq('user_id', currentUserId);
 
-    if (error) {
-        await showCustomModal('Error', 'Failed to update PVE gold: ' + error.message, [{ text: 'OK', value: true }]);
+    if (updateCharError) {
+        await showCustomModal('Error', `Error updating character gold for PVE: ${updateCharError.message}`, [{ text: 'OK', value: true }]);
+        console.error('Error updating character gold for PVE:', updateCharError.message);
+        return;
+    }
+
+    const description = goldChange >= 0
+        ? `PVE Gold Change: +${goldChange.toLocaleString()}`
+        : `PVE Gold Change: ${goldChange.toLocaleString()}`;
+
+    const { error: insertPveError } = await supabase
+        .from('pve_transactions')
+        .insert([
+            {
+                character_id: currentCharacterId,
+                gold_amount: goldChange,
+                description: description,
+                user_id: currentUserId
+            }
+        ]);
+
+    if (insertPveError) {
+        console.error('Error recording PVE transaction:', insertPveError.message);
+        await showCustomModal('Error', `Failed to record PVE transaction: ${insertPveError.message}. Gold updated, but transaction history might be incomplete.`, [{ text: 'OK', value: true }]);
         return;
     }
 
     const message = `Character gold set to ${newTotalGold.toLocaleString()}. Recorded change: ${goldChange >= 0 ? '+' : ''}${goldChange.toLocaleString()} gold from PVE.`;
 
     await showCustomModal('Success', message, [{ text: 'OK', value: true }]);
-    localStorage.removeItem(CHARACTER_CACHE_KEY_PREFIX + currentUserId); 
-    await invalidate_quart_cache(`pax_character:${currentCharacterId}`);
-    await invalidateDashboardStatsCache(currentCharacterId);
-    await invalidateTransactionHistoryCache(currentCharacterId);
     await loadTraderPageData();
 };
 
 
-export const getCurrentCharacter = async (forceRefresh = false) => {
-    if (!currentCharacterId) {
-        return null;
-    }
+const showSetGoldInputModal = (onConfirm, onCancel) => {
+    const modalId = `setGoldInputModal-${Date.now()}`;
+    const modalHtml = `
+        <div id="${modalId}" class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50">
+            <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+                <h3 class="text-lg font-bold mb-4">Set Character Gold</h3>
+                <input type="number" id="goldAmountInput" placeholder="Enter gold amount" class="w-full p-2 border rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700">
+                <div class="flex justify-end gap-2">
+                    <button id="cancelSetGold" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-full">Cancel</button>
+                    <button id="confirmSetGold" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">Set</button>
+                </div>
+                <p id="goldInputError" class="text-red-500 text-sm mt-2" style="display:none;"></p>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
 
-    const characterCacheKey = `pax_character:${currentCharacterId}`;
-    
-    if (!forceRefresh) {
-        const cachedCharacter = await get_from_quart_cache(characterCacheKey);
-        if (cachedCharacter) {
-            return cachedCharacter;
+    const goldAmountInput = document.getElementById('goldAmountInput');
+    const confirmButton = document.getElementById('confirmSetGold');
+    const cancelButton = document.getElementById('cancelSetGold');
+    const errorEl = document.getElementById('goldInputError');
+
+    confirmButton.onclick = null;
+    cancelButton.onclick = null;
+
+    confirmButton.addEventListener('click', () => {
+        const amount = parseInt(goldAmountInput.value, 10);
+        if (!isNaN(amount) && amount >= 0) {
+            onConfirm(amount);
+            document.getElementById(modalId).remove();
+        } else {
+            errorEl.textContent = 'Please enter a valid non-negative number for gold.';
+            errorEl.style.display = 'block';
         }
-    }
-    
+    });
+
+    cancelButton.addEventListener('click', () => {
+        onCancel();
+        document.getElementById(modalId).remove();
+    });
+
+    goldAmountInput.focus();
+};
+
+const showPveGoldInputModal = async (onConfirm, onCancel) => {
+    const modalId = `pveGoldInputModal-${Date.now()}`;
+
+    const currentCharacter = await getCurrentCharacter();
+    const currentGold = currentCharacter ? currentCharacter.gold : 0;
+
+    const modalHtml = `
+        <div id="${modalId}" class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50">
+            <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+                <h3 class="text-lg font-bold mb-4">Set Character Gold (PVE)</h3>
+                <p class="text-gray-600 text-sm mb-3">Current Gold: ${currentGold.toLocaleString()}</p>
+                <input type="number" id="pveGoldAmountInput" placeholder="Enter new total gold amount" class="w-full p-2 border rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-700" value="${currentGold}">
+                <div class="flex justify-end gap-2">
+                    <button id="cancelPveGold" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-full">Cancel</button>
+                    <button id="confirmPveGold" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-full">Set & Record</button>
+                </div>
+                <p id="pveGoldInputError" class="text-red-500 text-sm mt-2" style="display:none;"></p>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    const pveGoldAmountInput = document.getElementById('pveGoldAmountInput');
+    const confirmButton = document.getElementById('confirmPveGold');
+    const cancelButton = document.getElementById('cancelPveGold');
+    const errorEl = document.getElementById('pveGoldInputError');
+
+    confirmButton.onclick = null;
+    cancelButton.onclick = null;
+
+    confirmButton.addEventListener('click', () => {
+        const amount = parseInt(pveGoldAmountInput.value, 10);
+        if (!isNaN(amount) && amount >= 0) {
+            onConfirm(amount);
+            document.getElementById(modalId).remove();
+        } else {
+            errorEl.textContent = 'Please enter a valid non-negative number for the new total gold.';
+            errorEl.style.display = 'block';
+        }
+    });
+
+    cancelButton.addEventListener('click', () => {
+        onCancel();
+        document.getElementById(modalId).remove();
+    });
+
+    pveGoldAmountInput.focus();
+};
+
+
+export const getCurrentCharacter = async () => {
+    if (!currentCharacterId) return null;
     const { data, error } = await supabase
         .from('characters')
         .select('character_id, character_name, gold')
@@ -439,58 +380,52 @@ export const getCurrentCharacter = async (forceRefresh = false) => {
         .single();
 
     if (error) {
-        console.error('Error fetching current character from Supabase:', error.message);
+        console.error('Error fetching current character:', error.message);
+        await showCustomModal('Error', 'Failed to fetch current character data.', [{ text: 'OK', value: true }]);
         return null;
-    }
-    
-    if (data) {
-        await set_in_quart_cache(characterCacheKey, data, 60);
     }
     return data;
 };
 
-export const showSetGoldInputModal = async (onConfirm, onCancel) => {
-    const setGoldModal = document.getElementById('setGoldModal');
-    const goldAmountInput = document.getElementById('gold-amount-input');
-    if (setGoldModal) {
-        const currentCharacter = await getCurrentCharacter(true);
-        if (currentCharacter && typeof currentCharacter.gold === 'number') {
-            goldAmountInput.value = currentCharacter.gold;
-        } else {
-            goldAmountInput.value = '';
-        }
-        setGoldModal.classList.remove('hidden');
-    }
-};
-
-export const showPveGoldInputModal = async (onConfirm, onCancel) => {
-    const pveGoldInputModal = document.getElementById('pveGoldInputModal');
-    const pveGoldAmountInput = document.getElementById('pve-gold-amount');
-    if (pveGoldInputModal) {
-        const currentCharacter = await getCurrentCharacter(true); // Fetch current gold to pre-fill
-        if (currentCharacter && typeof currentCharacter.gold === 'number') {
-            pveGoldAmountInput.value = currentCharacter.gold;
-        } else {
-            pveGoldAmountInput.value = '';
-        }
-        document.getElementById('pve-description').value = '';
-        pveGoldInputModal.classList.remove('hidden');
-    }
-};
-
 const addCharacterEventListeners = () => {
-    const deleteCharacterBtn = document.getElementById('deleteCharacterBtn');
+    if (characterSelect) {
+        characterSelect.addEventListener('change', handleCharacterSelection);
+    }
     if (deleteCharacterBtn) {
         deleteCharacterBtn.addEventListener('click', handleDeleteCharacter);
     }
-    const setGoldBtn = document.getElementById('setGoldBtn');
     if (setGoldBtn) {
-        setGoldBtn.addEventListener('click', showSetGoldInputModal);
+        setGoldBtn.addEventListener('click', () => {
+            if (!currentCharacterId) {
+                showCustomModal("Error", "Please select a character first to set gold.", [{ text: 'OK', value: true }]);
+                return;
+            }
+            showSetGoldInputModal(
+                async (amount) => {
+                    await updateCharacterGold(amount);
+                },
+                () => {
+                    console.log("Set Gold operation cancelled.");
+                }
+            );
+        });
     }
-    const pveBtn = document.getElementById('pveBtn');
+
     if (pveBtn) {
-        pveBtn.addEventListener('click', showPveGoldInputModal);
+        pveBtn.addEventListener('click', async () => {
+            if (!currentCharacterId) {
+                showCustomModal("Error", "Please select a character first to record PVE gold.", [{ text: 'OK', value: true }]);
+                return;
+            }
+            
+            await showPveGoldInputModal(
+                async (newTotalGold) => {
+                    await updateCharacterGoldByPveTransaction(newTotalGold);
+                },
+                () => {
+                    console.log("PVE Gold transaction cancelled.");
+                }
+            );
+        });
     }
 };
-
-document.addEventListener('DOMContentLoaded', addCharacterEventListeners);
