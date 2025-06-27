@@ -52,43 +52,6 @@ export function slugify(text) {
     .replace(/--+/g, '-');
 }
 
-export function showFormMessage(messageElement, message, type) {
-    messageElement.textContent = message;
-    messageElement.className = '';
-    messageElement.style.display = 'none';
-
-    if (message) {
-        messageElement.style.display = 'block';
-        messageElement.classList.add('form-message');
-
-        if (type === 'success') {
-            messageElement.classList.add('success-message'); // Specific success style
-            messageElement.classList.add('bg-green-100', 'border-green-400', 'text-green-700', 'px-4', 'py-3', 'rounded', 'mb-4', 'border'); // Tailwind classes for success
-        } else if (type === 'error') {
-            messageElement.classList.add('error-message'); // Specific error style
-            messageElement.classList.add('bg-red-100', 'border-red-400', 'text-red-700', 'px-4', 'py-3', 'rounded', 'mb-4', 'border'); // Tailwind classes for error
-        } else if (type === 'info') {
-            messageElement.classList.add('info-message'); // Specific info style
-            messageElement.classList.add('bg-blue-100', 'border-blue-400', 'text-blue-700', 'px-4', 'py-3', 'rounded', 'mb-4', 'border'); // Tailwind classes for info
-        } else if (type === 'warning') {
-            messageElement.classList.add('warning-message'); // Specific warning style
-            messageElement.classList.add('bg-yellow-100', 'border-yellow-400', 'text-yellow-700', 'px-4', 'py-3', 'rounded', 'mb-4', 'border'); // Tailwind classes for warning
-        } else {
-             // Default styling if no specific type
-            messageElement.classList.add('bg-gray-100', 'border-gray-400', 'text-gray-700', 'px-4', 'py-3', 'rounded', 'mb-4', 'border');
-        }
-
-        // Hide message after 5 seconds if it's not empty
-        if (message) {
-            setTimeout(() => {
-                messageElement.style.display = 'none';
-                messageElement.textContent = '';
-                messageElement.className = ''; // Clear all classes
-            }, 5000);
-        }
-    }
-}
-
 export async function isLoggedIn() {
   const { data: { session } } = await supabase.auth.getSession();
   return !!session;

@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient.js';
-import { formatCommentDateTime, formatNewsDate, showFormMessage } from './utils.js'; // Import showFormMessage
+import { formatCommentDateTime, formatNewsDate } from './utils.js';
 import { fetchAndRenderDeveloperComments } from './devComments.js';
 import { fetchAndRenderNewsUpdates } from './newsUpdates.js';
 import { fetchAndRenderLorePosts } from './lorePosts.js';
@@ -8,12 +8,29 @@ import { fetchAndRenderArticles, fetchAndRenderArticleCategories, setupArticleMo
 import DOMPurify from 'https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.es.min.js';
 
 const TAG_LIST_CACHE_KEY = 'paxDeiTagList';
-const TAG_LIST_CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; 
+const TAG_LIST_CACHE_EXPIRY_MS = 10 * 1000; 
 
 const DEV_COMMENTS_CACHE_KEY = 'paxDeiDevComments';
 const DEV_COMMENTS_CACHE_EXPIRY_MS = 5 * 60 * 1000;
 
-// showFormMessage is now imported from utils.js
+function showFormMessage(messageElement, message, type) {
+    messageElement.textContent = message;
+    messageElement.className = '';
+    if (type) {
+        messageElement.classList.add('form-message', type);
+        messageElement.style.display = 'block';
+
+        if (message) {
+            setTimeout(() => {
+                messageElement.style.display = 'none';
+                messageElement.textContent = '';
+            }, 5000);
+        }
+    } else {
+        messageElement.style.display = 'none';
+        messageElement.textContent = '';
+    }
+}
 
 function normalizeAbilityNameForHash(name) {
     return name.toLowerCase().replace(/\s+/g, '-').replace(/'/g, '');
@@ -324,7 +341,7 @@ $(document).ready(async function() {
     const currentPage = window.location.pathname.split('/').pop();
 
     if (currentPage === 'index.html' || currentPage === '') {
-        fetchAndRenderDeveloperComments('recent-comments-home', 6, null, DEV_COMMENTS_CACHE_KEY, DEV_COMMENTS_CACHE_EXPIRY_MS);
+        fetchAndRenderDeveloperComments('recent-comments-home', 6);
         fetchAndRenderNewsUpdates('news-updates-home', 3);
     } else if (currentPage === 'developer-comments.html') {
         const devCommentsContainer = $('#dev-comments-container');
