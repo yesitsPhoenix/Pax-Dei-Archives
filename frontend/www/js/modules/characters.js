@@ -9,6 +9,7 @@ let createCharacterForm = null;
 let closeCreateCharacterModalBtn = null;
 let newCharacterNameInput = null;
 let newCharacterGoldInput = null;
+let newCharacterRegionSelect = null;
 let deleteCharacterBtn = null;
 const setGoldBtn = document.getElementById('setGoldBtn');
 const pveBtn = document.getElementById('pveBtn');
@@ -31,6 +32,15 @@ export const insertCharacterModalHtml = () => {
                         <label for="newCharacterGoldInput" class="block text-gray-700 text-sm font-bold mb-2">Starting Gold:</label>
                         <input type="number" id="newCharacterGoldInput" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Enter starting gold (e.g., 100)" value="0" required min="0">
                     </div>
+                    <div class="mb-4">
+                        <label for="newCharacterRegionSelect" class="block text-gray-700 text-sm font-bold mb-2">Region:</label>
+                        <select id="newCharacterRegionSelect" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                            <option value="" disabled selected>Select a region</option>
+                            <option value="USA">USA</option>
+                            <option value="EU">EU</option>
+                            <option value="SEA">SEA</option>
+                        </select>
+                    </div>
                     <div class="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
                         <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">Create Character</button>
                         <button type="button" id="closeCreateCharacterModalBtn" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-full">Cancel</button>
@@ -46,6 +56,7 @@ export const insertCharacterModalHtml = () => {
     closeCreateCharacterModalBtn = document.getElementById('closeCreateCharacterModalBtn');
     newCharacterNameInput = document.getElementById('newCharacterNameInput');
     newCharacterGoldInput = document.getElementById('newCharacterGoldInput');
+    newCharacterRegionSelect = document.getElementById('newCharacterRegionSelect');
 
     if (closeCreateCharacterModalBtn) {
         closeCreateCharacterModalBtn.addEventListener('click', () => {
@@ -126,6 +137,7 @@ const handleCreateCharacter = async (e) => {
     e.preventDefault();
     const characterName = newCharacterNameInput.value.trim();
     const initialGold = parseInt(newCharacterGoldInput.value, 10);
+    const region = newCharacterRegionSelect.value;
 
     if (!characterName) {
         await showCustomModal('Validation Error', 'Character name cannot be empty.', [{ text: 'OK', value: true }]);
@@ -137,9 +149,14 @@ const handleCreateCharacter = async (e) => {
         return;
     }
 
+    if (!region) {
+        await showCustomModal('Validation Error', 'Please select a region.', [{ text: 'OK', value: true }]);
+        return;
+    }
+
     const { data, error } = await supabase
         .from('characters')
-        .insert([{ user_id: currentUserId, character_name: characterName, gold: initialGold }])
+        .insert([{ user_id: currentUserId, character_name: characterName, gold: initialGold, region: region }])
         .select('character_id');
 
     if (error) {
@@ -153,12 +170,13 @@ const handleCreateCharacter = async (e) => {
     }
 
     currentCharacterId = data[0].character_id;
-    await showCustomModal('Success', `Character "${characterName}" created successfully with ${initialGold.toLocaleString()} gold!`, [{ text: 'OK', value: true }]);
+    await showCustomModal('Success', `Character "${characterName}" created successfully with ${initialGold.toLocaleString()} gold in ${region}!`, [{ text: 'OK', value: true }]);
     if (createCharacterModal) {
         createCharacterModal.classList.add('hidden');
     }
     newCharacterNameInput.value = '';
     newCharacterGoldInput.value = '0';
+    newCharacterRegionSelect.value = '';
     await loadCharacters(loadTraderPageData);
 };
 

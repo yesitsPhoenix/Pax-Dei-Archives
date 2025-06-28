@@ -8,6 +8,8 @@ const salesVolumeByCategoryList = document.getElementById('sales-volume-by-categ
 let dailySalesChartInstance = null;
 let dailyAvgPriceChartInstance = null;
 
+let currentSelectedRegion = null;
+
 const formatCurrency = (amount) => (amount !== null && amount !== undefined) ? amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : 'N/A';
 const formatDecimal = (amount, decimals = 2) => (amount !== null && amount !== undefined) ? parseFloat(amount).toFixed(decimals).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) : 'N/A';
 
@@ -83,30 +85,53 @@ function renderChart(chartId, labels, data, label, borderColor, backgroundColor,
         };
     }
 
-    return new Chart(ctx, chartConfig);
+    const newChart = new Chart(ctx, chartConfig);
+
+    if (chartId === 'daily-sales-chart' && dailySalesChartInstance) {
+        dailySalesChartInstance.destroy();
+        dailySalesChartInstance = null;
+    } else if (chartId === 'daily-avg-price-chart' && dailyAvgPriceChartInstance) {
+        dailyAvgPriceChartInstance.destroy();
+        dailyAvgPriceChartInstance = null;
+    }
+
+    return newChart;
 }
 
-async function loadHighestIndividualSales() {
-    if (!highestSalesList) {
+function prepareRpcParams(baseParams = {}, region = null) {
+    const params = { ...baseParams };
+    params.region_filter = (region === null || region === 'all') ? null : region;
+    return params;
+}
+
+async function loadListTrendsData(region = null) {
+    if (!highestSalesList || !mostSoldQuantityList || !topProfitableItemsList || !salesVolumeByCategoryList) {
         return;
     }
 
     highestSalesList.innerHTML = '<p class="text-white">Loading highest sales...</p>';
+    mostSoldQuantityList.innerHTML = '<p class="text-white">Loading most sold items...</p>';
+    topProfitableItemsList.innerHTML = '<p class="text-white">Loading profitable items...</p>';
+    salesVolumeByCategoryList.innerHTML = '<p class="text-white">Loading sales volume...</p>';
 
     try {
-        const { data, error } = await supabase.rpc('get_highest_individual_sale', { top_n_sales: 5 });
+        const params = prepareRpcParams({}, region);
+        const { data, error } = await supabase.rpc('get_all_list_trends_data_by_region', params);
 
         if (error) {
-            highestSalesList.innerHTML = '<p class="text-red-400">Error loading highest sales data.</p>';
+            console.error("Error loading all list trends data:", error);
+            const errorMessage = `<p class="text-red-400">Error loading data: ${error.message}</p>`;
+            highestSalesList.innerHTML = errorMessage;
+            mostSoldQuantityList.innerHTML = errorMessage;
+            topProfitableItemsList.innerHTML = errorMessage;
+            salesVolumeByCategoryList.innerHTML = errorMessage;
             return;
         }
 
-        if (data && data.length > 0) {
-            highestSalesList.innerHTML = '';
-            data.forEach((sale, index) => {
-                const saleDiv = document.createElement('div');
-                saleDiv.classList.add('p-2', 'bg-gray-700', 'rounded-sm', 'shadow-sm', 'flex', 'flex-col', 'md:flex-row', 'justify-between', 'items-center', 'gap-1');
-                saleDiv.innerHTML = `
+        const highestSales = data?.highest_individual_sales || [];
+        if (highestSales.length > 0) {
+            highestSalesList.innerHTML = highestSales.map((sale, index) => `
+                <div class="p-2 bg-gray-700 rounded-sm shadow-sm flex flex-col md:flex-row justify-between items-center gap-1">
                     <div class="flex items-center gap-2">
                         <span class="text-base font-bold text-gold-400">${index + 1}.</span>
                         <div>
@@ -119,38 +144,16 @@ async function loadHighestIndividualSales() {
                         <p class="text-gray-400">Qty Sold: ${sale.quantity_sold || 'N/A'} | Price/Unit: ${formatDecimal(sale.sale_price_per_unit)}</p>
                         <p class="text-gray-400">Stack Qty: ${sale.listed_quantity || 'N/A'} | Stack Price: ${formatCurrency(sale.listed_total_price)}</p>
                     </div>
-                `;
-                highestSalesList.appendChild(saleDiv);
-            });
+                </div>
+            `).join('');
         } else {
             highestSalesList.innerHTML = '<p class="text-white">No highest sales data found yet.</p>';
         }
-    } catch (err) {
-        highestSalesList.innerHTML = '<p class="text-red-400">An unexpected error occurred.</p>';
-    }
-}
 
-async function loadMostSoldItemsByQuantity() {
-    if (!mostSoldQuantityList) {
-        return;
-    }
-
-    mostSoldQuantityList.innerHTML = '<p class="text-white">Loading most sold items...</p>';
-
-    try {
-        const { data, error } = await supabase.rpc('get_most_items_sold_by_quantity', { top_n_items: 10 });
-
-        if (error) {
-            mostSoldQuantityList.innerHTML = '<p class="text-red-400">Error loading most sold items data.</p>';
-            return;
-        }
-
-        if (data && data.length > 0) {
-            mostSoldQuantityList.innerHTML = '';
-            data.forEach((item, index) => {
-                const itemDiv = document.createElement('div');
-                itemDiv.classList.add('p-2', 'bg-gray-700', 'rounded-sm', 'shadow-sm', 'flex', 'flex-col', 'md:flex-row', 'justify-between', 'items-center', 'gap-1');
-                itemDiv.innerHTML = `
+        const mostSoldItems = data?.most_sold_items_by_quantity || [];
+        if (mostSoldItems.length > 0) {
+            mostSoldQuantityList.innerHTML = mostSoldItems.map((item, index) => `
+                <div class="p-2 bg-gray-700 rounded-sm shadow-sm flex flex-col md:flex-row justify-between items-center gap-1">
                     <div class="flex items-center gap-2">
                         <span class="text-base font-bold text-gold-400">${index + 1}.</span>
                         <div>
@@ -163,38 +166,18 @@ async function loadMostSoldItemsByQuantity() {
                         <p class="text-gray-400">Avg. Price/Unit: ${formatDecimal(item.average_price_per_unit)}</p>
                         <p class="text-gray-400">Avg. Stack Qty: ${item.avg_stack_quantity !== null && item.avg_stack_quantity !== undefined ? formatDecimal(item.avg_stack_quantity, 0) : 'N/A'} | Avg. Stack Price: ${item.avg_stack_price !== null && item.avg_stack_price !== undefined ? formatCurrency(item.avg_stack_price) : 'N/A'}</p>
                     </div>
-                `;
-                mostSoldQuantityList.appendChild(itemDiv);
-            });
+                </div>
+            `).join('');
         } else {
             mostSoldQuantityList.innerHTML = '<p class="text-white">No items sold yet.</p>';
         }
-    } catch (err) {
-        mostSoldQuantityList.innerHTML = '<p class="text-red-400">An unexpected error occurred.</p>';
-    }
-}
 
-async function loadTopProfitableItems() {
-    if (!topProfitableItemsList) {
-        return;
-    }
+        const topProfitableItems = data?.top_profitable_items || [];
+        const trulyProfitableItems = topProfitableItems.filter(item => parseFloat(item.total_net_profit) > 0);
 
-    topProfitableItemsList.innerHTML = '<p class="text-white">Loading profitable items...</p>';
-
-    try {
-        const { data, error } = await supabase.rpc('get_top_profitable_items', { top_n_items: 5 });
-
-        if (error) {
-            topProfitableItemsList.innerHTML = '<p class="text-red-400">Error loading profitable items data.</p>';
-            return;
-        }
-
-        if (data && data.length > 0) {
-            topProfitableItemsList.innerHTML = '';
-            data.forEach((item, index) => {
-                const itemDiv = document.createElement('div');
-                itemDiv.classList.add('p-2', 'bg-gray-700', 'rounded-sm', 'shadow-sm', 'flex', 'flex-col', 'md:flex-row', 'justify-between', 'items-center', 'gap-1');
-                itemDiv.innerHTML = `
+        if (trulyProfitableItems.length > 0) {
+            topProfitableItemsList.innerHTML = trulyProfitableItems.map((item, index) => `
+                <div class="p-2 bg-gray-700 rounded-sm shadow-sm flex flex-col md:flex-row justify-between items-center gap-1">
                     <div class="flex items-center gap-2">
                         <span class="text-base font-bold text-gold-400">${index + 1}.</span>
                         <div>
@@ -205,38 +188,16 @@ async function loadTopProfitableItems() {
                     <div class="text-right text-xs">
                         <p class="text-white text-sm">Net Profit: <span class="font-bold">${formatCurrency(item.total_net_profit)} <i class="fas fa-coins"></i></span></p>
                     </div>
-                `;
-                topProfitableItemsList.appendChild(itemDiv);
-            });
+                </div>
+            `).join('');
         } else {
             topProfitableItemsList.innerHTML = '<p class="text-white">No profitable items data found yet.</p>';
         }
-    } catch (err) {
-        topProfitableItemsList.innerHTML = '<p class="text-red-400">An unexpected error occurred.</p>';
-    }
-}
 
-async function loadSalesVolumeByCategory() {
-    if (!salesVolumeByCategoryList) {
-        return;
-    }
-
-    salesVolumeByCategoryList.innerHTML = '<p class="text-white">Loading sales volume...</p>';
-
-    try {
-        const { data, error } = await supabase.rpc('get_sales_volume_by_category', { top_n_categories: 5 });
-
-        if (error) {
-            salesVolumeByCategoryList.innerHTML = '<p class="text-red-400">Error loading sales volume data.</p>';
-            return;
-        }
-
-        if (data && data.length > 0) {
-            salesVolumeByCategoryList.innerHTML = '';
-            data.forEach((category, index) => {
-                const categoryDiv = document.createElement('div');
-                categoryDiv.classList.add('p-2', 'bg-gray-700', 'rounded-sm', 'shadow-sm', 'flex', 'flex-col', 'md:flex-row', 'justify-between', 'items-center', 'gap-1');
-                categoryDiv.innerHTML = `
+        const salesVolumeByCategory = data?.sales_volume_by_category || [];
+        if (salesVolumeByCategory.length > 0) {
+            salesVolumeByCategoryList.innerHTML = salesVolumeByCategory.map((category, index) => `
+                <div class="p-2 bg-gray-700 rounded-sm shadow-sm flex flex-col md:flex-row justify-between items-center gap-1">
                     <div class="flex items-center gap-2">
                         <span class="text-base font-bold text-gold-400">${index + 1}.</span>
                         <p class="text-white text-sm font-semibold">${category.category_name}</p>
@@ -244,22 +205,29 @@ async function loadSalesVolumeByCategory() {
                     <div class="text-right text-xs">
                         <p class="text-white text-sm">Total Quantity Sold: <span class="font-bold">${category.total_quantity_sold || 'N/A'}</span></p>
                     </div>
-                `;
-                salesVolumeByCategoryList.appendChild(categoryDiv);
-            });
+                </div>
+            `).join('');
         } else {
             salesVolumeByCategoryList.innerHTML = '<p class="text-white">No sales volume data found yet.</p>';
         }
+
     } catch (err) {
-        salesVolumeByCategoryList.innerHTML = '<p class="text-red-400">An unexpected error occurred.</p>';
+        console.error("An unexpected error occurred loading list trends data:", err);
+        const errorMessage = `<p class="text-red-400">An error occurred: ${err.message}</p>`;
+        highestSalesList.innerHTML = errorMessage;
+        mostSoldQuantityList.innerHTML = errorMessage;
+        topProfitableItemsList.innerHTML = errorMessage;
+        salesVolumeByCategoryList.innerHTML = errorMessage;
     }
 }
 
-async function loadDailyTotalSalesChart() {
+async function loadDailyTotalSalesChart(region = null) {
     try {
-        const { data, error } = await supabase.rpc('get_daily_total_sales');
+        const params = prepareRpcParams({}, region);
+        const { data, error } = await supabase.rpc('get_daily_total_sales', params);
 
         if (error) {
+            console.error("Error loading daily total sales chart:", error);
             return;
         }
 
@@ -279,14 +247,17 @@ async function loadDailyTotalSalesChart() {
         );
 
     } catch (err) {
+        console.error("An unexpected error occurred loading daily total sales chart:", err);
     }
 }
 
-async function loadDailyAveragePriceChart() {
+async function loadDailyAveragePriceChart(region = null) {
     try {
-        const { data, error } = await supabase.rpc('get_daily_average_sale_price');
+        const params = prepareRpcParams({}, region);
+        const { data, error } = await supabase.rpc('get_daily_average_sale_price', params);
 
         if (error) {
+            console.error("Error loading daily average price chart:", error);
             return;
         }
 
@@ -306,14 +277,27 @@ async function loadDailyAveragePriceChart() {
         );
 
     } catch (err) {
+        console.error("An unexpected error occurred loading daily average price chart:", err);
     }
 }
 
+async function loadAllTrendsData(region = null) {
+    currentSelectedRegion = region;
+    //console.log(`Loading all trends data for region: ${region === null ? 'All Regions' : region}`);
+
+    await loadListTrendsData(region);
+    await loadDailyTotalSalesChart(region);
+    await loadDailyAveragePriceChart(region);
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
-    await loadHighestIndividualSales();
-    await loadMostSoldItemsByQuantity();
-    await loadTopProfitableItems();
-    await loadSalesVolumeByCategory();
-    await loadDailyTotalSalesChart();
-    await loadDailyAveragePriceChart();
+    await loadAllTrendsData();
+
+    const regionFilterSelect = document.getElementById('region-filter-select');
+    if (regionFilterSelect) {
+        regionFilterSelect.addEventListener('change', (event) => {
+            const selectedRegion = event.target.value === 'all' || event.target.value === '' ? null : event.target.value;
+            loadAllTrendsData(selectedRegion);
+        });
+    }
 });
