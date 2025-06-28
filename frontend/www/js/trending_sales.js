@@ -2,7 +2,7 @@ import { supabase } from './supabaseClient.js';
 
 const highestSalesList = document.getElementById('highest-sales-list');
 const mostSoldQuantityList = document.getElementById('most-sold-quantity-list');
-const topProfitableItemsList = document.getElementById('top-profitable-items-list');
+const topRevenueItemsList = document.getElementById('top-profitable-items-list'); // Keep this ID as is if HTML ID isn't changed
 const salesVolumeByCategoryList = document.getElementById('sales-volume-by-category-list');
 
 let dailySalesChartInstance = null;
@@ -105,13 +105,13 @@ function prepareRpcParams(baseParams = {}, region = null) {
 }
 
 async function loadListTrendsData(region = null) {
-    if (!highestSalesList || !mostSoldQuantityList || !topProfitableItemsList || !salesVolumeByCategoryList) {
+    if (!highestSalesList || !mostSoldQuantityList || !topRevenueItemsList || !salesVolumeByCategoryList) {
         return;
     }
 
     highestSalesList.innerHTML = '<p class="text-white">Loading highest sales...</p>';
     mostSoldQuantityList.innerHTML = '<p class="text-white">Loading most sold items...</p>';
-    topProfitableItemsList.innerHTML = '<p class="text-white">Loading profitable items...</p>';
+    topRevenueItemsList.innerHTML = '<p class="text-white">Loading revenue items...</p>';
     salesVolumeByCategoryList.innerHTML = '<p class="text-white">Loading sales volume...</p>';
 
     try {
@@ -123,7 +123,7 @@ async function loadListTrendsData(region = null) {
             const errorMessage = `<p class="text-red-400">Error loading data: ${error.message}</p>`;
             highestSalesList.innerHTML = errorMessage;
             mostSoldQuantityList.innerHTML = errorMessage;
-            topProfitableItemsList.innerHTML = errorMessage;
+            topRevenueItemsList.innerHTML = errorMessage;
             salesVolumeByCategoryList.innerHTML = errorMessage;
             return;
         }
@@ -172,11 +172,11 @@ async function loadListTrendsData(region = null) {
             mostSoldQuantityList.innerHTML = '<p class="text-white">No items sold yet.</p>';
         }
 
-        const topProfitableItems = data?.top_profitable_items || [];
-        const trulyProfitableItems = topProfitableItems.filter(item => parseFloat(item.total_net_profit) > 0);
+        const topRevenueItems = data?.top_profitable_items || []; // Assuming get_all_list_trends_data_by_region still returns this key
+        // Removed the filter for trulyProfitableItems as all revenue is > 0
 
-        if (trulyProfitableItems.length > 0) {
-            topProfitableItemsList.innerHTML = trulyProfitableItems.map((item, index) => `
+        if (topRevenueItems.length > 0) {
+            topRevenueItemsList.innerHTML = topRevenueItems.map((item, index) => `
                 <div class="p-2 bg-gray-700 rounded-sm shadow-sm flex flex-col md:flex-row justify-between items-center gap-1">
                     <div class="flex items-center gap-2">
                         <span class="text-base font-bold text-gold-400">${index + 1}.</span>
@@ -186,12 +186,12 @@ async function loadListTrendsData(region = null) {
                         </div>
                     </div>
                     <div class="text-right text-xs">
-                        <p class="text-white text-sm">Net Profit: <span class="font-bold">${formatCurrency(item.total_net_profit)} <i class="fas fa-coins"></i></span></p>
+                        <p class="text-white text-sm">Total Revenue: <span class="font-bold">${formatCurrency(item.total_revenue)} <i class="fas fa-coins"></i></span></p>
                     </div>
                 </div>
             `).join('');
         } else {
-            topProfitableItemsList.innerHTML = '<p class="text-white">No profitable items data found yet.</p>';
+            topRevenueItemsList.innerHTML = '<p class="text-white">No revenue items data found yet.</p>';
         }
 
         const salesVolumeByCategory = data?.sales_volume_by_category || [];
@@ -216,7 +216,7 @@ async function loadListTrendsData(region = null) {
         const errorMessage = `<p class="text-red-400">An error occurred: ${err.message}</p>`;
         highestSalesList.innerHTML = errorMessage;
         mostSoldQuantityList.innerHTML = errorMessage;
-        topProfitableItemsList.innerHTML = errorMessage;
+        topRevenueItemsList.innerHTML = errorMessage;
         salesVolumeByCategoryList.innerHTML = errorMessage;
     }
 }
