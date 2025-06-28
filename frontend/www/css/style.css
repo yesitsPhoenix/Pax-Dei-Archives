@@ -1447,3 +1447,6 @@ body.modal-open {
     opacity: 1;
 
 }
+.font-bold {
+	color: white;
+}
