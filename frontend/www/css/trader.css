@@ -415,3 +415,55 @@
     text-align: center;
     font-style: italic;
 }
+
+
+.market-stall-tabs {
+    display: flex; 
+    flex-wrap: wrap;
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 20px;
+}
+
+.tab-button {
+    background-color: #1D4ED8;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 10px 15px;
+    transition: 0.3s;
+    font-size: 16px;
+    margin-right: 5px; /* Spacing between tabs */
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+}
+
+.tab-button:hover {
+    background-color: #ddd;
+}
+
+.tab-button.active {
+    background-color: #FFD700;
+    border-bottom: 3px solid #007bff;
+    font-weight: bold;
+    color: #007bff;
+}
+
+
+.tab-content {
+    display: none; 
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-top: none;
+    border-radius: 0 0 5px 5px;
+    background-color: #fff;
+}
+
+.tab-content.active {
+    display: block; /* Show the active tab content */
+}
+
+
+
+.shadow-sm {
+    color: black !important;
+}

@@ -66,7 +66,7 @@ export const loadTransactionHistory = (transactions) => {
     if (!currentCharacterId) {
         if (salesLoader) salesLoader.style.display = 'none';
         if (salesTable) salesTable.style.display = 'table';
-        if (salesBody) salesBody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Please select a character or create one to view transaction history.</td></tr>';
+        if (salesBody) salesBody.innerHTML = '<tr><td colspan="9" class="text-center py-4">Please select a character or create one to view transaction history.</td></tr>'; // Updated colspan
         return;
     }
     if (salesLoader) salesLoader.style.display = 'block';
@@ -107,7 +107,8 @@ const applyTransactionFilters = () => {
         filteredTransactions = filteredTransactions.filter(transaction =>
             (transaction.item_name && transaction.item_name.toLowerCase().includes(searchTerm)) ||
             (transaction.type && transaction.type.toLowerCase().includes(searchTerm)) ||
-            (transaction.description && transaction.description.toLowerCase().includes(searchTerm))
+            (transaction.description && transaction.description.toLowerCase().includes(searchTerm)) ||
+            (transaction.market_stall_name && transaction.market_stall_name.toLowerCase().includes(searchTerm))
         );
     }
 
@@ -143,6 +144,9 @@ const applyTransactionFilters = () => {
         } else if (sortBy === 'category') {
             valA = (a.category_name || '').toLowerCase();
             valB = (b.category_name || '').toLowerCase();
+        } else if (sortBy === 'market_stall') {
+            valA = (a.market_stall_name || '').toLowerCase();
+            valB = (b.market_stall_name || '').toLowerCase();
         } else if (sortBy === 'total_amount') {
             valA = a.total_amount || 0;
             valB = b.total_amount || 0;
@@ -173,7 +177,7 @@ const renderTransactionTable = (transactions) => {
     if (!salesBody) return;
     salesBody.innerHTML = '';
     if (!transactions || transactions.length === 0) {
-        if (salesBody) salesBody.innerHTML = '<tr><td colspan="8" class="text-center py-4">No transactions recorded yet.</td></tr>';
+        if (salesBody) salesBody.innerHTML = '<tr><td colspan="9" class="text-center py-4">No transactions recorded yet.</td></tr>'; // Updated colspan
         return;
     }
     transactions.forEach(transaction => {
@@ -189,7 +193,7 @@ const renderTransactionTable = (transactions) => {
             <td class="py-3 px-6 text-left">${utcDateOnlyDisplay}</td>
             <td class="py-3 px-6 text-left whitespace-nowrap">${itemNameDisplay}</td>
             <td class="py-3 px-6 text-left">${transaction.category_name || 'N/A'}</td>
-            <td class="py-3 px-6 text-right">${quantityDisplay}</td>
+            <td class="py-3 px-6 text-left whitespace-nowrap">${transaction.market_stall_name || 'N/A'}</td> <td class="py-3 px-6 text-right">${quantityDisplay}</td>
             <td class="py-3 px-6 text-right">${pricePerUnitDisplay}</td>
             <td class="py-3 px-6 text-right">${totalAmountDisplay}</td>
             <td class="py-3 px-6 text-right">${(parseFloat(transaction.fee) || 0).toFixed(2)}</td>
@@ -278,17 +282,18 @@ export const handleDownloadCsv = async () => {
         downloadSalesCsvButton.textContent = 'Preparing Market History CSV...';
     }
     try {
-        const headers = ['Type', 'Date (UTC)', 'Item Name', 'Category', 'Quantity', 'Price Per Unit', 'Total Amount', 'Fee'];
+        const headers = ['Type', 'Date (UTC)', 'Item Name', 'Category', 'Market Stall', 'Quantity', 'Price Per Unit', 'Total Amount', 'Fee']; 
         const csvRows = [headers.join(',')];
         fullTransactionHistory.forEach(transaction => {
             const date = transaction.date ? new Date(transaction.date).toISOString() : 'N/A';
             const itemName = `"${transaction.type === 'PVE Gold' ? transaction.item_name : (transaction.item_name || 'N/A').replace(/"/g, '""')}"`;
             const category = `"${transaction.category_name || 'N/A'}"`;
+            const marketStall = `"${(transaction.market_stall_name || '').replace(/"/g, '""')}"`;
             const quantity = transaction.type === 'PVE Gold' ? '' : (transaction.quantity?.toLocaleString() || '');
             const pricePerUnit = (parseFloat(transaction.price_per_unit || transaction.total_amount) || 0).toFixed(2);
             const totalAmount = (parseFloat(transaction.total_amount) || 0).toFixed(2);
             const fee = (parseFloat(transaction.fee) || 0).toFixed(2);
-            csvRows.push([transaction.type, date, itemName, category, quantity, pricePerUnit, totalAmount, fee].join(','));
+            csvRows.push([transaction.type, date, itemName, category, marketStall, quantity, pricePerUnit, totalAmount, fee].join(','));
         });
         const csvString = csvRows.join('\n');
         const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
