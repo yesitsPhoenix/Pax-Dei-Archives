@@ -104,10 +104,10 @@ export const handleAddListing = async (event) => {
         const itemName = document.getElementById('item-name').value.trim();
         const categoryId = document.getElementById('item-category').value;
         const quantityListed = parseInt(document.getElementById('quantity-listed').value);
-        const totalListedPrice = parseInt(document.getElementById('total-price').value);
+        const totalPrice = parseInt(document.getElementById('total-price').value);
         const marketStallId = document.getElementById('marketStallSelect').value;
 
-        if (!itemName || !categoryId || isNaN(quantityListed) || quantityListed <= 0 || isNaN(totalListedPrice) || totalListedPrice <= 0 || !marketStallId) {
+        if (!itemName || !categoryId || isNaN(quantityListed) || quantityListed <= 0 || isNaN(totalPrice) || totalPrice <= 0 || !marketStallId) {
             await showCustomModal('Error', 'Please fill in all listing fields correctly.', [{
                 text: 'OK',
                 value: true
@@ -118,7 +118,7 @@ export const handleAddListing = async (event) => {
         const itemId = await getOrCreateItemId(itemName, categoryId);
         if (!itemId) return;
 
-        const calculatedMarketFee = Math.ceil(totalListedPrice * 0.05);
+        const fee = Math.floor(totalPrice * 0.03); // 3% fee
 
         const {
             error
@@ -129,10 +129,10 @@ export const handleAddListing = async (event) => {
                 market_stall_id: marketStallId,
                 character_id: currentCharacterId,
                 quantity_listed: quantityListed,
-                total_listed_price: totalListedPrice,
-                market_fee: calculatedMarketFee,
-                is_fully_sold: false,
-                is_cancelled: false
+                quantity_remaining: quantityListed,
+                total_price: totalPrice,
+                fee: fee,
+                status: 'active'
             });
 
         if (error) {
@@ -165,7 +165,7 @@ export const handleMarkAsSold = async (listingId) => {
             .from('market_listings')
             .update({
                 is_fully_sold: true,
-                is_cancelled: false
+                status: 'sold'
             })
             .eq('listing_id', listingId)
             .eq('character_id', currentCharacterId);
@@ -196,7 +196,7 @@ export const handleCancelListing = async (listingId) => {
             .from('market_listings')
             .update({
                 is_cancelled: true,
-                is_fully_sold: false
+                status: 'cancelled'
             })
             .eq('listing_id', listingId)
             .eq('character_id', currentCharacterId);
@@ -246,9 +246,9 @@ export const showEditListingModal = async (listingId) => {
 
         editItemNameInput.value = listing.items.item_name;
         editQuantityListedInput.value = listing.quantity_listed;
-        editTotalPriceInput.value = listing.total_listed_price;
-        setOriginalListingPrice(listing.total_listed_price);
-        setOriginalListingFee(listing.market_fee);
+        editTotalPriceInput.value = listing.total_price;
+        setOriginalListingPrice(listing.total_price);
+        setOriginalListingFee(listing.fee);
         updateEditFeeInfo();
 
         editModal.classList.remove('hidden');
@@ -276,9 +276,9 @@ export const handleEditListingSave = async (event) => {
 
     try {
         const newQuantityListed = parseInt(editQuantityListedInput.value);
-        const newTotalListedPrice = parseInt(editTotalPriceInput.value);
+        const newTotalPrice = parseInt(editTotalPriceInput.value);
 
-        if (isNaN(newQuantityListed) || newQuantityListed <= 0 || isNaN(newTotalListedPrice) || newTotalListedPrice <= 0) {
+        if (isNaN(newQuantityListed) || newQuantityListed <= 0 || isNaN(newTotalPrice) || newTotalPrice <= 0) {
             await showCustomModal('Error', 'Please enter valid quantity and total price.', [{
                 text: 'OK',
                 value: true
@@ -286,8 +286,7 @@ export const handleEditListingSave = async (event) => {
             return;
         }
 
-        const newFeeCalculated = Math.ceil(newTotalListedPrice * 0.05);
-        const feeToUpdate = Math.max(newFeeCalculated, originalListingFee);
+        const newFee = Math.floor(newTotalPrice * 0.03);
 
         const {
             error
@@ -295,8 +294,9 @@ export const handleEditListingSave = async (event) => {
             .from('market_listings')
             .update({
                 quantity_listed: newQuantityListed,
-                total_listed_price: newTotalListedPrice,
-                market_fee: feeToUpdate
+                quantity_remaining: newQuantityListed,
+                total_price: newTotalPrice,
+                fee: newFee
             })
             .eq('listing_id', currentEditingListingId)
             .eq('character_id', currentCharacterId);
@@ -329,14 +329,12 @@ export const updateEditFeeInfo = () => {
         editFeeInfo
     } = getEditListingModalElements();
     const currentPrice = parseInt(editTotalPriceInput.value);
-    const newFeeCalculated = isNaN(currentPrice) ? 0 : Math.ceil(currentPrice * 0.05);
+    const newFee = isNaN(currentPrice) ? 0 : Math.floor(currentPrice * 0.03);
 
-    const feeToDisplay = Math.max(newFeeCalculated, originalListingFee);
-
-    let feeDifference = feeToDisplay - originalListingFee;
+    let feeDifference = newFee - originalListingFee;
     let priceDifference = currentPrice - originalListingPrice;
 
-    let feeText = `Current Fee: ${feeToDisplay.toLocaleString()} gold (5%)`;
+    let feeText = `Current Fee: ${newFee.toLocaleString()} gold (3%)`;
 
     if (feeDifference > 0) {
         feeText += ` (+${feeDifference.toLocaleString()} gold)`;
@@ -389,7 +387,7 @@ export const handleAddMarketStall = async (event) => {
             });
 
         if (error) {
-            if (error.code === '23505') {
+            if (error.code === '23505') { // Unique violation
                 createStallError.textContent = 'A market stall with this name already exists for your character.';
             } else {
                 createStallError.textContent = 'Error adding market stall: ' + error.message;
@@ -472,6 +470,7 @@ export const handleDeleteMarketStall = async (stallId) => {
             return;
         }
 
+        // Check for active listings first
         const {
             data: listings,
             error: listingsError
@@ -525,10 +524,7 @@ export const handleDeleteMarketStall = async (stallId) => {
 
 export const getOrCreateDefaultMarketStall = async (characterId) => {
     try {
-        const {
-            data: characterData,
-            error: charError
-        } = await supabase
+        const { data: characterData, error: charError } = await supabase
             .from('characters')
             .select('character_name')
             .eq('character_id', characterId)
@@ -541,10 +537,8 @@ export const getOrCreateDefaultMarketStall = async (characterId) => {
 
         const dynamicDefaultStallName = `${characterData.character_name} - Default Stall`;
 
-        const {
-            data: existingDynamicStall,
-            error: selectDynamicError
-        } = await supabase
+        // First, try to find a stall with the dynamic default name.
+        const { data: existingDynamicStall, error: selectDynamicError } = await supabase
             .from('market_stalls')
             .select('id')
             .eq('character_id', characterId)
@@ -560,10 +554,8 @@ export const getOrCreateDefaultMarketStall = async (characterId) => {
             return existingDynamicStall[0].id;
         }
 
-        const {
-            data: existingOldDefaultStall,
-            error: selectOldError
-        } = await supabase
+        // If no dynamically named default stall exists, check for the old "Default Stall" name.
+        const { data: existingOldDefaultStall, error: selectOldError } = await supabase
             .from('market_stalls')
             .select('id')
             .eq('character_id', characterId)
@@ -576,13 +568,12 @@ export const getOrCreateDefaultMarketStall = async (characterId) => {
         }
 
         if (existingOldDefaultStall && existingOldDefaultStall.length > 0) {
+            // If an old "Default Stall" exists, use it.
             return existingOldDefaultStall[0].id;
         }
-
-        const {
-            data: newStall,
-            error: insertError
-        } = await supabase
+        
+        // If neither the dynamic nor the old "Default Stall" exists, create the dynamic one.
+        const { data: newStall, error: insertError } = await supabase
             .from('market_stalls')
             .insert({
                 stall_name: dynamicDefaultStallName,

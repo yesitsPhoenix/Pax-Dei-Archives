@@ -7,7 +7,7 @@ import {
 } from './dom.js';
 import {
     loadActiveListings
-} from './init.js';
+} from './init.js'; // Assuming loadActiveListings is in init.js
 
 export const renderListingsTable = (listings) => {
     listingsBody.innerHTML = '';
@@ -26,10 +26,6 @@ export const renderListingsTable = (listings) => {
         const linkClasses = isLinkEnabled ? 'text-blue-600 hover:underline' : 'text-gray-700 cursor-default';
         const linkTarget = isLinkEnabled ? 'target="_blank"' : '';
 
-        const quantityListed = parseFloat(listing.quantity_listed);
-        const totalListedPrice = parseFloat(listing.total_listed_price);
-        const pricePerUnit = (quantityListed > 0) ? (totalListedPrice / quantityListed) : 0;
-
         const row = document.createElement('tr');
         row.innerHTML = `
             <td class="py-3 px-6 text-left">
@@ -38,9 +34,9 @@ export const renderListingsTable = (listings) => {
                 </a>
             </td>
             <td class="py-3 px-6 text-left">${listing.category_name || 'N/A'}</td>
-            <td class="py-3 px-6 text-left">${Math.round(quantityListed).toLocaleString()}</td>
-            <td class="py-3 px-6 text-left">${pricePerUnit.toFixed(2)}</td>
-            <td class="py-3 px-6 text-left">${Math.round(totalListedPrice).toLocaleString()}</td>
+            <td class="py-3 px-6 text-left">${Math.round(listing.quantity_listed || 0).toLocaleString()}</td>
+            <td class="py-3 px-6 text-left">${(parseFloat(listing.listed_price_per_unit) || 0).toFixed(2)}</td>
+            <td class="py-3 px-6 text-left">${Math.round(listing.total_listed_price || 0).toLocaleString()}</td>
             <td class="py-3 px-6 text-left">${Math.round(listing.market_fee || 0).toLocaleString()}</td>
             <td class="py-3 px-6 text-left">${new Date(listing.listing_date).toISOString().substring(0, 10)}</td>
             <td class="py-3 px-6 text-left">
