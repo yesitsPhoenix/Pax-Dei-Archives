@@ -1,13 +1,12 @@
 import { supabase } from './supabaseClient.js';
 import { initializeListings, loadActiveListings } from './modules/listings.js';
-import { initializeCharacters, insertCharacterModalHtml, currentCharacterId, getCurrentCharacter } from './modules/characters.js';
+import { initializeCharacters, insertCharacterModalHtml, currentCharacterId, getCurrentCharacter, setCurrentUserId } from './modules/characters.js';
 import { initializeSales, loadTransactionHistory, handleDownloadCsv } from './modules/sales.js';
 import { renderDashboard } from './modules/dashboard.js';
 import { renderSalesChart, setupSalesChartListeners } from './modules/salesChart.js';
 
 let currentUser = null;
 let allCharacterActivityData = [];
-
 
 let customModalContainer = null;
 let customModalContentWrapper = null;
@@ -118,13 +117,12 @@ const checkUser = async () => {
     const traderDashboardAndForms = document.getElementById('traderDashboardAndForms');
     if (user) {
         currentUser = user;
+        setCurrentUserId(currentUser.id);
         if (traderLoginContainer) {
             traderLoginContainer.style.display = 'none';
         }
         insertCharacterModalHtml();
-        await initializeCharacters(currentUser.id, async () => {
-            await loadTraderPageData();
-        });
+        await initializeCharacters();
         initializeListings(currentUser.id);
         initializeSales();
         if (traderDashboardAndForms) {
@@ -151,7 +149,6 @@ export const loadTraderPageData = async () => {
     }
 
     try {
-
         const [
             { data: dashboardStats, error: dashboardError },
             currentCharacterData,
