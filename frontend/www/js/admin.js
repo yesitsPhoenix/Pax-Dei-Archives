@@ -1,6 +1,5 @@
 import { supabase } from './supabaseClient.js';
 import { authorRoleColors } from './utils.js';
-import { loadAllTrendsData } from './trending_sales.js';
 
 let initialAuthCheckComplete = false;
 let dashboardStatsCache = null;
@@ -155,7 +154,7 @@ if (devCommentForm) {
     });
 }
 
-export async function isAuthorizedAdmin(userId) {
+async function isAuthorizedAdmin(userId) {
     if (!userId) {
         return false;
     }
@@ -578,78 +577,6 @@ function hideAllAdminElements() {
 }
 
 
-export async function checkAuth(pageType) {
-    const { data: { user } = {} } = await supabase.auth.getUser();
-
-    const loginFormContainer = document.getElementById('loginFormContainer') || document.getElementById('traderLoginContainer');
-    const loginHeading = document.getElementById('loginHeading');
-    const adminDashboardAndForm = document.getElementById('adminDashboardAndForm');
-    const traderContent = document.querySelectorAll('.trader-container .container > *:not(#traderLoginContainer):not(h1)');
-    const loginError = document.getElementById('loginError') || document.getElementById('traderLoginError');
-
-    if (user) {
-        const authorized = await isAuthorizedAdmin(user.id);
-
-        if (pageType === 'admin') {
-            if (authorized) {
-                if (loginFormContainer) loginFormContainer.style.display = 'none';
-                if (loginHeading) loginHeading.style.display = 'none';
-                if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'block';
-                fetchDashboardStats();
-                if (!initialAuthCheckComplete) {
-                    populateTagSelect(tagSelect);
-                    populateTagSelect(loreCategorySelect);
-                    fetchAndPopulateLoreItems('loreItemsList');
-                    initialAuthCheckComplete = true;
-                }
-            } else {
-                if (loginFormContainer) loginFormContainer.style.display = 'block';
-                if (loginHeading) loginHeading.style.display = 'none';
-                if (loginError) {
-                    loginError.textContent = 'You are logged in but not authorized to view this page. Redirecting to home...';
-                    loginError.style.display = 'block';
-                }
-                if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none';
-
-                setTimeout(() => {
-                    window.location.href = 'index.html';
-                }, 8000);
-            }
-        } else if (pageType === 'trends') {
-            if (loginFormContainer) loginFormContainer.style.display = 'none';
-            if (traderContent) {
-                traderContent.forEach(element => element.style.display = ''); // Changed from 'block' to ''
-            }
-            if (loginError) loginError.style.display = 'none';
-            loadAllTrendsData();
-        }
-    } else {
-        if (pageType === 'admin') {
-            if (loginFormContainer) loginFormContainer.style.display = 'block';
-            if (loginHeading) loginHeading.style.display = 'block';
-            if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none';
-            if (loginError) {
-                 loginError.textContent = 'Please log in to view this page. Redirecting to home...';
-                 loginError.style.display = 'block';
-            }
-
-            setTimeout(() => {
-                window.location.href = 'index.html';
-            }, 8000);
-        } else if (pageType === 'trends') {
-            if (loginFormContainer) loginFormContainer.style.display = 'block';
-            if (traderContent) {
-                traderContent.forEach(element => element.style.display = 'none');
-            }
-            if (loginError) {
-                loginError.textContent = 'Please log in to view Market Trends.';
-                loginError.style.display = 'block';
-            }
-        }
-    }
-}
-
-
 $(document).ready(async function() {
     const currentPage = window.location.pathname.split('/').pop();
     if (currentPage !== 'admin.html') {
@@ -698,12 +625,57 @@ $(document).ready(async function() {
     const loreItemsList = document.getElementById('loreItemsList');
 
 
-    checkAuth('admin');
+    async function checkAuth() {
+        const { data: { user } = {} } = await supabase.auth.getUser();
+
+        if (user) {
+            const authorized = await isAuthorizedAdmin(user.id);
+
+            if (authorized) {
+                if (loginFormContainer) loginFormContainer.style.display = 'none';
+                if (loginHeading) loginHeading.style.display = 'none';
+                if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'block';
+                fetchDashboardStats();
+                if (!initialAuthCheckComplete) {
+                    populateTagSelect(tagSelect);
+                    populateTagSelect(loreCategorySelect);
+                    fetchAndPopulateLoreItems('loreItemsList');
+                    initialAuthCheckComplete = true;
+                }
+            } else {
+                if (loginFormContainer) loginFormContainer.style.display = 'block';
+                if (loginHeading) loginHeading.style.display = 'none';
+                if (loginError) {
+                    loginError.textContent = 'You are logged in but not authorized to view this page. Redirecting to home...';
+                    loginError.style.display = 'block';
+                }
+                if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none';
+                
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 8000);
+            }
+        } else {
+            if (loginFormContainer) loginFormContainer.style.display = 'block';
+            if (loginHeading) loginHeading.style.display = 'block';
+            if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none';
+            if (loginError) {
+                 loginError.textContent = 'Please log in to view this page. Redirecting to home...';
+                 loginError.style.display = 'block';
+            }
+           
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 8000);
+        }
+    }
+
+    checkAuth();
 
     supabase.auth.onAuthStateChange((event, session) => {
         if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
             initialAuthCheckComplete = false;
-            checkAuth('admin');
+            checkAuth();
         }
     });
 
@@ -768,7 +740,7 @@ $(document).ready(async function() {
             await handleAddNewTag(newTag, newTagInput, formMessage, tagSelect, loreCategorySelect, 'Tag');
         });
     }
-
+    
     if (addNewLoreCategoryButton && newLoreCategoryInput && loreCategorySelect && tagSelect) {
         addNewLoreCategoryButton.addEventListener('click', async () => {
             const newCategory = newLoreCategoryInput.value.trim();

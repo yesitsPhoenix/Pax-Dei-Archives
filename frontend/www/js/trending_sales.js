@@ -1,9 +1,8 @@
 import { supabase } from './supabaseClient.js';
-import { checkAuth } from './admin.js';
 
 const highestSalesList = document.getElementById('highest-sales-list');
 const mostSoldQuantityList = document.getElementById('most-sold-quantity-list');
-const topRevenueItemsList = document.getElementById('top-profitable-items-list');
+const topRevenueItemsList = document.getElementById('top-profitable-items-list'); // Keep this ID as is if HTML ID isn't changed
 const salesVolumeByCategoryList = document.getElementById('sales-volume-by-category-list');
 
 let dailySalesChartInstance = null;
@@ -173,7 +172,8 @@ async function loadListTrendsData(region = null) {
             mostSoldQuantityList.innerHTML = '<p class="text-white">No items sold yet.</p>';
         }
 
-        const topRevenueItems = data?.top_profitable_items || [];
+        const topRevenueItems = data?.top_profitable_items || []; // Assuming get_all_list_trends_data_by_region still returns this key
+        // Removed the filter for trulyProfitableItems as all revenue is > 0
 
         if (topRevenueItems.length > 0) {
             topRevenueItemsList.innerHTML = topRevenueItems.map((item, index) => `
@@ -281,8 +281,9 @@ async function loadDailyAveragePriceChart(region = null) {
     }
 }
 
-export async function loadAllTrendsData(region = null) {
+async function loadAllTrendsData(region = null) {
     currentSelectedRegion = region;
+    //console.log(`Loading all trends data for region: ${region === null ? 'All Regions' : region}`);
 
     await loadListTrendsData(region);
     await loadDailyTotalSalesChart(region);
@@ -290,35 +291,7 @@ export async function loadAllTrendsData(region = null) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    const traderDiscordLoginButton = document.getElementById('traderDiscordLoginButton');
-    const traderLoginError = document.getElementById('traderLoginError');
-
-    await checkAuth('trends');
-
-    supabase.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-            await checkAuth('trends');
-        }
-    });
-
-    if (traderDiscordLoginButton) {
-        traderDiscordLoginButton.addEventListener('click', async () => {
-            const { data, error } = await supabase.auth.signInWithOAuth({
-                provider: 'discord',
-                options: {
-                    redirectTo: window.location.href
-                }
-            });
-
-            if (error) {
-                console.error('Discord login error:', error);
-                if (traderLoginError) {
-                    traderLoginError.textContent = 'Login failed: ' + error.message;
-                    traderLoginError.style.display = 'block';
-                }
-            }
-        });
-    }
+    await loadAllTrendsData();
 
     const regionFilterSelect = document.getElementById('region-filter-select');
     if (regionFilterSelect) {
