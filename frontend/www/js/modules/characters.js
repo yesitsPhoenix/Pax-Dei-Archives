@@ -2,6 +2,7 @@ import { supabase } from '../supabaseClient.js';
 import { showCustomModal, loadTraderPageData } from '../trader.js';
 import { loadTransactionHistory } from './sales.js';
 import { renderSalesChart } from './salesChart.js';
+import { createDefaultMarketStall } from './actions.js';
 
 const characterSelect = document.getElementById('character-select');
 let createCharacterModal = null;
@@ -9,7 +10,10 @@ let createCharacterForm = null;
 let closeCreateCharacterModalBtn = null;
 let newCharacterNameInput = null;
 let newCharacterGoldInput = null;
-let newCharacterRegionSelect = null;
+let newCharacterRegionNameSelect = null;
+let newCharacterShardSelect = null;
+let newCharacterProvinceSelect = null;
+let newCharacterHomeValleySelect = null;
 let deleteCharacterBtn = null;
 const setGoldBtn = document.getElementById('setGoldBtn');
 const pveBtn = document.getElementById('pveBtn');
@@ -32,15 +36,32 @@ export const insertCharacterModalHtml = () => {
                         <label for="newCharacterGoldInput" class="block text-gray-700 text-sm font-bold mb-2">Starting Gold:</label>
                         <input type="number" id="newCharacterGoldInput" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Enter starting gold (e.g., 100)" value="0" required min="0">
                     </div>
+
                     <div class="mb-4">
-                        <label for="newCharacterRegionSelect" class="block text-gray-700 text-sm font-bold mb-2">Region:</label>
-                        <select id="newCharacterRegionSelect" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
-                            <option value="" disabled selected>Select a region</option>
-                            <option value="USA">USA</option>
-                            <option value="EU">EU</option>
-                            <option value="SEA">SEA</option>
+                        <label for="newCharacterRegionNameSelect" class="block text-gray-700 text-sm font-bold mb-2">Region Name:</label>
+                        <select id="newCharacterRegionNameSelect" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                            <option value="" disabled selected>Select Region Name</option>
                         </select>
                     </div>
+                    <div class="mb-4">
+                        <label for="newCharacterShardSelect" class="block text-gray-700 text-sm font-bold mb-2">Shard:</label>
+                        <select id="newCharacterShardSelect" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required disabled>
+                            <option value="" disabled selected>Select Shard</option>
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label for="newCharacterProvinceSelect" class="block text-gray-700 text-sm font-bold mb-2">Province:</label>
+                        <select id="newCharacterProvinceSelect" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required disabled>
+                            <option value="" disabled selected>Select Province</option>
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label for="newCharacterHomeValleySelect" class="block text-gray-700 text-sm font-bold mb-2">Home Valley:</label>
+                        <select id="newCharacterHomeValleySelect" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required disabled>
+                            <option value="" disabled selected>Select Home Valley</option>
+                        </select>
+                    </div>
+
                     <div class="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
                         <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">Create Character</button>
                         <button type="button" id="closeCreateCharacterModalBtn" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-full">Cancel</button>
@@ -56,7 +77,10 @@ export const insertCharacterModalHtml = () => {
     closeCreateCharacterModalBtn = document.getElementById('closeCreateCharacterModalBtn');
     newCharacterNameInput = document.getElementById('newCharacterNameInput');
     newCharacterGoldInput = document.getElementById('newCharacterGoldInput');
-    newCharacterRegionSelect = document.getElementById('newCharacterRegionSelect');
+    newCharacterRegionNameSelect = document.getElementById('newCharacterRegionNameSelect');
+    newCharacterShardSelect = document.getElementById('newCharacterShardSelect');
+    newCharacterProvinceSelect = document.getElementById('newCharacterProvinceSelect');
+    newCharacterHomeValleySelect = document.getElementById('newCharacterHomeValleySelect');
 
     if (closeCreateCharacterModalBtn) {
         closeCreateCharacterModalBtn.addEventListener('click', () => {
@@ -69,6 +93,8 @@ export const insertCharacterModalHtml = () => {
     if (createCharacterForm) {
         createCharacterForm.addEventListener('submit', handleCreateCharacter);
     }
+
+    populateRegionDropdowns();
 };
 
 export const initializeCharacters = async (userId, onCharacterSelectedCallback) => {
@@ -133,11 +159,176 @@ const handleCharacterSelection = async (event) => {
     await loadTraderPageData();
 };
 
+const populateRegionDropdowns = async () => {
+    const { data, error } = await supabase
+        .from('regions')
+        .select('region_name')
+        .order('region_name', { ascending: true });
+
+    if (error) {
+        console.error('Error fetching distinct region names:', error);
+        await showCustomModal('Error', 'Failed to load region names. Please try again.', [{ text: 'OK', value: true }]);
+        return;
+    }
+
+    const distinctRegionNames = [...new Set(data.map(item => item.region_name))];
+
+    if (newCharacterRegionNameSelect) {
+        newCharacterRegionNameSelect.innerHTML = '<option value="" disabled selected>Select Region Name</option>';
+        distinctRegionNames.forEach(regionName => {
+            const option = document.createElement('option');
+            option.value = regionName;
+            option.textContent = regionName;
+            newCharacterRegionNameSelect.appendChild(option);
+        });
+        newCharacterRegionNameSelect.disabled = false;
+    }
+
+    if (newCharacterRegionNameSelect) {
+        newCharacterRegionNameSelect.addEventListener('change', async () => {
+            newCharacterShardSelect.innerHTML = '<option value="" disabled selected>Select Shard</option>';
+            newCharacterShardSelect.disabled = true;
+            newCharacterProvinceSelect.innerHTML = '<option value="" disabled selected>Select Province</option>';
+            newCharacterProvinceSelect.disabled = true;
+            newCharacterHomeValleySelect.innerHTML = '<option value="" disabled selected>Select Home Valley</option>';
+            newCharacterHomeValleySelect.disabled = true;
+
+            const selectedRegionName = newCharacterRegionNameSelect.value;
+            if (selectedRegionName) {
+                await populateShardDropdowns(selectedRegionName);
+            }
+        });
+    }
+};
+
+const populateShardDropdowns = async (regionName) => {
+    const { data, error } = await supabase
+        .from('regions')
+        .select('shard')
+        .eq('region_name', regionName)
+        .order('shard', { ascending: true });
+
+    if (error) {
+        console.error('Error fetching shards:', error);
+        await showCustomModal('Error', 'Failed to load shards. Please try again.', [{ text: 'OK', value: true }]);
+        return;
+    }
+
+    const distinctShards = [...new Set(data.map(item => item.shard))];
+
+    if (newCharacterShardSelect) {
+        newCharacterShardSelect.innerHTML = '<option value="" disabled selected>Select Shard</option>';
+        distinctShards.forEach(shard => {
+            const option = document.createElement('option');
+            option.value = shard;
+            option.textContent = shard;
+            newCharacterShardSelect.appendChild(option);
+        });
+        newCharacterShardSelect.disabled = false;
+    }
+
+    if (newCharacterShardSelect) {
+        newCharacterShardSelect.removeEventListener('change', handleShardChange);
+        newCharacterShardSelect.addEventListener('change', handleShardChange);
+    }
+};
+
+const handleShardChange = async () => {
+    newCharacterProvinceSelect.innerHTML = '<option value="" disabled selected>Select Province</option>';
+    newCharacterProvinceSelect.disabled = true;
+    newCharacterHomeValleySelect.innerHTML = '<option value="" disabled selected>Select Home Valley</option>';
+    newCharacterHomeValleySelect.disabled = true;
+
+    const selectedRegionName = newCharacterRegionNameSelect.value;
+    const selectedShard = newCharacterShardSelect.value;
+    if (selectedRegionName && selectedShard) {
+        await populateProvinceDropdowns(selectedRegionName, selectedShard);
+    }
+};
+
+const populateProvinceDropdowns = async (regionName, shard) => {
+    const { data, error } = await supabase
+        .from('regions')
+        .select('province')
+        .eq('region_name', regionName)
+        .eq('shard', shard)
+        .order('province', { ascending: true });
+
+    if (error) {
+        console.error('Error fetching provinces:', error);
+        await showCustomModal('Error', 'Failed to load provinces. Please try again.', [{ text: 'OK', value: true }]);
+        return;
+    }
+
+    const distinctProvinces = [...new Set(data.map(item => item.province))];
+
+    if (newCharacterProvinceSelect) {
+        newCharacterProvinceSelect.innerHTML = '<option value="" disabled selected>Select Province</option>';
+        distinctProvinces.forEach(province => {
+            const option = document.createElement('option');
+            option.value = province;
+            option.textContent = province;
+            newCharacterProvinceSelect.appendChild(option);
+        });
+        newCharacterProvinceSelect.disabled = false;
+    }
+
+    if (newCharacterProvinceSelect) {
+        newCharacterProvinceSelect.removeEventListener('change', handleProvinceChange);
+        newCharacterProvinceSelect.addEventListener('change', handleProvinceChange);
+    }
+};
+
+const handleProvinceChange = async () => {
+    newCharacterHomeValleySelect.innerHTML = '<option value="" disabled selected>Select Home Valley</option>';
+    newCharacterHomeValleySelect.disabled = true;
+
+    const selectedRegionName = newCharacterRegionNameSelect.value;
+    const selectedShard = newCharacterShardSelect.value;
+    const selectedProvince = newCharacterProvinceSelect.value;
+    if (selectedRegionName && selectedShard && selectedProvince) {
+        await populateHomeValleyDropdowns(selectedRegionName, selectedShard, selectedProvince);
+    }
+};
+
+const populateHomeValleyDropdowns = async (regionName, shard, province) => {
+    const { data, error } = await supabase
+        .from('regions')
+        .select('home_valley')
+        .eq('region_name', regionName)
+        .eq('shard', shard)
+        .eq('province', province)
+        .order('home_valley', { ascending: true });
+
+    if (error) {
+        console.error('Error fetching home valleys:', error);
+        await showCustomModal('Error', 'Failed to load home valleys. Please try again.', [{ text: 'OK', value: true }]);
+        return;
+    }
+
+    const distinctHomeValleys = [...new Set(data.map(item => item.home_valley))];
+
+    if (newCharacterHomeValleySelect) {
+        newCharacterHomeValleySelect.innerHTML = '<option value="" disabled selected>Select Home Valley</option>';
+        distinctHomeValleys.forEach(homeValley => {
+            const option = document.createElement('option');
+            option.value = homeValley;
+            option.textContent = homeValley;
+            newCharacterHomeValleySelect.appendChild(option);
+        });
+        newCharacterHomeValleySelect.disabled = false;
+    }
+};
+
 const handleCreateCharacter = async (e) => {
     e.preventDefault();
     const characterName = newCharacterNameInput.value.trim();
     const initialGold = parseInt(newCharacterGoldInput.value, 10);
-    const region = newCharacterRegionSelect.value;
+    const selectedRegionName = newCharacterRegionNameSelect.value;
+    const selectedShard = newCharacterShardSelect.value;
+    const selectedProvince = newCharacterProvinceSelect.value;
+    const selectedHomeValley = newCharacterHomeValleySelect.value;
+
 
     if (!characterName) {
         await showCustomModal('Validation Error', 'Character name cannot be empty.', [{ text: 'OK', value: true }]);
@@ -149,14 +340,31 @@ const handleCreateCharacter = async (e) => {
         return;
     }
 
-    if (!region) {
-        await showCustomModal('Validation Error', 'Please select a region.', [{ text: 'OK', value: true }]);
+    if (!selectedRegionName || !selectedShard || !selectedProvince || !selectedHomeValley) {
+        await showCustomModal('Validation Error', 'Please select a Region Name, Shard, Province, and Home Valley.', [{ text: 'OK', value: true }]);
         return;
     }
 
+    const { data: regionEntry, error: regionEntryError } = await supabase
+        .from('regions')
+        .select('id')
+        .eq('region_name', selectedRegionName)
+        .eq('shard', selectedShard)
+        .eq('province', selectedProvince)
+        .eq('home_valley', selectedHomeValley)
+        .single();
+
+    if (regionEntryError || !regionEntry) {
+        console.error('Error fetching region entry ID:', regionEntryError);
+        await showCustomModal('Error', 'Failed to find the selected region combination. Please ensure all fields are correctly selected.', [{ text: 'OK', value: true }]);
+        return;
+    }
+    const regionEntryId = regionEntry.id;
+
+
     const { data, error } = await supabase
         .from('characters')
-        .insert([{ user_id: currentUserId, character_name: characterName, gold: initialGold, region: region }])
+        .insert([{ user_id: currentUserId, character_name: characterName, gold: initialGold, region: selectedRegionName, region_entry_id: regionEntryId }])
         .select('character_id');
 
     if (error) {
@@ -170,13 +378,24 @@ const handleCreateCharacter = async (e) => {
     }
 
     currentCharacterId = data[0].character_id;
-    await showCustomModal('Success', `Character "${characterName}" created successfully with ${initialGold.toLocaleString()} gold in ${region}!`, [{ text: 'OK', value: true }]);
+
+    await createDefaultMarketStall(currentCharacterId, characterName);
+
+    await showCustomModal('Success', `Character "${characterName}" created successfully with ${initialGold.toLocaleString()} gold in ${selectedRegionName} (${selectedShard}, ${selectedProvince}, ${selectedHomeValley})!`, [{ text: 'OK', value: true }]);
     if (createCharacterModal) {
         createCharacterModal.classList.add('hidden');
     }
     newCharacterNameInput.value = '';
     newCharacterGoldInput.value = '0';
-    newCharacterRegionSelect.value = '';
+    newCharacterRegionNameSelect.value = '';
+    newCharacterShardSelect.innerHTML = '<option value="" disabled selected>Select Shard</option>';
+    newCharacterProvinceSelect.innerHTML = '<option value="" disabled selected>Select Province</option>';
+    newCharacterHomeValleySelect.innerHTML = '<option value="" disabled selected>Select Home Valley</option>';
+    
+    newCharacterShardSelect.disabled = true;
+    newCharacterProvinceSelect.disabled = true;
+    newCharacterHomeValleySelect.disabled = true;
+
     await loadCharacters(loadTraderPageData);
 };
 

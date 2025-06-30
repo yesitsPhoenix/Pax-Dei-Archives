@@ -1,7 +1,9 @@
 // listings.js
 import {
     initializeListings,
-    loadActiveListings
+    loadActiveListings,
+    populateMarketStallDropdown,
+    setupMarketStallTabs
 } from './init.js';
 import {
     addListingForm,
@@ -38,5 +40,7 @@ import {
 
 export {
     initializeListings,
-    loadActiveListings
+    loadActiveListings,
+    populateMarketStallDropdown,
+    setupMarketStallTabs
 };

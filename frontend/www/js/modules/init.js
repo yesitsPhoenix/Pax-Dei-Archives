@@ -34,11 +34,10 @@ import {
     getEditListingModalElements,
     itemCategorySelect,
     purchaseItemCategorySelect,
-    // New imports for market stall management
-    showManageMarketStallsModalBtn, // Updated import
-    manageMarketStallsModal, // Updated import
+    showManageMarketStallsModalBtn,
+    manageMarketStallsModal,
     createMarketStallForm,
-    closeManageMarketStallsModalBtn // Updated import
+    closeManageMarketStallsModalBtn
 } from './dom.js';
 import {
     handleAddListing,
@@ -48,8 +47,8 @@ import {
     handleEditListingSave,
     updateEditFeeInfo,
     handleAddMarketStall,
-    showManageMarketStallsModal, // Updated import
-    handleDeleteMarketStall // New import
+    showManageMarketStallsModal,
+    handleDeleteMarketStall
 } from './actions.js';
 import {
     handleRecordPurchase
@@ -130,9 +129,8 @@ const addListingsEventListeners = () => {
         editTotalPriceInput.addEventListener('input', updateEditFeeInfo);
     }
 
-    // Event listeners for Market Stall management functionality
     if (showManageMarketStallsModalBtn) {
-        showManageMarketStallsModalBtn.addEventListener('click', showManageMarketStallsModal); // Updated function call
+        showManageMarketStallsModalBtn.addEventListener('click', showManageMarketStallsModal);
     }
     if (createMarketStallForm) {
         createMarketStallForm.addEventListener('submit', handleAddMarketStall);
@@ -144,7 +142,6 @@ const addListingsEventListeners = () => {
             }
         });
     }
-    // Event delegation for dynamically added delete buttons
     if (manageMarketStallsModal) {
         manageMarketStallsModal.addEventListener('click', (e) => {
             if (e.target.classList.contains('delete-stall-btn')) {
@@ -155,15 +152,63 @@ const addListingsEventListeners = () => {
 };
 
 export const loadActiveListings = async (marketStallId = null) => {
+    let targetContainer = listingsBody.parentElement;
+    let targetTable = listingsTable;
+    let targetLoader = loader;
+
+    if (marketStallId) {
+        const stallTabContent = document.getElementById(`listings-for-${marketStallId}`);
+        if (stallTabContent) {
+            targetContainer = stallTabContent;
+            const existingTable = stallTabContent.querySelector('table');
+            if (existingTable) {
+                targetTable = existingTable;
+            } else {
+                targetTable = document.createElement('table');
+                targetTable.classList.add('min-w-full', 'divide-y', 'divide-gray-200');
+                targetTable.innerHTML = `
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Listed By</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th scope="col" class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                    </tbody>
+                `;
+                targetContainer.innerHTML = '';
+                targetContainer.appendChild(targetTable);
+            }
+            const existingLoader = stallTabContent.querySelector('.loader');
+            if (existingLoader) {
+                targetLoader = existingLoader;
+            } else {
+                targetLoader = document.createElement('div');
+                targetLoader.classList.add('loader', 'text-center', 'py-4', 'hidden');
+                targetLoader.innerHTML = '<div class="spinner"></div>Loading...';
+                targetContainer.prepend(targetLoader);
+            }
+            stallTabContent.querySelector('p')?.remove();
+        }
+    }
+
+
     if (!currentCharacterId) {
-        loader.style.display = 'none';
-        listingsTable.style.display = 'table';
-        listingsBody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Please select a character or create one to view listings.</td></tr>';
+        targetLoader.style.display = 'none';
+        targetTable.style.display = 'table';
+        if (targetTable.querySelector('tbody')) {
+            targetTable.querySelector('tbody').innerHTML = '<tr><td colspan="7" class="text-center py-4">Please select a character or create one to view listings.</td></tr>';
+        }
         return;
     }
 
-    loader.style.display = 'block';
-    listingsTable.style.display = 'none';
+    targetLoader.style.display = 'block';
+    targetTable.style.display = 'none';
 
     try {
         const {
@@ -178,7 +223,7 @@ export const loadActiveListings = async (marketStallId = null) => {
             p_offset: (currentListingsPage - 1) * LISTINGS_PER_PAGE,
             p_sort_by: currentSort.column,
             p_sort_direction: currentSort.direction,
-            p_market_stall_id: marketStallId // Pass the market stall ID
+            p_market_stall_id: marketStallId
         });
 
         if (error) throw error;
@@ -186,8 +231,11 @@ export const loadActiveListings = async (marketStallId = null) => {
         const listings = data || [];
         const totalCount = listings.length > 0 ? listings[0].total_count : 0;
 
-        renderListingsTable(listings);
-        renderListingsPagination(totalCount);
+        const listingsTbody = targetTable.querySelector('tbody');
+        if (listingsTbody) {
+            renderListingsTable(listings, listingsTbody);
+        }
+        renderListingsPagination(totalCount, targetContainer);
 
     } catch (err) {
         console.error('Error loading listings:', err.message);
@@ -196,8 +244,8 @@ export const loadActiveListings = async (marketStallId = null) => {
             value: true
         }]);
     } finally {
-        loader.style.display = 'none';
-        listingsTable.style.display = 'table';
+        targetLoader.style.display = 'none';
+        targetTable.style.display = 'table';
     }
 };
 
@@ -282,13 +330,11 @@ export async function setupMarketStallTabs() {
         const tabButton = document.createElement('button');
         tabButton.textContent = stall.stall_name;
         tabButton.dataset.stallId = stall.id;
-        // Default Tailwind classes for inactive state
         tabButton.classList.add('tab-button', 'px-4', 'py-2', 'rounded-t-lg', 'font-semibold', 'bg-gray-200', 'text-gray-700', 'hover:bg-gray-300', 'transition-colors', 'duration-200');
 
 
         const tabContent = document.createElement('div');
         tabContent.id = `listings-for-${stall.id}`;
-        // Default Tailwind classes for hidden content
         tabContent.classList.add('tab-content', 'p-4', 'border', 'border-t-0', 'border-gray-300', 'rounded-b-lg', 'hidden');
 
         tabContent.innerHTML = `<h3 class="text-xl font-bold mb-4">${stall.stall_name} Listings</h3><p class="text-gray-600">Loading listings...</p>`;
@@ -301,9 +347,7 @@ export async function setupMarketStallTabs() {
         }
 
         tabButton.addEventListener('click', () => {
-            // Deactivate all tab buttons and content
             document.querySelectorAll('.tab-button').forEach(btn => {
-                // Remove active Tailwind classes, add inactive ones
                 btn.classList.remove('bg-blue-500', 'text-white');
                 btn.classList.add('bg-gray-200', 'text-gray-700');
             });
@@ -311,11 +355,9 @@ export async function setupMarketStallTabs() {
                 content.classList.add('hidden');
             });
 
-            // Activate the clicked tab button
-            tabButton.classList.remove('bg-gray-200', 'text-gray-700'); // Remove inactive
-            tabButton.classList.add('bg-blue-500', 'text-white'); // Add active
+            tabButton.classList.remove('bg-gray-200', 'text-gray-700');
+            tabButton.classList.add('bg-blue-500', 'text-white');
 
-            // Show the corresponding tab content
             tabContent.classList.remove('hidden');
 
             loadActiveListings(stall.id);
@@ -325,7 +367,7 @@ export async function setupMarketStallTabs() {
     if (firstStallId) {
         const initialTabButton = marketStallTabsContainer.querySelector(`[data-stall-id="${firstStallId}"]`);
         if (initialTabButton) {
-            initialTabButton.click(); // Simulate click to activate first tab
+            initialTabButton.click();
         }
     }
 }

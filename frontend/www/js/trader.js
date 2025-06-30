@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient.js';
-import { initializeListings, loadActiveListings } from './modules/listings.js';
+import { initializeListings, loadActiveListings, populateMarketStallDropdown, setupMarketStallTabs } from './modules/listings.js';
 import { initializeCharacters, insertCharacterModalHtml, currentCharacterId, getCurrentCharacter } from './modules/characters.js';
 import { initializeSales, loadTransactionHistory, handleDownloadCsv } from './modules/sales.js';
 import { renderDashboard } from './modules/dashboard.js';
@@ -7,7 +7,6 @@ import { renderSalesChart, setupSalesChartListeners } from './modules/salesChart
 
 let currentUser = null;
 let allCharacterActivityData = [];
-
 
 let customModalContainer = null;
 let customModalContentWrapper = null;
@@ -147,6 +146,9 @@ export const loadTraderPageData = async () => {
         await loadActiveListings();
         loadTransactionHistory([]);
         renderSalesChart([], 'daily');
+        // Added calls for market stalls
+        await populateMarketStallDropdown();
+        await setupMarketStallTabs();
         return;
     }
 
@@ -165,14 +167,17 @@ export const loadTraderPageData = async () => {
         if (dashboardError) {
             throw dashboardError;
         }
-        
+
         allCharacterActivityData = allActivityData;
 
         renderDashboard(dashboardStats ? dashboardStats[0] : {}, currentCharacterData);
         await loadActiveListings();
         loadTransactionHistory(allCharacterActivityData);
         renderSalesChart(allCharacterActivityData, 'daily');
-        
+        // Added calls for market stalls
+        await populateMarketStallDropdown();
+        await setupMarketStallTabs();
+
     } catch (error) {
         console.error('Error loading trader page data:', error.message);
         await showCustomModal('Error', 'Failed to load trader data: ' + error.message, [{ text: 'OK', value: true }]);

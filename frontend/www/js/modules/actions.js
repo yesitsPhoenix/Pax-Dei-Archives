@@ -140,7 +140,6 @@ export const handleAddListing = async (e) => {
                 text: 'OK',
                 value: true
             }]);
-            console.error('Error fetching character gold:', fetchCharacterError.message);
             return;
         }
 
@@ -194,7 +193,6 @@ export const handleAddListing = async (e) => {
                     text: 'OK',
                     value: true
                 }]);
-                console.error('Error deducting gold:', updateGoldError.message);
             } else {
                 await showCustomModal('Success', `Successfully created ${successCount} new listing(s) and deducted ${totalFees.toLocaleString()} gold in fees!`, [{
                     text: 'OK',
@@ -555,7 +553,6 @@ export const handleEditListingSave = async (e) => {
                 text: 'OK',
                 value: true
             }]);
-            console.error('Error fetching character gold:', fetchCharacterError.message);
             return;
         }
 
@@ -608,7 +605,6 @@ export const handleEditListingSave = async (e) => {
                     text: 'OK',
                     value: true
                 }]);
-                console.error('Error deducting additional gold:', updateGoldError.message);
             } else {
                 await showCustomModal('Success', `Listing updated and additional fee of ${additionalFeeToDeduct.toLocaleString()} gold deducted!`, [{
                     text: 'OK',
@@ -657,6 +653,50 @@ export const showManageMarketStallsModal = async () => {
     manageMarketStallsModal.classList.remove('hidden');
 };
 
+export const handleEditMarketStallName = async (stallId, newStallName, editInput, saveButton, cancelButton, stallNameSpan, editButton, deleteButton) => {
+    saveButton.disabled = true;
+    saveButton.textContent = 'Saving...';
+
+    if (!newStallName.trim()) {
+        await showCustomModal('Validation Error', 'Stall name cannot be empty.', [{ text: 'OK', value: true }]);
+        saveButton.disabled = false;
+        saveButton.textContent = 'Save';
+        return;
+    }
+
+    try {
+        const { error } = await supabase
+            .from('market_stalls')
+            .update({ stall_name: newStallName.trim() })
+            .eq('id', stallId)
+            .eq('character_id', currentCharacterId);
+
+        if (error) {
+            throw error;
+        }
+
+        await showCustomModal('Success', 'Market Stall name updated successfully!', [{ text: 'OK', value: true }]);
+
+        stallNameSpan.textContent = newStallName.trim();
+        stallNameSpan.classList.remove('hidden');
+        editInput.classList.add('hidden');
+        saveButton.classList.add('hidden');
+        cancelButton.classList.add('hidden');
+        editButton.classList.remove('hidden');
+        deleteButton.classList.remove('hidden');
+
+        await populateMarketStallDropdown();
+        await setupMarketStallTabs();
+
+    } catch (e) {
+        console.error('Error updating market stall name:', e.message);
+        await showCustomModal('Error', 'Failed to update market stall name: ' + e.message, [{ text: 'OK', value: true }]);
+    } finally {
+        saveButton.disabled = false;
+        saveButton.textContent = 'Save';
+    }
+};
+
 
 const renderMarketStallsInModal = async () => {
     if (!marketStallsList) return;
@@ -674,19 +714,90 @@ const renderMarketStallsInModal = async () => {
         marketStallsList.innerHTML = '';
         stalls.forEach(stall => {
             const stallDiv = document.createElement('div');
-            stallDiv.classList.add('flex', 'items-center', 'justify-between', 'bg-gray-100', 'p-3', 'rounded-lg', 'shadow-sm', 'mb-2');
-            stallDiv.innerHTML = `
-                <span class="text-gray-800 font-medium">${stall.stall_name}</span>
-                <button type="button" class="delete-stall-btn bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-3 rounded-full text-sm" data-stall-id="${stall.id}">
-                    Delete
-                </button>
-            `;
-            marketStallsList.appendChild(stallDiv);
-        });
+            stallDiv.classList.add('flex', 'flex-wrap', 'items-center', 'justify-between', 'bg-gray-100', 'p-3', 'rounded-lg', 'shadow-sm', 'mb-2');
+            stallDiv.dataset.stallId = stall.id;
 
-        marketStallsList.querySelectorAll('.delete-stall-btn').forEach(button => {
-            button.addEventListener('click', (e) => {
-                handleDeleteMarketStall(e.target.dataset.stallId);
+            const stallNameSpan = document.createElement('span');
+            stallNameSpan.classList.add('text-gray-800', 'font-medium', 'flex-grow');
+            stallNameSpan.textContent = stall.stall_name;
+
+            const editInput = document.createElement('input');
+            editInput.type = 'text';
+            editInput.classList.add('hidden', 'flex-grow', 'p-1', 'border', 'rounded', 'mr-2');
+            editInput.value = stall.stall_name;
+
+            const buttonsDiv = document.createElement('div');
+            buttonsDiv.classList.add('flex', 'space-x-2', 'mt-2', 'md:mt-0');
+
+            const editButton = document.createElement('button');
+            editButton.type = 'button';
+            editButton.classList.add('edit-stall-btn', 'bg-blue-500', 'hover:bg-blue-600', 'text-white', 'font-bold', 'py-1', 'px-3', 'rounded-full', 'text-sm');
+            editButton.textContent = 'Edit';
+            editButton.dataset.stallId = stall.id;
+
+            const saveButton = document.createElement('button');
+            saveButton.type = 'button';
+            saveButton.classList.add('save-stall-btn', 'bg-green-500', 'hover:bg-green-600', 'text-white', 'font-bold', 'py-1', 'px-3', 'rounded-full', 'text-sm', 'hidden');
+            saveButton.textContent = 'Save';
+            saveButton.dataset.stallId = stall.id;
+
+            const cancelButton = document.createElement('button');
+            cancelButton.type = 'button';
+            cancelButton.classList.add('cancel-stall-btn', 'bg-gray-500', 'hover:bg-gray-600', 'text-white', 'font-bold', 'py-1', 'px-3', 'rounded-full', 'text-sm', 'hidden');
+            cancelButton.textContent = 'Cancel';
+            cancelButton.dataset.stallId = stall.id;
+
+            const deleteButton = document.createElement('button');
+            deleteButton.type = 'button';
+            deleteButton.classList.add('delete-stall-btn', 'bg-red-500', 'hover:bg-red-600', 'text-white', 'font-bold', 'py-1', 'px-3', 'rounded-full', 'text-sm');
+            deleteButton.textContent = 'Delete';
+            deleteButton.dataset.stallId = stall.id;
+
+            buttonsDiv.appendChild(editButton);
+            buttonsDiv.appendChild(saveButton);
+            buttonsDiv.appendChild(cancelButton);
+            buttonsDiv.appendChild(deleteButton);
+
+            stallDiv.appendChild(stallNameSpan);
+            stallDiv.appendChild(editInput);
+            stallDiv.appendChild(buttonsDiv);
+            marketStallsList.appendChild(stallDiv);
+
+            editButton.addEventListener('click', () => {
+                stallNameSpan.classList.add('hidden');
+                editInput.classList.remove('hidden');
+                saveButton.classList.remove('hidden');
+                cancelButton.classList.remove('hidden');
+                editButton.classList.add('hidden');
+                deleteButton.classList.add('hidden');
+                editInput.focus();
+            });
+
+            cancelButton.addEventListener('click', () => {
+                editInput.value = stall.stall_name;
+                stallNameSpan.classList.remove('hidden');
+                editInput.classList.add('hidden');
+                saveButton.classList.add('hidden');
+                cancelButton.classList.add('hidden');
+                editButton.classList.remove('hidden');
+                deleteButton.classList.remove('hidden');
+            });
+
+            saveButton.addEventListener('click', () => {
+                handleEditMarketStallName(
+                    stall.id,
+                    editInput.value,
+                    editInput,
+                    saveButton,
+                    cancelButton,
+                    stallNameSpan,
+                    editButton,
+                    deleteButton
+                );
+            });
+
+            deleteButton.addEventListener('click', () => {
+                handleDeleteMarketStall(stall.id);
             });
         });
 
@@ -696,10 +807,6 @@ const renderMarketStallsInModal = async () => {
     }
 };
 
-/**
- * Handles the form submission for creating a new market stall.
- * @param {Event} e - The form submission event.
- */
 export const handleAddMarketStall = async (e) => {
     e.preventDefault();
     createStallError.classList.add('hidden');
@@ -754,10 +861,44 @@ export const handleAddMarketStall = async (e) => {
     }
 };
 
-/**
- * Handles the deletion of a market stall.
- * @param {string} stallId - The ID of the stall to delete.
- */
+export const createDefaultMarketStall = async (characterId, characterName) => {
+    if (!characterId) {
+        console.error('No character ID provided for creating default market stall.');
+        return null;
+    }
+
+    if (!characterName) {
+        console.error('No character name provided for creating default market stall.');
+        return null;
+    }
+
+    const defaultStallName = `${characterName} - Default Stall`;
+
+    try {
+        const {
+            data,
+            error
+        } = await supabase
+            .from('market_stalls')
+            .insert({
+                stall_name: defaultStallName,
+                character_id: characterId
+            })
+            .select('id')
+            .single();
+
+        if (error) {
+            throw error;
+        }
+
+
+        return data.id;
+    } catch (e) {
+        console.error('Error creating default market stall:', e.message);
+        return null;
+    }
+};
+
 export const handleDeleteMarketStall = async (stallId) => {
     deleteStallError.classList.add('hidden');
 

@@ -1,4 +1,4 @@
-import { currentCharacterId } from './characters.js'; // Assuming characters.js is in the same parent directory
+import { currentCharacterId } from './characters.js';
 
 export const addListingForm = document.getElementById('add-listing-form');
 export const listingsBody = document.getElementById('listings-body');
@@ -24,21 +24,20 @@ export const marketStallDropdown = document.getElementById('market-stall-locatio
 export const marketStallTabsContainer = document.querySelector('.market-stall-tabs');
 export const tabContentContainer = document.querySelector('.tab-content-container');
 
-// Updated DOM elements for Market Stall management
-export const showManageMarketStallsModalBtn = document.getElementById('showManageMarketStallsModalBtn'); // Renamed ID
-export const manageMarketStallsModal = document.getElementById('manageMarketStallsModal'); // Renamed ID
+export const showManageMarketStallsModalBtn = document.getElementById('showManageMarketStallsModalBtn'); 
+export const manageMarketStallsModal = document.getElementById('manageMarketStallsModal');
 export const createMarketStallForm = document.getElementById('create-market-stall-form');
 export const newMarketStallNameInput = document.getElementById('new-market-stall-name');
 export const addMarketStallBtn = document.getElementById('addMarketStallBtn');
-export const closeManageMarketStallsModalBtn = document.getElementById('closeManageMarketStallsModalBtn'); // Renamed ID
-export const createStallError = document.getElementById('createStallError'); // Changed ID for clarity
-export const marketStallsList = document.getElementById('marketStallsList'); // New element for listing stalls
-export const deleteStallError = document.getElementById('deleteStallError'); // New element for delete errors
+export const closeManageMarketStallsModalBtn = document.getElementById('closeManageMarketStallsModalBtn'); 
+export const createStallError = document.getElementById('createStallError'); 
+export const marketStallsList = document.getElementById('marketStallsList');
+export const deleteStallError = document.getElementById('deleteStallError');
 
 
 export const LISTINGS_PER_PAGE = 15;
 export let currentListingsPage = 1;
-export let currentUserId = null; // Will be set by initializeListings
+export let currentUserId = null;
 export let currentEditingListingId = null;
 export let listingsFilter = {
     itemName: '',
