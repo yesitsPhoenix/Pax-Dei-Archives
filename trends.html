@@ -35,7 +35,6 @@
                         <li><a href="articles.html">Articles</a></li>
                         <li><a href="news-updates.html">News</a></li>
                         <li><a href="developer-comments.html">Dev Comments</a></li>
-                        <!-- <li><a href="loot.html">Loot Tracker</a></li> -->
                         <li><a href="lore.html">Lore</a></li>
                         <li><a href="ledger.html">Ledger</a></li>
                         <li><a href="trends.html" class="active">Sales Trends</a></li>
@@ -65,14 +64,34 @@
         </div>
         <h1 class="text-xl font-semibold mt-6 mb-3 text-white text-center">Market Trends Over Time</h1>
 
-        <div class="mb-4">
-            <label for="region-filter-select" class="block text-white text-sm font-bold mb-2">Filter by Region:</label>
-            <select id="region-filter-select" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                <option value="all">All Regions</option>
-                <option value="USA">USA</option>
-                <option value="EU">EU</option>
-                <option value="SEA">SEA</option>
-            </select>
+        <div class="mb-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="col-span-1">
+                <label for="region-filter-select" class="block text-white text-sm font-bold mb-2">Filter by Region:</label>
+                <select id="region-filter-select" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                    <option value="all">All Regions</option>
+                    <option value="USA">USA</option>
+                    <option value="EU">EU</option>
+                    <option value="SEA">SEA</option>
+                </select>
+            </div>
+            <div class="col-span-1">
+                <label for="shard-filter-select" class="block text-white text-sm font-bold mb-2">Filter by Shard:</label>
+                <select id="shard-filter-select" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                    <option value="all">All Shards</option>
+                </select>
+            </div>
+            <div class="col-span-1">
+                <label for="province-filter-select" class="block text-white text-sm font-bold mb-2">Filter by Province:</label>
+                <select id="province-filter-select" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                    <option value="all">All Provinces</option>
+                </select>
+            </div>
+            <div class="col-span-1">
+                <label for="home-valley-filter-select" class="block text-white text-sm font-bold mb-2">Filter by Home Valley:</label>
+                <select id="home-valley-filter-select" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                    <option value="all">All Home Valleys</option>
+                </select>
+            </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -87,6 +106,19 @@
                 <h2 class="text-lg font-semibold mb-2 text-white">Daily Average Item Price</h2>
                 <div class="relative h-48">
                     <canvas id="daily-avg-price-chart"></canvas>
+                </div>
+            </section>
+
+            <div class="col-span-1">
+                <label for="item-filter-select" class="block text-white text-sm font-bold mb-2">Specific Item Filter:</label>
+                <select id="item-filter-select" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                    <option value="all">All Items</option>
+                </select>
+            </div>
+            <section class="mb-4 p-3 bg-gray-800 rounded-md shadow-md col-span-full">
+                <h2 class="text-lg font-semibold mb-2 text-white">Specific Item Price Trend (per unit)</h2>
+                <div class="relative h-48">
+                    <canvas id="specific-item-price-chart"></canvas>
                 </div>
             </section>
         </div>
