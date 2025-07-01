@@ -43,7 +43,7 @@ function renderChart(chartId, labels, data, label, borderColor, backgroundColor,
                     type: 'time',
                     time: {
                         unit: 'day',
-                        tooltipFormat: 'MMM d,yyyy'
+                        tooltipFormat: 'MMM d,YYYY'
                     },
                     title: {
                         display: true,
