@@ -307,7 +307,8 @@ async function loadSpecificItemPriceChart(itemId = null, region = null, shard = 
 
     try {
         const { data, error } = await supabase.rpc('get_item_price_history', {
-            p_item_id: itemId
+            p_item_id: itemId,
+            p_region: region,
         });
 
         if (error) {
