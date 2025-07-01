@@ -338,7 +338,6 @@ export const handleMarkAsSold = async (listingId) => {
             value: true
         }]);
     } finally {
-        loadActiveListings();
     }
 };
 
