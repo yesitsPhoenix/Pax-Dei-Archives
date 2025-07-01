@@ -658,16 +658,23 @@ export const handleEditMarketStallName = async (stallId, newStallName, editInput
     saveButton.textContent = 'Saving...';
 
     if (!newStallName.trim()) {
-        await showCustomModal('Validation Error', 'Stall name cannot be empty.', [{ text: 'OK', value: true }]);
+        await showCustomModal('Validation Error', 'Stall name cannot be empty.', [{
+            text: 'OK',
+            value: true
+        }]);
         saveButton.disabled = false;
         saveButton.textContent = 'Save';
         return;
     }
 
     try {
-        const { error } = await supabase
+        const {
+            error
+        } = await supabase
             .from('market_stalls')
-            .update({ stall_name: newStallName.trim() })
+            .update({
+                stall_name: newStallName.trim()
+            })
             .eq('id', stallId)
             .eq('character_id', currentCharacterId);
 
@@ -675,7 +682,10 @@ export const handleEditMarketStallName = async (stallId, newStallName, editInput
             throw error;
         }
 
-        await showCustomModal('Success', 'Market Stall name updated successfully!', [{ text: 'OK', value: true }]);
+        await showCustomModal('Success', 'Market Stall name updated successfully!', [{
+            text: 'OK',
+            value: true
+        }]);
 
         stallNameSpan.textContent = newStallName.trim();
         stallNameSpan.classList.remove('hidden');
@@ -690,7 +700,10 @@ export const handleEditMarketStallName = async (stallId, newStallName, editInput
 
     } catch (e) {
         console.error('Error updating market stall name:', e.message);
-        await showCustomModal('Error', 'Failed to update market stall name: ' + e.message, [{ text: 'OK', value: true }]);
+        await showCustomModal('Error', 'Failed to update market stall name: ' + e.message, [{
+            text: 'OK',
+            value: true
+        }]);
     } finally {
         saveButton.disabled = false;
         saveButton.textContent = 'Save';
