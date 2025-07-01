@@ -9,11 +9,10 @@ let dailySalesChartInstance = null;
 let dailyAvgPriceChartInstance = null;
 let specificItemPriceChartInstance = null;
 
-let currentSelectedRegion = null;
 let currentSelectedItemId = null;
 
 const formatCurrency = (amount) => (amount !== null && amount !== undefined) ? amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : 'N/A';
-const formatDecimal = (amount, decimals = 2) => (amount !== null && amount !== undefined) ? parseFloat(amount).toFixed(decimals).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) : 'N/A';
+const formatDecimal = (amount, decimals = 2) => (amount !== null && amount !== undefined) ? parseFloat(amount).toFixed(decimals) : 'N/A';
 
 function renderChart(chartId, labels, data, label, borderColor, backgroundColor, type = 'line') {
     const ctx = document.getElementById(chartId)?.getContext('2d');
@@ -49,7 +48,7 @@ function renderChart(chartId, labels, data, label, borderColor, backgroundColor,
                     ticks: { color: '#B0B0B0' },
                     grid: { color: 'rgba(255, 255, 255, 0.1)' },
                     title: {
-                        display: chartId.includes('daily') || chartId.includes('specific-item-price') ? true : false,
+                        display: chartId.includes('daily') || chartId.includes('specific-item-price'),
                         text: 'Date',
                         color: '#FFFFFF'
                     }
@@ -87,8 +86,6 @@ function renderChart(chartId, labels, data, label, borderColor, backgroundColor,
         };
     }
 
-    const newChart = new Chart(ctx, chartConfig);
-
     if (chartId === 'daily-sales-chart' && dailySalesChartInstance) {
         dailySalesChartInstance.destroy();
         dailySalesChartInstance = null;
@@ -100,13 +97,17 @@ function renderChart(chartId, labels, data, label, borderColor, backgroundColor,
         specificItemPriceChartInstance = null;
     }
 
+    const newChart = new Chart(ctx, chartConfig);
+
+    if (chartId === 'daily-sales-chart') dailySalesChartInstance = newChart;
+    if (chartId === 'daily-avg-price-chart') dailyAvgPriceChartInstance = newChart;
+    if (chartId === 'specific-item-price-chart') specificItemPriceChartInstance = newChart;
+
     return newChart;
 }
 
-async function loadListTrendsData(region = null) {
-    if (!highestSalesList || !mostSoldQuantityList || !topRevenueItemsList || !salesVolumeByCategoryList) {
-        return;
-    }
+async function loadListTrendsData() {
+    if (!highestSalesList || !mostSoldQuantityList || !topRevenueItemsList || !salesVolumeByCategoryList) return;
 
     highestSalesList.innerHTML = '<p class="text-white">Loading highest sales...</p>';
     mostSoldQuantityList.innerHTML = '<p class="text-white">Loading most sold items...</p>';
@@ -114,19 +115,27 @@ async function loadListTrendsData(region = null) {
     salesVolumeByCategoryList.innerHTML = '<p class="text-white">Loading sales volume...</p>';
 
     try {
-        const { data, error } = await supabase.rpc('get_all_list_trends_data_by_region', { region_filter: region });
+        const { data, error } = await supabase.rpc('get_all_list_trends_data_by_region');
 
         if (error) {
-            console.error("Error loading all list trends data:", error);
             const errorMessage = `<p class="text-red-400">Error loading data: ${error.message}</p>`;
             highestSalesList.innerHTML = errorMessage;
             mostSoldQuantityList.innerHTML = errorMessage;
             topRevenueItemsList.innerHTML = errorMessage;
             salesVolumeByCategoryList.innerHTML = errorMessage;
+            console.error("Error loading list trends data:", error);
             return;
         }
 
-        const highestSales = data?.highest_individual_sales || [];
+        if (!data) {
+            highestSalesList.innerHTML = '<p class="text-white">No data returned.</p>';
+            mostSoldQuantityList.innerHTML = '<p class="text-white">No data returned.</p>';
+            topRevenueItemsList.innerHTML = '<p class="text-white">No data returned.</p>';
+            salesVolumeByCategoryList.innerHTML = '<p class="text-white">No data returned.</p>';
+            return;
+        }
+
+        const highestSales = data.get_highest_individual_sales || [];
         if (highestSales.length > 0) {
             highestSalesList.innerHTML = highestSales.map((sale, index) => `
                 <div class="p-2 bg-gray-700 rounded-sm shadow-sm flex flex-col md:flex-row justify-between items-center gap-1">
@@ -140,7 +149,7 @@ async function loadListTrendsData(region = null) {
                     <div class="text-right text-xs">
                         <p class="text-white text-sm">Total Sale: <span class="font-bold">${formatCurrency(sale.total_sale_price)} <i class="fas fa-coins"></i></span></p>
                         <p class="text-gray-400">Qty Sold: ${sale.quantity_sold || 'N/A'} | Price/Unit: ${formatDecimal(sale.sale_price_per_unit)}</p>
-                        <p class="text-gray-400">Stack Qty: ${sale.listed_quantity || 'N/A'} | Stack Price: ${formatCurrency(sale.listed_total_price)}</p>
+                        <p class="text-gray-400">Stack Qty: ${sale.quantity_listed || 'N/A'} | Stack Price: ${formatCurrency(sale.total_listed_price)}</p>
                     </div>
                 </div>
             `).join('');
@@ -148,7 +157,7 @@ async function loadListTrendsData(region = null) {
             highestSalesList.innerHTML = '<p class="text-white">No highest sales data found yet.</p>';
         }
 
-        const mostSoldItems = data?.most_sold_items_by_quantity || [];
+        const mostSoldItems = data.get_most_sold_items_by_quantity || [];
         if (mostSoldItems.length > 0) {
             mostSoldQuantityList.innerHTML = mostSoldItems.map((item, index) => `
                 <div class="p-2 bg-gray-700 rounded-sm shadow-sm flex flex-col md:flex-row justify-between items-center gap-1">
@@ -170,7 +179,7 @@ async function loadListTrendsData(region = null) {
             mostSoldQuantityList.innerHTML = '<p class="text-white">No items sold yet.</p>';
         }
 
-        const topRevenueItems = data?.top_profitable_items || [];
+        const topRevenueItems = data.top_profitable_items || [];
         if (topRevenueItems.length > 0) {
             topRevenueItemsList.innerHTML = topRevenueItems.map((item, index) => `
                 <div class="p-2 bg-gray-700 rounded-sm shadow-sm flex flex-col md:flex-row justify-between items-center gap-1">
@@ -190,7 +199,7 @@ async function loadListTrendsData(region = null) {
             topRevenueItemsList.innerHTML = '<p class="text-white">No revenue items data found yet.</p>';
         }
 
-        const salesVolumeByCategory = data?.sales_volume_by_category || [];
+        const salesVolumeByCategory = data.sales_volume_by_category || [];
         if (salesVolumeByCategory.length > 0) {
             salesVolumeByCategoryList.innerHTML = salesVolumeByCategory.map((category, index) => `
                 <div class="p-2 bg-gray-700 rounded-sm shadow-sm flex flex-col md:flex-row justify-between items-center gap-1">
@@ -208,30 +217,28 @@ async function loadListTrendsData(region = null) {
         }
 
     } catch (err) {
-        console.error("An unexpected error occurred loading list trends data:", err);
         const errorMessage = `<p class="text-red-400">An error occurred: ${err.message}</p>`;
         highestSalesList.innerHTML = errorMessage;
         mostSoldQuantityList.innerHTML = errorMessage;
         topRevenueItemsList.innerHTML = errorMessage;
         salesVolumeByCategoryList.innerHTML = errorMessage;
+        console.error("An error occurred in loadListTrendsData:", err);
     }
 }
 
-async function loadDailyTotalSalesChart(region = null) {
+async function loadDailyTotalSalesChart() {
     try {
-        const { data, error } = await supabase.rpc('get_daily_total_sales', { region_filter: region });
+        const { data, error } = await supabase.rpc('get_daily_total_sales');
 
         if (error) {
-            console.error("Error loading daily total sales chart:", error);
+            console.error("Error loading daily total sales:", error);
             return;
         }
 
         const labels = data.map(row => row.sale_date);
         const totalSales = data.map(row => row.total_gold_sold);
 
-        if (dailySalesChartInstance) {
-            dailySalesChartInstance.destroy();
-        }
+        if (dailySalesChartInstance) dailySalesChartInstance.destroy();
         dailySalesChartInstance = renderChart(
             'daily-sales-chart',
             labels,
@@ -242,25 +249,23 @@ async function loadDailyTotalSalesChart(region = null) {
         );
 
     } catch (err) {
-        console.error("An unexpected error occurred loading daily total sales chart:", err);
+        console.error("An error occurred in loadDailyTotalSalesChart:", err);
     }
 }
 
-async function loadDailyAveragePriceChart(region = null) {
+async function loadDailyAveragePriceChart() {
     try {
-        const { data, error } = await supabase.rpc('get_daily_average_sale_price', { region_filter: region });
+        const { data, error } = await supabase.rpc('get_daily_average_sale_price');
 
         if (error) {
-            console.error("Error loading daily average price chart:", error);
+            console.error("Error loading daily average price:", error);
             return;
         }
 
         const labels = data.map(row => row.sale_date);
         const avgPrices = data.map(row => row.average_price);
 
-        if (dailyAvgPriceChartInstance) {
-            dailyAvgPriceChartInstance.destroy();
-        }
+        if (dailyAvgPriceChartInstance) dailyAvgPriceChartInstance.destroy();
         dailyAvgPriceChartInstance = renderChart(
             'daily-avg-price-chart',
             labels,
@@ -271,11 +276,11 @@ async function loadDailyAveragePriceChart(region = null) {
         );
 
     } catch (err) {
-        console.error("An unexpected error occurred loading daily average price chart:", err);
+        console.error("An error occurred in loadDailyAveragePriceChart:", err);
     }
 }
 
-async function loadSpecificItemPriceChart(itemId = null, region = null, shard = null, province = null, homeValley = null) {
+async function loadSpecificItemPriceChart(itemId = null) {
     if (!itemId || itemId === 'all') {
         if (specificItemPriceChartInstance) {
             specificItemPriceChartInstance.destroy();
@@ -294,12 +299,10 @@ async function loadSpecificItemPriceChart(itemId = null, region = null, shard = 
             do {
                 ctx.font = `${fontSize}px Arial`;
                 const textWidth = ctx.measureText(text).width;
-                if (textWidth <= maxWidth || fontSize <= 10) {
-                    break;
-                }
+                if (textWidth <= maxWidth || fontSize <= 10) break;
                 fontSize--;
             } while (true);
-            
+
             ctx.fillText(text, ctx.canvas.width / 2, ctx.canvas.height / 2);
         }
         return;
@@ -307,12 +310,11 @@ async function loadSpecificItemPriceChart(itemId = null, region = null, shard = 
 
     try {
         const { data, error } = await supabase.rpc('get_item_price_history', {
-            p_item_id: itemId,
-            p_region: region,
+            p_item_id: itemId
         });
 
         if (error) {
-            console.error(`Error loading price history for item ${itemId}:`, error);
+            console.error("Error loading specific item price history:", error);
             return;
         }
 
@@ -320,9 +322,7 @@ async function loadSpecificItemPriceChart(itemId = null, region = null, shard = 
         const prices = data.map(row => row.average_price);
         const itemName = data.length > 0 ? data[0].item_name : `Item ID: ${itemId}`;
 
-        if (specificItemPriceChartInstance) {
-            specificItemPriceChartInstance.destroy();
-        }
+        if (specificItemPriceChartInstance) specificItemPriceChartInstance.destroy();
         specificItemPriceChartInstance = renderChart(
             'specific-item-price-chart',
             labels,
@@ -333,7 +333,7 @@ async function loadSpecificItemPriceChart(itemId = null, region = null, shard = 
         );
 
     } catch (err) {
-        console.error("An unexpected error occurred loading specific item price chart:", err);
+        console.error("An error occurred in loadSpecificItemPriceChart:", err);
     }
 }
 
@@ -345,7 +345,7 @@ async function populateDropdown(selectElementId, rpcFunctionName, valueColumn, t
     try {
         const { data, error } = await supabase.rpc(rpcFunctionName);
         if (error) {
-            console.error(`Error fetching data for ${selectElementId}:`, error);
+            console.error(`Error populating dropdown ${selectElementId} with function ${rpcFunctionName}:`, error);
             return;
         }
         data.forEach(row => {
@@ -355,39 +355,30 @@ async function populateDropdown(selectElementId, rpcFunctionName, valueColumn, t
             selectElement.appendChild(option);
         });
     } catch (err) {
-        console.error(`An unexpected error occurred populating ${selectElementId}:`, err);
+        console.error(`An error occurred in populateDropdown for ${selectElementId}:`, err);
     }
 }
 
 async function loadAllTrendsData() {
-    await loadListTrendsData(currentSelectedRegion);
-    await loadDailyTotalSalesChart(currentSelectedRegion);
-    await loadDailyAveragePriceChart(currentSelectedRegion);
-    await loadSpecificItemPriceChart(currentSelectedItemId, currentSelectedRegion, null, null, null);
+    await loadListTrendsData();
+    await loadDailyTotalSalesChart();
+    await loadDailyAveragePriceChart();
+    await loadSpecificItemPriceChart(currentSelectedItemId);
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    const regionFilterSelect = document.getElementById('region-filter-select');
     const itemFilterSelect = document.getElementById('item-filter-select');
 
     await populateDropdown('item-filter-select', 'get_all_items_for_dropdown', 'item_id', 'item_name', 'All Items');
 
-    currentSelectedItemId = itemFilterSelect ? parseInt(itemFilterSelect.value, 10) || null : null;
-
+    currentSelectedItemId = itemFilterSelect ? (itemFilterSelect.value === 'all' || itemFilterSelect.value === '' ? null : parseInt(itemFilterSelect.value, 10)) : null;
 
     await loadAllTrendsData();
-
-    if (regionFilterSelect) {
-        regionFilterSelect.addEventListener('change', (event) => {
-            currentSelectedRegion = event.target.value === 'all' || event.target.value === '' ? null : event.target.value;
-            loadAllTrendsData();
-        });
-    }
 
     if (itemFilterSelect) {
         itemFilterSelect.addEventListener('change', (event) => {
             currentSelectedItemId = event.target.value === 'all' || event.target.value === '' ? null : parseInt(event.target.value, 10);
-            loadSpecificItemPriceChart(currentSelectedItemId, currentSelectedRegion, null, null, null);
+            loadSpecificItemPriceChart(currentSelectedItemId);
         });
     }
 });
