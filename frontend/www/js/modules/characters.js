@@ -451,7 +451,7 @@ const updateCharacterGold = async (newGoldAmount) => {
     await loadTraderPageData();
 };
 
-const updateCharacterGoldByPveTransaction = async (newTotalGold) => {
+const updateCharacterGoldByPveTransaction = async (newTotalGold, description = '') => {
     if (!currentCharacterId) {
         await showCustomModal("Error", "No character selected to record PVE gold.", [{ text: 'OK', value: true }]);
         return;
@@ -473,6 +473,11 @@ const updateCharacterGoldByPveTransaction = async (newTotalGold) => {
         await showCustomModal("Validation Error", "PVE transaction would result in negative gold. Please enter a valid non-negative amount.", [{ text: 'OK', value: true }]);
         return;
     }
+    
+    if (goldChange === 0) {
+        await showCustomModal('Info', 'Gold amount is unchanged. No PVE transaction recorded.', [{ text: 'OK', value: true }]);
+        return;
+    }
 
     const { error: updateCharError } = await supabase
         .from('characters')
@@ -486,9 +491,9 @@ const updateCharacterGoldByPveTransaction = async (newTotalGold) => {
         return;
     }
 
-    const description = goldChange >= 0
-        ? `PVE Gold Change: +${goldChange.toLocaleString()}`
-        : `PVE Gold Change: ${goldChange.toLocaleString()}`;
+    const finalDescription = description.trim() !== ''
+        ? description
+        : (goldChange >= 0 ? `PVE Gold Change: +${goldChange.toLocaleString()}` : `PVE Gold Change: ${goldChange.toLocaleString()}`);
 
     const { error: insertPveError } = await supabase
         .from('pve_transactions')
@@ -496,7 +501,7 @@ const updateCharacterGoldByPveTransaction = async (newTotalGold) => {
             {
                 character_id: currentCharacterId,
                 gold_amount: goldChange,
-                description: description,
+                description: finalDescription,
                 user_id: currentUserId
             }
         ]);
@@ -507,7 +512,7 @@ const updateCharacterGoldByPveTransaction = async (newTotalGold) => {
         return;
     }
 
-    const message = `Character gold set to ${newTotalGold.toLocaleString()}. Recorded change: ${goldChange >= 0 ? '+' : ''}${goldChange.toLocaleString()} gold from PVE.`;
+    const message = `Character gold set to ${newTotalGold.toLocaleString()}. Recorded change: ${goldChange >= 0 ? '+' : ''}${goldChange.toLocaleString()} gold. Reason: ${finalDescription}.`;
 
     await showCustomModal('Success', message, [{ text: 'OK', value: true }]);
     await loadTraderPageData();
@@ -566,33 +571,64 @@ const showPveGoldInputModal = async (onConfirm, onCancel) => {
 
     const modalHtml = `
         <div id="${modalId}" class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50">
-            <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
-                <h3 class="text-lg font-bold mb-4">Set Character Gold (PVE)</h3>
-                <p class="text-gray-600 text-sm mb-3">Current Gold: ${currentGold.toLocaleString()}</p>
-                <input type="number" id="pveGoldAmountInput" placeholder="Enter new total gold amount" class="w-full p-2 border rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-700" value="${currentGold}">
-                <div class="flex justify-end gap-2">
-                    <button id="cancelPveGold" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-full">Cancel</button>
-                    <button id="confirmPveGold" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-full">Set & Record</button>
+            <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full text-gray-800">
+                <h3 class="text-xl font-bold mb-4">Set Character Gold (PVE)</h3>
+                
+                <div class="mb-4">
+                    <label for="pveGoldAmountInput" class="block text-sm font-bold mb-2">New Total Gold</label>
+                    <p class="text-sm text-gray-600 mb-1">Current: ${currentGold.toLocaleString()}</p>
+                    <input type="number" id="pveGoldAmountInput" class="w-full p-2 border border-gray-300 rounded-md" value="${currentGold}">
                 </div>
-                <p id="pveGoldInputError" class="text-red-500 text-sm mt-2" style="display:none;"></p>
+
+                <div class="mb-4">
+                    <label for="pveGoldChangeInput" class="block text-sm font-bold mb-2">Adjustment (+/-)</label>
+                    <input type="number" id="pveGoldChangeInput" placeholder="e.g., 5 or -20" class="w-full p-2 border border-gray-300 rounded-md">
+                </div>
+
+                <div class="mb-6">
+                    <label for="pveDescriptionInput" class="block text-sm font-bold mb-2">Description (Optional)</label>
+                    <input type="text" id="pveDescriptionInput" placeholder="e.g., Daily quest reward" class="w-full p-2 border border-gray-300 rounded-md">
+                </div>
+
+                <div class="flex justify-end gap-3">
+                    <button id="cancelPveGold" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-full">Cancel</button>
+                    <button id="confirmPveGold" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">Set & Record</button>
+                </div>
+                <p id="pveGoldInputError" class="text-red-500 text-sm mt-3 text-right" style="display:none;"></p>
             </div>
         </div>
     `;
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 
+    const modalElement = document.getElementById(modalId);
     const pveGoldAmountInput = document.getElementById('pveGoldAmountInput');
+    const pveGoldChangeInput = document.getElementById('pveGoldChangeInput');
+    const pveDescriptionInput = document.getElementById('pveDescriptionInput');
     const confirmButton = document.getElementById('confirmPveGold');
     const cancelButton = document.getElementById('cancelPveGold');
     const errorEl = document.getElementById('pveGoldInputError');
+    
+    pveGoldChangeInput.addEventListener('input', () => {
+        const adjustment = parseInt(pveGoldChangeInput.value, 10);
+        if (!isNaN(adjustment)) {
+            pveGoldAmountInput.value = currentGold + adjustment;
+        } else if (pveGoldChangeInput.value.trim() === '') {
+             pveGoldAmountInput.value = currentGold;
+        }
+    });
 
-    confirmButton.onclick = null;
-    cancelButton.onclick = null;
+    pveGoldAmountInput.addEventListener('input', () => {
+        pveGoldChangeInput.value = '';
+    });
+
 
     confirmButton.addEventListener('click', () => {
-        const amount = parseInt(pveGoldAmountInput.value, 10);
-        if (!isNaN(amount) && amount >= 0) {
-            onConfirm(amount);
-            document.getElementById(modalId).remove();
+        const newTotalGold = parseInt(pveGoldAmountInput.value, 10);
+        const description = pveDescriptionInput.value.trim();
+
+        if (!isNaN(newTotalGold) && newTotalGold >= 0) {
+            onConfirm(newTotalGold, description);
+            modalElement.remove();
         } else {
             errorEl.textContent = 'Please enter a valid non-negative number for the new total gold.';
             errorEl.style.display = 'block';
@@ -601,7 +637,7 @@ const showPveGoldInputModal = async (onConfirm, onCancel) => {
 
     cancelButton.addEventListener('click', () => {
         onCancel();
-        document.getElementById(modalId).remove();
+        modalElement.remove();
     });
 
     pveGoldAmountInput.focus();
@@ -656,8 +692,8 @@ const addCharacterEventListeners = () => {
             }
             
             await showPveGoldInputModal(
-                async (newTotalGold) => {
-                    await updateCharacterGoldByPveTransaction(newTotalGold);
+                async (newTotalGold, description) => {
+                    await updateCharacterGoldByPveTransaction(newTotalGold, description);
                 },
                 () => {
                     console.log("PVE Gold transaction cancelled.");
