@@ -576,7 +576,7 @@ const showPveGoldInputModal = async (onConfirm, onCancel) => {
                 
                 <div class="mb-4">
                     <label for="pveGoldAmountInput" class="block text-sm font-bold mb-2">New Total Gold</label>
-                    <p class="text-sm text-gray-600 mb-1">Current: ${currentGold.toLocaleString()}</p>
+                    <p class="text-lg text-white-600 mb-1">Current: ${currentGold.toLocaleString()}</p>
                     <input type="number" id="pveGoldAmountInput" class="w-full p-2 border border-gray-300 rounded-md" value="${currentGold}">
                 </div>
 
@@ -587,7 +587,7 @@ const showPveGoldInputModal = async (onConfirm, onCancel) => {
 
                 <div class="mb-6">
                     <label for="pveDescriptionInput" class="block text-sm font-bold mb-2">Description (Optional)</label>
-                    <input type="text" id="pveDescriptionInput" placeholder="e.g., Daily quest reward" class="w-full p-2 border border-gray-300 rounded-md">
+                    <input type="text" id="pveDescriptionInput" placeholder="e.g., POI clear, Chest Deposit" class="w-full p-2 border border-gray-300 rounded-md">
                 </div>
 
                 <div class="flex justify-end gap-3">
