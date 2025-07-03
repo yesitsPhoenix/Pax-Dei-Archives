@@ -64,7 +64,6 @@
                             <div id="profile-info" style="display: none;">
                                 <img id="user-avatar" src="" alt="User Avatar" class="profile-avatar">
                                 <h3 id="user-discord-name"></h3>
-                                <p><strong>Discord ID:</strong> <span id="user-discord-id"></span></p>
                                 <p><strong>Member Since:</strong> <span id="user-created-at"></span></p>
                                 <p><strong>Last Login:</strong> <span id="user-last-login-at"></span></p>
                             </div>
@@ -77,15 +76,16 @@
                             </div>
                             
                             <div id="characters-list" class="data-list">
-                                <div class="loading-indicator">Loading characters...</div>
-                                </div>
+                            <select id="characterSelect" class="character-select">
+                                <option value="">Loading characters...</option>
+                            </select>
+                         </div>
                         </div>
-
-                        </div>
+                    </div>
                 </div>
-            </div>
+         </div>
         </div>
-    </div>
+    </div>  
     <footer>
         <div class="container">
             <div class="row">

@@ -8,13 +8,6 @@ import {
 import {
     currentCharacterId
 } from './characters.js';
-import {
-    purchaseItemNameInput,
-    purchaseItemCategorySelect,
-    purchaseItemStacksInput,
-    purchaseItemCountPerStackInput,
-    purchaseItemPricePerStackInput
-} from './dom.js';
 
 const getOrCreateItemId = async (itemName, categoryId) => {
     if (!currentCharacterId) {
@@ -50,113 +43,149 @@ const getOrCreateItemId = async (itemName, categoryId) => {
         error: insertError
     } = await supabase
         .from('items')
-        .insert({
+        .insert([{
             item_name: itemName,
             category_id: categoryId,
             character_id: currentCharacterId
-        })
+        }])
         .select('item_id')
         .single();
 
     if (insertError) {
+        console.error('Supabase insert error:', insertError);
+        console.error('Details:', insertError.details);
+        console.error('Hint:', insertError.hint);
         await showCustomModal('Error', 'Failed to create new item record: ' + insertError.message, [{
             text: 'OK',
             value: true
         }]);
         return null;
     }
+
     return newItem.item_id;
 };
 
 export const handleRecordPurchase = async (e) => {
     e.preventDefault();
-    const submitButton = e.target.querySelector('button[type="submit"]');
+
+    if (!currentCharacterId) {
+        await showCustomModal('Error', 'Please select a character first.', [{
+            text: 'OK',
+            value: true
+        }]);
+        return;
+    }
+
+    const submitButton = e.submitter;
     if (submitButton) {
         submitButton.disabled = true;
-        submitButton.textContent = 'Recording Purchase...';
+        submitButton.textContent = 'Recording...';
     }
+
+    const itemName = document.getElementById('purchase-item-name').value;
+    const categoryId = document.getElementById('purchase-item-category').value;
+    const quantity = parseInt(document.getElementById('purchase-quantity').value, 10);
+    const costPerItem = parseInt(document.getElementById('purchase-cost-per-item').value, 10);
+    const date = document.getElementById('purchase-date').value;
+    const notes = document.getElementById('purchase-notes').value;
+    const marketStallId = document.getElementById('purchase-market-stall-location').value;
+
+    if (!itemName || !categoryId || isNaN(quantity) || isNaN(costPerItem) || !date || !marketStallId) {
+        await showCustomModal('Error', 'Please fill in all required fields: Item Name, Category, Quantity, Cost Per Item, Date, and Market Stall.', [{
+            text: 'OK',
+            value: true
+        }]);
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Record Purchase';
+        }
+        return;
+    }
+
+    const integerCategoryId = parseInt(categoryId, 10);
+    if (isNaN(integerCategoryId)) {
+        await showCustomModal('Error', 'Invalid category selected. Please ensure a valid category is chosen.', [{
+            text: 'OK',
+            value: true
+        }]);
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Record Purchase';
+        }
+        return;
+    }
+
     try {
-        if (!currentCharacterId) {
-            await showCustomModal('Validation Error', 'Please select a character first.', [{
-                text: 'OK',
-                value: true
-            }]);
+        const itemId = await getOrCreateItemId(itemName, integerCategoryId);
+        if (!itemId) {
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Record Purchase';
+            }
             return;
         }
 
-        const itemName = purchaseItemNameInput.value.trim();
-        const itemCategory = purchaseItemCategorySelect.value;
-        const itemStacks = parseInt(purchaseItemStacksInput.value, 10);
-        const itemCountPerStack = parseInt(purchaseItemCountPerStackInput.value, 10);
-        const itemPricePerStack = parseFloat(purchaseItemPricePerStackInput.value);
-
-        if (!itemName || !itemCategory || isNaN(itemStacks) || isNaN(itemCountPerStack) || isNaN(itemPricePerStack)) {
-            await showCustomModal('Validation Error', 'Please fill in all purchase fields correctly.', [{
-                text: 'OK',
-                value: true
-            }]);
-            return;
-        }
-
-        const itemId = await getOrCreateItemId(itemName, itemCategory);
-        if (!itemId) return;
-
-        const quantityPerPurchase = itemCountPerStack;
-        const totalPurchasePricePerPurchase = itemPricePerStack;
-        const purchasePricePerUnitPerPurchase = totalPurchasePricePerPurchase / quantityPerPurchase;
-
-        let successCount = 0;
-        let failedCount = 0;
-        const errors = [];
+        const totalCost = quantity * costPerItem;
 
         const {
-            data: characterData,
-            error: fetchCharacterError
+            data: existingGoldData,
+            error: goldError
         } = await supabase
             .from('characters')
             .select('gold')
             .eq('character_id', currentCharacterId)
             .single();
 
-        if (fetchCharacterError) {
-            await showCustomModal('Error', 'Failed to fetch character gold: ' + fetchCharacterError.message, [{
-                text: 'OK',
-                value: true
-            }]);
-            console.error('Error fetching character gold:', fetchCharacterError.message);
-            return;
+        if (goldError) {
+            throw goldError;
         }
 
-        let currentGold = characterData.gold || 0;
-        let totalCost = 0;
-        for (let i = 0; i < itemStacks; i++) {
-            totalCost += totalPurchasePricePerPurchase;
-        }
+        const currentGold = existingGoldData.gold || 0;
 
         if (currentGold < totalCost) {
-            await showCustomModal('Validation Error', `Not enough gold! You need ${totalCost.toLocaleString()} gold but only have ${currentGold.toLocaleString()}.`, [{
+            await showCustomModal('Error', `Not enough gold. Current gold: ${currentGold.toLocaleString()}. Purchase cost: ${totalCost.toLocaleString()}.`, [{
                 text: 'OK',
                 value: true
             }]);
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Record Purchase';
+            }
             return;
         }
 
-        for (let i = 0; i < itemStacks; i++) {
-            const {
-                error
-            } = await supabase.from('purchases').insert({
+        // Handle multiple stacks if inputs are provided
+        const numStacks = parseInt(document.getElementById('purchase-item-stacks').value, 10) || 1;
+        const countPerStack = parseInt(document.getElementById('purchase-item-count-per-stack').value, 10) || quantity;
+
+        const recordsToInsert = [];
+        for (let i = 0; i < numStacks; i++) {
+            recordsToInsert.push({
                 item_id: itemId,
                 character_id: currentCharacterId,
-                quantity_purchased: quantityPerPurchase,
-                purchase_price_per_unit: purchasePricePerUnitPerPurchase,
-                total_purchase_price: totalPurchasePricePerPurchase
+                market_stall_id: marketStallId,
+                purchase_quantity: (numStacks > 1) ? countPerStack : quantity, // Use countPerStack if multiple stacks, else use total quantity
+                cost_per_item: costPerItem,
+                total_cost: (numStacks > 1) ? (countPerStack * costPerItem) : totalCost,
+                purchase_date: date,
+                notes: notes,
             });
-            if (error) {
-                errors.push(error.message);
-                failedCount++;
-            } else {
-                successCount++;
-            }
+        }
+
+
+        const {
+            error: insertPurchaseError,
+            count: successCount
+        } = await supabase
+            .from('purchases')
+            .insert(recordsToInsert)
+            .select('*', {
+                count: 'exact'
+            });
+
+
+        if (insertPurchaseError) {
+            throw insertPurchaseError;
         }
 
         if (successCount > 0) {

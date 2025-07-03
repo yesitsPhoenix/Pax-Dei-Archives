@@ -123,7 +123,8 @@ const aggregateTransactionData = (transactions, timeframe) => {
       const week = getWeekNumber(d);
       key = `${year}-W${week.toString().padStart(2, '0')}`;
     } else {
-      key = `${transactionDate.getUTCFullYear()}-${(transactionDate.getUTCMonth() + 1).toString().padStart(2, '0')}-${transactionDate.getUTCDate().toString().padStart(2, '0')}`;
+      // Modified for daily figures to remove the year
+      key = `${(transactionDate.getUTCMonth() + 1).toString().padStart(2, '0')}-${transactionDate.getUTCDate().toString().padStart(2, '0')}`;
     }
 
     const type = (transaction.type || '').trim().toLowerCase();

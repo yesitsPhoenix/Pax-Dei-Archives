@@ -85,11 +85,14 @@ const getOrCreateItemId = async (itemName, categoryId) => {
 
 export const handleAddListing = async (e) => {
     e.preventDefault();
-    const submitButton = e.target.querySelector('button[type="submit"]');
+    const form = e.target;
+    const submitButton = form.querySelector('button[type="submit"]');
+
     if (submitButton) {
         submitButton.disabled = true;
         submitButton.textContent = 'Adding Listing...';
     }
+
     try {
         if (!currentCharacterId) {
             await showCustomModal('Validation Error', 'Please select a character first.', [{
@@ -99,15 +102,24 @@ export const handleAddListing = async (e) => {
             return;
         }
 
-        const itemName = document.getElementById('item-name').value.trim();
-        const itemCategory = document.getElementById('item-category').value;
-        const itemStacks = parseInt(document.getElementById('item-stacks').value, 10);
-        const itemCountPerStack = parseInt(document.getElementById('item-count-per-stack').value, 10);
-        const itemPricePerStack = parseFloat(document.getElementById('item-price-per-stack').value);
-        const marketStallId = document.getElementById('market-stall-location').value;
+        const itemName = form.querySelector('[name="item-name"]').value.trim();
+        const itemCategory = parseInt(form.querySelector('[name="item-category"]').value, 10);
+        const itemStacks = parseInt(form.querySelector('[name="item-stacks"]').value, 10);
+        const itemCountPerStack = parseInt(form.querySelector('[name="item-count-per-stack"]').value, 10);
+        const itemPricePerStack = parseFloat(form.querySelector('[name="item-price-per-stack"]').value);
+        const marketStallId = form.querySelector('[name="market-stall-location"]').value;
 
-        if (!itemName || !itemCategory || isNaN(itemStacks) || isNaN(itemCountPerStack) || isNaN(itemPricePerStack) || !marketStallId) {
+        if (!itemName || isNaN(itemStacks) || isNaN(itemCountPerStack) || isNaN(itemPricePerStack) || !marketStallId) {
             await showCustomModal('Validation Error', 'Please fill in all listing fields correctly.', [{
+                text: 'OK',
+                value: true
+            }]);
+            return;
+        }
+
+        // Validate itemCategory after parsing
+        if (isNaN(itemCategory) || itemCategory <= 0) { // Assuming category IDs are positive integers
+            await showCustomModal('Validation Error', 'Please select a valid item category.', [{
                 text: 'OK',
                 value: true
             }]);
@@ -198,7 +210,10 @@ export const handleAddListing = async (e) => {
                     text: 'OK',
                     value: true
                 }]);
-                e.target.reset();
+                form.reset();
+                if (addListingModal && !addListingModal.classList.contains('hidden')) {
+                    addListingModal.classList.add('hidden');
+                }
                 await loadTraderPageData();
             }
         } else {

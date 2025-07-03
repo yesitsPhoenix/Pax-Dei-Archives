@@ -15,12 +15,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script> window.gtTooltipConfig = {
         scale: 0.8,
-        delay: 40,
+        delay: 30,
         };
     </script>
     <script async src="https://paxdei.gaming.tools/embed.js"></script>
 </head>
-<aside id="sidebar" class="w-64 bg-[#1c1c1c] border-r-4 border-emerald-500 shadow-lg transition-all duration-300 hover:bg-slate-700 px-3 py-4 cursor-pointer fixed h-v50vh z-50 top-[220px] collapsed">
+<aside id="sidebar" class="w-64 bg-[#1c1c1c] border-r-4 border-amber-300 shadow-lg transition-all duration-300 hover:bg-slate-700 px-3 py-4 cursor-pointer fixed h-v50vh z-50 top-[220px] collapsed">
   <ul class="space-y-2 font-medium">
     <li>
       <a href="/Pax-Dei-Archives/profile.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
@@ -35,9 +35,21 @@
       </a>
     </li>
     <li>
+        <a href="#" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900" id="addListingSidebarBtn">
+        <i class="fas fa-plus-square w-5 h-5 text-gray-400 transition duration-75"></i>
+        <span class="ml-3">Add New Listing</span>
+      </a>
+    </li>
+    <li>
       <a href="#" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900" id="addPveTransactionSidebarBtn">
         <i class="fas fa-solid fa-chess-rook w-5 h-5 text-gray-400 transition duration-75"></i>
         <span class="ml-3">Add PVE Transaction</span>
+      </a>
+    </li>
+    <li>
+      <a href="#" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900" id="recordPurchaseSidebarBtn">
+        <i class="fas fa-receipt w-5 h-5 text-gray-400 transition duration-75"></i>
+        <span class="ml-3">Record New Purchase</span>
       </a>
     </li>
     <li>
@@ -91,7 +103,6 @@
             </nav>
         </div>
     </header>
-    
     <main class="trader-container">
         <div class="container">
             <div id="traderLoginContainer" class="admin-form-container" style="display: none; text-align: center;">
@@ -101,6 +112,7 @@
                 </button>
                 <p id="traderLoginError" style="color: red; display: none;"></p>
             </div>
+        <h1 class="dashboard-header">Ledger</h1>
             <div class="mb-4">
                 <label for="character-select" class="block text-gray-700 text-sm font-bold mb-2">Select Character:</label>
                 <select id="character-select" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
@@ -110,19 +122,10 @@
                 <button id="showCreateCharacterModalBtn" class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-full">
                     Create New Character
                 </button>
-                <button id="showManageMarketStallsModalBtn" class="bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-full">
-                    Manage Market Stalls
-                </button>
-                <button id="setGoldBtn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">
-                    Set Gold
-                </button>
-                <button id="pveBtn" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-full">
-                    Enter Manual PVE Gold
-                </button>
             </div>
             <div id="traderDashboardAndForms" style="display: none;">
-                <h1 class="dashboard-header">Transaction Dashboard</h1>
-                <em>It may be necessary to occasionally update gold manually (due to Dungeons, POIs, and manual gold pickup).</em>
+
+                <em>It may be necessary to occasionally update gold manually (due to Dungeons, POIs, and gold pickup/chest deposits).</em>
                 <br>
                 <br>
                 <section class="dashboard">
@@ -163,79 +166,6 @@
                         <button id="viewSalesMonthly" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">View Monthly</button>
                     </div>
                 </section>
-
-
-                <div class="flex flex-col md:flex-row gap-8 mb-8">
-                <section class="add-listing w-full md:w-1/2">
-                    <h2>Add New Listing</h2>
-                    <form id="add-listing-form">
-                        <div class="form-group">
-                            <label for="item-name">Item Name</label>
-                            <div class="autocomplete-wrapper">
-                                <input type="text" id="item-name" name="item-name" placeholder="e.g., Iron Ingot" required>
-                                <div id="item-name-suggestions" class="autocomplete-suggestions"></div>
-                            </div>
-                            </div>
-                        <div class="form-group">
-                            <label for="item-category">Item Category</label>
-                            <select id="item-category" name="item-category" class="w-full p-2 border rounded-lg" required>
-                                <option value="">Select a category</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="item-stacks">Stacks (Number of Individual Listings)</label>
-                            <input type="number" id="item-stacks" name="item-stacks" value="1" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="item-count-per-stack">Count (per stack)</label>
-                            <input type="number" id="item-count-per-stack" name="item-count-per-stack" placeholder="e.g., 100" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="item-price-per-stack">Price (per stack)</label>
-                            <input type="number" id="item-price-per-stack" name="item-price-per-stack" placeholder="e.g., 500" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="market-stall-location">Market Stall Location</label>
-                            <select id="market-stall-location" name="market-stall-location" required>
-                                <option value="">Select a Market Stall</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="btn">Add Listing</button>
-                    </form>
-                </section>
-
-               <section class="add-purchase w-full md:w-1/2">
-                    <h2>Record New Purchase</h2>
-                    <form id="add-purchase-form">
-                        <div class="form-group">
-                            <label for="purchase-item-name">Item Name</label>
-                            <div class="autocomplete-wrapper">
-                                <input type="text" id="purchase-item-name" name="purchase-item-name" placeholder="e.g., Copper Ore" required>
-                                <div id="purchase-item-name-suggestions" class="autocomplete-suggestions"></div>
-                            </div>
-                            </div>
-                        <div class="form-group">
-                            <label for="purchase-item-category">Item Category</label>
-                            <select id="purchase-item-category" name="purchase-item-category" class="w-full p-2 border rounded-lg" required>
-                                <option value="">Select a category</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="purchase-item-stacks">Stacks (Number of Individual Purchases)</label>
-                            <input type="number" id="purchase-item-stacks" name="purchase-item-stacks" value="1" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="purchase-item-count-per-stack">Count (per stack)</label>
-                            <input type="number" id="purchase-item-count-per-stack" name="item-count-per-stack" placeholder="e.g., 50" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="purchase-item-price-per-stack">Price (per stack)</label>
-                            <input type="number" step="0.01" id="purchase-item-price-per-stack" name="purchase-item-price-per-stack" placeholder="e.g., 200" required>
-                        </div>
-                        <button type="submit" class="btn">Record Purchase</button>
-                    </form>
-                </section>
-            </div>
                 <section id="active-listings-section" class="active-listings">
                     <h2>Active Market Listings</h2>
                     <div class="market-stall-tabs"></div>
@@ -426,7 +356,138 @@
         </div>
     </div>
 </div>
+    <div id="addListingModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md border border-emerald-400">
+            <h3 class="text-2xl font-bold text-white mb-6 text-center">Add New Listing</h3>
+            <form id="add-listing-form-modal" class="space-y-4">
+                <div class="form-group">
+                    <label for="modal-item-name" class="block text-sm font-medium text-gray-300">Item Name</label>
+                    <div class="autocomplete-wrapper">
+                        <input type="text" id="modal-item-name" name="item-name" placeholder="e.g., Iron Ingot" required
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <div id="modal-item-name-suggestions" class="autocomplete-suggestions"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="modal-item-category" class="block text-sm font-medium text-gray-300">Item Category</label>
+                    <select id="item-category" name="item-category" class="w-full p-2 border rounded-lg bg-gray-700 text-white" required>
+                        <option value="">Select a category</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="modal-item-stacks" class="block text-sm font-medium text-gray-300">Stacks (Number of Individual Listings)</label>
+                    <input type="number" id="modal-item-stacks" name="item-stacks" value="1" required
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div class="form-group">
+                    <label for="modal-item-count-per-stack" class="block text-sm font-medium text-gray-300">Count (per stack)</label>
+                    <input type="number" id="modal-item-count-per-stack" name="item-count-per-stack" placeholder="e.g., 100" required
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div class="form-group">
+                    <label for="modal-item-price-per-stack" class="block text-sm font-medium text-gray-300">Price (per stack)</label>
+                    <input type="number" id="modal-item-price-per-stack" name="item-price-per-stack" placeholder="e.g., 500" required
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div class="form-group">
+                    <label for="modal-market-stall-location" class="block text-sm font-medium text-gray-300">Market Stall Location</label>
+                    <select id="modal-market-stall-location" name="market-stall-location" required
+                                class="w-full p-2 border rounded-lg bg-gray-700 text-white">
+                        <option value="">Select a Market Stall</option>
+                    </select>
+                </div>
+                <div class="flex justify-end gap-4">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Add Listing
+                    </button>
+                    <button type="button" id="closeAddListingModalBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                        Close
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
+    <div id="recordPurchaseModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md border border-emerald-400">
+            <h2 class="text-2xl font-bold text-white mb-6 text-center">Record New Purchase</h2>
+            <form id="recordPurchaseFormModal" class="space-y-4">
+                <div class="form-group">
+                    <label for="modal-purchase-item-name" class="block text-sm font-medium text-gray-300">Item Name</label>
+                    <div class="autocomplete-wrapper">
+                        <input type="text" id="modal-purchase-item-name" name="item-name" placeholder="e.g., Copper Ore" required
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <div id="modal-purchase-item-name-suggestions" class="autocomplete-suggestions"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="modal-purchase-item-category" class="block text-sm font-medium text-gray-300">Item Category</label>
+                    <select id="purchase-item-category" name="item-category" required
+                        class="w-full p-2 border rounded-lg bg-gray-700 text-white">
+                        <option value="">Select a category</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="modal-purchase-item-stacks" class="block text-sm font-medium text-gray-300">Stacks (Number of Individual Purchases)</label>
+                    <input type="number" id="modal-purchase-item-stacks" name="item-stacks" value="1" required
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div class="form-group">
+                    <label for="modal-purchase-item-count-per-stack" class="block text-sm font-medium text-gray-300">Count (per stack)</label>
+                    <input type="number" id="modal-purchase-item-count-per-stack" name="item-count-per-stack" placeholder="e.g., 50" required
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div class="form-group">
+                    <label for="modal-purchase-item-price-per-stack" class="block text-sm font-medium text-gray-300">Price (per stack)</label>
+                    <input type="number" step="0.01" id="modal-purchase-item-price-per-stack" name="item-price-per-stack" placeholder="e.g., 200" required
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div class="flex justify-end gap-4">
+                    <button type="submit"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Record Purchase
+                    </button>
+                    <button type="button" id="closeRecordPurchaseModalBtn"
+                        class="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+  <div id="addPveTransactionModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+    <div class="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md border border-emerald-400">
+      <h3 class="text-2xl font-bold text-white mb-6 text-center">Add PVE Transaction</h3>
+      <form id="add-pve-transaction-form" class="space-y-4">
+        <div class="form-group">
+          <label for="pve-transaction-type" class="block text-sm font-medium text-gray-300">Transaction Type</label>
+          <select id="pve-transaction-type" name="pve-transaction-type" class="w-full p-2 border rounded-lg bg-gray-700 text-white" required>
+            <option value="">Select a type</option>
+            <option value="Dungeon">Dungeon Run</option>
+            <option value="POI">POI Clear</option>
+            <option value="Manual">Chest Withdrawal (positive amt)</option>
+            <option value="Manual">Chest Deposit (negative amt)</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="pve-amount" class="block text-sm font-medium text-gray-300">New Gold Total</label>
+          <input type="number" id="pve-amount" name="pve-amount" min="0" step="1" required
+                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                placeholder="Enter new gold total to calculate difference">
+        </div>
+        <div class="flex justify-end gap-4">
+          <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            Add Transaction
+          </button>
+          <button type="button" id="closeAddPveTransactionModalBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+            Close
+          </button>
+        </div>
+      </form>
+    </div>
+</div>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -435,5 +496,6 @@
     <script type="module" src="frontend/www/js/modules/listings.js"></script>
     <script type="module" src="frontend/www/js/popoutAuth.js"></script>
     <script type="module" src="frontend/www/js/sidebar.js"></script>
+    <script type="module" src="frontend/www/js/modules/filter.js"></script>
 </body>
 </html>

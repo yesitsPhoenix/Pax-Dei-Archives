@@ -6,7 +6,7 @@
 }
 
 .dashboard-header {
-    font-size: 3rem;
+    font-size: 2rem;
     color: #ffffff;
     margin-bottom: 20px;
     margin-top: 20px;
@@ -105,11 +105,15 @@
 .sales-history h2 {
     font-size: 1.8rem;
     color: #fff;
-    margin-bottom: 25px;
+    margin-bottom: 1rem;
     text-align: center;
-    border-bottom: 1px solid #444;
     padding-bottom: 15px;
     font-weight: bold;
+}
+
+.market-stall-tabs {
+    border-bottom: 1px solid #ececec;
+    margin-bottom: 1rem;
 }
 
 .add-listing .form-group,
@@ -465,4 +469,8 @@
 
 .shadow-sm {
     color: black !important;
+}
+
+#character-select {
+    width: 40.5vw !important;
 }

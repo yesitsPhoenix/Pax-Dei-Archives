@@ -1,3 +1,4 @@
+// trader.js
 import { supabase } from './supabaseClient.js';
 import { initializeListings, loadActiveListings, populateMarketStallDropdown, setupMarketStallTabs } from './modules/listings.js';
 import { initializeCharacters, insertCharacterModalHtml, currentCharacterId, getCurrentCharacter } from './modules/characters.js';
@@ -5,8 +6,20 @@ import { initializeSales, loadTransactionHistory, handleDownloadCsv } from './mo
 import { renderDashboard } from './modules/dashboard.js';
 import { renderSalesChart, setupSalesChartListeners } from './modules/salesChart.js';
 
+import {
+    showAddListingModalBtn,
+    addListingModal,
+    closeAddListingModalBtn,
+    addListingFormModal,
+    modalItemNameInput,
+    modalItemCategorySelect,
+    modalItemNameSuggestions,
+    modalMarketStallLocationSelect
+} from './modules/dom.js';
+
 let currentUser = null;
 let allCharacterActivityData = [];
+let allItems = [];
 
 let customModalContainer = null;
 let customModalContentWrapper = null;
@@ -140,15 +153,38 @@ const checkUser = async () => {
     }
 };
 
+async function populateItemData() {
+    try {
+        const { data, error } = await supabase.rpc('get_all_items_for_dropdown');
+
+        if (error) {
+            console.error('Error fetching items for dropdowns:', error);
+            console.error('Supabase RPC error details:', error.message, error.details, error.hint);
+            return;
+        }
+
+        allItems = data;
+
+        initializeAutocomplete(allItems);
+
+    } catch (err) {
+        console.error('An unexpected error occurred while fetching item data:', err);
+    }
+}
+
 export const loadTraderPageData = async () => {
     if (!currentUser || !currentUser.id || !currentCharacterId) {
         renderDashboard({}, null);
         await loadActiveListings();
         loadTransactionHistory([]);
         renderSalesChart([], 'daily');
-        // Added calls for market stalls
-        await populateMarketStallDropdown();
-        await setupMarketStallTabs();
+        // If no character selected, clear and hide market stall tabs
+        if (document.querySelector('.market-stall-tabs')) {
+            document.querySelector('.market-stall-tabs').innerHTML = '<p class="text-gray-600 text-center py-4">Select a character to manage market stalls.</p>';
+        }
+        if (document.querySelector('.tab-content-container')) {
+            document.querySelector('.tab-content-container').innerHTML = '';
+        }
         return;
     }
 
@@ -174,8 +210,11 @@ export const loadTraderPageData = async () => {
         await loadActiveListings();
         loadTransactionHistory(allCharacterActivityData);
         renderSalesChart(allCharacterActivityData, 'daily');
-        // Added calls for market stalls
-        await populateMarketStallDropdown();
+        // Add this line to repopulate the market stall dropdown when character data is loaded
+        if (modalMarketStallLocationSelect) {
+            await populateMarketStallDropdown(modalMarketStallLocationSelect);
+        }
+        // Call setupMarketStallTabs to refresh the tabs for the new character
         await setupMarketStallTabs();
 
     } catch (error) {
@@ -221,26 +260,50 @@ const addPageEventListeners = () => {
         });
     }
     setupSalesChartListeners(() => allCharacterActivityData);
+    if (showAddListingModalBtn) {
+        showAddListingModalBtn.addEventListener('click', () => {
+            if (addListingModal) {
+                addListingModal.classList.remove('hidden');
+            }
+            if (addListingFormModal) {
+                addListingFormModal.reset();
+            }
+        });
+    }
+
+    if (closeAddListingModalBtn) {
+        closeAddListingModalBtn.addEventListener('click', () => {
+            if (addListingModal) {
+                addListingModal.classList.add('hidden');
+            }
+        });
+    }
+
+    if (addListingModal) {
+        addListingModal.addEventListener('click', (event) => {
+            if (event.target === addListingModal) {
+                addListingModal.classList.add('hidden');
+            }
+        });
+    }
+
+
+    if (modalItemNameInput && modalItemNameSuggestions && allItems) {
+        setupCustomAutocomplete(modalItemNameInput, modalItemNameSuggestions, allItems, (selectedItem) => {
+            modalItemNameInput.value = selectedItem.item_name;
+            const categorySelect = modalItemCategorySelect;
+            if (categorySelect) {
+                categorySelect.value = String(selectedItem.category_id); // Convert to string here
+            }
+            modalItemNameInput.dataset.selectedItemId = selectedItem.item_id;
+            modalItemNameInput.dataset.selectedPaxDeiSlug = selectedItem.p_slug;
+            modalItemNameInput.dataset.selectedItemCategory = selectedItem.category_id;
+        });
+    }
+
 };
 
-async function populateItemData() {
-    try {
-        const { data, error } = await supabase.rpc('get_all_items_for_dropdown');
 
-        if (error) {
-            console.error('Error fetching items for dropdowns:', error);
-            console.error('Supabase RPC error details:', error.message, error.details, error.hint);
-            return;
-        }
-
-        const allItems = data;
-
-        initializeAutocomplete(allItems);
-
-    } catch (err) {
-        console.error('An unexpected error occurred while fetching item data:', err);
-    }
-}
 
 function setupCustomAutocomplete(inputElement, suggestionsContainerElement, dataArray, selectionCallback) {
     let currentFocus = -1;
@@ -375,35 +438,35 @@ function setupCustomAutocomplete(inputElement, suggestionsContainerElement, data
 }
 
 function initializeAutocomplete(allItems) {
-    const itemNameInput = document.getElementById('item-name');
-    const itemNameSuggestions = document.getElementById('item-name-suggestions');
+    const modalItemNameInput = document.getElementById('modal-item-name');
+    const modalItemNameSuggestions = document.getElementById('modal-item-name-suggestions');
 
-    if (itemNameInput && itemNameSuggestions) {
-        setupCustomAutocomplete(itemNameInput, itemNameSuggestions, allItems, (selectedItem) => {
-            itemNameInput.value = selectedItem.item_name;
-            const categorySelect = document.getElementById('item-category');
-            if (categorySelect) {
-                categorySelect.value = selectedItem.category_id;
+    if (modalItemNameInput && modalItemNameSuggestions) {
+        setupCustomAutocomplete(modalItemNameInput, modalItemNameSuggestions, allItems, (selectedItem) => {
+            modalItemNameInput.value = selectedItem.item_name;
+            const modalItemCategorySelect = document.getElementById('modal-item-category');
+            if (modalItemCategorySelect) {
+                modalItemCategorySelect.value = String(selectedItem.category_id); // Convert to string here
             }
-            itemNameInput.dataset.selectedItemId = selectedItem.item_id;
-            itemNameInput.dataset.selectedPaxDeiSlug = selectedItem.pax_dei_slug;
-            itemNameInput.dataset.selectedItemCategory = selectedItem.category_id;
+            modalItemNameInput.dataset.selectedItemId = selectedItem.item_id;
+            modalItemNameInput.dataset.selectedPaxDeiSlug = selectedItem.pax_dei_slug;
+            modalItemNameInput.dataset.selectedItemCategory = selectedItem.category_id;
         });
     }
 
-    const purchaseItemNameInput = document.getElementById('purchase-item-name');
-    const purchaseItemNameSuggestions = document.getElementById('purchase-item-name-suggestions');
+    const modalPurchaseItemNameInput = document.getElementById('modal-purchase-item-name');
+    const modalPurchaseItemNameSuggestions = document.getElementById('modal-purchase-item-name-suggestions');
 
-    if (purchaseItemNameInput && purchaseItemNameSuggestions) {
-        setupCustomAutocomplete(purchaseItemNameInput, purchaseItemNameSuggestions, allItems, (selectedItem) => {
-            purchaseItemNameInput.value = selectedItem.item_name;
-            const categorySelect = document.getElementById('purchase-item-category');
-            if (categorySelect) {
-                categorySelect.value = selectedItem.category_id;
+    if (modalPurchaseItemNameInput && modalPurchaseItemNameSuggestions) {
+        setupCustomAutocomplete(modalPurchaseItemNameInput, modalPurchaseItemNameSuggestions, allItems, (selectedItem) => {
+            modalPurchaseItemNameInput.value = selectedItem.item_name;
+            const modalPurchaseItemCategorySelect = document.getElementById('modal-purchase-item-category');
+            if (modalPurchaseItemCategorySelect) {
+                modalPurchaseItemCategorySelect.value = String(selectedItem.category_id); // Convert to string here
             }
-            purchaseItemNameInput.dataset.selectedItemId = selectedItem.item_id;
-            purchaseItemNameInput.dataset.selectedPaxDeiSlug = selectedItem.p_slug;
-            purchaseItemNameInput.dataset.selectedItemCategory = selectedItem.category_id;
+            modalPurchaseItemNameInput.dataset.selectedItemId = selectedItem.item_id;
+            modalPurchaseItemNameInput.dataset.selectedPaxDeiSlug = selectedItem.pax_dei_slug;
+            modalPurchaseItemNameInput.dataset.selectedItemCategory = selectedItem.category_id;
         });
     }
 
@@ -418,7 +481,7 @@ function initializeAutocomplete(allItems) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    addPageEventListeners();
     await checkUser();
     await populateItemData();
+    addPageEventListeners();
 });

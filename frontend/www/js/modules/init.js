@@ -37,7 +37,11 @@ import {
     showManageMarketStallsModalBtn,
     manageMarketStallsModal,
     createMarketStallForm,
-    closeManageMarketStallsModalBtn
+    closeManageMarketStallsModalBtn,
+    addListingFormModal,
+    modalItemCategorySelect,
+    modalMarketStallLocationSelect,
+    modalPurchaseItemCategorySelect
 } from './dom.js';
 import {
     handleAddListing,
@@ -54,19 +58,76 @@ import {
     handleRecordPurchase
 } from './purchase.js';
 import {
-    handleFilterChange,
-    fetchAndPopulateCategories
+    handleFilterChange
 } from './filter.js';
 import {
     setupAutocomplete
 } from './autocomplete.js';
 
 
-export const initializeListings = (userId) => {
+const initializeAddListingModalContent = async () => {
+
+    if (modalMarketStallLocationSelect) {
+        await populateMarketStallDropdown(modalMarketStallLocationSelect);
+    } else {
+        console.error("Error: modalMarketStallLocationSelect element not found in DOM.");
+    }
+
+    if (addListingFormModal) {
+        addListingFormModal.addEventListener('submit', handleAddListing);
+    }
+};
+
+export const fetchAndPopulateCategories = async (selectElement) => {
+    if (!selectElement) {
+        console.warn("fetchAndPopulateCategories: selectElement is null or undefined.");
+        return;
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('item_categories')
+            .select('category_id, category_name')
+            .order('category_name');
+
+        if (error) throw error;
+
+        selectElement.innerHTML = '<option value="">All Categories</option>';
+
+        data.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category.category_id;
+            option.textContent = category.category_name;
+            selectElement.appendChild(option);
+        });
+    } catch (e) {
+        console.error("Error fetching or populating categories:", e.message);
+    }
+};
+
+
+export const initializeListings = async (userId) => {
     setCurrentUserId(userId);
     addListingsEventListeners();
-    fetchAndPopulateCategories();
-    populateMarketStallDropdown();
+    if (itemCategorySelect) {
+        await fetchAndPopulateCategories(itemCategorySelect);
+    }
+    if (filterListingCategorySelect) {
+        await fetchAndPopulateCategories(filterListingCategorySelect);
+    }
+    if (purchaseItemCategorySelect) {
+        await fetchAndPopulateCategories(purchaseItemCategorySelect);
+    }
+    if (modalItemCategorySelect) {
+        await fetchAndPopulateCategories(modalItemCategorySelect);
+    }
+    if (modalPurchaseItemCategorySelect) {
+        await fetchAndPopulateCategories(modalPurchaseItemCategorySelect);
+    }
+    if (marketStallDropdown) {
+        populateMarketStallDropdown(marketStallDropdown);
+    }
+    initializeAddListingModalContent();
     setupMarketStallTabs();
     if (sortBySelect) {
         sortBySelect.value = currentSort.column;
@@ -77,8 +138,12 @@ export const initializeListings = (userId) => {
 };
 
 const addListingsEventListeners = () => {
-    addListingForm.addEventListener('submit', handleAddListing);
-    addPurchaseForm.addEventListener('submit', handleRecordPurchase);
+    if (addListingForm) {
+        addListingForm.addEventListener('submit', handleAddListing);
+    }
+    if (addPurchaseForm) {
+        addPurchaseForm.addEventListener('submit', handleRecordPurchase);
+    }
 
     filterListingItemNameInput.addEventListener('input', (e) => handleFilterChange('itemName', e.target.value));
     filterListingCategorySelect.addEventListener('change', (e) => handleFilterChange('categoryId', e.target.value));
@@ -196,8 +261,6 @@ export const loadActiveListings = async (marketStallId = null) => {
             stallTabContent.querySelector('p')?.remove();
         }
     }
-
-
     if (!currentCharacterId) {
         targetLoader.style.display = 'none';
         targetTable.style.display = 'table';
@@ -206,10 +269,8 @@ export const loadActiveListings = async (marketStallId = null) => {
         }
         return;
     }
-
     targetLoader.style.display = 'block';
     targetTable.style.display = 'none';
-
     try {
         const {
             data,
@@ -225,149 +286,191 @@ export const loadActiveListings = async (marketStallId = null) => {
             p_sort_direction: currentSort.direction,
             p_market_stall_id: marketStallId
         });
-
-        if (error) throw error;
-
-        const listings = data || [];
-        const totalCount = listings.length > 0 ? listings[0].total_count : 0;
-
-        const listingsTbody = targetTable.querySelector('tbody');
-        if (listingsTbody) {
-            renderListingsTable(listings, listingsTbody);
+        if (error) {
+            throw error;
         }
-        renderListingsPagination(totalCount, targetContainer);
+        renderListingsTable(data);
+        const {
+            count: totalListings,
+            error: countError
+        } = await supabase
+            .from('market_listings')
+            .select('*', {
+                count: 'exact',
+                head: true
+            })
+            .eq('character_id', currentCharacterId)
+            .eq('is_fully_sold', false)
+            .eq('is_cancelled', false);
 
-    } catch (err) {
-        console.error('Error loading listings:', err.message);
-        await showCustomModal('Error', 'Failed to load listings. ' + err.message, [{
-            text: 'OK',
-            value: true
-        }]);
+        if (countError) {
+            throw countError;
+        }
+        renderListingsPagination(totalListings);
+    } catch (e) {
+        console.error("Error loading active listings:", e.message);
+        if (targetTable.querySelector('tbody')) {
+            targetTable.querySelector('tbody').innerHTML = `<tr><td colspan="7" class="text-center py-4 text-red-500">Error loading listings: ${e.message}</td></tr>`;
+        }
     } finally {
         targetLoader.style.display = 'none';
         targetTable.style.display = 'table';
     }
 };
 
-
-export async function populateMarketStallDropdown() {
-    if (!marketStallDropdown) {
-        console.warn('Market stall dropdown not found. Skipping dropdown population.');
+export const populateMarketStallDropdown = async (selectElement) => {
+    if (!selectElement) {
+        console.error("populateMarketStallDropdown: selectElement is null or undefined.");
         return;
     }
 
     if (!currentCharacterId) {
-        marketStallDropdown.innerHTML = '<option value="">Please select a character</option>';
-        marketStallDropdown.disabled = true;
+        selectElement.innerHTML = '<option value="">No character selected</option>';
+        selectElement.disabled = true;
         return;
     }
 
-    const marketStalls = await getUserMarketStallLocations(currentCharacterId);
+    try {
+        const {
+            data: marketStalls,
+            error
+        } = await supabase
+            .from('market_stalls')
+            .select('id, stall_name')
+            .eq('character_id', currentCharacterId)
+            .order('stall_name');
 
-    marketStallDropdown.innerHTML = '<option value="">Select a Stall</option>';
-    if (marketStalls.length === 0) {
-        marketStallDropdown.innerHTML += '<option value="" disabled>No stalls found</option>';
-        marketStallDropdown.disabled = true;
-    } else {
+        if (error) {
+            throw error;
+        }
+
+        selectElement.innerHTML = '<option value="">All Market Stalls</option>';
         marketStalls.forEach(stall => {
             const option = document.createElement('option');
             option.value = stall.id;
             option.textContent = stall.stall_name;
-            marketStallDropdown.appendChild(option);
+            selectElement.appendChild(option);
         });
-        marketStallDropdown.disabled = false;
+        selectElement.disabled = false;
+    } catch (e) {
+        console.error("Error populating market stall dropdown:", e.message);
+        selectElement.innerHTML = '<option value="">Error loading stalls</option>';
+        selectElement.disabled = true;
     }
-}
+};
 
-export async function getUserMarketStallLocations(characterId) {
-
-    if (!characterId) {
-        return [];
-    }
-    const {
-        data,
-        error
-    } = await supabase
-        .from('market_stalls')
-        .select('id, stall_name, region')
-        .eq('character_id', characterId)
-        .order('stall_name', {
-            ascending: true
-        });
-
-    if (error) {
-        console.error('Error fetching market stalls:', error.message);
-        return [];
-    }
-    return data;
-}
-
-export async function setupMarketStallTabs() {
+export const setupMarketStallTabs = async () => {
     if (!marketStallTabsContainer || !tabContentContainer) {
-        console.warn('Market stall tab containers not found. Skipping tab setup.');
+        console.warn("Market stall tab containers not found.");
         return;
     }
-
-    if (!currentCharacterId) {
-        marketStallTabsContainer.innerHTML = '<p class="text-gray-600">Select a character to view market stalls.</p>';
-        tabContentContainer.innerHTML = '';
-        return;
-    }
-
-    const marketStalls = await getUserMarketStallLocations(currentCharacterId);
 
     marketStallTabsContainer.innerHTML = '';
     tabContentContainer.innerHTML = '';
 
-    if (marketStalls.length === 0) {
-        marketStallTabsContainer.innerHTML = '<p class="text-gray-600">No market stalls found for this character. Create one using "Manage Market Stalls" button.</p>';
+    if (!currentCharacterId) {
+        marketStallTabsContainer.innerHTML = '<p class="text-gray-600 text-center py-4">Select a character to manage market stalls.</p>';
         return;
     }
 
-    let firstStallId = null;
+    try {
+        const {
+            data: marketStalls,
+            error
+        } = await supabase
+            .from('market_stalls')
+            .select('id, stall_name')
+            .eq('character_id', currentCharacterId)
+            .order('stall_name');
 
-    marketStalls.forEach((stall, index) => {
-        const tabButton = document.createElement('button');
-        tabButton.textContent = stall.stall_name;
-        tabButton.dataset.stallId = stall.id;
-        tabButton.classList.add('tab-button', 'px-4', 'py-2', 'rounded-t-lg', 'font-semibold', 'bg-gray-200', 'text-gray-700', 'hover:bg-gray-300', 'transition-colors', 'duration-200');
-
-
-        const tabContent = document.createElement('div');
-        tabContent.id = `listings-for-${stall.id}`;
-        tabContent.classList.add('tab-content', 'p-4', 'border', 'border-t-0', 'border-gray-300', 'rounded-b-lg', 'hidden');
-
-        tabContent.innerHTML = `<h3 class="text-xl font-bold mb-4">${stall.stall_name} Listings</h3><p class="text-gray-600">Loading listings...</p>`;
-
-        marketStallTabsContainer.appendChild(tabButton);
-        tabContentContainer.appendChild(tabContent);
-
-        if (index === 0) {
-            firstStallId = stall.id;
+        if (error) {
+            throw error;
         }
 
-        tabButton.addEventListener('click', () => {
-            document.querySelectorAll('.tab-button').forEach(btn => {
-                btn.classList.remove('bg-blue-500', 'text-white');
-                btn.classList.add('bg-gray-200', 'text-gray-700');
+        if (marketStalls.length === 0) {
+            marketStallTabsContainer.innerHTML = '<p class="text-gray-600 text-center py-4 col-span-full">No market stalls found. Create one above!</p>';
+            return;
+        }
+
+        let firstStallId = null;
+
+        marketStalls.forEach((stall, index) => {
+            const tabButton = document.createElement('button');
+            tabButton.type = 'button';
+            tabButton.dataset.stallId = stall.id;
+            tabButton.classList.add('tab-button', 'px-4', 'py-2', 'font-medium', 'text-sm', 'rounded-t-lg', 'focus:outline-none', 'transition-colors', 'duration-200');
+            tabButton.textContent = stall.stall_name;
+
+            const tabContent = document.createElement('div');
+            tabContent.id = `listings-for-${stall.id}`;
+            tabContent.classList.add('tab-content', 'p-4', 'border', 'border-t-0', 'border-gray-300', 'rounded-b-lg', 'hidden');
+
+            tabContent.innerHTML = `<h3 class="text-xl font-bold mb-4">${stall.stall_name} Listings</h3><p class="text-gray-600">Loading listings...</p>`;
+
+            marketStallTabsContainer.appendChild(tabButton);
+            tabContentContainer.appendChild(tabContent);
+
+            if (index === 0) {
+                firstStallId = stall.id;
+            }
+
+            tabButton.addEventListener('click', () => {
+                document.querySelectorAll('.tab-button').forEach(btn => {
+                    btn.classList.remove('bg-blue-500', 'text-white');
+                    btn.classList.add('bg-gray-200', 'text-gray-700');
+                });
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.add('hidden');
+                });
+
+                tabButton.classList.remove('bg-gray-200', 'text-gray-700');
+                tabButton.classList.add('bg-blue-500', 'text-white');
+
+                tabContent.classList.remove('hidden');
+
+                loadActiveListings(stall.id);
             });
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.add('hidden');
-            });
-
-            tabButton.classList.remove('bg-gray-200', 'text-gray-700');
-            tabButton.classList.add('bg-blue-500', 'text-white');
-
-            tabContent.classList.remove('hidden');
-
-            loadActiveListings(stall.id);
         });
-    });
 
-    if (firstStallId) {
-        const initialTabButton = marketStallTabsContainer.querySelector(`[data-stall-id="${firstStallId}"]`);
-        if (initialTabButton) {
-            initialTabButton.click();
+        if (firstStallId) {
+            const firstTabButton = marketStallTabsContainer.querySelector(`[data-stall-id="${firstStallId}"]`);
+            if (firstTabButton) {
+                firstTabButton.classList.remove('bg-gray-200', 'text-gray-700');
+                firstTabButton.classList.add('bg-blue-500', 'text-white');
+            }
+            const firstTabContent = document.getElementById(`listings-for-${firstStallId}`);
+            if (firstTabContent) {
+                firstTabContent.classList.remove('hidden');
+            }
+            loadActiveListings(firstStallId);
         }
+    } catch (e) {
+        console.error("Error setting up market stall tabs:", e.message);
+        marketStallTabsContainer.innerHTML = `<p class="text-red-500 text-center py-4">Error loading market stalls: ${e.message}</p>`;
     }
-}
+};
+
+export const getUserMarketStallLocations = async (characterId) => {
+    if (!characterId) {
+        console.warn("getUserMarketStallLocations: No character ID provided.");
+        return [];
+    }
+    try {
+        const {
+            data,
+            error
+        } = await supabase
+            .from('market_stalls')
+            .select('id, stall_name')
+            .eq('character_id', currentCharacterId)
+            .order('stall_name');
+
+        if (error) {
+            throw error;
+        }
+        return data;
+    } catch (e) {
+        console.error("Error fetching user market stall locations:", e.message);
+        return [];
+    }
+};

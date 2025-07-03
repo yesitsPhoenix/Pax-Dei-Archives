@@ -18,9 +18,19 @@ let deleteCharacterBtn = null;
 const setGoldBtn = document.getElementById('setGoldBtn');
 const pveBtn = document.getElementById('pveBtn');
 
+const addPveTransactionModal = document.getElementById('addPveTransactionModal');
+const addPveTransactionForm = document.getElementById('add-pve-transaction-form');
+const pveTransactionTypeSelect = document.getElementById('pve-transaction-type');
+const pveAmountInput = document.getElementById('pve-amount');
+const closeAddPveTransactionModalBtn = document.getElementById('closeAddPveTransactionModalBtn');
 
 let currentUserId = null;
 export let currentCharacterId = null;
+export let currentCharacterGold = 0;
+
+export const setCurrentCharacterGold = (gold) => {
+    currentCharacterGold = gold;
+};
 
 export const insertCharacterModalHtml = () => {
     const createCharacterModalHtml = `
@@ -97,14 +107,40 @@ export const insertCharacterModalHtml = () => {
     populateRegionDropdowns();
 };
 
-export const initializeCharacters = async (userId, onCharacterSelectedCallback) => {
+export const initializeCharacters = async (userId = null, onCharacterSelectedCallback) => {
+    if (!userId) {
+        const session = await supabase.auth.getSession();
+        userId = session?.data?.session?.user?.id;
+    }
+
+    if (!userId) {
+        console.warn("initializeCharacters: No valid user ID found.");
+        return;
+    }
+
     currentUserId = userId;
     await loadCharacters(onCharacterSelectedCallback);
     deleteCharacterBtn = document.getElementById('deleteCharacterBtn');
     addCharacterEventListeners();
 };
 
-const loadCharacters = async (onCharacterSelectedCallback) => {
+
+export const loadCharacters = async (onCharacterSelectedCallback) => {
+    if (!currentUserId) {
+        console.warn("No currentUserId set. Cannot load characters.");
+        return;
+    }
+
+    const characterSelect = document.getElementById('character-select');
+    if (!characterSelect) {
+        console.warn("characterSelect element not found in DOM.");
+        return;
+    }
+
+    const deleteCharacterBtn = document.getElementById('deleteCharacterBtn');
+    const setGoldBtn = document.getElementById('setGoldBtn');
+    const pveBtn = document.getElementById('pveBtn');
+
     const { data, error } = await supabase
         .from('characters')
         .select('character_id, character_name, gold')
@@ -153,8 +189,33 @@ const loadCharacters = async (onCharacterSelectedCallback) => {
     }
 };
 
+
+const showAddPveTransactionModal = async () => {
+    if (addPveTransactionModal) {
+        addPveTransactionModal.classList.remove('hidden');
+        if (pveAmountInput) {
+            pveAmountInput.value = currentCharacterGold;
+        }
+        if (pveTransactionTypeSelect) {
+            pveTransactionTypeSelect.value = "";
+        }
+    }
+};
+
+const hideAddPveTransactionModal = () => {
+    if (addPveTransactionModal) {
+        addPveTransactionModal.classList.add('hidden');
+    }
+};
+
 const handleCharacterSelection = async (event) => {
     currentCharacterId = event.target.value;
+    if (currentCharacterId) {
+        const characterData = await getCurrentCharacter();
+        if (characterData) {
+            setCurrentCharacterGold(characterData.gold);
+        }
+    }
     await loadTraderPageData();
 };
 
@@ -402,7 +463,7 @@ export const handleDeleteCharacter = async (characterIdParam = null) => {
     const characterId = characterIdParam || currentCharacterId;
 
     if (!characterId) {
-        showCustomModal("Error", "No character selected to delete.", [{ text: 'OK', value: true }]);
+        await showCustomModal("Error", "No character selected to delete.", [{ text: 'OK', value: true }]);
         return;
     }
 
@@ -416,7 +477,7 @@ export const handleDeleteCharacter = async (characterIdParam = null) => {
             throw marketStallError;
         }
 
-        if (marketStalls && marketStalls.length > 0) {
+        if (marketStalls?.length > 0) {
             const stallIds = marketStalls.map(stall => stall.id);
             const { data: listings, error: listingsError } = await supabase
                 .from('market_listings')
@@ -428,47 +489,74 @@ export const handleDeleteCharacter = async (characterIdParam = null) => {
             }
 
             const hasActiveListings = listings.some(listing => !listing.is_fully_sold && !listing.is_cancelled);
-
             if (hasActiveListings) {
-                await showCustomModal('Deletion Failed', 'This character cannot be deleted because they still have active listings in their market stalls. Please cancel or mark all listings as sold first.', [{ text: 'OK', value: true }]);
+                await showCustomModal(
+                    'Deletion Failed',
+                    'This character cannot be deleted because they still have active listings in their market stalls. Please cancel or mark all listings as sold first.',
+                    [{ text: 'OK', value: true }]
+                );
                 return;
             }
         }
     } catch (e) {
         console.error('Error checking for active listings:', e.message);
-        await showCustomModal('Error', 'Failed to check for active listings. Please try again.', [{ text: 'OK', value: true }]);
+        await showCustomModal(
+            'Error',
+            'Failed to check for active listings. Please try again.',
+            [{ text: 'OK', value: true }]
+        );
         return;
     }
 
     const confirmed = await showCustomModal(
         'Confirmation',
         'Are you sure you want to delete this character and all associated data? This action cannot be undone.',
-        [{ text: 'Yes, Delete', value: true, type: 'confirm' }, { text: 'No', value: false, type: 'cancel' }]
+        [
+            { text: 'Yes, Delete', value: true, type: 'confirm' },
+            { text: 'No', value: false, type: 'cancel' }
+        ]
     );
 
-    if (confirmed) {
-        try {
-            const { error } = await supabase
-                .from('characters')
-                .delete()
-                .eq('character_id', characterId)
-                .eq('user_id', currentUserId);
+    if (!confirmed) return;
 
-            if (error) {
-                throw error;
+    try {
+        if (!currentUserId) {
+            const session = await supabase.auth.getSession();
+            currentUserId = session?.data?.session?.user?.id;
+            if (!currentUserId) {
+                await showCustomModal('Error', 'Could not confirm your session. Please re-login.', [{ text: 'OK', value: true }]);
+                return;
             }
+        }
 
-            await showCustomModal('Success', 'Character deleted successfully!', [{ text: 'OK', value: true }]);
-            await initializeCharacters();
+        const { error } = await supabase
+            .from('characters')
+            .delete()
+            .eq('character_id', characterId)
+            .eq('user_id', currentUserId);
+
+        if (error) throw error;
+
+        const card = document.getElementById(`character-card-${characterId}`);
+        if (card?.parentElement) {
+            card.parentElement.removeChild(card);
+        }
+
+        await showCustomModal('Success', 'Character deleted successfully!', [{ text: 'OK', value: true }]);
+
+        await initializeCharacters();
+
+        if (document.getElementById('listingsContainer')) {
             await loadTraderPageData();
             loadTransactionHistory();
             renderSalesChart();
-        } catch (e) {
-            console.error('Error deleting character:', e.message);
-            await showCustomModal('Error', 'Failed to delete character: ' + e.message, [{ text: 'OK', value: true }]);
         }
+    } catch (e) {
+        console.error('Error deleting character:', e.message);
+        await showCustomModal('Error', 'Failed to delete character: ' + e.message, [{ text: 'OK', value: true }]);
     }
 };
+
 
 
 const updateCharacterGold = async (newGoldAmount) => {
@@ -733,14 +821,31 @@ const addCharacterEventListeners = () => {
                 return;
             }
             
-            await showPveGoldInputModal(
-                async (newTotalGold, description) => {
-                    await updateCharacterGoldByPveTransaction(newTotalGold, description);
-                },
-                () => {
-                    console.log("PVE Gold transaction cancelled.");
-                }
-            );
+            showAddPveTransactionModal();
         });
     }
+
+    if (addPveTransactionForm) {
+        addPveTransactionForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const transactionType = pveTransactionTypeSelect.value;
+            const newAmount = parseInt(pveAmountInput.value, 10);
+
+            if (!transactionType || isNaN(newAmount)) {
+                showCustomModal("Error", "Please select a transaction type and enter a valid gold amount.", [{ text: 'OK', value: true }]);
+                return;
+            }
+
+            await updateCharacterGoldByPveTransaction(newAmount, transactionType);
+            hideAddPveTransactionModal();
+        });
+    }
+
+    if (closeAddPveTransactionModalBtn) {
+        closeAddPveTransactionModalBtn.addEventListener('click', hideAddPveTransactionModal);
+    }
+};
+
+export const setCurrentUserId = (id) => {
+    currentUserId = id;
 };

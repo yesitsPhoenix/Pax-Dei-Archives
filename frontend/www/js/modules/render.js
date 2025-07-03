@@ -7,7 +7,7 @@ import {
 } from './dom.js';
 import {
     loadActiveListings
-} from './init.js'; // Assuming loadActiveListings is in init.js
+} from './init.js';
 
 export const renderListingsTable = (listings) => {
     listingsBody.innerHTML = '';

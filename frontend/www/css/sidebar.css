@@ -7,6 +7,9 @@
     padding-bottom: 0.5rem;
     overflow: visible;
     box-sizing: border-box;
+    box-shadow: 0 0 10px 3px rgba(255, 215, 0, 0.5),
+                0 0 18px 7px rgba(255, 165, 0, 0.3);
+    animation: glowing-vertical-move 3s 2 alternate ease-in-out;
 }
 
 #sidebar.collapsed {
@@ -82,4 +85,17 @@
     color: black;
 }
 
-
+@keyframes glowing-vertical-move {
+    0% {
+        box-shadow: 0 0 10px 3px rgba(255, 215, 0, 0.5),
+                    0 0 18px 7px rgba(255, 165, 0, 0.3);
+    }
+    50% {
+        box-shadow: 0 10px 10px 3px rgba(255, 215, 0, 0.5),
+                    0 18px 18px 7px rgba(255, 165, 0, 0.3);
+    }
+    100% {
+        box-shadow: 0 0 10px 3px rgba(255, 215, 0, 0.5),
+                    0 0 18px 7px rgba(255, 165, 0, 0.3);
+    }
+}

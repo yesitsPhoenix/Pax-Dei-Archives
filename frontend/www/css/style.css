@@ -51,7 +51,7 @@ ul {
 .header-area {
 	background-color: #1c1c1c;
 	padding: 20px 0;
-	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	/* border-bottom: 1px solid rgba(255, 255, 255, 0.1); */
 	position: sticky;
 	top: 0;
 	z-index: 999;
@@ -62,7 +62,7 @@ ul {
 	align-items: center;
 }
 .header-area .logo {
-	font-size: 28px;
+	font-size: 22px;
 	font-weight: 700;
 	color: #fff;
 	text-transform: uppercase;
@@ -70,13 +70,13 @@ ul {
 	align-items: center;
 }
 .header-area .logo .site-icon {
-	height: 75px;
+	height: 45px;
 	width: auto;
 	margin-right: 10px;
 }
 .header-area .logo h1 {
 	margin: 0;
-	font-size: 28px;
+	font-size: 22px;
 	color: #fff;
 }
 .header-area .search-input {

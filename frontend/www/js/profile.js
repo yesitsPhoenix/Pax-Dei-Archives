@@ -1,32 +1,41 @@
 import { supabase } from './supabaseClient.js';
-import { showCustomModal } from './trader.js';
 import { handleDeleteCharacter as deleteCharacterWithCheck } from './modules/characters.js';
-
 
 const profileLoading = document.getElementById('profileLoading');
 const profileInfo = document.getElementById('profile-info');
 const userAvatar = document.getElementById('user-avatar');
 const userDiscordName = document.getElementById('user-discord-name');
-const userDiscordId = document.getElementById('user-discord-id');
 const userCreatedAt = document.getElementById('user-created-at');
 const userLastLoginAt = document.getElementById('user-last-login-at');
 const charactersList = document.getElementById('characters-list');
 
+const showCreateCharacterModalBtn = document.getElementById('showCreateCharacterModalBtn');
+const createCharacterModal = document.getElementById('createCharacterModal');
+const closeCreateCharacterModalBtn = document.getElementById('closeCreateCharacterModalBtn');
+const createCharacterForm = document.getElementById('createCharacterForm');
+const newCharacterNameInput = document.getElementById('newCharacterNameInput');
+const newCharacterGoldInput = document.getElementById('newCharacterGoldInput');
+const newCharacterRegionNameSelect = document.getElementById('newCharacterRegionNameSelect');
+const newCharacterShardSelect = document.getElementById('newCharacterShardSelect');
+const newCharacterProvinceSelect = document.getElementById('newCharacterProvinceSelect');
+const newCharacterHomeValleySelect = document.getElementById('newCharacterHomeValleySelect');
+
 let currentUserId = null;
 
 const fetchUserProfile = async () => {
-    profileLoading.style.display = 'block';
-    profileInfo.style.display = 'none';
+    if (profileLoading) profileLoading.style.display = 'block';
+    if (profileInfo) profileInfo.style.display = 'none';
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
     if (userError || !user) {
         console.error('Error fetching user:', userError?.message || 'User not logged in');
-        profileLoading.textContent = 'Please log in to view your profile.';
+        if (profileLoading) profileLoading.textContent = 'Please log in to view your profile.';
+        if (charactersList) charactersList.innerHTML = '<div class="text-gray-500">Log in to view your characters.</div>';
         return;
     }
 
-    currentUserId = user.id; 
+    currentUserId = user.id;
 
     const { data: userData, error: userDataError } = await supabase
         .from('users')
@@ -36,18 +45,17 @@ const fetchUserProfile = async () => {
 
     if (userDataError) {
         console.error('Error fetching user data:', userDataError.message);
-        profileLoading.textContent = 'Failed to load user profile data.';
+        if (profileLoading) profileLoading.textContent = 'Failed to load user profile data.';
         return;
     }
 
-    userAvatar.src = user.user_metadata.avatar_url || 'https://via.placeholder.com/150';
-    userDiscordName.textContent = user.user_metadata.full_name || 'N/A';
-    userDiscordId.textContent = user.id;
-    userCreatedAt.textContent = new Date(user.created_at).toLocaleDateString();
-    userLastLoginAt.textContent = userData.last_login_at ? new Date(userData.last_login_at).toLocaleDateString() : 'N/A';
+    if (userAvatar) userAvatar.src = user.user_metadata.avatar_url || 'https://via.placeholder.com/150';
+    if (userDiscordName) userDiscordName.textContent = user.user_metadata.full_name || 'N/A';
+    if (userCreatedAt) userCreatedAt.textContent = new Date(user.created_at).toLocaleDateString();
+    if (userLastLoginAt) userLastLoginAt.textContent = userData.last_login_at ? new Date(userData.last_login_at).toLocaleDateString() : 'N/A';
 
-    profileLoading.style.display = 'none';
-    profileInfo.style.display = 'block';
+    if (profileLoading) profileLoading.style.display = 'none';
+    if (profileInfo) profileInfo.style.display = 'block';
 
     await loadCharacters();
 };
@@ -111,7 +119,70 @@ const loadCharacters = async () => {
 
 document.addEventListener('DOMContentLoaded', () => {
     fetchUserProfile();
+
+    if (showCreateCharacterModalBtn && createCharacterModal) {
+        showCreateCharacterModalBtn.addEventListener('click', () => {
+            createCharacterModal.classList.remove('hidden');
+        });
+    }
+
+    if (closeCreateCharacterModalBtn && createCharacterModal && createCharacterForm) {
+        closeCreateCharacterModalBtn.addEventListener('click', () => {
+            createCharacterModal.classList.add('hidden');
+            createCharacterForm.reset();
+        });
+    }
+
+    if (createCharacterForm) {
+        createCharacterForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const characterName = newCharacterNameInput.value;
+            const startingGold = parseInt(newCharacterGoldInput.value, 10);
+            const regionName = newCharacterRegionNameSelect.value;
+            const shard = newCharacterShardSelect.value;
+            const province = newCharacterProvinceSelect.value;
+            const homeValley = newCharacterHomeValleySelect.value;
+
+            if (!currentUserId) {
+                showCustomModal("Error", "User not logged in. Cannot create character.", [{ text: 'OK', value: true }]);
+                return;
+            }
+            if (!characterName || !regionName || !shard) {
+                showCustomModal("Error", "Character Name, Region, and Shard are required.", [{ text: 'OK', value: true }]);
+                return;
+            }
+
+            try {
+                const { data, error } = await supabase
+                    .from('characters')
+                    .insert([{
+                        user_id: currentUserId,
+                        character_name: characterName,
+                        gold: startingGold,
+                        region_name: regionName,
+                        shard: shard,
+                        province: province,
+                        home_valley: homeValley
+                    }]);
+
+                if (error) {
+                    throw error;
+                }
+
+                showCustomModal("Success", `Character "${characterName}" created successfully!`, [{ text: 'OK', value: true }]);
+                createCharacterModal.classList.add('hidden');
+                createCharacterForm.reset();
+
+                await loadCharacters();
+            } catch (e) {
+                console.error('Error creating character:', e.message);
+                showCustomModal("Error", `Failed to create character: ${e.message}`, [{ text: 'OK', value: true }]);
+            }
+        });
+    }
 });
+
 document.addEventListener('authStatusChanged', () => {
     fetchUserProfile();
 });

@@ -1,3 +1,4 @@
+// filter.js
 import {
     supabase
 } from '../supabaseClient.js';
@@ -10,7 +11,8 @@ import {
     setCurrentListingsPage,
     itemCategorySelect,
     filterListingCategorySelect,
-    purchaseItemCategorySelect
+    purchaseItemCategorySelect,
+    modalItemCategorySelect
 } from './dom.js';
 import {
     loadActiveListings
@@ -23,7 +25,7 @@ export const handleFilterChange = (key, value) => {
 };
 
 export const fetchAndPopulateCategories = async () => {
-    if (!itemCategorySelect || !filterListingCategorySelect || !purchaseItemCategorySelect) return;
+    if (!itemCategorySelect || !filterListingCategorySelect || !purchaseItemCategorySelect || !modalItemCategorySelect) return;
 
     try {
         const {
@@ -38,12 +40,16 @@ export const fetchAndPopulateCategories = async () => {
 
         if (error) throw error;
 
+        console.log("Supabase fetched categories data:", data); // LOG 1: What Supabase returned
+
         itemCategorySelect.innerHTML = '<option value="">Select a category</option>';
         data.forEach(category => {
+            console.log(`Processing category: ID=${category.category_id} (Type: ${typeof category.category_id}), Name=${category.category_name}`); // LOG 2: Type and value of category_id before assignment
             const option = document.createElement('option');
             option.value = category.category_id;
             option.textContent = category.category_name;
             itemCategorySelect.appendChild(option);
+            console.log(`Assigned to itemCategorySelect: Option value=${option.value}, text=${option.textContent}`); // LOG 3: What was assigned
         });
 
         filterListingCategorySelect.innerHTML = '<option value="">All Categories</option>';
@@ -61,6 +67,14 @@ export const fetchAndPopulateCategories = async () => {
             option.value = category.category_id;
             option.textContent = category.category_name;
             purchaseItemCategorySelect.appendChild(option);
+        });
+
+        modalItemCategorySelect.innerHTML = '<option value="">Select a category</option>';
+        data.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category.category_id;
+            option.textContent = category.category_name;
+            modalItemCategorySelect.appendChild(option);
         });
 
     } catch (e) {
