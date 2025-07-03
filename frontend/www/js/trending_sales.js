@@ -6,102 +6,114 @@ const topRevenueItemsList = document.getElementById('top-profitable-items-list')
 const salesVolumeByCategoryList = document.getElementById('sales-volume-by-category-list');
 
 let dailySalesChartInstance = null;
-let dailyAvgPriceChartInstance = null;
+let dailyMarketActivityChartInstance = null;
 let specificItemPriceChartInstance = null;
+let dailyAvgPriceChartInstance = null;
 
 let currentSelectedItemId = null;
+let currentSelectedRegion = null;
 
 const formatCurrency = (amount) => (amount !== null && amount !== undefined) ? amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : 'N/A';
 const formatDecimal = (amount, decimals = 2) => (amount !== null && amount !== undefined) ? parseFloat(amount).toFixed(decimals) : 'N/A';
 
-function renderChart(chartId, labels, data, label, borderColor, backgroundColor, type = 'line') {
+function renderChart(chartId, labels, datasetsConfig, type = 'line') {
     const ctx = document.getElementById(chartId)?.getContext('2d');
     if (!ctx) return null;
 
-    const cleanLabels = labels.filter((_, i) => data[i] != null);
-    const cleanData = data.filter(v => v != null);
+    const chartDatasets = datasetsConfig.map(ds => ({
+        ...ds,
+        tension: ds.tension !== undefined ? ds.tension : 0.3,
+        fill: ds.fill !== undefined ? ds.fill : (type === 'line')
+    }));
+
+    let yAxisCallback;
+    let tooltipLabelCallback;
+    let yAxisTitleText = '';
+
+    if (chartId === 'daily-market-activity-chart') {
+        yAxisCallback = function(value) { return formatCurrency(value); };
+        tooltipLabelCallback = function(context) {
+            let value = context.parsed.y;
+            return `${context.dataset.label}: ${formatCurrency(value)}`;
+        };
+        yAxisTitleText = 'Count';
+    } else if (chartId.includes('avg') || chartId.includes('specific-item-price')) {
+        yAxisCallback = function(value) { return formatDecimal(value); };
+        tooltipLabelCallback = function(context) {
+            let value = context.parsed.y;
+            return `${context.dataset.label}: ${formatDecimal(value)} Gold`;
+        };
+        yAxisTitleText = 'Price (Gold)';
+    } else if (chartId.includes('sales-chart')) {
+        yAxisCallback = function(value) { return formatCurrency(value); };
+        tooltipLabelCallback = function(context) {
+            let value = context.parsed.y;
+            return `${context.dataset.label}: ${formatCurrency(value)} Gold`;
+        };
+        yAxisTitleText = 'Total Gold';
+    }
 
     const chartConfig = {
         type: type,
         data: {
-            labels: cleanLabels,
-            datasets: [{
-                label: label,
-                data: cleanData,
-                borderColor: borderColor,
-                backgroundColor: backgroundColor,
-                tension: 0.3,
-                fill: type === 'line'
-            }]
+            labels: labels,
+            datasets: chartDatasets
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             scales: {
                 x: {
-                    type: chartId.includes('daily') || chartId.includes('specific-item-price') ? 'time' : 'category',
-                    time: chartId.includes('daily') || chartId.includes('specific-item-price') ? {
+                    type: 'time',
+                    time: {
                         unit: 'day',
                         tooltipFormat: 'MMM d',
                         displayFormats: { day: 'MMM d' }
-                    } : undefined,
+                    },
                     ticks: { color: '#B0B0B0' },
                     grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                    title: {
-                        display: chartId.includes('daily') || chartId.includes('specific-item-price'),
-                        text: 'Date',
-                        color: '#FFFFFF'
-                    }
+                    title: { display: true, text: 'Date', color: '#FFFFFF' }
                 },
                 y: {
-                    ticks: { color: '#B0B0B0' },
+                    ticks: {
+                        color: '#B0B0B0',
+                        callback: yAxisCallback
+                    },
                     grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                    title: { display: true, text: label, color: '#FFFFFF' }
+                    title: { display: true, text: yAxisTitleText, color: '#FFFFFF' }
                 }
             },
             plugins: {
                 legend: { labels: { color: '#FFFFFF' } },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
-                            let value = context.parsed.y;
-                            if (chartId.includes('avg') || chartId.includes('specific-item-price')) {
-                                return `${context.dataset.label}: ${formatDecimal(value)} Gold`;
-                            }
-                            return `${context.dataset.label}: ${formatCurrency(value)} Gold`;
-                        }
+                        label: tooltipLabelCallback
                     }
                 }
             }
         }
     };
 
-    if (chartId === 'daily-avg-price-chart' || chartId === 'specific-item-price-chart') {
-        chartConfig.options.scales.y.ticks.callback = function(value) {
-            return formatDecimal(value);
-        };
-    } else if (chartId.includes('sales')) {
-        chartConfig.options.scales.y.ticks.callback = function(value) {
-            return formatCurrency(value);
-        };
-    }
-
     if (chartId === 'daily-sales-chart' && dailySalesChartInstance) {
         dailySalesChartInstance.destroy();
         dailySalesChartInstance = null;
-    } else if (chartId === 'daily-avg-price-chart' && dailyAvgPriceChartInstance) {
-        dailyAvgPriceChartInstance.destroy();
-        dailyAvgPriceChartInstance = null;
+    } else if (chartId === 'daily-market-activity-chart' && dailyMarketActivityChartInstance) {
+        dailyMarketActivityChartInstance.destroy();
+        dailyMarketActivityChartInstance = null;
     } else if (chartId === 'specific-item-price-chart' && specificItemPriceChartInstance) {
         specificItemPriceChartInstance.destroy();
         specificItemPriceChartInstance = null;
+    } else if (chartId === 'daily-avg-price-chart' && dailyAvgPriceChartInstance) {
+        dailyAvgPriceChartInstance.destroy();
+        dailyAvgPriceChartInstance = null;
     }
 
     const newChart = new Chart(ctx, chartConfig);
 
     if (chartId === 'daily-sales-chart') dailySalesChartInstance = newChart;
-    if (chartId === 'daily-avg-price-chart') dailyAvgPriceChartInstance = newChart;
+    if (chartId === 'daily-market-activity-chart') dailyMarketActivityChartInstance = newChart;
     if (chartId === 'specific-item-price-chart') specificItemPriceChartInstance = newChart;
+    if (chartId === 'daily-avg-price-chart') dailyAvgPriceChartInstance = newChart;
 
     return newChart;
 }
@@ -115,7 +127,9 @@ async function loadListTrendsData() {
     salesVolumeByCategoryList.innerHTML = '<p class="text-white">Loading sales volume...</p>';
 
     try {
-        const { data, error } = await supabase.rpc('get_all_list_trends_data_by_region');
+        const { data, error } = await supabase.rpc('get_all_list_trends_data_by_region', {
+            p_region_filter: currentSelectedRegion
+        });
 
         if (error) {
             const errorMessage = `<p class="text-red-400">Error loading data: ${error.message}</p>`;
@@ -123,7 +137,6 @@ async function loadListTrendsData() {
             mostSoldQuantityList.innerHTML = errorMessage;
             topRevenueItemsList.innerHTML = errorMessage;
             salesVolumeByCategoryList.innerHTML = errorMessage;
-            console.error("Error loading list trends data:", error);
             return;
         }
 
@@ -222,61 +235,198 @@ async function loadListTrendsData() {
         mostSoldQuantityList.innerHTML = errorMessage;
         topRevenueItemsList.innerHTML = errorMessage;
         salesVolumeByCategoryList.innerHTML = errorMessage;
-        console.error("An error occurred in loadListTrendsData:", err);
     }
 }
 
 async function loadDailyTotalSalesChart() {
     try {
-        const { data, error } = await supabase.rpc('get_daily_total_sales');
+        const { data, error } = await supabase.rpc('get_daily_total_sales', {
+            p_region_filter: currentSelectedRegion
+        });
 
         if (error) {
-            console.error("Error loading daily total sales:", error);
+            if (dailySalesChartInstance) dailySalesChartInstance.destroy();
+            const ctx = document.getElementById('daily-sales-chart')?.getContext('2d');
+            if (ctx) {
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#FF6666';
+                ctx.font = '16px Arial';
+                ctx.fillText(`Error: ${error.message}`, ctx.canvas.width / 2, ctx.canvas.height / 2);
+            }
+            return;
+        }
+
+        if (!data || data.length === 0) {
+            if (dailySalesChartInstance) dailySalesChartInstance.destroy();
+            const ctx = document.getElementById('daily-sales-chart')?.getContext('2d');
+            if (ctx) {
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#B0B0B0';
+                ctx.font = '16px Arial';
+                ctx.fillText('No data available for this region.', ctx.canvas.width / 2, ctx.canvas.height / 2);
+            }
             return;
         }
 
         const labels = data.map(row => row.sale_date);
         const totalSales = data.map(row => row.total_gold_sold);
 
+        const datasetsConfig = [{
+            label: 'Total Gold Sold',
+            data: totalSales,
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)'
+        }];
+
         if (dailySalesChartInstance) dailySalesChartInstance.destroy();
         dailySalesChartInstance = renderChart(
             'daily-sales-chart',
             labels,
-            totalSales,
-            'Total Gold Sold',
-            'rgb(75, 192, 192)',
-            'rgba(75, 192, 192, 0.2)'
+            datasetsConfig
         );
 
     } catch (err) {
-        console.error("An error occurred in loadDailyTotalSalesChart:", err);
+        if (dailySalesChartInstance) dailySalesChartInstance.destroy();
+        const ctx = document.getElementById('daily-sales-chart')?.getContext('2d');
+        if (ctx) {
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#FF6666';
+            ctx.font = '16px Arial';
+            ctx.fillText(`An unexpected error occurred: ${err.message}`, ctx.canvas.width / 2, ctx.canvas.height / 2);
+        }
     }
 }
 
-async function loadDailyAveragePriceChart() {
+async function loadDailyMarketActivityChart() {
     try {
-        const { data, error } = await supabase.rpc('get_daily_average_sale_price');
+        const { data, error } = await supabase.rpc('get_daily_market_activity_data', {
+            p_region_filter: currentSelectedRegion
+        });
 
         if (error) {
-            console.error("Error loading daily average price:", error);
+            if (dailyMarketActivityChartInstance) dailyMarketActivityChartInstance.destroy();
+            const ctx = document.getElementById('daily-market-activity-chart')?.getContext('2d');
+            if (ctx) {
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#FF6666';
+                ctx.font = '16px Arial';
+                ctx.fillText(`Error: ${error.message}`, ctx.canvas.width / 2, ctx.canvas.height / 2);
+            }
+            return;
+        }
+
+        const newListingsData = data.new_listings || [];
+        const salesCountData = data.sales_count || [];
+
+        const allDates = new Set();
+        newListingsData.forEach(row => allDates.add(row.date));
+        salesCountData.forEach(row => allDates.add(row.date));
+        const sortedLabels = Array.from(allDates).sort();
+
+        const listingsMap = new Map(newListingsData.map(row => [row.date, row.count]));
+        const salesMap = new Map(salesCountData.map(row => [row.date, row.count]));
+
+        const listingsCounts = sortedLabels.map(date => listingsMap.get(date) || null);
+        const salesCounts = sortedLabels.map(date => salesMap.get(date) || null);
+
+        const datasetsConfig = [
+            {
+                label: 'Daily New Listings',
+                data: listingsCounts,
+                borderColor: 'rgb(255, 159, 64)',
+                backgroundColor: 'rgba(255, 159, 64, 0.2)'
+            },
+            {
+                label: 'Daily Sales Count',
+                data: salesCounts,
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)'
+            }
+        ];
+
+        if (dailyMarketActivityChartInstance) dailyMarketActivityChartInstance.destroy();
+        dailyMarketActivityChartInstance = renderChart(
+            'daily-market-activity-chart',
+            sortedLabels,
+            datasetsConfig
+        );
+
+    } catch (err) {
+        if (dailyMarketActivityChartInstance) dailyMarketActivityChartInstance.destroy();
+        const ctx = document.getElementById('daily-market-activity-chart')?.getContext('2d');
+        if (ctx) {
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#FF6666';
+            ctx.font = '16px Arial';
+            ctx.fillText(`An unexpected error occurred: ${err.message}`, ctx.canvas.width / 2, ctx.canvas.height / 2);
+        }
+    }
+}
+
+async function loadDailyAverageItemPriceChart() {
+    try {
+        const { data, error } = await supabase.rpc('get_daily_average_sale_price', {
+            p_region_filter: currentSelectedRegion
+        });
+
+        if (error) {
+            if (dailyAvgPriceChartInstance) dailyAvgPriceChartInstance.destroy();
+            const ctx = document.getElementById('daily-avg-price-chart')?.getContext('2d');
+            if (ctx) {
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#FF6666';
+                ctx.font = '16px Arial';
+                ctx.fillText(`Error: ${error.message}`, ctx.canvas.width / 2, ctx.canvas.height / 2);
+            }
+            return;
+        }
+
+        if (!data || data.length === 0) {
+            if (dailyAvgPriceChartInstance) dailyAvgPriceChartInstance.destroy();
+            const ctx = document.getElementById('daily-avg-price-chart')?.getContext('2d');
+            if (ctx) {
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#B0B0B0';
+                ctx.font = '16px Arial';
+                ctx.fillText('No data available for average prices in this region.', ctx.canvas.width / 2, ctx.canvas.height / 2);
+            }
             return;
         }
 
         const labels = data.map(row => row.sale_date);
-        const avgPrices = data.map(row => row.average_price);
+        const prices = data.map(row => row.average_price);
+
+        const datasetsConfig = [{
+            label: 'Daily Average Item Price',
+            data: prices,
+            borderColor: 'rgb(255, 99, 132)',
+            backgroundColor: 'rgba(255, 99, 132, 0.2)'
+        }];
 
         if (dailyAvgPriceChartInstance) dailyAvgPriceChartInstance.destroy();
         dailyAvgPriceChartInstance = renderChart(
             'daily-avg-price-chart',
             labels,
-            avgPrices,
-            'Average Item Price',
-            'rgb(255, 99, 132)',
-            'rgba(255, 99, 132, 0.2)'
+            datasetsConfig
         );
 
     } catch (err) {
-        console.error("An error occurred in loadDailyAveragePriceChart:", err);
+        if (dailyAvgPriceChartInstance) dailyAvgPriceChartInstance.destroy();
+        const ctx = document.getElementById('daily-avg-price-chart')?.getContext('2d');
+        if (ctx) {
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#FF6666';
+            ctx.font = '16px Arial';
+            ctx.fillText(`An unexpected error occurred: ${err.message}`, ctx.canvas.width / 2, ctx.canvas.height / 2);
+        }
     }
 }
 
@@ -310,11 +460,11 @@ async function loadSpecificItemPriceChart(itemId = null) {
 
     try {
         const { data, error } = await supabase.rpc('get_item_price_history', {
-            p_item_id: itemId
+            p_item_id: itemId,
+            p_region_filter: currentSelectedRegion
         });
 
         if (error) {
-            console.error("Error loading specific item price history:", error);
             return;
         }
 
@@ -322,18 +472,21 @@ async function loadSpecificItemPriceChart(itemId = null) {
         const prices = data.map(row => row.average_price);
         const itemName = data.length > 0 ? data[0].item_name : `Item ID: ${itemId}`;
 
+        const datasetsConfig = [{
+            label: `${itemName} Price`,
+            data: prices,
+            borderColor: 'rgb(54, 162, 235)',
+            backgroundColor: 'rgba(54, 162, 235, 0.2)'
+        }];
+
         if (specificItemPriceChartInstance) specificItemPriceChartInstance.destroy();
         specificItemPriceChartInstance = renderChart(
             'specific-item-price-chart',
             labels,
-            prices,
-            `${itemName} Price`,
-            'rgb(54, 162, 235)',
-            'rgba(54, 162, 235, 0.2)'
+            datasetsConfig
         );
 
     } catch (err) {
-        console.error("An error occurred in loadSpecificItemPriceChart:", err);
     }
 }
 
@@ -341,36 +494,44 @@ async function populateDropdown(selectElementId, rpcFunctionName, valueColumn, t
     const selectElement = document.getElementById(selectElementId);
     if (!selectElement) return;
 
-    selectElement.innerHTML = `<option value="all">${defaultOptionText}</option>`;
-    try {
-        const { data, error } = await supabase.rpc(rpcFunctionName);
-        if (error) {
-            console.error(`Error populating dropdown ${selectElementId} with function ${rpcFunctionName}:`, error);
-            return;
+    if (selectElementId === 'item-filter-select') {
+        selectElement.innerHTML = `<option value="all">${defaultOptionText}</option>`;
+    } else {
+        selectElement.innerHTML = '';
+    }
+
+    if (rpcFunctionName === 'get_all_items_for_dropdown') {
+        try {
+            const { data, error } = await supabase.rpc(rpcFunctionName);
+            if (error) {
+                return;
+            }
+            data.forEach(row => {
+                const option = document.createElement('option');
+                option.value = row[valueColumn];
+                option.textContent = row[textColumn];
+                selectElement.appendChild(option);
+            });
+        } catch (err) {
         }
-        data.forEach(row => {
-            const option = document.createElement('option');
-            option.value = row[valueColumn];
-            option.textContent = row[textColumn];
-            selectElement.appendChild(option);
-        });
-    } catch (err) {
-        console.error(`An error occurred in populateDropdown for ${selectElementId}:`, err);
     }
 }
 
 async function loadAllTrendsData() {
     await loadListTrendsData();
     await loadDailyTotalSalesChart();
-    await loadDailyAveragePriceChart();
+    await loadDailyMarketActivityChart();
+    await loadDailyAverageItemPriceChart();
     await loadSpecificItemPriceChart(currentSelectedItemId);
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
     const itemFilterSelect = document.getElementById('item-filter-select');
+    const regionFilterSelect = document.getElementById('region-filter-select');
 
     await populateDropdown('item-filter-select', 'get_all_items_for_dropdown', 'item_id', 'item_name', 'All Items');
 
+    currentSelectedRegion = regionFilterSelect ? regionFilterSelect.value : 'all';
     currentSelectedItemId = itemFilterSelect ? (itemFilterSelect.value === 'all' || itemFilterSelect.value === '' ? null : parseInt(itemFilterSelect.value, 10)) : null;
 
     await loadAllTrendsData();
@@ -379,6 +540,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         itemFilterSelect.addEventListener('change', (event) => {
             currentSelectedItemId = event.target.value === 'all' || event.target.value === '' ? null : parseInt(event.target.value, 10);
             loadSpecificItemPriceChart(currentSelectedItemId);
+        });
+    }
+
+    if (regionFilterSelect) {
+        regionFilterSelect.addEventListener('change', async (event) => {
+            currentSelectedRegion = event.target.value;
+            await loadAllTrendsData();
         });
     }
 });
