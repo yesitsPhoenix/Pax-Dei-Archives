@@ -7,7 +7,7 @@
 
 .dashboard-header {
     font-size: 3rem;
-    color: #FFD700;
+    color: #ffffff;
     margin-bottom: 20px;
     margin-top: 20px;
     text-align: center;
@@ -22,7 +22,7 @@
 }
 
 .dashboard-card {
-    background-color: #2a2a2a;
+    background-color: #232323;
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
@@ -52,7 +52,7 @@
 }
 
 .dashboard-card p {
-    font-size: 2rem;
+    font-size: 1.5rem;
     color: #ffc107;
     display: flex;
     align-items: center;
@@ -432,7 +432,7 @@
     padding: 10px 15px;
     transition: 0.3s;
     font-size: 16px;
-    margin-right: 5px; /* Spacing between tabs */
+    margin-right: 5px;
     border-top-left-radius: 5px;
     border-top-right-radius: 5px;
 }
@@ -459,9 +459,8 @@
 }
 
 .tab-content.active {
-    display: block; /* Show the active tab content */
+    display: block;
 }
-
 
 
 .shadow-sm {

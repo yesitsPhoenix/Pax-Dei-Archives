@@ -1,0 +1,85 @@
+#sidebar {
+    transition: width 0.2s ease, padding 0.2s ease;
+    height: auto;
+    align-self: flex-start;
+    border-radius: 20px;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    overflow: visible;
+    box-sizing: border-box;
+}
+
+#sidebar.collapsed {
+    width: 4rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    overflow: visible;
+}
+
+#sidebar > div {
+    height: auto !important;
+    overflow: visible !important;
+}
+
+#sidebar ul {
+    transition: opacity 0.2s ease;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+#sidebar ul.space-y-2 > li + li {
+    margin-top: 0.5rem;
+}
+
+#sidebar li a {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0.5rem 0.75rem;
+    white-space: nowrap;
+    transition: padding 0.2s ease, justify-content 0.2s ease;
+}
+
+#sidebar.collapsed li a {
+    justify-content: center !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+#sidebar.collapsed li a i {
+    margin: 0 !important;
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+    flex-shrink: 0;
+    display: block;
+}
+#sidebar.collapsed span {
+    display: none !important;
+}
+
+#sidebar svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    min-width: 1.25rem;
+    display: block;
+    flex-shrink: 0;
+    color: #9CA3AF;
+    transition: color 0.1s ease;
+}
+
+#sidebar li a:hover svg {
+    color: #D1D5DB;
+}
+
+#sidebar a.active,
+#sidebar a.active:hover {
+    background-color: #16a34a;
+    color: black;
+}
+
+#sidebar a.active i {
+    color: black;
+}
+
+

@@ -6,6 +6,7 @@
     <title>Pax Dei Archives - Ledger</title>
     <link rel="stylesheet" href="frontend/www/css/style.css">
     <link rel="stylesheet" href="frontend/www/css/trader.css">
+    <link rel="stylesheet" href="frontend/www/css/sidebar.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
     <script type="module" src="frontend/www/js/supabaseClient.js"></script>
@@ -19,6 +20,40 @@
     </script>
     <script async src="https://paxdei.gaming.tools/embed.js"></script>
 </head>
+<aside id="sidebar" class="w-64 bg-[#1c1c1c] border-r-4 border-emerald-500 shadow-lg transition-all duration-300 hover:bg-slate-700 px-3 py-4 cursor-pointer fixed h-v50vh z-50 top-[220px] collapsed">
+  <ul class="space-y-2 font-medium">
+    <li>
+      <a href="/profile.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+        <i class="fas fa-users w-5 h-5 text-gray-400 transition duration-75"></i>
+        <span class="ml-3">Manage Characters</span>
+      </a>
+    </li>
+    <li>
+      <a href="#" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900" id="manageStallsBtn">
+        <i class="fas fa-store w-5 h-5 text-gray-400 transition duration-75"></i>
+        <span class="ml-3">Manage Stalls</span>
+      </a>
+    </li>
+    <li>
+      <a href="#" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900" id="addPveTransactionSidebarBtn">
+        <i class="fas fa-solid fa-chess-rook w-5 h-5 text-gray-400 transition duration-75"></i>
+        <span class="ml-3">Add PVE Transaction</span>
+      </a>
+    </li>
+    <li>
+      <a href="#active-listings-section" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900" id="sidebarActiveListingsLink">
+        <i class="fas fa-list-alt w-5 h-5 text-gray-200 transition duration-75"></i>
+        <span class="ml-3">Active Listings</span>
+      </a>
+    </li>
+    <li>
+      <a href="#transaction-history-section" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900" id="sidebarTransactionHistoryLink">
+        <i class="fas fa-history w-5 h-5 text-gray-400 transition duration-75"></i>
+        <span class="ml-3">Transaction History</span>
+      </a>
+    </li>
+  </ul>
+</aside>
 <body>
     <header class="header-area">
         <div class="container">
@@ -56,6 +91,7 @@
             </nav>
         </div>
     </header>
+    
     <main class="trader-container">
         <div class="container">
             <div id="traderLoginContainer" class="admin-form-container" style="display: none; text-align: center;">
@@ -76,9 +112,6 @@
                 </button>
                 <button id="showManageMarketStallsModalBtn" class="bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-full">
                     Manage Market Stalls
-                </button>
-                <button id="deleteCharacterBtn" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-full">
-                    Delete Character
                 </button>
                 <button id="setGoldBtn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">
                     Set Gold
@@ -203,7 +236,7 @@
                     </form>
                 </section>
             </div>
-                <section class="active-listings">
+                <section id="active-listings-section" class="active-listings">
                     <h2>Active Market Listings</h2>
                     <div class="market-stall-tabs"></div>
                     <div class="tab-content-container"></div>
@@ -265,7 +298,7 @@
                     </table>
                     <div id="listings-pagination" class="flex justify-center items-center space-x-2 mt-4 text-white"></div>
                 </section>
-                <section class="sales-history my-8">
+                <section id="transaction-history-section" class="sales-history my-8">
                     <h2 class="text-2xl font-bold mb-4 text-gray-800">Transaction History Ledger</h2>
                     <div class="flex flex-wrap items-center gap-4 mb-6">
                         <div class="flex-1 min-w-[200px]">
@@ -387,7 +420,7 @@
         </form>
         
         <div class="flex justify-end mt-6">
-            <button type="button" id="closeManageMarketStallsModalBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+            <button type="button" id="closeManageMarketStallsModalBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
                 Close
             </button>
         </div>
@@ -401,5 +434,6 @@
     <script type="module" src="frontend/www/js/trader.js"></script>
     <script type="module" src="frontend/www/js/modules/listings.js"></script>
     <script type="module" src="frontend/www/js/popoutAuth.js"></script>
+    <script type="module" src="frontend/www/js/sidebar.js"></script>
 </body>
 </html>

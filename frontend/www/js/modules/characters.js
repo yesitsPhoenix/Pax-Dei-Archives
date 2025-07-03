@@ -99,10 +99,9 @@ export const insertCharacterModalHtml = () => {
 
 export const initializeCharacters = async (userId, onCharacterSelectedCallback) => {
     currentUserId = userId;
-    deleteCharacterBtn = document.getElementById('deleteCharacterBtn');
-    
-    addCharacterEventListeners();
     await loadCharacters(onCharacterSelectedCallback);
+    deleteCharacterBtn = document.getElementById('deleteCharacterBtn');
+    addCharacterEventListeners();
 };
 
 const loadCharacters = async (onCharacterSelectedCallback) => {
@@ -399,9 +398,45 @@ const handleCreateCharacter = async (e) => {
     await loadCharacters(loadTraderPageData);
 };
 
-const handleDeleteCharacter = async () => {
-    if (!currentCharacterId) {
-        await showCustomModal('Error', 'No character selected to delete.', [{ text: 'OK', value: true }]);
+export const handleDeleteCharacter = async (characterIdParam = null) => {
+    const characterId = characterIdParam || currentCharacterId;
+
+    if (!characterId) {
+        showCustomModal("Error", "No character selected to delete.", [{ text: 'OK', value: true }]);
+        return;
+    }
+
+    try {
+        const { data: marketStalls, error: marketStallError } = await supabase
+            .from('market_stalls')
+            .select('id')
+            .eq('character_id', characterId);
+
+        if (marketStallError) {
+            throw marketStallError;
+        }
+
+        if (marketStalls && marketStalls.length > 0) {
+            const stallIds = marketStalls.map(stall => stall.id);
+            const { data: listings, error: listingsError } = await supabase
+                .from('market_listings')
+                .select('listing_id, is_fully_sold, is_cancelled')
+                .in('market_stall_id', stallIds);
+
+            if (listingsError) {
+                throw listingsError;
+            }
+
+            const hasActiveListings = listings.some(listing => !listing.is_fully_sold && !listing.is_cancelled);
+
+            if (hasActiveListings) {
+                await showCustomModal('Deletion Failed', 'This character cannot be deleted because they still have active listings in their market stalls. Please cancel or mark all listings as sold first.', [{ text: 'OK', value: true }]);
+                return;
+            }
+        }
+    } catch (e) {
+        console.error('Error checking for active listings:', e.message);
+        await showCustomModal('Error', 'Failed to check for active listings. Please try again.', [{ text: 'OK', value: true }]);
         return;
     }
 
@@ -412,22 +447,29 @@ const handleDeleteCharacter = async () => {
     );
 
     if (confirmed) {
-        const { error } = await supabase
-            .from('characters')
-            .delete()
-            .eq('character_id', currentCharacterId)
-            .eq('user_id', currentUserId);
+        try {
+            const { error } = await supabase
+                .from('characters')
+                .delete()
+                .eq('character_id', characterId)
+                .eq('user_id', currentUserId);
 
-        if (error) {
-            await showCustomModal('Error', 'Failed to delete character: ' + error.message, [{ text: 'OK', value: true }]);
-            console.error('Error deleting character:', error.message);
-            return;
+            if (error) {
+                throw error;
+            }
+
+            await showCustomModal('Success', 'Character deleted successfully!', [{ text: 'OK', value: true }]);
+            await initializeCharacters();
+            await loadTraderPageData();
+            loadTransactionHistory();
+            renderSalesChart();
+        } catch (e) {
+            console.error('Error deleting character:', e.message);
+            await showCustomModal('Error', 'Failed to delete character: ' + e.message, [{ text: 'OK', value: true }]);
         }
-
-        await showCustomModal('Success', 'Character deleted successfully!', [{ text: 'OK', value: true }]);
-        await loadCharacters(loadTraderPageData);
     }
 };
+
 
 const updateCharacterGold = async (newGoldAmount) => {
     if (!currentCharacterId) {
@@ -587,7 +629,7 @@ const showPveGoldInputModal = async (onConfirm, onCancel) => {
 
                 <div class="mb-6">
                     <label for="pveDescriptionInput" class="block text-sm font-bold mb-2">Description (Optional)</label>
-                    <input type="text" id="pveDescriptionInput" placeholder="e.g., POI clear, Chest Deposit" class="w-full p-2 border border-gray-300 rounded-md">
+                    <input type="text" id="pveDescriptionInput" placeholder="e.g., POI clear, Chest Deposit" class="w-full p-3 border border-gray-300 rounded-md">
                 </div>
 
                 <div class="flex justify-end gap-3">
@@ -643,7 +685,6 @@ const showPveGoldInputModal = async (onConfirm, onCancel) => {
     pveGoldAmountInput.focus();
 };
 
-
 export const getCurrentCharacter = async () => {
     if (!currentCharacterId) return null;
     const { data, error } = await supabase
@@ -659,6 +700,7 @@ export const getCurrentCharacter = async () => {
     }
     return data;
 };
+
 
 const addCharacterEventListeners = () => {
     if (characterSelect) {
