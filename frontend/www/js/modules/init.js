@@ -65,6 +65,9 @@ import {
 } from './autocomplete.js';
 
 
+let cachedCategories = null;
+let cachedMarketStalls = null;
+
 const initializeAddListingModalContent = async () => {
 
     if (modalMarketStallLocationSelect) {
@@ -73,9 +76,6 @@ const initializeAddListingModalContent = async () => {
         console.error("Error: modalMarketStallLocationSelect element not found in DOM.");
     }
 
-    if (addListingFormModal) {
-        addListingFormModal.addEventListener('submit', handleAddListing);
-    }
 };
 
 export const fetchAndPopulateCategories = async (selectElement) => {
@@ -84,25 +84,28 @@ export const fetchAndPopulateCategories = async (selectElement) => {
         return;
     }
 
-    try {
-        const { data, error } = await supabase
-            .from('item_categories')
-            .select('category_id, category_name')
-            .order('category_name');
+    if (cachedCategories === null) {
+        try {
+            const { data, error } = await supabase
+                .from('item_categories')
+                .select('category_id, category_name')
+                .order('category_name');
 
-        if (error) throw error;
-
-        selectElement.innerHTML = '<option value="">All Categories</option>';
-
-        data.forEach(category => {
-            const option = document.createElement('option');
-            option.value = category.category_id;
-            option.textContent = category.category_name;
-            selectElement.appendChild(option);
-        });
-    } catch (e) {
-        console.error("Error fetching or populating categories:", e.message);
+            if (error) throw error;
+            cachedCategories = data;
+        } catch (e) {
+            console.error("Error fetching categories:", e.message);
+            return;
+        }
     }
+
+    selectElement.innerHTML = '<option value="">All Categories</option>';
+    cachedCategories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category.category_id;
+        option.textContent = category.category_name;
+        selectElement.appendChild(option);
+    });
 };
 
 
@@ -125,10 +128,10 @@ export const initializeListings = async (userId) => {
         await fetchAndPopulateCategories(modalPurchaseItemCategorySelect);
     }
     if (marketStallDropdown) {
-        populateMarketStallDropdown(marketStallDropdown);
+        await populateMarketStallDropdown(marketStallDropdown);
     }
-    initializeAddListingModalContent();
-    setupMarketStallTabs();
+    await initializeAddListingModalContent();
+    await setupMarketStallTabs();
     if (sortBySelect) {
         sortBySelect.value = currentSort.column;
     }
@@ -318,6 +321,31 @@ export const loadActiveListings = async (marketStallId = null) => {
     }
 };
 
+export const fetchAndCacheMarketStalls = async (characterId) => {
+    if (!characterId) {
+        console.warn("fetchAndCacheMarketStalls: No character ID provided.");
+        cachedMarketStalls = [];
+        return [];
+    }
+    if (cachedMarketStalls !== null) {
+        return cachedMarketStalls;
+    }
+    try {
+        const { data, error } = await supabase
+            .from('market_stalls')
+            .select('id, stall_name')
+            .eq('character_id', characterId)
+            .order('stall_name');
+        if (error) throw error;
+        cachedMarketStalls = data;
+        return data;
+    } catch (e) {
+        console.error("Error fetching market stall locations:", e.message);
+        cachedMarketStalls = [];
+        return [];
+    }
+};
+
 export const populateMarketStallDropdown = async (selectElement) => {
     if (!selectElement) {
         console.error("populateMarketStallDropdown: selectElement is null or undefined.");
@@ -331,18 +359,7 @@ export const populateMarketStallDropdown = async (selectElement) => {
     }
 
     try {
-        const {
-            data: marketStalls,
-            error
-        } = await supabase
-            .from('market_stalls')
-            .select('id, stall_name')
-            .eq('character_id', currentCharacterId)
-            .order('stall_name');
-
-        if (error) {
-            throw error;
-        }
+        const marketStalls = await fetchAndCacheMarketStalls(currentCharacterId);
 
         selectElement.innerHTML = '<option value="">All Market Stalls</option>';
         marketStalls.forEach(stall => {
@@ -374,18 +391,7 @@ export const setupMarketStallTabs = async () => {
     }
 
     try {
-        const {
-            data: marketStalls,
-            error
-        } = await supabase
-            .from('market_stalls')
-            .select('id, stall_name')
-            .eq('character_id', currentCharacterId)
-            .order('stall_name');
-
-        if (error) {
-            throw error;
-        }
+        const marketStalls = await fetchAndCacheMarketStalls(currentCharacterId);
 
         if (marketStalls.length === 0) {
             marketStallTabsContainer.innerHTML = '<p class="text-gray-600 text-center py-4 col-span-full">No market stalls found. Create one above!</p>';
@@ -451,26 +457,5 @@ export const setupMarketStallTabs = async () => {
 };
 
 export const getUserMarketStallLocations = async (characterId) => {
-    if (!characterId) {
-        console.warn("getUserMarketStallLocations: No character ID provided.");
-        return [];
-    }
-    try {
-        const {
-            data,
-            error
-        } = await supabase
-            .from('market_stalls')
-            .select('id, stall_name')
-            .eq('character_id', currentCharacterId)
-            .order('stall_name');
-
-        if (error) {
-            throw error;
-        }
-        return data;
-    } catch (e) {
-        console.error("Error fetching user market stall locations:", e.message);
-        return [];
-    }
+    return await fetchAndCacheMarketStalls(characterId);
 };

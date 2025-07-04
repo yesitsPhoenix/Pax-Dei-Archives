@@ -40,16 +40,12 @@ export const fetchAndPopulateCategories = async () => {
 
         if (error) throw error;
 
-        console.log("Supabase fetched categories data:", data); // LOG 1: What Supabase returned
-
         itemCategorySelect.innerHTML = '<option value="">Select a category</option>';
         data.forEach(category => {
-            console.log(`Processing category: ID=${category.category_id} (Type: ${typeof category.category_id}), Name=${category.category_name}`); // LOG 2: Type and value of category_id before assignment
             const option = document.createElement('option');
             option.value = category.category_id;
             option.textContent = category.category_name;
             itemCategorySelect.appendChild(option);
-            console.log(`Assigned to itemCategorySelect: Option value=${option.value}, text=${option.textContent}`); // LOG 3: What was assigned
         });
 
         filterListingCategorySelect.innerHTML = '<option value="">All Categories</option>';
