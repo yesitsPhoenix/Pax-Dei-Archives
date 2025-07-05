@@ -31,7 +31,7 @@ import {
 } from './dom.js';
 
 const getOrCreateItemId = async (itemName, categoryId) => {
-    console.log('getOrCreateItemId called with:', { itemName, categoryId });
+    //console.log('getOrCreateItemId called with:', { itemName, categoryId });
     if (!currentCharacterId) {
         console.warn("getOrCreateItemId: No character selected.");
         await showCustomModal('Error', 'No character selected. Cannot create or retrieve item.', [{
@@ -61,11 +61,11 @@ const getOrCreateItemId = async (itemName, categoryId) => {
     }
 
     if (items && items.length > 0) {
-        console.log('getOrCreateItemId: Existing item found, ID:', items[0].item_id);
+        //console.log('getOrCreateItemId: Existing item found, ID:', items[0].item_id);
         return items[0].item_id;
     }
 
-    console.log('getOrCreateItemId: No existing item, attempting to create new item.');
+    //console.log('getOrCreateItemId: No existing item, attempting to create new item.');
     const {
         data: newItem,
         error: insertError
@@ -87,21 +87,21 @@ const getOrCreateItemId = async (itemName, categoryId) => {
         }]);
         return null;
     }
-    console.log('getOrCreateItemId: New item created, ID:', newItem.item_id);
+    //console.log('getOrCreateItemId: New item created, ID:', newItem.item_id);
     return newItem.item_id;
 };
 
 
 export const handleAddListing = async (e) => {
-    console.log('handleAddListing called.');
-    e.preventDefault(); // This should stop the address bar change.
+    //console.log('handleAddListing called.');
+    e.preventDefault();
     const form = e.target;
     const submitButton = form.querySelector('button[type="submit"]');
 
     if (submitButton) {
         submitButton.disabled = true;
         submitButton.textContent = 'Adding Listing...';
-        console.log('Submit button disabled and text changed.');
+        //console.log('Submit button disabled and text changed.');
     }
 
     try {
@@ -113,7 +113,7 @@ export const handleAddListing = async (e) => {
             console.error("Validation Error: No character selected. Aborting listing creation.");
             return;
         }
-        console.log('Current Character ID:', currentCharacterId);
+        //console.log('Current Character ID:', currentCharacterId);
 
 
         const itemName = form.querySelector('[name="item-name"]').value.trim();
@@ -123,7 +123,7 @@ export const handleAddListing = async (e) => {
         const itemPricePerStack = parseFloat(form.querySelector('[name="item-price-per-stack"]').value);
         const marketStallId = form.querySelector('[name="market-stall-location"]').value;
 
-        console.log('Form values retrieved:', { itemName, itemCategory, itemStacks, itemCountPerStack, itemPricePerStack, marketStallId });
+        //console.log('Form values retrieved:', { itemName, itemCategory, itemStacks, itemCountPerStack, itemPricePerStack, marketStallId });
 
 
         if (!itemName || isNaN(itemStacks) || isNaN(itemCountPerStack) || isNaN(itemPricePerStack) || !marketStallId) {
@@ -135,8 +135,7 @@ export const handleAddListing = async (e) => {
             return;
         }
 
-        // Validate itemCategory after parsing
-        if (isNaN(itemCategory) || itemCategory <= 0) { // Assuming category IDs are positive integers
+        if (isNaN(itemCategory) || itemCategory <= 0) {
             await showCustomModal('Validation Error', 'Please select a valid item category.', [{
                 text: 'OK',
                 value: true
@@ -150,14 +149,14 @@ export const handleAddListing = async (e) => {
             console.error("Error: Could not get or create item ID. Aborting listing creation.");
             return;
         }
-        console.log('Item ID obtained/created:', itemId);
+        //console.log('Item ID obtained/created:', itemId);
 
 
         const quantityPerListing = itemCountPerStack;
         const totalListedPricePerListing = itemPricePerStack;
         const pricePerUnitPerListing = itemPricePerStack / itemCountPerStack;
-        const marketFeePerListing = Math.ceil(totalListedPricePerListing * 0.05); // Fee calculation
-        console.log('Listing calculations:', { quantityPerListing, totalListedPricePerListing, pricePerUnitPerListing, marketFeePerListing });
+        const marketFeePerListing = Math.ceil(totalListedPricePerListing * 0.05);
+        //console.log('Listing calculations:', { quantityPerListing, totalListedPricePerListing, pricePerUnitPerListing, marketFeePerListing });
 
 
         let successCount = 0;
@@ -184,7 +183,7 @@ export const handleAddListing = async (e) => {
         for (let i = 0; i < itemStacks; i++) {
             totalFees += marketFeePerListing;
         }
-        console.log('Character gold:', currentGold, 'Total fees for all stacks:', totalFees);
+        //console.log('Character gold:', currentGold, 'Total fees for all stacks:', totalFees);
 
 
         if (currentGold < totalFees) {
@@ -196,9 +195,9 @@ export const handleAddListing = async (e) => {
             return;
         }
 
-        console.log(`Proceeding to insert ${itemStacks} listings.`);
+        //console.log(`Proceeding to insert ${itemStacks} listings.`);
         for (let i = 0; i < itemStacks; i++) {
-            console.log(`Attempting to insert listing ${i + 1}/${itemStacks}`);
+            //console.log(`Attempting to insert listing ${i + 1}/${itemStacks}`);
             const { error } = await supabase.from('market_listings').insert({
                 item_id: itemId,
                 character_id: currentCharacterId,
@@ -215,12 +214,12 @@ export const handleAddListing = async (e) => {
                 console.error(`Supabase Insert Error for listing ${i + 1}:`, error);
             } else {
                 successCount++;
-                console.log(`Listing ${i + 1} successfully inserted.`);
+                //console.log(`Listing ${i + 1} successfully inserted.`);
             }
         }
 
         if (successCount > 0) {
-            console.log(`Successfully added ${successCount} listings. Updating character gold.`);
+            //console.log(`Successfully added ${successCount} listings. Updating character gold.`);
             const newGold = currentGold - totalFees;
             const { error: updateGoldError } = await supabase
                 .from('characters')
@@ -234,13 +233,12 @@ export const handleAddListing = async (e) => {
                 }]);
                 console.error("Supabase Error: Failed to update character gold.", updateGoldError);
             } else {
-                console.log(`Character gold updated from ${currentGold} to ${newGold}.`);
+                //console.log(`Character gold updated from ${currentGold} to ${newGold}.`);
                 let successMessage = `Successfully added ${successCount} listing(s)!`;
                 if (failedCount > 0) {
                     successMessage += ` ${failedCount} listing(s) failed.`;
                 }
 
-                // *** MODIFICATION HERE to include fee in the success message ***
                 const totalListedValue = successCount * totalListedPricePerListing;
                 successMessage += `<br>Total Value Listed: ${totalListedValue.toLocaleString()}<br>Total Fees Deducted: ${totalFees.toLocaleString()}`;
 
@@ -256,11 +254,11 @@ export const handleAddListing = async (e) => {
                 value: true
             }]);
         }
-        console.log('Calling loadActiveListings and loadTraderPageData.');
+        //console.log('Calling loadActiveListings and loadTraderPageData.');
         await loadActiveListings();
         await loadTraderPageData();
-        form.reset(); // Clear the form after successful submission
-        console.log('Form reset.');
+        form.reset();
+        //console.log('Form reset.');
 
     } catch (e) {
         console.error("Unexpected error during handleAddListing:", e);
@@ -272,13 +270,13 @@ export const handleAddListing = async (e) => {
         if (submitButton) {
             submitButton.disabled = false;
             submitButton.textContent = 'Add Listing';
-            console.log('Submit button re-enabled and text reset.');
+            //console.log('Submit button re-enabled and text reset.');
         }
     }
 };
 
 export const handleMarkAsSold = async (listingId) => {
-    console.log('handleMarkAsSold called for listing ID:', listingId);
+    //console.log('handleMarkAsSold called for listing ID:', listingId);
     const confirmation = await showCustomModal('Confirm Sale', 'Are you sure you want to mark this listing as sold? This action cannot be undone.', [{
         text: 'Yes',
         value: true,
@@ -290,10 +288,10 @@ export const handleMarkAsSold = async (listingId) => {
     }]);
 
     if (!confirmation) {
-        console.log('Mark as sold cancelled by user.');
+        //console.log('Mark as sold cancelled by user.');
         return;
     }
-    console.log('Confirmation received for marking as sold.');
+    //console.log('Confirmation received for marking as sold.');
 
     try {
         const {
@@ -313,7 +311,7 @@ export const handleMarkAsSold = async (listingId) => {
             }]);
             return;
         }
-        console.log('Listing fetched for marking as sold:', listing);
+        //console.log('Listing fetched for marking as sold:', listing);
 
 
         const {
@@ -321,7 +319,8 @@ export const handleMarkAsSold = async (listingId) => {
         } = await supabase
             .from('market_listings')
             .update({
-                is_fully_sold: true
+                is_fully_sold: true,
+                is_cancelled: false
             })
             .eq('listing_id', listingId)
             .eq('character_id', currentCharacterId);
@@ -334,7 +333,7 @@ export const handleMarkAsSold = async (listingId) => {
             }]);
             return;
         }
-        console.log('Listing successfully marked as sold in DB.');
+        //console.log('Listing successfully marked as sold in DB.');
 
 
         const {
@@ -356,7 +355,7 @@ export const handleMarkAsSold = async (listingId) => {
                 value: true
             }]);
         } else {
-            console.log('Sales record inserted successfully. Fetching character gold.');
+            //console.log('Sales record inserted successfully. Fetching character gold.');
             const {
                 data: characterData,
                 error: fetchGoldError
@@ -374,7 +373,7 @@ export const handleMarkAsSold = async (listingId) => {
                 }]);
             } else {
                 const newGold = (characterData.gold || 0) + listing.total_listed_price;
-                console.log(`Updating character gold from ${characterData.gold} to ${newGold}.`);
+                //console.log(`Updating character gold from ${characterData.gold} to ${newGold}.`);
                 const {
                     error: updateGoldError
                 } = await supabase
@@ -395,7 +394,7 @@ export const handleMarkAsSold = async (listingId) => {
                         text: 'OK',
                         value: true
                     }]);
-                    console.log('Character gold updated successfully. Loading trader page data.');
+                    //console.log('Character gold updated successfully. Loading trader page data.');
                     await loadTraderPageData();
                 }
             }
@@ -407,13 +406,13 @@ export const handleMarkAsSold = async (listingId) => {
             value: true
         }]);
     } finally {
-        console.log('handleMarkAsSold finished. Calling loadActiveListings.');
-        loadActiveListings(); // This was missing in your original finally block for mark as sold
+        //console.log('handleMarkAsSold finished. Calling loadActiveListings.');
+        loadActiveListings();
     }
 };
 
 export const handleCancelListing = async (listingId) => {
-    console.log('handleCancelListing called for listing ID:', listingId);
+    //console.log('handleCancelListing called for listing ID:', listingId);
     const confirmation = await showCustomModal('Confirm Cancel', 'Are you sure you want to cancel this listing? This action cannot be undone.', [{
         text: 'Yes',
         value: true,
@@ -425,10 +424,10 @@ export const handleCancelListing = async (listingId) => {
     }]);
 
     if (!confirmation) {
-        console.log('Cancellation cancelled by user.');
+        //console.log('Cancellation cancelled by user.');
         return;
     }
-    console.log('Confirmation received for cancellation.');
+    //console.log('Confirmation received for cancellation.');
 
     try {
         const {
@@ -448,7 +447,7 @@ export const handleCancelListing = async (listingId) => {
             }]);
             return;
         }
-        console.log('Listing fetched for cancellation:', listing);
+        //console.log('Listing fetched for cancellation:', listing);
 
 
         const {
@@ -457,7 +456,7 @@ export const handleCancelListing = async (listingId) => {
             .from('market_listings')
             .update({
                 is_cancelled: true,
-                is_fully_sold: true // Marking as fully sold effectively hides it from active listings
+                is_fully_sold: false
             })
             .eq('listing_id', listingId)
             .eq('character_id', currentCharacterId);
@@ -470,14 +469,14 @@ export const handleCancelListing = async (listingId) => {
             }]);
             return;
         }
-        console.log('Listing successfully marked as cancelled in DB.');
+        //console.log('Listing successfully marked as cancelled in DB.');
 
 
         await showCustomModal('Success', 'Listing canceled successfully!', [{
             text: 'OK',
             value: true
         }]);
-        console.log('Calling loadTraderPageData after cancellation.');
+        //console.log('Calling loadTraderPageData after cancellation.');
         await loadTraderPageData();
     } catch (e) {
         console.error('handleCancelListing: An unexpected error occurred while canceling the listing.', e);
@@ -486,13 +485,13 @@ export const handleCancelListing = async (listingId) => {
             value: true
         }]);
     } finally {
-        console.log('handleCancelListing finished. Calling loadActiveListings.');
+        //console.log('handleCancelListing finished. Calling loadActiveListings.');
         loadActiveListings();
     }
 };
 
 export const showEditListingModal = async (listingId) => {
-    console.log('showEditListingModal called for listing ID:', listingId);
+    //console.log('showEditListingModal called for listing ID:', listingId);
     setCurrentEditingListingId(listingId);
     const {
         editModal,
@@ -519,7 +518,7 @@ export const showEditListingModal = async (listingId) => {
             }]);
             return;
         }
-        console.log('Listing data fetched for edit modal:', listing);
+        //console.log('Listing data fetched for edit modal:', listing);
 
 
         setOriginalListingPrice(listing.total_listed_price || 0);
@@ -529,7 +528,7 @@ export const showEditListingModal = async (listingId) => {
         editTotalPriceInput.value = Math.round(listing.total_listed_price || 0);
         updateEditFeeInfo();
         editModal.classList.remove('hidden');
-        console.log('Edit modal displayed.');
+        //console.log('Edit modal displayed.');
     } catch (e) {
         console.error('showEditListingModal: An unexpected error occurred while preparing the edit form.', e);
         await showCustomModal('Error', 'An unexpected error occurred while preparing the edit form.', [{
@@ -540,29 +539,29 @@ export const showEditListingModal = async (listingId) => {
 };
 
 export const updateEditFeeInfo = () => {
-    console.log('updateEditFeeInfo called.');
+    //console.log('updateEditFeeInfo called.');
     const {
         editTotalPriceInput,
         editFeeInfo
     } = getEditListingModalElements();
     const newPrice = parseFloat(editTotalPriceInput.value) || 0;
     const estimatedNewFee = Math.ceil(newPrice * 0.05);
-    console.log('New price:', newPrice, 'Estimated new fee:', estimatedNewFee);
+    //console.log('New price:', newPrice, 'Estimated new fee:', estimatedNewFee);
 
 
     if (newPrice > originalListingPrice) {
         let additionalFee = estimatedNewFee - originalListingFee;
-        if (additionalFee < 0) additionalFee = 0; // Ensure additionalFee is not negative
+        if (additionalFee < 0) additionalFee = 0;
         editFeeInfo.textContent = `Estimated additional fee: ${additionalFee.toLocaleString()} (Total estimated fee: ${estimatedNewFee.toLocaleString()})`;
-        console.log('Price increased. Additional fee:', additionalFee);
+        //console.log('Price increased. Additional fee:', additionalFee);
     } else {
         editFeeInfo.textContent = `Current fee: ${originalListingFee.toLocaleString()}`;
-        console.log('Price not increased. Current fee:', originalListingFee);
+        //console.log('Price not increased. Current fee:', originalListingFee);
     }
 };
 
 export const handleEditListingSave = async (e) => {
-    console.log('handleEditListingSave called.');
+    //console.log('handleEditListingSave called.');
     e.preventDefault();
     const {
         editModal,
@@ -573,7 +572,7 @@ export const handleEditListingSave = async (e) => {
     if (submitButton) {
         submitButton.disabled = true;
         submitButton.textContent = 'Saving...';
-        console.log('Edit save button disabled and text changed.');
+        //console.log('Edit save button disabled and text changed.');
     }
 
     try {
@@ -585,12 +584,12 @@ export const handleEditListingSave = async (e) => {
             console.error('handleEditListingSave: No current editing listing ID. Aborting.');
             return;
         }
-        console.log('Current editing listing ID:', currentEditingListingId);
+        //console.log('Current editing listing ID:', currentEditingListingId);
 
 
         const quantity_listed = parseInt(editQuantityListedInput.value, 10);
         const total_listed_price = parseFloat(editTotalPriceInput.value);
-        console.log('New quantity:', quantity_listed, 'New total price:', total_listed_price);
+        //console.log('New quantity:', quantity_listed, 'New total price:', total_listed_price);
 
 
         if (isNaN(quantity_listed) || isNaN(total_listed_price) || quantity_listed <= 0 || total_listed_price <= 0) {
@@ -620,13 +619,13 @@ export const handleEditListingSave = async (e) => {
             }]);
             return;
         }
-        console.log('Old listing details:', oldListing);
+        //console.log('Old listing details:', oldListing);
 
 
         const oldPrice = oldListing.total_listed_price;
         const currentStoredFee = oldListing.market_fee;
         const priceIncrease = total_listed_price - oldPrice;
-        console.log('Old price:', oldPrice, 'Current stored fee:', currentStoredFee, 'Price increase:', priceIncrease);
+        //console.log('Old price:', oldPrice, 'Current stored fee:', currentStoredFee, 'Price increase:', priceIncrease);
 
 
         let additionalFeeToDeduct = 0;
@@ -635,14 +634,14 @@ export const handleEditListingSave = async (e) => {
         if (priceIncrease > 0) {
             newCalculatedFee = Math.ceil(total_listed_price * 0.05);
             if (newCalculatedFee < currentStoredFee) {
-                newCalculatedFee = currentStoredFee; // Fee should not decrease on price increase
+                newCalculatedFee = currentStoredFee;
             }
             additionalFeeToDeduct = newCalculatedFee - currentStoredFee;
-            console.log('Price increased. New calculated fee:', newCalculatedFee, 'Additional fee to deduct:', additionalFeeToDeduct);
+            //console.log('Price increased. New calculated fee:', newCalculatedFee, 'Additional fee to deduct:', additionalFeeToDeduct);
         } else {
             additionalFeeToDeduct = 0;
             newCalculatedFee = currentStoredFee;
-            console.log('Price not increased or decreased. No additional fee.');
+            //console.log('Price not increased or decreased. No additional fee.');
         }
 
         const {
@@ -664,7 +663,7 @@ export const handleEditListingSave = async (e) => {
         }
 
         let currentGold = characterData.gold || 0;
-        console.log('Character gold before fee deduction:', currentGold);
+        //console.log('Character gold before fee deduction:', currentGold);
 
 
         if (additionalFeeToDeduct > 0 && currentGold < additionalFeeToDeduct) {
@@ -677,7 +676,7 @@ export const handleEditListingSave = async (e) => {
         }
 
         const listed_price_per_unit = total_listed_price / quantity_listed;
-        console.log('New price per unit:', listed_price_per_unit);
+        //console.log('New price per unit:', listed_price_per_unit);
 
 
         const {
@@ -701,7 +700,7 @@ export const handleEditListingSave = async (e) => {
             }]);
             return;
         }
-        console.log('Listing successfully updated in DB.');
+        //console.log('Listing successfully updated in DB.');
 
 
         if (additionalFeeToDeduct > 0) {
@@ -726,17 +725,17 @@ export const handleEditListingSave = async (e) => {
                     text: 'OK',
                     value: true
                 }]);
-                console.log(`Character gold updated from ${currentGold} to ${newGold} after fee deduction.`);
+                //console.log(`Character gold updated from ${currentGold} to ${newGold} after fee deduction.`);
             }
         } else {
             await showCustomModal('Success', 'Listing updated successfully!', [{
                 text: 'OK',
                 value: true
             }]);
-            console.log('Listing updated, no additional fee to deduct.');
+            //console.log('Listing updated, no additional fee to deduct.');
         }
         editModal.classList.add('hidden');
-        console.log('Edit modal hidden. Calling loadTraderPageData.');
+        //console.log('Edit modal hidden. Calling loadTraderPageData.');
         await loadTraderPageData();
     } catch (e) {
         console.error('handleEditListingSave: An unexpected error occurred while saving changes.', e);
@@ -748,16 +747,16 @@ export const handleEditListingSave = async (e) => {
         if (submitButton) {
             submitButton.disabled = false;
             submitButton.textContent = 'Save Changes';
-            console.log('Edit save button re-enabled and text reset.');
+            //console.log('Edit save button re-enabled and text reset.');
         }
-        console.log('Calling loadActiveListings after edit save.');
-        loadActiveListings(); // Ensure listings are refreshed after edit
+        //console.log('Calling loadActiveListings after edit save.');
+        loadActiveListings();
     }
 };
 
 
 export const showManageMarketStallsModal = async () => {
-    console.log('showManageMarketStallsModal called.');
+    //console.log('showManageMarketStallsModal called.');
     if (!manageMarketStallsModal) {
         console.error('showManageMarketStallsModal: manageMarketStallsModal element not found.');
         return;
@@ -771,20 +770,20 @@ export const showManageMarketStallsModal = async () => {
         console.error('showManageMarketStallsModal: No character selected. Aborting.');
         return;
     }
-    console.log('Character ID present. Preparing manage market stalls modal.');
+    //console.log('Character ID present. Preparing manage market stalls modal.');
 
     createStallError.classList.add('hidden');
     deleteStallError.classList.add('hidden');
     newMarketStallNameInput.value = '';
-    console.log('Cleared previous errors and input for new stall.');
+    //console.log('Cleared previous errors and input for new stall.');
 
     await renderMarketStallsInModal();
     manageMarketStallsModal.classList.remove('hidden');
-    console.log('Manage Market Stalls modal displayed.');
+    //console.log('Manage Market Stalls modal displayed.');
 };
 
 export const handleEditMarketStallName = async (stallId, newStallName, editInput, saveButton, cancelButton, stallNameSpan, editButton, deleteButton) => {
-    console.log('handleEditMarketStallName called for stall ID:', stallId, 'New name:', newStallName);
+    //console.log('handleEditMarketStallName called for stall ID:', stallId, 'New name:', newStallName);
     saveButton.disabled = true;
     saveButton.textContent = 'Saving...';
 
@@ -813,7 +812,7 @@ export const handleEditMarketStallName = async (stallId, newStallName, editInput
         if (error) {
             throw error;
         }
-        console.log('Market stall name updated in DB successfully.');
+        //console.log('Market stall name updated in DB successfully.');
 
         await showCustomModal('Success', 'Market Stall name updated successfully!', [{
             text: 'OK',
@@ -827,9 +826,9 @@ export const handleEditMarketStallName = async (stallId, newStallName, editInput
         cancelButton.classList.add('hidden');
         editButton.classList.remove('hidden');
         deleteButton.classList.remove('hidden');
-        console.log('UI updated after stall name save.');
+        //console.log('UI updated after stall name save.');
 
-        console.log('Calling populateMarketStallDropdown and setupMarketStallTabs after stall name edit.');
+        //console.log('Calling populateMarketStallDropdown and setupMarketStallTabs after stall name edit.');
         await populateMarketStallDropdown();
         await setupMarketStallTabs();
 
@@ -842,13 +841,13 @@ export const handleEditMarketStallName = async (stallId, newStallName, editInput
     } finally {
         saveButton.disabled = false;
         saveButton.textContent = 'Save';
-        console.log('Edit stall name save button re-enabled.');
+        //console.log('Edit stall name save button re-enabled.');
     }
 };
 
 
 const renderMarketStallsInModal = async () => {
-    console.log('renderMarketStallsInModal called.');
+    //console.log('renderMarketStallsInModal called.');
     if (!marketStallsList) {
         console.error('renderMarketStallsInModal: marketStallsList element not found.');
         return;
@@ -858,11 +857,11 @@ const renderMarketStallsInModal = async () => {
 
     try {
         const stalls = await getUserMarketStallLocations(currentCharacterId);
-        console.log('Market stalls fetched for modal rendering:', stalls);
+        //console.log('Market stalls fetched for modal rendering:', stalls);
 
         if (stalls.length === 0) {
             marketStallsList.innerHTML = '<p class="text-gray-600">No market stalls found for this character. Create one below!</p>';
-            console.log('No market stalls found to render.');
+            //console.log('No market stalls found to render.');
             return;
         }
 
@@ -920,7 +919,7 @@ const renderMarketStallsInModal = async () => {
             marketStallsList.appendChild(stallDiv);
 
             editButton.addEventListener('click', () => {
-                console.log('Edit button clicked for stall:', stall.id);
+                //console.log('Edit button clicked for stall:', stall.id);
                 stallNameSpan.classList.add('hidden');
                 editInput.classList.remove('hidden');
                 saveButton.classList.remove('hidden');
@@ -931,7 +930,7 @@ const renderMarketStallsInModal = async () => {
             });
 
             cancelButton.addEventListener('click', () => {
-                console.log('Cancel button clicked for stall:', stall.id);
+                //console.log('Cancel button clicked for stall:', stall.id);
                 editInput.value = stall.stall_name;
                 stallNameSpan.classList.remove('hidden');
                 editInput.classList.add('hidden');
@@ -942,7 +941,7 @@ const renderMarketStallsInModal = async () => {
             });
 
             saveButton.addEventListener('click', () => {
-                console.log('Save button clicked for stall:', stall.id);
+                //console.log('Save button clicked for stall:', stall.id);
                 handleEditMarketStallName(
                     stall.id,
                     editInput.value,
@@ -956,7 +955,7 @@ const renderMarketStallsInModal = async () => {
             });
 
             deleteButton.addEventListener('click', () => {
-                console.log('Delete button clicked for stall:', stall.id);
+                //console.log('Delete button clicked for stall:', stall.id);
                 handleDeleteMarketStall(stall.id);
             });
         });
@@ -968,7 +967,7 @@ const renderMarketStallsInModal = async () => {
 };
 
 export const handleAddMarketStall = async (e) => {
-    console.log('handleAddMarketStall called.');
+    //console.log('handleAddMarketStall called.');
     e.preventDefault();
     createStallError.classList.add('hidden');
 
@@ -978,7 +977,7 @@ export const handleAddMarketStall = async (e) => {
         console.error('handleAddMarketStall: No character selected. Aborting.');
         return;
     }
-    console.log('Character ID present.');
+    //console.log('Character ID present.');
 
     const stallName = newMarketStallNameInput.value.trim();
     if (!stallName) {
@@ -987,11 +986,11 @@ export const handleAddMarketStall = async (e) => {
         console.error('handleAddMarketStall: Stall name is empty. Aborting.');
         return;
     }
-    console.log('New stall name:', stallName);
+    //console.log('New stall name:', stallName);
 
     addMarketStallBtn.disabled = true;
     addMarketStallBtn.textContent = 'Creating Stall...';
-    console.log('Add market stall button disabled.');
+    //console.log('Add market stall button disabled.');
 
 
     try {
@@ -1007,19 +1006,19 @@ export const handleAddMarketStall = async (e) => {
         if (error) {
             throw error;
         }
-        console.log('Market stall inserted into DB successfully.');
+        //console.log('Market stall inserted into DB successfully.');
 
         await showCustomModal('Success', 'Market Stall created successfully!', [{
             text: 'OK',
             value: true
         }]);
         newMarketStallNameInput.value = '';
-        console.log('Modal shown, input cleared. Calling updates.');
+        //console.log('Modal shown, input cleared. Calling updates.');
 
         await populateMarketStallDropdown();
         await setupMarketStallTabs();
         await renderMarketStallsInModal();
-        console.log('Market stall UI elements updated.');
+        //console.log('Market stall UI elements updated.');
 
     } catch (e) {
         console.error('handleAddMarketStall: Error creating market stall:', e.message, e);
@@ -1028,12 +1027,12 @@ export const handleAddMarketStall = async (e) => {
     } finally {
         addMarketStallBtn.disabled = false;
         addMarketStallBtn.textContent = 'Create Market Stall';
-        console.log('Add market stall button re-enabled.');
+        //console.log('Add market stall button re-enabled.');
     }
 };
 
 export const createDefaultMarketStall = async (characterId, characterName) => {
-    console.log('createDefaultMarketStall called for character:', { characterId, characterName });
+    //console.log('createDefaultMarketStall called for character:', { characterId, characterName });
     if (!characterId) {
         console.error('createDefaultMarketStall: No character ID provided for creating default market stall.');
         return null;
@@ -1045,7 +1044,7 @@ export const createDefaultMarketStall = async (characterId, characterName) => {
     }
 
     const defaultStallName = `${characterName} - Default Stall`;
-    console.log('Default stall name:', defaultStallName);
+    //console.log('Default stall name:', defaultStallName);
 
     try {
         const {
@@ -1064,7 +1063,7 @@ export const createDefaultMarketStall = async (characterId, characterName) => {
             throw error;
         }
 
-        console.log('Default market stall created with ID:', data.id);
+        //console.log('Default market stall created with ID:', data.id);
         return data.id;
     } catch (e) {
         console.error('createDefaultMarketStall: Error creating default market stall:', e.message, e);
@@ -1073,7 +1072,7 @@ export const createDefaultMarketStall = async (characterId, characterName) => {
 };
 
 export const handleDeleteMarketStall = async (stallId) => {
-    console.log('handleDeleteMarketStall called for stall ID:', stallId);
+    //console.log('handleDeleteMarketStall called for stall ID:', stallId);
     deleteStallError.classList.add('hidden');
 
     if (!currentCharacterId) {
@@ -1082,7 +1081,7 @@ export const handleDeleteMarketStall = async (stallId) => {
         console.error('handleDeleteMarketStall: No character selected. Aborting.');
         return;
     }
-    console.log('Character ID present.');
+    //console.log('Character ID present.');
 
 
     const confirmation = await showCustomModal(
@@ -1099,14 +1098,14 @@ export const handleDeleteMarketStall = async (stallId) => {
     );
 
     if (!confirmation) {
-        console.log('Stall deletion cancelled by user.');
+        //console.log('Stall deletion cancelled by user.');
         return;
     }
-    console.log('Confirmation received for stall deletion.');
+    //console.log('Confirmation received for stall deletion.');
 
 
     try {
-        console.log('Checking for active listings in stall:', stallId);
+        //console.log('Checking for active listings in stall:', stallId);
         const {
             data: listings,
             error: listingsError
@@ -1130,8 +1129,7 @@ export const handleDeleteMarketStall = async (stallId) => {
             }]);
             return;
         }
-        console.log('No active listings found for this stall.');
-
+        //console.log('No active listings found for this stall.');
 
         const {
             error: deleteError
@@ -1144,20 +1142,20 @@ export const handleDeleteMarketStall = async (stallId) => {
         if (deleteError) {
             throw deleteError;
         }
-        console.log('Market stall successfully deleted from DB.');
+        //console.log('Market stall successfully deleted from DB.');
 
 
         await showCustomModal('Success', 'Market Stall deleted successfully!', [{
             text: 'OK',
             value: true
         }]);
-        console.log('Modal shown. Calling UI updates after stall deletion.');
+        //console.log('Modal shown. Calling UI updates after stall deletion.');
 
 
         await populateMarketStallDropdown();
         await setupMarketStallTabs();
         await renderMarketStallsInModal();
-        console.log('Market stall UI elements updated after deletion.');
+        //console.log('Market stall UI elements updated after deletion.');
 
     } catch (e) {
         console.error('handleDeleteMarketStall: Error deleting market stall:', e.message, e);

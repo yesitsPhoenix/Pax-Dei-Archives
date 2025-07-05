@@ -808,7 +808,7 @@ const addCharacterEventListeners = () => {
                     await updateCharacterGold(amount);
                 },
                 () => {
-                    console.log("Set Gold operation cancelled.");
+                    //console.log("Set Gold operation cancelled.");
                 }
             );
         });

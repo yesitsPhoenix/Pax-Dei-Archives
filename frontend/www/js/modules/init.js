@@ -141,7 +141,7 @@ export const initializeListings = async (userId) => {
 };
 
 const addListingsEventListeners = () => {
-    console.log('addListingsEventListeners called');
+    //console.log('addListingsEventListeners called');
     if (addListingForm) {
         addListingForm.addEventListener('submit', handleAddListing);
     }
