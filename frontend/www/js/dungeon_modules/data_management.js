@@ -1,6 +1,7 @@
 import { state, markChanges } from './state.js';
 import { showFeedback, updatePartyMembersList, updateCurrentLootList, updateDistributionResults, initializeUI } from './ui_updates.js';
 import { supabase } from '../supabaseClient.js';
+import { updateDungeonRun } from '../utils.js'; 
 
 let allPaxDeiItems = [];
 
@@ -40,111 +41,8 @@ export function saveDungeonRun() {
         return;
     }
 
-    const dungeonName = state.dungeonNameInput.value.trim();
-    if (!dungeonName) {
-        showFeedback("Please enter a name for your dungeon run before saving.", "error");
-        return;
-    }
-
-    const runData = {
-        dungeonName: dungeonName,
-        partyMembers: state.partyMembers,
-        lootItems: state.lootItems,
-        totalGold: state.totalGold,
-        nextLootRecipientIndex: state.nextLootRecipientIndex,
-        reservedItems: state.reservedItems,
-        userId: state.userId
-    };
-
-    try {
-        localStorage.setItem(`dungeonRun_${dungeonName}`, JSON.stringify(runData));
-        showFeedback(`Dungeon run "${dungeonName}" saved successfully!`, "success");
-        markChanges(true);
-    } catch (e) {
-        console.error("Error saving dungeon run to local storage:", e);
-        showFeedback("Failed to save dungeon run. Local storage might be full or unavailable.", "error");
-    }
-}
-
-export function loadDungeonRun(dungeonName) {
-    try {
-        const runDataString = localStorage.getItem(`dungeonRun_${dungeonName}`);
-        if (runDataString) {
-            const runData = JSON.parse(runDataString);
-            state.dungeonNameInput.value = runData.dungeonName;
-            state.partyMembers = runData.partyMembers || [];
-            state.lootItems = runData.lootItems || [];
-            state.totalGold = runData.totalGold || 0;
-            state.nextLootRecipientIndex = runData.nextLootRecipientIndex || 0;
-            state.reservedItems = runData.reservedItems || {};
-            state.userId = runData.userId || crypto.randomUUID();
-
-            initializeUI();
-            updatePartyMembersList();
-            updateCurrentLootList();
-            updateDistributionResults();
-
-            showFeedback(`Dungeon run "${dungeonName}" loaded from local storage.`, "success");
-            state.hasUnsavedChanges = false;
-            return true;
-        } else {
-            showFeedback(`No saved run found with the name "${dungeonName}".`, "error");
-            return false;
-        }
-    } catch (e) {
-        console.error("Error loading dungeon run from local storage:", e);
-        showFeedback("Failed to load dungeon run. Data might be corrupted.", "error");
-        return false;
-    }
-}
-
-export function listSavedDungeonRuns() {
-    const runs = [];
-    for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key.startsWith('dungeonRun_')) {
-            runs.push(key.substring('dungeonRun_'.length));
-        }
-    }
-    return runs;
-}
-
-export function deleteDungeonRun(dungeonName) {
-    if (confirm(`Are you sure you want to delete the run "${dungeonName}"?`)) {
-        localStorage.removeItem(`dungeonRun_${dungeonName}`);
-        showFeedback(`Dungeon run "${dungeonName}" deleted.`, "success");
-        return true;
-    }
-    return false;
-}
-
-export async function generateShareCode() {
-    let newCode;
-    let isUnique = false;
-    while (!isUnique) {
-        newCode = Math.random().toString(36).substring(2, 9);
-        const { data, error } = await supabase
-            .from('dungeon_runs')
-            .select('id')
-            .eq('id', newCode)
-            .maybeSingle();
-
-        if (error) {
-            console.error('Error checking share code uniqueness:', error);
-            showFeedback('Error generating share code. Please try again.', 'error');
-            return null;
-        }
-
-        if (data === null) {
-            isUnique = true;
-        } else {
-            isUnique = false;
-        }
-    }
-
-    const runDataToSave = {
-        id: newCode,
-        user_id: state.userId,
+    const runData = { // Prepare the data object for saving/updating
+        user_id: state.userId, // Assuming userId is set
         dungeon_name: state.dungeonNameInput ? state.dungeonNameInput.value : 'Unnamed Run',
         party_members: state.partyMembers,
         current_loot_items: state.lootItems,
@@ -153,85 +51,174 @@ export async function generateShareCode() {
         reserved_items: state.reservedItems
     };
 
-    const { error } = await supabase
+    // If there's a current shareable code, update the remote run in Supabase
+    if (state.currentShareableCode) {
+        // Use the updateDungeonRun from utils.js
+        updateDungeonRun(state.currentShareableCode, runData)
+            .then(updatedData => {
+                if (updatedData) {
+                    showFeedback(`Dungeon run "${runData.dungeon_name}" updated remotely!`, 'success');
+                    markChanges(true); // Mark changes as saved
+                } else {
+                    showFeedback(`Failed to update run remotely: ${runData.dungeon_name}`, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error updating run remotely:', error);
+                showFeedback(`Error updating run remotely: ${error.message}`, 'error');
+            });
+        return; // Exit after attempting remote save
+    }
+
+    // Original logic for local storage save if no share code is active
+    const runName = runData.dungeon_name; // Use dungeon_name from prepared data
+    const savedRuns = JSON.parse(localStorage.getItem('dungeonRuns') || '{}');
+
+    savedRuns[runName] = runData; // Save the full runData object
+
+    localStorage.setItem('dungeonRuns', JSON.stringify(savedRuns));
+    showFeedback(`Dungeon run "${runName}" saved locally!`, 'success');
+    markChanges(true); // Mark changes as saved without debouncing
+}
+
+export async function generateShareCode() {
+    if (state.currentShareableCode) {
+        showFeedback("This run already has a share code.", "info");
+        return state.currentShareableCode;
+    }
+
+    const newShareCode = crypto.randomUUID();
+    const runDataToSave = {
+        id: newShareCode, // Set the ID for the new row
+        user_id: state.userId, // Assuming userId is set
+        dungeon_name: state.dungeonNameInput.value || 'Unnamed Run',
+        party_members: state.partyMembers,
+        current_loot_items: state.lootItems,
+        current_total_gold: state.totalGold,
+        next_loot_recipient_index: state.nextLootRecipientIndex,
+        reserved_items: state.reservedItems
+    };
+
+    const { data, error } = await supabase
         .from('dungeon_runs')
-        .upsert(runDataToSave, { onConflict: 'id' });
+        .insert([runDataToSave])
+        .select();
 
     if (error) {
-        console.error('Error saving new share code to Supabase:', error);
-        showFeedback('Failed to generate and save unique share code.', 'error');
+        console.error('Error generating share code and saving run:', error);
+        showFeedback(`Error generating share code: ${error.message}`, "error");
         return null;
     } else {
-        state.currentShareableCode = newCode;
-        if (state.shareCodeDisplay) state.shareCodeDisplay.value = newCode;
-        if (state.shareCodeDisplay) state.shareCodeDisplay.classList.remove('hidden');
-        if (state.copyCodeBtn) state.copyCodeBtn.classList.remove('hidden');
-        showFeedback('New share code generated and saved!', 'success');
-
-        const newUrl = window.location.origin + window.location.pathname + '#code-' + newCode;
-        window.history.pushState({ path: newUrl }, '', newUrl);
-
-        state.hasUnsavedChanges = false;
-        return newCode;
+        state.currentShareableCode = newShareCode; // Crucial: Set the active share code in state
+        showFeedback(`Share code generated! Share this link: <a href="loot.html#code-${newShareCode}" target="_blank" class="text-blue-400 hover:text-blue-300">${newShareCode}</a>`, "success");
+        markChanges(true); // Mark as saved as it's now in DB
+        return newShareCode;
     }
 }
 
+export function loadDungeonRun(runName) {
+    const savedRuns = JSON.parse(localStorage.getItem('dungeonRuns') || '{}');
+    const runToLoad = savedRuns[runName];
+
+    if (runToLoad) {
+        // Clear any active share code when loading from local storage
+        state.currentShareableCode = ''; 
+
+        // Set UI input for dungeon name
+        if (state.dungeonNameInput) {
+            state.dungeonNameInput.value = runToLoad.dungeon_name || 'Unnamed Run';
+        }
+
+        // Update state with loaded data
+        state.partyMembers = runToLoad.party_members || [];
+        state.lootItems = runToLoad.current_loot_items || [];
+        state.totalGold = runToLoad.current_total_gold || 0;
+        state.nextLootRecipientIndex = runToLoad.next_loot_recipient_index || 0;
+        state.reservedItems = runToLoad.reserved_items || {};
+
+        // Update UI based on loaded state
+        updatePartyMembersList();
+        updateCurrentLootList();
+        updateDistributionResults();
+        markChanges(true); // Mark as saved initially after loading
+        showFeedback(`Dungeon run "${runName}" loaded from local storage!`, 'success');
+        return true;
+    } else {
+        showFeedback(`No locally saved run found with name: ${runName}.`, 'error');
+        return false;
+    }
+}
+
+export function listSavedDungeonRuns() {
+    const savedRuns = JSON.parse(localStorage.getItem('dungeonRuns') || '{}');
+    return Object.keys(savedRuns);
+}
+
+export function deleteDungeonRun(runName) {
+    if (confirm(`Are you sure you want to delete the dungeon run "${runName}"? This action cannot be undone.`)) {
+        const savedRuns = JSON.parse(localStorage.getItem('dungeonRuns') || '{}');
+        if (savedRuns[runName]) {
+            delete savedRuns[runName];
+            localStorage.setItem('dungeonRuns', JSON.stringify(savedRuns));
+            showFeedback(`Dungeon run "${runName}" deleted locally.`, 'success');
+            return true;
+        } else {
+            showFeedback(`No locally saved run found with name: ${runName}.`, 'error');
+            return false;
+        }
+    }
+    return false;
+}
+
 export async function loadDungeonRunFromShareCode(shareCode) {
-    showFeedback(`Attempting to load run with code: ${shareCode}...`, 'info');
+    if (!shareCode) {
+        showFeedback('No share code provided.', 'error');
+        return false;
+    }
+
     try {
         const { data: supabaseData, error } = await supabase
             .from('dungeon_runs')
-            .select('dungeon_name')
+            .select('*')
             .eq('id', shareCode)
             .single();
 
-        if (error) {
-            console.error('Supabase query error:', error);
+        if (error && error.code === 'PGRST116') { 
+            showFeedback(`No saved run found with code: ${shareCode}.`, "error");
+            state.currentShareableCode = ''; 
+            return false;
+        } else if (error) {
+            console.error('Error loading run from Supabase:', error);
             showFeedback(`Error loading run: ${error.message || 'Please try again.'}`, 'error');
             return false;
         }
 
         if (!supabaseData) {
             showFeedback(`No saved run found with code: ${shareCode}.`, "error");
+            state.currentShareableCode = ''; 
             return false;
         }
 
-        window.location.href = `view_dungeon.html#code-${shareCode}`;
+        if (state.dungeonNameInput) {
+            state.dungeonNameInput.value = supabaseData.dungeon_name || 'Unnamed Run'; 
+        }
+        state.partyMembers = supabaseData.party_members || [];
+        state.lootItems = supabaseData.current_loot_items || [];
+        state.totalGold = supabaseData.current_total_gold || 0;
+        state.nextLootRecipientIndex = supabaseData.next_loot_recipient_index || 0;
+        state.reservedItems = supabaseData.reserved_items || {};
+        state.currentShareableCode = shareCode; 
+
+        updatePartyMembersList();
+        updateCurrentLootList();
+        updateDistributionResults();
+        markChanges(true); 
         return true;
 
     } catch (e) {
         console.error('Unexpected error loading run from share code:', e);
         showFeedback(`Error loading run: ${e.message || 'Please try again.'}`, 'error');
+        state.currentShareableCode = ''; 
         return false;
-    }
-}
-
-export async function updateDungeonRunInSupabase(shareCode) {
-    if (!shareCode) {
-        console.warn("No share code provided for Supabase update. Skipping.");
-        return false;
-    }
-
-    const runDataToUpdate = {
-        user_id: state.userId,
-        dungeon_name: state.dungeonNameInput ? state.dungeonNameInput.value : 'Unnamed Run',
-        party_members: state.partyMembers,
-        current_loot_items: state.lootItems,
-        current_total_gold: state.totalGold,
-        next_loot_recipient_index: state.nextLootRecipientIndex,
-        reserved_items: state.reservedItems
-    };
-
-    const { error } = await supabase
-        .from('dungeon_runs')
-        .update(runDataToUpdate)
-        .eq('id', shareCode);
-
-    if (error) {
-        console.error('Error updating run in Supabase:', error);
-        showFeedback('Failed to update run in real-time.', 'error');
-        return false;
-    } else {
-        return true;
     }
 }

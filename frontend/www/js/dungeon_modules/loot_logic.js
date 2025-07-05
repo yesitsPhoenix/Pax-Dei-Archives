@@ -1,6 +1,8 @@
 import { state, markChanges } from './state.js';
 import { showFeedback, updatePartyMembersList, updateCurrentLootList, updateDistributionResults, showReserveModal, hideReserveModal, updateReservePlayerSelection, updateConfirmButtonState } from './ui_updates.js';
-import { fetchAllItemsForDropdown, updateDungeonRunInSupabase } from './data_management.js';
+// Remove updateDungeonRunInSupabase from this import.
+// If loot_logic.js needed to call it directly, it would now import it from utils.js
+import { fetchAllItemsForDropdown } from './data_management.js'; 
 
 export function addPartyMember(memberName) {
     if (!memberName || memberName.trim() === "") {
@@ -9,7 +11,7 @@ export function addPartyMember(memberName) {
     }
     const nameToAdd = memberName.trim();
     if (state.partyMembers.some(member => member.name.toLowerCase() === nameToAdd.toLowerCase())) {
-        showFeedback(`Party member "${nameToAdd}" already exists.`, "info");
+        showFeedback(`Party member \"${nameToAdd}\" already exists.`, "info");
         return;
     }
     if (state.partyMembers.length >= state.MAX_PARTY_MEMBERS) {
@@ -29,346 +31,266 @@ export function addPartyMember(memberName) {
 
 export function removePartyMember(index) {
     if (index < 0 || index >= state.partyMembers.length) {
-        showFeedback("Invalid party member selected for removal.", "error");
+        showFeedback("Invalid party member index.", "error");
         return;
     }
 
-    const removedMember = state.partyMembers.splice(index, 1)[0];
-    const removedMemberName = removedMember.name;
+    const memberName = state.partyMembers[index].name;
 
-    if (state.reservedItems[removedMemberName]) {
-        delete state.reservedItems[removedMemberName];
-    }
-    
-    if (state.nextLootRecipientIndex >= state.partyMembers.length && state.partyMembers.length > 0) {
-        state.nextLootRecipientIndex = 0;
-    } else if (state.partyMembers.length === 0) {
-        state.nextLootRecipientIndex = 0;
+    // Check for any reserved items by this player and return them to main loot if confirmed
+    if (state.reservedItems[memberName] && state.reservedItems[memberName].length > 0) {
+        const confirmReturn = confirm(`"${memberName}" has reserved items. Do you want to return them to the general loot pool before removing the player?`);
+        if (confirmReturn) {
+            state.reservedItems[memberName].forEach(reserved => {
+                const existingLootItem = state.lootItems.find(item => item.name === reserved.item.name && item.slug === reserved.item.slug);
+                if (existingLootItem) {
+                    existingLootItem.quantity += reserved.quantity;
+                } else {
+                    state.lootItems.push({ ...reserved.item, quantity: reserved.quantity });
+                }
+            });
+        }
+        delete state.reservedItems[memberName]; // Remove player's reservations regardless of return decision
     }
 
+    state.partyMembers.splice(index, 1);
     updatePartyMembersList();
-    updateCurrentLootList();
     updateReservePlayerSelection();
+    updateCurrentLootList(); // Update loot list in case items were returned
     updateDistributionResults();
     markChanges();
-    showFeedback(`Removed party member: ${removedMemberName}`, 'info');
+    showFeedback(`Removed party member: ${memberName}`, 'success');
 }
 
-
-export function addLootItem(itemName, itemQuantity) {
+export function addLootItem(itemName, quantity = 1, slug = '') {
     if (!itemName || itemName.trim() === "") {
-        showFeedback("Loot item name cannot be empty.", "error");
+        showFeedback("Item name cannot be empty.", "error");
+        return;
+    }
+    const nameToAdd = itemName.trim();
+    const quantityToAdd = parseInt(quantity);
+
+    if (isNaN(quantityToAdd) || quantityToAdd <= 0) {
+        showFeedback("Quantity must be a positive number.", "error");
         return;
     }
 
-    if (isNaN(itemQuantity) || itemQuantity <= 0) {
-        itemQuantity = 1;
-        if (state.lootItemQuantityInput) {
-            state.lootItemQuantityInput.value = '1';
-        }
-    }
+    const existingItem = state.lootItems.find(item => item.name.toLowerCase() === nameToAdd.toLowerCase() && item.slug === slug);
 
-    const trimmedItemName = itemName.trim();
-    const selectedSearchResult = state.lootSearchResults.querySelector(`div[data-item-name="${trimmedItemName}"]`);
-    const itemSlug = selectedSearchResult ? selectedSearchResult.dataset.slug : trimmedItemName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-*|-*$/g, '');
-
-    const existingItemIndex = state.lootItems.findIndex(item => item.name.toLowerCase() === trimmedItemName.toLowerCase());
-    
-    if (existingItemIndex > -1) {
-        state.lootItems[existingItemIndex].quantity += itemQuantity;
-        showFeedback(`Added ${itemQuantity} to existing "${trimmedItemName}". Total: ${state.lootItems[existingItemIndex].quantity}`, 'info');
+    if (existingItem) {
+        existingItem.quantity += quantityToAdd;
     } else {
-        state.lootItems.push({ name: trimmedItemName, slug: itemSlug, quantity: itemQuantity });
-        showFeedback(`Added ${itemQuantity} x "${trimmedItemName}".`, 'success');
+        state.lootItems.push({ name: nameToAdd, quantity: quantityToAdd, slug: slug });
     }
-    
-    if (state.lootItemNameInput) state.lootItemNameInput.value = '';
-    if (state.lootItemQuantityInput) state.lootItemQuantityInput.value = '1';
-    if (state.lootSearchResults) state.lootSearchResults.classList.add('hidden');
 
+    state.lootItemNameInput.value = '';
+    state.lootItemQuantityInput.value = '1';
+    state.lootSearchResults.innerHTML = '';
     updateCurrentLootList();
-    updateDistributionResults();
     markChanges();
+    showFeedback(`Added ${quantityToAdd}x ${nameToAdd} to loot!`, 'success');
 }
 
 export function removeLootItem(index) {
     if (index < 0 || index >= state.lootItems.length) {
-        showFeedback("Invalid loot item selected for removal.", "error");
+        showFeedback("Invalid loot item index.", "error");
         return;
     }
-    const removedItem = state.lootItems.splice(index, 1)[0];
-    
-    for (const player in state.reservedItems) {
-        state.reservedItems[player] = state.reservedItems[player].filter(reserved => 
-            !(reserved.item.name === removedItem.name && reserved.item.slug === removedItem.slug)
-        );
-        if (state.reservedItems[player].length === 0) {
-            delete state.reservedItems[player];
-        }
-    }
+    const removedItem = state.lootItems.splice(index, 1);
     updateCurrentLootList();
     updateDistributionResults();
     markChanges();
-    showFeedback(`Removed "${removedItem.name}".`, 'info');
+    showFeedback(`Removed item: ${removedItem[0].name}`, 'success');
 }
 
-export function addGold(goldAmount) {
-    const amount = parseInt(goldAmount);
-    if (!isNaN(amount) && amount > 0) {
-        state.totalGold += amount;
-        if (state.totalGoldDisplay) {
-            state.totalGoldDisplay.textContent = state.totalGold.toLocaleString();
-        }
-        if (state.addGoldAmountInput) {
-            state.addGoldAmountInput.value = '';
-        }
-        updateDistributionResults();
-        markChanges();
-        showFeedback(`Added ${amount.toLocaleString()} gold. Total: ${state.totalGold.toLocaleString()}`, 'success');
-    } else {
-        showFeedback('Please enter a valid positive gold amount to add.', 'error');
-    }
-}
-
-export function setGold(goldAmount) {
-    const amount = parseInt(goldAmount);
-    if (!isNaN(amount) && amount >= 0) {
-        state.totalGold = amount;
-        if (state.totalGoldDisplay) {
-            state.totalGoldDisplay.textContent = state.totalGold.toLocaleString();
-        }
-        if (state.setGoldAmountInput) {
-            state.setGoldAmountInput.value = '';
-        }
-        updateDistributionResults();
-        markChanges(); 
-        showFeedback(`Set total gold to ${amount.toLocaleString()}.`, 'success');
-    } else {
-        showFeedback('Please enter a valid non-negative gold amount to set.', 'error');
-    }
-}
-
-export async function distributeGold() {
-    if (state.partyMembers.length === 0) {
-        showFeedback('Please add party members first to distribute gold!', 'error');
+export function addGold(amount) {
+    const goldToAdd = parseInt(amount);
+    if (isNaN(goldToAdd) || goldToAdd <= 0) {
+        showFeedback("Amount must be a positive number.", "error");
         return;
     }
-    if (state.totalGold === 0) {
-        showFeedback('No gold to distribute!', 'info');
-        return;
-    }
-
-    const goldPerMember = Math.floor(state.totalGold / state.partyMembers.length);
-    let remainingGold = state.totalGold % state.partyMembers.length;
-    const totalGoldForLog = state.totalGold;
-
-    let distributionHtmlLog = '';
-    state.lastGoldDistributionLog = [];
-
-    const timestamp = new Date().toLocaleString();
-    const headerHtml = `<p class="py-1 border-b border-gray-500 text-yellow-400 font-bold mt-2">--- Gold Distribution Event (${timestamp}) ---</p>`;
-    distributionHtmlLog += headerHtml;
-    state.lastGoldDistributionLog.push({ type: 'header', text: headerHtml, timestamp: timestamp });
-
-    const totalGoldEntryHtml = `<p class="py-1 border-b border-gray-500 text-gray-200">Total Gold Distributed: <span class="text-yellow-400">${totalGoldForLog.toLocaleString()}</span></p>`;
-    distributionHtmlLog += totalGoldEntryHtml;
-    state.lastGoldDistributionLog.push({ type: 'total_gold', amount: totalGoldForLog, timestamp: new Date().toLocaleString() });
-
-    const basePerMemberHtml = `<p class="py-1 border-b border-gray-500 text-gray-200">Each member received a base of: <span class="text-yellow-400">${goldPerMember.toLocaleString()}</span> gold.</p>`;
-    distributionHtmlLog += basePerMemberHtml;
-    state.lastGoldDistributionLog.push({ type: 'base_gold_per_member', amount: goldPerMember, timestamp: new Date().toLocaleString() });
-
-
-    state.partyMembers.forEach((member) => { 
-        let memberGold = goldPerMember;
-        if (remainingGold > 0) {
-            memberGold += 1;
-            remainingGold--;
-        }
-        member.goldShare += memberGold;
-        const memberLogHtml = `<strong>${member.name}</strong> received: <span class="text-yellow-400">${memberGold.toLocaleString()}</span> gold. (Total: ${member.goldShare.toLocaleString()})`;
-        distributionHtmlLog += `<p>${memberLogHtml}</p>`;
-        state.lastGoldDistributionLog.push({
-            type: 'member_gold',
-            memberName: member.name,
-            amount: memberGold,
-            totalMemberGold: member.goldShare,
-            timestamp: new Date().toLocaleString()
-        });
-    });
-
-    state.totalGold = 0;
-    if (state.totalGoldDisplay) {
-        state.totalGoldDisplay.textContent = state.totalGold.toLocaleString(); 
-    }
-    state.distribution_results_html = (state.distribution_results_html || '') + distributionHtmlLog;
-
-    showFeedback('Gold distributed successfully!', 'success');
+    state.totalGold += goldToAdd;
+    state.addGoldAmountInput.value = '';
+    updateCurrentLootList();
     updateDistributionResults();
     markChanges();
-
-    if (state.currentShareableCode) {
-        await updateDungeonRunInSupabase(state.currentShareableCode);
-    } else {
-        showFeedback("Gold distributed locally, but not saved to shared run (no share code).", "info");
-    }
+    showFeedback(`Added ${goldToAdd} gold!`, 'success');
 }
 
-export async function distributeLoot() {
-    if (state.partyMembers.length === 0) {
-        showFeedback('Please add party members first to distribute loot!', 'error');
+export function setGold(amount) {
+    const goldToSet = parseInt(amount);
+    if (isNaN(goldToSet) || goldToSet < 0) {
+        showFeedback("Amount must be a non-negative number.", "error");
         return;
     }
-    const unreservedLootItems = state.lootItems.filter(item => {
-        let totalReserved = 0;
-        for (const player in state.reservedItems) {
-            const playerReserves = state.reservedItems[player] || [];
-            const reservation = playerReserves.find(res => res.item.name === item.name && res.item.slug === item.slug);
-            if (reservation) {
-                totalReserved += reservation.quantity;
-            }
-        }
-        return item.quantity > totalReserved;
+    state.totalGold = goldToSet;
+    state.setGoldAmountInput.value = '';
+    updateCurrentLootList();
+    updateDistributionResults();
+    markChanges();
+    showFeedback(`Total gold set to ${goldToSet}!`, 'success');
+}
+
+export function distributeGold() {
+    if (state.partyMembers.length === 0) {
+        showFeedback("No party members to distribute gold to.", "error");
+        return;
+    }
+
+    const goldPerMember = state.totalGold / state.partyMembers.length;
+    state.partyMembers.forEach(member => {
+        member.goldShare = goldPerMember;
     });
 
-    if (unreservedLootItems.length === 0) {
-        showFeedback('No unreserved loot items to distribute!', 'info');
+    state.lastGoldDistributionLog = state.partyMembers.map(member => ({
+        name: member.name,
+        share: goldPerMember.toFixed(2)
+    }));
+
+    updateDistributionResults();
+    markChanges();
+    showFeedback("Gold distributed!", 'success');
+}
+
+export function distributeLoot() {
+    if (state.partyMembers.length === 0) {
+        showFeedback("No party members to distribute loot to.", "error");
         return;
     }
 
-    const itemsToDistributeIndividual = [];
-    state.lootItems = state.lootItems.map(item => {
-        let totalReserved = 0;
-        for (const player in state.reservedItems) {
-            const playerReserves = state.reservedItems[player] || [];
-            const reservation = playerReserves.find(res => res.item.name === item.name && res.item.slug === item.slug);
-            if (reservation) {
-                totalReserved += reservation.quantity;
+    if (state.lootItems.length === 0) {
+        showFeedback("No loot to distribute.", "error");
+        return;
+    }
+
+    // Initialize item distribution for each member for this round
+    state.partyMembers.forEach(member => member.items = []);
+
+    let currentLootIndex = 0;
+    while (state.lootItems.length > 0) {
+        const currentItem = state.lootItems[currentLootIndex];
+
+        // Find the next recipient, skipping those with reservations for this item if quantity is met
+        let nextRecipientIndex = state.nextLootRecipientIndex;
+        let recipientFound = false;
+        for (let i = 0; i < state.partyMembers.length; i++) {
+            const memberIndex = (state.nextLootRecipientIndex + i) % state.partyMembers.length;
+            const currentMember = state.partyMembers[memberIndex];
+            
+            // Check if this member has a reservation for the current item
+            const reservedQuantity = (state.reservedItems[currentMember.name] || [])
+                                        .filter(r => r.item.name === currentItem.name && r.item.slug === currentItem.slug)
+                                        .reduce((sum, r) => sum + r.quantity, 0);
+
+            // Check if member already received enough of this item from current distribution
+            const receivedQuantity = (currentMember.items || [])
+                                        .filter(i => i.name === currentItem.name && i.slug === currentItem.slug)
+                                        .reduce((sum, i) => sum + i.quantity, 0);
+
+            // If the member has a reservation and has not yet received their reserved quantity, prioritize them
+            if (reservedQuantity > 0 && receivedQuantity < reservedQuantity) {
+                nextRecipientIndex = memberIndex;
+                recipientFound = true;
+                break; // Found a prioritized recipient
             }
         }
-        const quantityToDistribute = item.quantity - totalReserved;
-        for (let i = 0; i < quantityToDistribute; i++) {
-            itemsToDistributeIndividual.push({ name: item.name, slug: item.slug });
+
+        // If no prioritized recipient found, just use the regular round-robin
+        if (!recipientFound) {
+            nextRecipientIndex = state.nextLootRecipientIndex;
         }
-        return { ...item, quantity: totalReserved };
-    }).filter(item => item.quantity > 0);
 
-    for (let i = itemsToDistributeIndividual.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [itemsToDistributeIndividual[i], itemsToDistributeIndividual[j]] = [itemsToDistributeIndividual[j], itemsToDistributeIndividual[i]];
-    }
+        const recipient = state.partyMembers[nextRecipientIndex];
 
-    let distributionHtmlLog = '';
-    state.lastLootDistributionLog = [];
-
-    if (itemsToDistributeIndividual.length > 0) {
-        const timestamp = new Date().toLocaleString();
-        const headerHtml = `<p class="py-1 border-b border-gray-500 text-yellow-400 font-bold mt-2">--- Loot Distribution Event (${timestamp}) ---</p>`;
-        distributionHtmlLog += headerHtml;
-        state.lastLootDistributionLog.push({ type: 'header', text: headerHtml, timestamp: timestamp });
-    }
-
-    let currentMemberIndex = state.nextLootRecipientIndex % state.partyMembers.length;
-    while (itemsToDistributeIndividual.length > 0) {
-        const item = itemsToDistributeIndividual.shift();
-        const recipient = state.partyMembers[currentMemberIndex];
-        if (!recipient.items) {
-            recipient.items = [];
-        }
-        const existingRecipientItem = recipient.items.find(ri => ri.name === item.name && ri.slug === item.slug);
-        if (existingRecipientItem) {
-            existingRecipientItem.quantity = (existingRecipientItem.quantity || 1) + 1;
+        // Add item to recipient
+        const existingItemInRecipient = recipient.items.find(item => item.name === currentItem.name && item.slug === currentItem.slug);
+        if (existingItemInRecipient) {
+            existingItemInRecipient.quantity++;
         } else {
-            recipient.items.push({ name: item.name, slug: item.slug, quantity: 1 });
+            recipient.items.push({ name: currentItem.name, quantity: 1, slug: currentItem.slug });
         }
 
-        const logEntryHtml = `<strong>${recipient.name}</strong> receives <span class="text-green-300">"${item.name}"</span>`;
-        distributionHtmlLog += `<p>${logEntryHtml}</p>`;
-        state.lastLootDistributionLog.push({
-            type: 'item_received',
-            itemName: item.name,
-            itemSlug: item.slug,
-            recipient: recipient.name,
-            timestamp: new Date().toLocaleString()
-        });
-        currentMemberIndex = (currentMemberIndex + 1) % state.partyMembers.length;
+        // Decrease item quantity in loot pool
+        currentItem.quantity--;
+
+        // If item quantity drops to 0, remove it from loot pool and reset index if necessary
+        if (currentItem.quantity <= 0) {
+            state.lootItems.splice(currentLootIndex, 1);
+            // No need to increment currentLootIndex as splice shifts elements
+        } else {
+            currentLootIndex++; // Move to the next item if current one still has quantity
+        }
+
+        // Move to the next recipient in the general round-robin for the next distribution turn
+        state.nextLootRecipientIndex = (nextRecipientIndex + 1) % state.partyMembers.length;
+
+        // Reset currentLootIndex if we've gone through all items
+        if (currentLootIndex >= state.lootItems.length && state.lootItems.length > 0) {
+            currentLootIndex = 0;
+        } else if (state.lootItems.length === 0) {
+            currentLootIndex = 0; // All items distributed
+        }
     }
 
-    state.nextLootRecipientIndex = currentMemberIndex;
-    state.distribution_results_html = (state.distribution_results_html || '') + distributionHtmlLog;
+    state.lastLootDistributionLog = state.partyMembers.map(member => ({
+        name: member.name,
+        items: member.items.map(item => `${item.quantity}x ${item.name}`)
+    }));
 
-    showFeedback('Unreserved loot distributed successfully!', 'success');
     updateCurrentLootList();
     updateDistributionResults();
     markChanges();
-
-    if (state.currentShareableCode) {
-        await updateDungeonRunInSupabase(state.currentShareableCode);
-    } else {
-        showFeedback("Loot distributed locally, but not saved to shared run (no share code).", "info");
-    }
+    showFeedback("Loot distributed!", 'success');
 }
 
-export function handleReserveLoot(item) {
-    state.currentItemToReserve = item;
+export function handleReserveLoot(itemName, itemSlug, itemQuantity) {
+    if (!state.partyMembers || state.partyMembers.length === 0) {
+        showFeedback("Add party members before reserving loot.", "error");
+        return;
+    }
+    state.currentItemToReserve = { name: itemName, slug: itemSlug, quantity: itemQuantity };
     showReserveModal();
 }
 
-export function confirmReservations() {
-    if (!state.currentItemToReserve) return;
-
-    const playerQuantityInputs = state.reservePlayerSelectionDiv.querySelectorAll('.player-reserve-quantity');
-    let totalQuantityRequestedAcrossPlayersInModal = 0;
-    const newPlayerReservations = []; 
-
-    playerQuantityInputs.forEach(input => {
-        const playerName = input.dataset.playerQuantity;
-        const quantityToReserve = parseInt(input.value);
-        if (!isNaN(quantityToReserve) && quantityToReserve > 0) {
-            totalQuantityRequestedAcrossPlayersInModal += quantityToReserve;
-            newPlayerReservations.push({ playerName, quantityToReserve });
-        }
-    });
-
-    let currentItemTotalAvailable = state.currentItemToReserve.quantity;
-    let currentTotalReservedForItemBeforeChanges = 0;
-
+export function confirmReservations(newPlayerReservations) {
+    // Collect all current reservations for the item being modified
+    const currentReservationsForThisItem = {};
     for (const player in state.reservedItems) {
         const reservation = (state.reservedItems[player] || []).find(res => 
             res.item.name === state.currentItemToReserve.name && res.item.slug === state.currentItemToReserve.slug
         );
         if (reservation) {
-            currentTotalReservedForItemBeforeChanges += reservation.quantity;
-        }
-    }
-    const overallTotalAvailable = currentItemTotalAvailable + currentTotalReservedForItemBeforeChanges;
-
-
-    if (totalQuantityRequestedAcrossPlayersInModal > overallTotalAvailable) {
-        showFeedback(`Cannot reserve ${totalQuantityRequestedAcrossPlayersInModal}. Only ${overallTotalAvailable} available.`, 'error');
-        return;
-    }
-
-    for (const member of state.partyMembers) {
-        const memberObj = state.partyMembers.find(pm => pm.name === member.name);
-        if (memberObj && state.reservedItems[memberObj.name]) {
-            state.reservedItems[memberObj.name] = state.reservedItems[memberObj.name].filter(res =>
-                !(res.item.name === state.currentItemToReserve.name && res.item.slug === state.currentItemToReserve.slug)
-            );
-            if (state.reservedItems[memberObj.name].length === 0) {
-                delete state.reservedItems[memberObj.name];
-            }
+            currentReservationsForThisItem[player] = reservation.quantity;
         }
     }
 
+    // Calculate total reserved quantity for this item *before* changes from the modal
+    const currentTotalReservedForItemBeforeChanges = Object.values(currentReservationsForThisItem).reduce((sum, q) => sum + q, 0);
+
+    // Update state.reservedItems based on newPlayerReservations
+    // First, remove existing reservations for the current item across all players
+    for (const player in state.reservedItems) {
+        state.reservedItems[player] = (state.reservedItems[player] || []).filter(res => 
+            !(res.item.name === state.currentItemToReserve.name && res.item.slug === state.currentItemToReserve.slug)
+        );
+        // Clean up empty player arrays
+        if (state.reservedItems[player].length === 0) {
+            delete state.reservedItems[player];
+        }
+    }
+
+    let totalQuantityRequestedAcrossPlayersInModal = 0;
     newPlayerReservations.forEach(({ playerName, quantityToReserve }) => {
-        if (!state.reservedItems[playerName]) {
-            state.reservedItems[playerName] = [];
+        if (quantityToReserve > 0) {
+            totalQuantityRequestedAcrossPlayersInModal += quantityToReserve;
+            if (!state.reservedItems[playerName]) {
+                state.reservedItems[playerName] = [];
+            }
+            state.reservedItems[playerName].push({ 
+                item: { name: state.currentItemToReserve.name, slug: state.currentItemToReserve.slug }, 
+                quantity: quantityToReserve 
+            });
         }
-        state.reservedItems[playerName].push({ 
-            item: { name: state.currentItemToReserve.name, slug: state.currentItemToReserve.slug }, 
-            quantity: quantityToReserve 
-        });
     });
 
     const finalTotalReservedForThisItem = totalQuantityRequestedAcrossPlayersInModal;
@@ -382,6 +304,7 @@ export function confirmReservations() {
             state.lootItems.splice(originalItemIndex, 1);
         }
     } else {
+        // This case should ideally only happen if netChangeFromLoot is negative (i.e., items were unreserved and returned to loot)
         if (netChangeFromLoot < 0) {
             state.lootItems.push({
                 name: state.currentItemToReserve.name,
@@ -391,9 +314,42 @@ export function confirmReservations() {
         }
     }
     
-    showFeedback(`Reservations for "${state.currentItemToReserve.name}" updated.`, 'success');
+    showFeedback(`Reservations for \"${state.currentItemToReserve.name}\" updated.`, 'success');
     updateCurrentLootList();
     updateDistributionResults();
     hideReserveModal();
     markChanges();
+}
+
+export function resetDungeonRunAndSaveNew() {
+    // Reset all relevant state variables to their initial empty values
+    state.dungeonNameInput.value = '';
+    state.partyMembers = [];
+    state.lootItems = [];
+    state.totalGold = 0;
+    state.nextLootRecipientIndex = 0;
+    state.reservedItems = {};
+
+    // Clear any active share code
+    state.currentShareableCode = '';
+    if (state.shareCodeDisplay) {
+        state.shareCodeDisplay.value = '';
+        state.shareCodeDisplay.classList.add('hidden');
+        if (state.copyCodeBtn) state.copyCodeBtn.classList.add('hidden');
+    }
+    
+    // Clear UI elements
+    updatePartyMembersList();
+    updateCurrentLootList();
+    updateDistributionResults();
+    if (state.addGoldAmountInput) state.addGoldAmountInput.value = '';
+    if (state.setGoldAmountInput) state.setGoldAmountInput.value = '';
+    if (state.lootItemNameInput) state.lootItemNameInput.value = '';
+    if (state.lootItemQuantityInput) state.lootItemQuantityInput.value = '1';
+
+    // Mark changes as saved because it's a new, clean run, effectively 'saved' in its initial state
+    markChanges(true); 
+
+    // Provide feedback
+    showFeedback("Started a new dungeon run!", 'info');
 }

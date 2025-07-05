@@ -1,7 +1,8 @@
-import { updateDungeonRunInSupabase } from './data_management.js';
+import { supabase } from '../supabaseClient.js';
+import { updateDungeonRun } from '../utils.js';
 
 export const state = {
-    userId: null,
+    userId: null, 
     dungeonNameInput: null,
     partyMemberNameInput: null,
     addMemberBtn: null,
@@ -47,9 +48,8 @@ export const state = {
     distribution_results_html: '',
 
     _debounceTimer: null,
-    _debounceDelay: 500 
+    _debounceDelay: 500
 };
-
 
 export function markChanges(doNotDebounce = false) {
     state.hasUnsavedChanges = true;
@@ -57,10 +57,24 @@ export function markChanges(doNotDebounce = false) {
     if (state.currentShareableCode && !doNotDebounce) {
         clearTimeout(state._debounceTimer);
         state._debounceTimer = setTimeout(async () => {
-            const success = await updateDungeonRunInSupabase(state.currentShareableCode);
-            if (success) {
+            const runData = { 
+                user_id: state.userId,
+                dungeon_name: state.dungeonNameInput ? state.dungeonNameInput.value : 'Unnamed Run',
+                party_members: state.partyMembers,
+                current_loot_items: state.lootItems,
+                current_total_gold: state.totalGold,
+                next_loot_recipient_index: state.nextLootRecipientIndex,
+                reserved_items: state.reservedItems
+            };
+            const updated = await updateDungeonRun(state.currentShareableCode, runData);
+            if (updated) {
                 state.hasUnsavedChanges = false;
+                console.log('Auto-saved changes to shared run.');
+
+            } else {
+                console.error('Auto-save failed for shared run.');
             }
         }, state._debounceDelay);
+    } else if (!state.currentShareableCode && !doNotDebounce) {
     }
 }
