@@ -141,8 +141,12 @@ export const initializeListings = async (userId) => {
 };
 
 const addListingsEventListeners = () => {
+    console.log('addListingsEventListeners called');
     if (addListingForm) {
         addListingForm.addEventListener('submit', handleAddListing);
+    }
+    if (addListingFormModal) {
+        addListingFormModal.addEventListener('submit', handleAddListing);
     }
     if (addPurchaseForm) {
         addPurchaseForm.addEventListener('submit', handleRecordPurchase);

@@ -6,6 +6,7 @@
     <title>Pax Dei Archives - Developer Comments</title>
     <link rel="stylesheet" href="frontend/www/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
     <script type="module" src="frontend/www/js/supabaseClient.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -30,7 +31,6 @@
                         <li><a href="index.html">Home</a></li>
                         <li><a href="abilities.html">Abilities</a></li>
                         <li><a href="articles.html">Articles</a></li>
-                        <li><a href="news-updates.html">News</a></li>
                         <li><a href="developer-comments.html" class="active">Dev Comments</a></li>
                         <li><a href="lore.html">Lore</a></li>
                         <li><a href="ledger.html">Ledger</a></li>
@@ -91,6 +91,11 @@
                             <div class="col-lg-12">
                                 <div id="dev-comments-container" class="row">
                                     <div class="loading-indicator">Loading developer comments...</div>
+                                </div>
+                                <div class="pagination-controls flex justify-center items-center space-x-4 mb-8">
+                                    <button id="prevPage" class="pagination-button px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed" disabled>Previous</button>
+                                    <div id="pageNumbers" class="page-numbers flex space-x-2"></div>
+                                    <button id="nextPage" class="pagination-button px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100">Next</button>
                                 </div>
                             </div>
                         </div>

@@ -5,6 +5,9 @@ let initialAuthCheckComplete = false;
 let dashboardStatsCache = null;
 let lastStatsFetchTime = 0;
 const STATS_CACHE_DURATION = 60 * 5000;
+let tagListCache = null;
+let isAdminAuthorizedCache = null;
+let loreItemsCache = [];
 
 function showFormMessage(messageElement, message, type) {
     messageElement.textContent = message;
@@ -156,7 +159,11 @@ if (devCommentForm) {
 
 async function isAuthorizedAdmin(userId) {
     if (!userId) {
+        isAdminAuthorizedCache = false;
         return false;
+    }
+    if (isAdminAuthorizedCache !== null) {
+        return isAdminAuthorizedCache;
     }
     try {
         const { data, error } = await supabase
@@ -166,37 +173,37 @@ async function isAuthorizedAdmin(userId) {
             .single();
 
         if (error && error.code === 'PGRST116') {
+            isAdminAuthorizedCache = false;
             return false;
         }
         if (error) {
             console.error('Error checking admin authorization:', error.message);
+            isAdminAuthorizedCache = false;
             return false;
         }
 
-        return data && data.role === 'comment_adder';
+        isAdminAuthorizedCache = data && data.role === 'comment_adder';
+        return isAdminAuthorizedCache;
     } catch (e) {
         console.error('Unexpected error in isAuthorizedAdmin:', e);
+        isAdminAuthorizedCache = false;
         return false;
     }
 }
 
 async function fetchDashboardStats() {
     const totalCommentsCount = document.getElementById('totalCommentsCount');
-    const totalNewsCount = document.getElementById('totalNewsCount');
     const commentsMonthCount = document.getElementById('commentsMonthCount');
-    const newsMonthCount = document.getElementById('newsMonthCount');
     const totalLoreCount = document.getElementById('totalLoreCount');
 
-    if (!totalCommentsCount || !totalNewsCount || !commentsMonthCount || !newsMonthCount || !totalLoreCount) {
+    if (!totalCommentsCount || !commentsMonthCount || !totalLoreCount) {
         return;
     }
 
     const now = Date.now();
     if (dashboardStatsCache && (now - lastStatsFetchTime < STATS_CACHE_DURATION)) {
         totalCommentsCount.textContent = dashboardStatsCache.commentsTotal;
-        totalNewsCount.textContent = dashboardStatsCache.newsTotal;
         commentsMonthCount.textContent = dashboardStatsCache.commentsThisMonth;
-        newsMonthCount.textContent = dashboardStatsCache.newsThisMonth;
         totalLoreCount.textContent = dashboardStatsCache.loreTotal;
         return;
     }
@@ -205,39 +212,29 @@ async function fetchDashboardStats() {
     const endOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59, 999).toISOString();
 
     const [{ count: commentsTotal, error: commentsTotalError },
-        { count: newsTotal, error: newsTotalError },
         { count: commentsThisMonth, error: commentsMonthError },
-        { count: newsThisMonth, error: newsMonthError },
         { count: loreTotal, error: loreTotalError }] = await Promise.all([
         supabase.from('developer_comments').select('*', { count: 'exact', head: true }),
-        supabase.from('news_updates').select('*', { count: 'exact', head: true }),
         supabase.from('developer_comments').select('*', { count: 'exact', head: true }).gte('comment_date', startOfMonth).lte('comment_date', endOfMonth),
-        supabase.from('news_updates').select('*', { count: 'exact', head: true }).gte('news_date', startOfMonth).lte('news_date', endOfMonth),
         supabase.from('lore_items').select('*', { count: 'exact', head: true })
     ]);
 
-    if (commentsTotalError || newsTotalError || commentsMonthError || newsMonthError || loreTotalError) {
-        console.error('Error fetching dashboard stats:', commentsTotalError || newsTotalError || commentsMonthError || newsMonthError || loreTotalError);
+    if (commentsTotalError || commentsMonthError || loreTotalError) {
+        console.error('Error fetching dashboard stats:', commentsTotalError || commentsMonthError || loreTotalError);
         totalCommentsCount.textContent = 'Error';
-        totalNewsCount.textContent = 'Error';
         commentsMonthCount.textContent = 'Error';
-        newsMonthCount.textContent = 'Error';
         totalLoreCount.textContent = 'Error';
         dashboardStatsCache = null;
     } else {
         dashboardStatsCache = {
             commentsTotal,
-            newsTotal,
             commentsThisMonth,
-            newsThisMonth,
             loreTotal
         };
         lastStatsFetchTime = now;
 
         totalCommentsCount.textContent = commentsTotal;
-        totalNewsCount.textContent = newsTotal;
         commentsMonthCount.textContent = commentsThisMonth;
-        newsMonthCount.textContent = newsThisMonth;
         totalLoreCount.textContent = loreTotal;
     }
 }
@@ -380,27 +377,31 @@ async function populateTagSelect(tagSelectElement) {
         tagSelectElement.appendChild(defaultOption);
     }
 
-    try {
-        const { data, error } = await supabase
-            .from('tag_list')
-            .select('tag_name')
-            .order('tag_name', { ascending: true });
+    if (!tagListCache) {
+        try {
+            const { data, error } = await supabase
+                .from('tag_list')
+                .select('tag_name')
+                .order('tag_name', { ascending: true });
 
-        if (error) {
-            console.error('Error fetching tags for admin form:', error.message);
+            if (error) {
+                console.error('Error fetching tags for admin form:', error.message);
+                return;
+            }
+            tagListCache = data;
+        } catch (e) {
+            console.error('Unexpected error populating tags for admin form:', e);
             return;
         }
+    }
 
-        if (data && data.length > 0) {
-            data.forEach(tag => {
-                const option = document.createElement('option');
-                option.value = tag.tag_name;
-                option.textContent = tag.tag_name;
-                tagSelectElement.appendChild(option);
-            });
-        }
-    } catch (e) {
-        console.error('Unexpected error populating tags for admin form:', e);
+    if (tagListCache && tagListCache.length > 0) {
+        tagListCache.forEach(tag => {
+            const option = document.createElement('option');
+            option.value = tag.tag_name;
+            option.textContent = tag.tag_name;
+            tagSelectElement.appendChild(option);
+        });
     }
 }
 
@@ -430,6 +431,8 @@ async function handleAddNewTag(newTagValue, inputElement, messageElement, tagSel
                     showFormMessage(messageElement, `${tagType} '${newTagValue}' already exists.`, 'warning');
                 } else {
                     showFormMessage(messageElement, `${tagType} '${newTagValue}' added successfully!`, 'success');
+                    tagListCache.push({ tag_name: newTagValue });
+                    tagListCache.sort((a, b) => a.tag_name.localeCompare(b.tag_name));
                 }
                 inputElement.value = '';
                 populateTagSelect(tagSelectElement);
@@ -443,14 +446,55 @@ async function handleAddNewTag(newTagValue, inputElement, messageElement, tagSel
     }
 }
 
-async function fetchAndPopulateLoreItems(containerId) {
+function renderLoreItems(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (loreItemsCache.length === 0) {
+        container.innerHTML = 'No lore items found.';
+        return;
+    }
+
+    container.innerHTML = '';
+    const list = document.createElement('ul');
+    list.classList.add('lore-item-list');
+    loreItemsCache.forEach(item => {
+        const listItem = document.createElement('li');
+        listItem.classList.add('lore-item');
+        listItem.innerHTML = `
+            <div class="lore-item-header">
+                <h3>${item.title}</h3>
+                <span class="lore-item-category">${item.category}</span>
+            </div>
+            <p class="lore-item-slug">Slug: ${item.slug}</p>
+            <div class="lore-item-content">
+                <p>${item.content.substring(0, 150)}...</p>
+            </div>
+            <div class="lore-item-actions">
+                <button class="edit-lore-item" data-id="${item.id}">Edit</button>
+                <button class="delete-lore-item" data-id="${item.id}">Delete</button>
+            </div>
+        `;
+        list.appendChild(listItem);
+    });
+    container.appendChild(list);
+
+    container.querySelectorAll('.edit-lore-item').forEach(button => {
+        button.addEventListener('click', (e) => editLoreItem(e.target.dataset.id));
+    });
+    container.querySelectorAll('.delete-lore-item').forEach(button => {
+        button.addEventListener('click', (e) => deleteLoreItem(e.target.dataset.id));
+    });
+}
+
+async function fetchAndSetLoreItemsCache(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
     container.innerHTML = 'Loading lore items...';
 
     try {
-        const { data: loreItems, error } = await supabase
+        const { data, error } = await supabase
             .from('lore_items')
             .select('*')
             .order('created_at', { ascending: false });
@@ -458,79 +502,42 @@ async function fetchAndPopulateLoreItems(containerId) {
         if (error) {
             container.innerHTML = `Error loading lore items: ${error.message}`;
             console.error('Error fetching lore items:', error.message);
+            loreItemsCache = [];
             return;
         }
 
-        if (loreItems.length === 0) {
-            container.innerHTML = 'No lore items found.';
-            return;
-        }
-
-        container.innerHTML = '';
-        const list = document.createElement('ul');
-        list.classList.add('lore-item-list');
-        loreItems.forEach(item => {
-            const listItem = document.createElement('li');
-            listItem.classList.add('lore-item');
-            listItem.innerHTML = `
-                <div class="lore-item-header">
-                    <h3>${item.title}</h3>
-                    <span class="lore-item-category">${item.category}</span>
-                </div>
-                <p class="lore-item-slug">Slug: ${item.slug}</p>
-                <div class="lore-item-content">
-                    <p>${item.content.substring(0, 150)}...</p>
-                </div>
-                <div class="lore-item-actions">
-                    <button class="edit-lore-item" data-id="${item.id}">Edit</button>
-                    <button class="delete-lore-item" data-id="${item.id}">Delete</button>
-                </div>
-            `;
-            list.appendChild(listItem);
-        });
-        container.appendChild(list);
-
-        container.querySelectorAll('.edit-lore-item').forEach(button => {
-            button.addEventListener('click', (e) => editLoreItem(e.target.dataset.id));
-        });
-        container.querySelectorAll('.delete-lore-item').forEach(button => {
-            button.addEventListener('click', (e) => deleteLoreItem(e.target.dataset.id));
-        });
+        loreItemsCache = data;
+        renderLoreItems(containerId);
 
     } catch (e) {
         container.innerHTML = `An unexpected error occurred: ${e.message}`;
-        console.error('Unexpected error in fetchAndPopulateLoreItems:', e);
+        console.error('Unexpected error in fetchAndSetLoreItemsCache:', e);
+        loreItemsCache = [];
     }
 }
 
 async function editLoreItem(id) {
-    const { data: loreItem, error } = await supabase
-        .from('lore_items')
-        .select('*')
-        .eq('id', id)
-        .single();
+    const loreItem = loreItemsCache.find(item => item.id == id);
 
-    if (error) {
-        console.error('Error fetching lore item for edit:', error.message);
-        showFormMessage(document.getElementById('addLoreItemMessage'), `Error fetching lore item: ${error.message}`, 'error');
+    if (!loreItem) {
+        console.error('Lore item not found in cache for edit:', id);
+        showFormMessage(document.getElementById('addLoreItemMessage'), `Error: Lore item not found.`, 'error');
         return;
     }
 
-    if (loreItem) {
-        document.getElementById('loreTitle').value = loreItem.title;
-        document.getElementById('loreSlug').value = loreItem.slug;
-        document.getElementById('loreCategory').value = loreItem.category;
-        document.getElementById('loreContent').value = loreItem.content;
-        document.getElementById('addLoreItemForm').dataset.editingId = loreItem.id;
-        document.getElementById('addLoreItemForm').querySelector('button[type="submit"]').textContent = 'Update Lore Item';
-        document.getElementById('cancelEditLoreItemButton').style.display = 'inline-block';
-        document.getElementById('newLoreCategoryInput').style.display = 'none';
-        document.getElementById('addNewLoreCategoryButton').style.display = 'none';
+    document.getElementById('loreTitle').value = loreItem.title;
+    document.getElementById('loreSlug').value = loreItem.slug;
+    document.getElementById('loreCategory').value = loreItem.category;
+    document.getElementById('loreContent').value = loreItem.content;
+    document.getElementById('addLoreItemForm').dataset.editingId = loreItem.id;
+    document.getElementById('addLoreItemForm').querySelector('button[type="submit"]').textContent = 'Update Lore Item';
+    document.getElementById('cancelEditLoreItemButton').style.display = 'inline-block';
+    document.getElementById('newLoreCategoryInput').style.display = 'none';
+    document.getElementById('addNewLoreCategoryButton').style.display = 'none';
 
-        document.getElementById('addLoreItemMessage').textContent = 'Editing Lore Item';
-        document.getElementById('addLoreItemMessage').className = 'form-message info';
-        document.getElementById('addLoreItemMessage').style.display = 'block';
-    }
+    document.getElementById('addLoreItemMessage').textContent = 'Editing Lore Item';
+    document.getElementById('addLoreItemMessage').className = 'form-message info';
+    document.getElementById('addLoreItemMessage').style.display = 'block';
 }
 
 async function deleteLoreItem(id) {
@@ -547,8 +554,9 @@ async function deleteLoreItem(id) {
         console.error('Error deleting lore item:', error.message);
         showFormMessage(document.getElementById('addLoreItemMessage'), `Error deleting lore item: ${error.message}`, 'error');
     } else {
+        loreItemsCache = loreItemsCache.filter(item => item.id != id);
+        renderLoreItems('loreItemsList');
         showFormMessage(document.getElementById('addLoreItemMessage'), 'Lore item deleted successfully!', 'success');
-        fetchAndPopulateLoreItems('loreItemsList');
         fetchDashboardStats();
     }
 }
@@ -576,106 +584,65 @@ function hideAllAdminElements() {
     if (loginError) loginError.style.display = 'none';
 }
 
-
-$(document).ready(async function() {
-    const currentPage = window.location.pathname.split('/').pop();
-    if (currentPage !== 'admin.html') {
-        return;
-    }
-
-    hideAllAdminElements();
-
-    const discordLoginButton = document.getElementById('discordLoginButton');
-    const loginError = document.getElementById('loginError');
+async function initAuthAndDashboard() {
     const loginFormContainer = document.getElementById('loginFormContainer');
     const loginHeading = document.getElementById('loginHeading');
     const adminDashboardAndForm = document.getElementById('adminDashboardAndForm');
+    const loginError = document.getElementById('loginError');
 
-    const commentInput = document.getElementById('commentInput');
-    const parseButton = document.getElementById('parseButton');
-    const devCommentForm = document.getElementById('devCommentForm');
-    const parseError = document.getElementById('parseError');
-    const formMessage = document.getElementById('formMessage');
+    const { data: { user } = {} } = await supabase.auth.getUser();
 
-    const authorField = document.getElementById('author');
-    const sourceField = document.getElementById('source');
-    const timestampField = document.getElementById('timestamp');
-    const commentContentField = document.getElementById('commentContent');
-    const editButton = document.getElementById('editButton');
-    const tagSelect = document.getElementById('tagSelect');
-    const newTagInput = document.getElementById('newTagInput');
-    const addNewTagButton = document.getElementById('addNewTagButton');
+    if (user) {
+        const authorized = await isAuthorizedAdmin(user.id);
 
-    const addNewsUpdateForm = document.getElementById('addNewsUpdateForm');
-    const newsDateInput = document.getElementById('news_date');
-    const newsTitleInput = document.getElementById('news_title');
-    const newsSummaryInput = document.getElementById('news_summary');
-    const fullArticleLinkInput = document.getElementById('full_article_link');
-    const addNewsUpdateMessage = document.getElementById('addNewsUpdateMessage');
-
-    const addLoreItemForm = document.getElementById('addLoreItemForm');
-    const loreTitleInput = document.getElementById('loreTitle');
-    const loreSlugInput = document.getElementById('loreSlug');
-    const loreCategorySelect = document.getElementById('loreCategory');
-    const newLoreCategoryInput = document.getElementById('newLoreCategoryInput');
-    const addNewLoreCategoryButton = document.getElementById('addNewLoreCategoryButton');
-    const loreContentInput = document.getElementById('loreContent');
-    const addLoreItemMessage = document.getElementById('addLoreItemMessage');
-    const cancelEditLoreItemButton = document.getElementById('cancelEditLoreItemButton');
-    const loreItemsList = document.getElementById('loreItemsList');
-
-
-    async function checkAuth() {
-        const { data: { user } = {} } = await supabase.auth.getUser();
-
-        if (user) {
-            const authorized = await isAuthorizedAdmin(user.id);
-
-            if (authorized) {
-                if (loginFormContainer) loginFormContainer.style.display = 'none';
-                if (loginHeading) loginHeading.style.display = 'none';
-                if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'block';
-                fetchDashboardStats();
-                if (!initialAuthCheckComplete) {
-                    populateTagSelect(tagSelect);
-                    populateTagSelect(loreCategorySelect);
-                    fetchAndPopulateLoreItems('loreItemsList');
-                    initialAuthCheckComplete = true;
-                }
-            } else {
-                if (loginFormContainer) loginFormContainer.style.display = 'block';
-                if (loginHeading) loginHeading.style.display = 'none';
-                if (loginError) {
-                    loginError.textContent = 'You are logged in but not authorized to view this page. Redirecting to home...';
-                    loginError.style.display = 'block';
-                }
-                if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none';
-                
-                setTimeout(() => {
-                    window.location.href = 'index.html';
-                }, 8000);
+        if (authorized) {
+            if (loginFormContainer) loginFormContainer.style.display = 'none';
+            if (loginHeading) loginHeading.style.display = 'none';
+            if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'block';
+            fetchDashboardStats();
+            if (!initialAuthCheckComplete) {
+                populateTagSelect(document.getElementById('tagSelect'));
+                populateTagSelect(document.getElementById('loreCategory'));
+                fetchAndSetLoreItemsCache('loreItemsList');
+                initialAuthCheckComplete = true;
             }
         } else {
             if (loginFormContainer) loginFormContainer.style.display = 'block';
-            if (loginHeading) loginHeading.style.display = 'block';
-            if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none';
+            if (loginHeading) loginHeading.style.display = 'none';
             if (loginError) {
-                 loginError.textContent = 'Please log in to view this page. Redirecting to home...';
-                 loginError.style.display = 'block';
+                loginError.textContent = 'You are logged in but not authorized to view this page. Redirecting to home...';
+                loginError.style.display = 'block';
             }
-           
+            if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none';
+            
             setTimeout(() => {
                 window.location.href = 'index.html';
             }, 8000);
         }
+    } else {
+        if (loginFormContainer) loginFormContainer.style.display = 'block';
+        if (loginHeading) loginHeading.style.display = 'block';
+        if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none';
+        if (loginError) {
+             loginError.textContent = 'Please log in to view this page. Redirecting to home...';
+             loginError.style.display = 'block';
+        }
+       
+        setTimeout(() => {
+            window.location.href = 'index.html';
+        }, 8000);
     }
+}
 
-    checkAuth();
+function setupAuthEventListeners() {
+    const discordLoginButton = document.getElementById('discordLoginButton');
+    const loginError = document.getElementById('loginError');
 
     supabase.auth.onAuthStateChange((event, session) => {
         if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
             initialAuthCheckComplete = false;
-            checkAuth();
+            isAdminAuthorizedCache = null;
+            initAuthAndDashboard();
         }
     });
 
@@ -697,6 +664,19 @@ $(document).ready(async function() {
             }
         });
     }
+}
+
+function setupCommentFormHandlers() {
+    const commentInput = document.getElementById('commentInput');
+    const parseButton = document.getElementById('parseButton');
+    const devCommentForm = document.getElementById('devCommentForm');
+    const parseError = document.getElementById('parseError');
+    const authorField = document.getElementById('author');
+    const sourceField = document.getElementById('source');
+    const timestampField = document.getElementById('timestamp');
+    const commentContentField = document.getElementById('commentContent');
+    const editButton = document.getElementById('editButton');
+    const formMessage = document.getElementById('formMessage');
 
     if (parseButton && commentInput && devCommentForm && parseError) {
         parseButton.addEventListener('click', () => {
@@ -733,6 +713,13 @@ $(document).ready(async function() {
             parseError.style.display = 'none';
         });
     }
+}
+
+function setupTagManagementHandlers() {
+    const newTagInput = document.getElementById('newTagInput');
+    const addNewTagButton = document.getElementById('addNewTagButton');
+    const tagSelect = document.getElementById('tagSelect');
+    const loreCategorySelect = document.getElementById('loreCategory');
 
     if (addNewTagButton && newTagInput && tagSelect && loreCategorySelect) {
         addNewTagButton.addEventListener('click', async () => {
@@ -741,42 +728,26 @@ $(document).ready(async function() {
         });
     }
     
+    const newLoreCategoryInput = document.getElementById('newLoreCategoryInput');
+    const addNewLoreCategoryButton = document.getElementById('addNewLoreCategoryButton');
+    const addLoreItemMessage = document.getElementById('addLoreItemMessage');
+
     if (addNewLoreCategoryButton && newLoreCategoryInput && loreCategorySelect && tagSelect) {
         addNewLoreCategoryButton.addEventListener('click', async () => {
             const newCategory = newLoreCategoryInput.value.trim();
             await handleAddNewTag(newCategory, newLoreCategoryInput, addLoreItemMessage, tagSelect, loreCategorySelect, 'Category');
         });
     }
+}
 
-    if (addNewsUpdateForm) {
-        addNewsUpdateForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            showFormMessage(addNewsUpdateMessage, '', '');
-
-            const newNewsUpdate = {
-                news_date: newsDateInput.value,
-                title: newsTitleInput.value,
-                summary: newsSummaryInput.value,
-                full_article_link: fullArticleLinkInput.value || null
-            };
-
-            const { data, error } = await supabase
-                .from('news_updates')
-                .insert([newNewsUpdate]);
-
-            if (error) {
-                console.error('Error inserting news update:', error);
-                showFormMessage(addNewsUpdateMessage, 'Error adding news update: ' + error.message, 'error');
-            } else {
-                showFormMessage(addNewsUpdateMessage, 'News update added successfully!', 'success');
-                newsDateInput.value = '';
-                newsTitleInput.value = '';
-                newsSummaryInput.value = '';
-                fullArticleLinkInput.value = '';
-                fetchDashboardStats();
-            }
-        });
-    }
+function setupLoreItemFormHandlers() {
+    const addLoreItemForm = document.getElementById('addLoreItemForm');
+    const loreTitleInput = document.getElementById('loreTitle');
+    const loreSlugInput = document.getElementById('loreSlug');
+    const loreCategorySelect = document.getElementById('loreCategory');
+    const loreContentInput = document.getElementById('loreContent');
+    const addLoreItemMessage = document.getElementById('addLoreItemMessage');
+    const cancelEditLoreItemButton = document.getElementById('cancelEditLoreItemButton');
 
     if (loreTitleInput && loreSlugInput && addLoreItemForm) {
         loreTitleInput.addEventListener('input', () => {
@@ -800,7 +771,7 @@ $(document).ready(async function() {
                 return;
             }
 
-            const newLoreItem = {
+            const loreItemData = {
                 title: loreTitleInput.value,
                 slug: loreSlugInput.value,
                 category: loreCategorySelect.value,
@@ -808,26 +779,39 @@ $(document).ready(async function() {
             };
 
             let error;
+            let insertedData;
             if (editingId) {
-                const { error: updateError } = await supabase
+                const { data, error: updateError } = await supabase
                     .from('lore_items')
-                    .update(newLoreItem)
-                    .eq('id', editingId);
+                    .update(loreItemData)
+                    .eq('id', editingId)
+                    .select();
                 error = updateError;
+                insertedData = data ? data[0] : null;
             } else {
-                const { error: insertError } = await supabase
+                const { data, error: insertError } = await supabase
                     .from('lore_items')
-                    .insert([newLoreItem]);
+                    .insert([loreItemData])
+                    .select();
                 error = insertError;
+                insertedData = data ? data[0] : null;
             }
 
             if (error) {
                 console.error('Error saving lore item:', error);
                 showFormMessage(addLoreItemMessage, 'Error saving lore item: ' + error.message, 'error');
             } else {
+                if (editingId) {
+                    const index = loreItemsCache.findIndex(item => item.id == editingId);
+                    if (index !== -1) {
+                        loreItemsCache[index] = { ...loreItemsCache[index], ...loreItemData };
+                    }
+                } else {
+                    loreItemsCache.unshift(insertedData);
+                }
+                renderLoreItems('loreItemsList');
                 showFormMessage(addLoreItemMessage, `Lore item ${editingId ? 'updated' : 'added'} successfully!`, 'success');
                 resetLoreForm();
-                fetchAndPopulateLoreItems('loreItemsList');
                 fetchDashboardStats();
             }
         });
@@ -836,4 +820,18 @@ $(document).ready(async function() {
     if (cancelEditLoreItemButton) {
         cancelEditLoreItemButton.addEventListener('click', resetLoreForm);
     }
+}
+
+$(document).ready(async function() {
+    const currentPage = window.location.pathname.split('/').pop();
+    if (currentPage !== 'admin.html') {
+        return;
+    }
+
+    hideAllAdminElements();
+    initAuthAndDashboard();
+    setupAuthEventListeners();
+    setupCommentFormHandlers();
+    setupTagManagementHandlers();
+    setupLoreItemFormHandlers();
 });

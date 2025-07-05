@@ -29,7 +29,6 @@
                         <li><a href="index.html">Home</a></li>
                         <li><a href="abilities.html">Abilities</a></li>
                         <li><a href="articles.html">Articles</a></li>
-                        <li><a href="news-updates.html">News</a></li>
                         <li><a href="developer-comments.html">Dev Comments</a></li>
                         <li><a href="lore.html">Lore</a></li>
                         <li><a href="ledger.html">Ledger</a></li>
@@ -40,9 +39,9 @@
                         <form id="search" action="#">
                             <input type="text" placeholder="Search the Archives" id='searchText' name="searchKeyword" />
                             <button type="submit" class="search-button"><i class="fa fa-search"></i></button>
+                            <div id="searchResultsDropdown" class="search-results-dropdown">
+                            </div>
                         </form>
-                        <div id="searchResultsDropdown" class="search-results-dropdown">
-                        </div>
                     </div>
                 </div>
             </nav>
@@ -77,13 +76,6 @@
                             </div>
                             <div class="col-lg-3 col-md-3 col-sm-12">
                                 <div class="admin-dashboard-card">
-                                    <h6>Total News Updates</h6>
-                                    <p id="totalNewsCount">--</p>
-                                    <i class="fas fa-newspaper"></i>
-                                </div>
-                            </div>
-                            <div class="col-lg-3 col-md-3 col-sm-12">
-                                <div class="admin-dashboard-card">
                                     <h6>Comments This Month</h6>
                                     <p id="commentsMonthCount">--</p>
                                     <i class="fas fa-calendar-alt"></i>
@@ -91,18 +83,11 @@
                             </div>
                             <div class="col-lg-3 col-md-3 col-sm-12">
                                 <div class="admin-dashboard-card">
-                                    <h6>News This Month</h6>
-                                    <p id="newsMonthCount">--</p>
-                                    <i class="fas fa-calendar-check"></i>
+                                    <h6>Total Lore Items</h6>
+                                    <p id="totalLoreCount">--</p>
+                                    <i class="fas fa-book"></i> 
                                 </div>
                             </div>
-                            <div class="col-lg-3 col-md-3 col-sm-12">
-                            <div class="admin-dashboard-card">
-                                <h6>Total Lore Items</h6>
-                                <p id="totalLoreCount">--</p>
-                                <i class="fas fa-book"></i> 
-                            </div>
-                        </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6">
@@ -150,37 +135,7 @@
                                     <p id="parseError" style="color: red; display: none;"></p>
                                 </div>
                             </div>
-
                             <div class="col-md-6">
-                                <div class="heading-section" style="margin-top: 50px;">
-                                    <h4>Add New <em>News Update</em></h4>
-                                </div>
-                                <div class="admin-form-container">
-                                    <p>Use this form to publish new official game news or significant updates.</p>
-                                    <form id="addNewsUpdateForm">
-                                        <label for="news_date">News Date:</label>
-                                        <input type="date" id="news_date" name="news_date" required>
-
-                                        <label for="news_title">Title:</label>
-                                        <input type="text" id="news_title" name="title" required>
-
-                                        <label for="news_summary">Summary:</label>
-                                        <textarea id="news_summary" name="summary" rows="5" required></textarea>
-
-                                        <label for="full_article_link">Full Article Link (URL):</label>
-                                        <input type="url" id="full_article_link" name="full_article_link">
-
-                                        <div class="form-actions">
-                                            <button type="submit" class="main-button submit-button">Add News Update</button>
-                                        </div>
-                                        <div id="addNewsUpdateMessage" class="form-message" style="display:none;"></div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-lg-12">
                                 <div class="heading-section" style="margin-top: 50px;">
                                     <h4>Add New <em>Lore Item</em></h4>
                                 </div>
@@ -208,6 +163,7 @@
 
                                         <div class="form-actions">
                                             <button type="submit" class="main-button submit-button">Add Lore Item</button>
+                                            <button type="button" id="cancelEditLoreItemButton" class="main-button secondary-button" style="display: none;">Cancel Edit</button>
                                         </div>
                                         <div id="addLoreItemMessage" class="form-message" style="display:none;"></div>
                                     </form>
@@ -218,7 +174,7 @@
                         <div class="row">
                             <div class="col-lg-12">
                                 <section id="heading-section" class="mt-8 p-6 bg-white rounded-lg shadow-md admin-form-container">
-                                    <div class="heading-section" style="margin-top: 50px;">
+                                    <div class="heading-section" style="margin-top: 10px;">
                                         <h4>Add New <em>Article</em></h4>
                                     </div>
                                     <p>Create new articles for the site. Content supports Markdown!</p>
@@ -267,7 +223,6 @@
             </div>
         </div>
     </div>
-
     <footer>
         <div class="container">
             <div class="row">
@@ -299,6 +254,5 @@
     <script type="module" src="frontend/www/js/articlePosts.js"></script>
     <script type="module" src="frontend/www/js/main.js"></script>
     <script type="module" src="frontend/www/js/popoutAuth.js"></script>
-
 </body>
 </html>

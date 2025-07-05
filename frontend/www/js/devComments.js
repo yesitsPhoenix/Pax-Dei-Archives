@@ -4,8 +4,7 @@ import { supabase } from './supabaseClient.js';
 import { authorRoleColors, formatCommentDateTime } from './utils.js';
 import DOMPurify from 'https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.es.min.js';
 
-
-export async function fetchAndRenderDeveloperComments(containerId, limit = null, searchTerm = null, cacheKey = null, cacheExpiryMs = null) {
+export async function fetchAndRenderDeveloperComments(containerId, page = 0, commentsPerPage = null, filters = {}, searchTerm = null, cacheKey = null, cacheExpiryMs = null) {
     const container = containerId ? document.getElementById(containerId) : null;
 
     if (container && !searchTerm) {
@@ -13,48 +12,63 @@ export async function fetchAndRenderDeveloperComments(containerId, limit = null,
     }
 
     let commentsData = [];
+    let totalCount = 0;
+    const hasActiveFiltersOrPagination = searchTerm || Object.keys(filters).length > 0 || commentsPerPage !== null;
 
-    if (cacheKey && cacheExpiryMs && !searchTerm) {
+    if (cacheKey && cacheExpiryMs && !hasActiveFiltersOrPagination) {
         const cachedData = sessionStorage.getItem(cacheKey);
         if (cachedData) {
             const parsedCache = JSON.parse(cachedData);
             if (Date.now() - parsedCache.timestamp < cacheExpiryMs) {
                 commentsData = parsedCache.data;
+                totalCount = parsedCache.totalCount;
             } else {
                 sessionStorage.removeItem(cacheKey);
             }
         }
     }
 
-    if (commentsData.length === 0 || searchTerm) {
+    if (commentsData.length === 0 || hasActiveFiltersOrPagination) {
         try {
             let query = supabase
                 .from('developer_comments')
-                .select('*');
+                .select('*', { count: 'exact' });
 
             if (searchTerm) {
                 query = query.or(`content.ilike.%${searchTerm}%,author.ilike.%${searchTerm}%`);
             }
 
-            query = query.order('comment_date', { ascending: false });
-
-            if (limit) {
-                query = query.limit(limit);
+            if (filters.tag && filters.tag.length > 0) {
+                query = query.contains('tag', filters.tag);
+            }
+            if (filters.author) {
+                query = query.eq('author', filters.author);
+            }
+            if (filters.date) {
+                query = query.gte('comment_date', `${filters.date}T00:00:00`).lte('comment_date', `${filters.date}T23:59:59`);
             }
 
-            const { data, error } = await query;
+            query = query.order('comment_date', { ascending: false });
+
+            if (commentsPerPage !== null) {
+                const offset = page * commentsPerPage;
+                query = query.range(offset, offset + commentsPerPage - 1);
+            }
+
+            const { data, error, count } = await query;
 
             if (error) {
                 console.error('Error fetching developer comments:', error.message);
                 if (container && !searchTerm) {
                     container.innerHTML = '<div class="error-message">Failed to load comments. Please try again later.</div>';
                 }
-                return [];
+                return { data: [], totalCount: 0 };
             }
             commentsData = data;
+            totalCount = count;
 
-            if (cacheKey && cacheExpiryMs && !searchTerm) {
-                sessionStorage.setItem(cacheKey, JSON.stringify({ data: commentsData, timestamp: Date.now() }));
+            if (cacheKey && cacheExpiryMs && !hasActiveFiltersOrPagination) {
+                sessionStorage.setItem(cacheKey, JSON.stringify({ data: commentsData, totalCount: totalCount, timestamp: Date.now() }));
             }
 
         } catch (e) {
@@ -62,7 +76,7 @@ export async function fetchAndRenderDeveloperComments(containerId, limit = null,
             if (container && !searchTerm) {
                 container.innerHTML = '<div class="error-message">An unexpected error occurred.</div>';
             }
-            return [];
+            return { data: [], totalCount: 0 };
         }
     }
 
@@ -72,12 +86,11 @@ export async function fetchAndRenderDeveloperComments(containerId, limit = null,
         } else {
             renderComments(container, commentsData);
         }
-        $(container).trigger('commentsRendered');
+        $(container).trigger('commentsRendered', { totalCount: totalCount });
     }
 
-    return commentsData;
+    return { data: commentsData, totalCount: totalCount };
 }
-
 
 function renderComments(container, comments) {
     container.innerHTML = '';
@@ -103,12 +116,11 @@ function renderComments(container, comments) {
         if (comment.comment_date) {
             try {
                 const dateObj = new Date(comment.comment_date);
-                const year = dateObj.getFullYear();
+                const year = String(dateObj.getFullYear());
                 const month = String(dateObj.getMonth() + 1).padStart(2, '0');
                 const day = String(dateObj.getDate()).padStart(2, '0');
                 formattedDateForData = `${year}-${month}-${day}`;
             } catch (e) {
-                // If parsing fails, use original date or empty string
                 formattedDateForData = comment.comment_date || '';
             }
         }
