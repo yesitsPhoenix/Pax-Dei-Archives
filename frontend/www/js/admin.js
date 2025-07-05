@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient.js';
-import { authorRoleColors } from './utils.js';
+import { authorRoleColors, slugify } from './utils.js';
+
 
 let initialAuthCheckComplete = false;
 let dashboardStatsCache = null;
@@ -405,17 +406,6 @@ async function populateTagSelect(tagSelectElement) {
     }
 }
 
-function slugify(text) {
-    return text
-        .toString()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase()
-        .trim()
-        .replace(/\s+/g, '-')
-        .replace(/[^\w-]+/g, '')
-        .replace(/--+/g, '-');
-}
 
 async function handleAddNewTag(newTagValue, inputElement, messageElement, tagSelectElement, loreCategorySelectElement, tagType = 'Tag') {
     if (newTagValue) {
