@@ -4,7 +4,8 @@ import { supabase } from './supabaseClient.js';
 import { authorRoleColors, formatCommentDateTime } from './utils.js';
 import DOMPurify from 'https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.es.min.js';
 
-export async function fetchAndRenderDeveloperComments(containerId, page = 0, commentsPerPage = null, filters = {}, searchTerm = null, cacheKey = null, cacheExpiryMs = null) {
+
+export async function fetchAndRenderDeveloperComments(containerId, limit = null, searchTerm = null, cacheKey = null, cacheExpiryMs = null) {
     const container = containerId ? document.getElementById(containerId) : null;
 
     if (container && !searchTerm) {
@@ -12,63 +13,48 @@ export async function fetchAndRenderDeveloperComments(containerId, page = 0, com
     }
 
     let commentsData = [];
-    let totalCount = 0;
-    const hasActiveFiltersOrPagination = searchTerm || Object.keys(filters).length > 0 || commentsPerPage !== null;
 
-    if (cacheKey && cacheExpiryMs && !hasActiveFiltersOrPagination) {
+    if (cacheKey && cacheExpiryMs && !searchTerm) {
         const cachedData = sessionStorage.getItem(cacheKey);
         if (cachedData) {
             const parsedCache = JSON.parse(cachedData);
             if (Date.now() - parsedCache.timestamp < cacheExpiryMs) {
                 commentsData = parsedCache.data;
-                totalCount = parsedCache.totalCount;
             } else {
                 sessionStorage.removeItem(cacheKey);
             }
         }
     }
 
-    if (commentsData.length === 0 || hasActiveFiltersOrPagination) {
+    if (commentsData.length === 0 || searchTerm) {
         try {
             let query = supabase
                 .from('developer_comments')
-                .select('*', { count: 'exact' });
+                .select('*');
 
             if (searchTerm) {
                 query = query.or(`content.ilike.%${searchTerm}%,author.ilike.%${searchTerm}%`);
             }
 
-            if (filters.tag && filters.tag.length > 0) {
-                query = query.contains('tag', filters.tag);
-            }
-            if (filters.author) {
-                query = query.eq('author', filters.author);
-            }
-            if (filters.date) {
-                query = query.gte('comment_date', `${filters.date}T00:00:00`).lte('comment_date', `${filters.date}T23:59:59`);
-            }
-
             query = query.order('comment_date', { ascending: false });
 
-            if (commentsPerPage !== null) {
-                const offset = page * commentsPerPage;
-                query = query.range(offset, offset + commentsPerPage - 1);
+            if (limit) {
+                query = query.limit(limit);
             }
 
-            const { data, error, count } = await query;
+            const { data, error } = await query;
 
             if (error) {
                 console.error('Error fetching developer comments:', error.message);
                 if (container && !searchTerm) {
                     container.innerHTML = '<div class="error-message">Failed to load comments. Please try again later.</div>';
                 }
-                return { data: [], totalCount: 0 };
+                return [];
             }
             commentsData = data;
-            totalCount = count;
 
-            if (cacheKey && cacheExpiryMs && !hasActiveFiltersOrPagination) {
-                sessionStorage.setItem(cacheKey, JSON.stringify({ data: commentsData, totalCount: totalCount, timestamp: Date.now() }));
+            if (cacheKey && cacheExpiryMs && !searchTerm) {
+                sessionStorage.setItem(cacheKey, JSON.stringify({ data: commentsData, timestamp: Date.now() }));
             }
 
         } catch (e) {
@@ -76,7 +62,7 @@ export async function fetchAndRenderDeveloperComments(containerId, page = 0, com
             if (container && !searchTerm) {
                 container.innerHTML = '<div class="error-message">An unexpected error occurred.</div>';
             }
-            return { data: [], totalCount: 0 };
+            return [];
         }
     }
 
@@ -86,11 +72,12 @@ export async function fetchAndRenderDeveloperComments(containerId, page = 0, com
         } else {
             renderComments(container, commentsData);
         }
-        $(container).trigger('commentsRendered', { totalCount: totalCount });
+        $(container).trigger('commentsRendered');
     }
 
-    return { data: commentsData, totalCount: totalCount };
+    return commentsData;
 }
+
 
 function renderComments(container, comments) {
     container.innerHTML = '';
@@ -116,11 +103,12 @@ function renderComments(container, comments) {
         if (comment.comment_date) {
             try {
                 const dateObj = new Date(comment.comment_date);
-                const year = String(dateObj.getFullYear());
+                const year = dateObj.getFullYear();
                 const month = String(dateObj.getMonth() + 1).padStart(2, '0');
                 const day = String(dateObj.getDate()).padStart(2, '0');
                 formattedDateForData = `${year}-${month}-${day}`;
             } catch (e) {
+                // If parsing fails, use original date or empty string
                 formattedDateForData = comment.comment_date || '';
             }
         }
