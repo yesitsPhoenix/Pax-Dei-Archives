@@ -1,7 +1,9 @@
+import { formatNewsDate } from './utils.js';
+
 const QUART_API_BASE_URL = 'https://homecraftlodge.serveminecraft.net';
 
 const NEWS_LIST_CACHE_KEY = 'paxDeiNewsList';
-const NEWS_LIST_CACHE_EXPIRY_MS = 10 * 60 * 1000;
+const NEWS_LIST_CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 const NEWS_CATEGORIES_CACHE_KEY = 'paxDeiNewsCategories';
 const NEWS_CATEGORIES_CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000;
