@@ -1,6 +1,4 @@
-// lore.js
-
-import { supabase } from './supabaseClient.js';
+const QUART_API_BASE_URL = 'https:homecraftlodge.serveminecraft.net';
 
 const renderMarkdown = (markdownText) => {
     if (typeof marked === 'undefined') {
@@ -22,53 +20,74 @@ function getQueryParams() {
 }
 
 async function fetchLoreCategories() {
-    const { data, error } = await supabase
-        .from('lore_items')
-        .select('category')
-        .order('category', { ascending: true });
-
-    if (error) {
-        console.error('Error fetching lore categories:', error.message);
+    try {
+        const response = await fetch(`${QUART_API_BASE_URL}/lore/categories`);
+        if (!response.ok) {
+            console.error(`HTTP error! status: ${response.status}`);
+            return [];
+        }
+        const result = await response.json();
+        if (result.status === 'success') {
+            return result.data;
+        } else {
+            console.error('Error fetching lore categories from proxy:', result.message);
+            return [];
+        }
+    } catch (error) {
+        console.error('Network or other error fetching lore categories:', error);
         return [];
     }
-
-    const uniqueCategories = [...new Set(data.map(item => item.category))];
-    return uniqueCategories;
 }
 
 async function fetchLoreItems(category = null) {
-    let query = supabase
-        .from('lore_items')
-        .select('title, slug, category')
-        .order('title', { ascending: true });
-
-    if (category) {
-        query = query.eq('category', category);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-        console.error('Error fetching lore items:', error.message);
+    try {
+        let url = `${QUART_API_BASE_URL}/lore/items`;
+        if (category) {
+            url += `?category=${encodeURIComponent(category)}`;
+        }
+        const response = await fetch(url);
+        if (!response.ok) {
+            console.error(`HTTP error! status: ${response.status}`);
+            return [];
+        }
+        const result = await response.json();
+        if (result.status === 'success') {
+            return result.data;
+        } else {
+            console.error('Error fetching lore items from proxy:', result.message);
+            return [];
+        }
+    } catch (error) {
+        console.error('Network or other error fetching lore items:', error);
         return [];
     }
-    return data;
 }
 
 async function fetchLoreItemDetail(slug) {
-    const { data, error } = await supabase
-        .from('lore_items')
-        .select('*')
-        .eq('slug', slug)
-        .single();
-
-    if (error) {
-        if (error.code !== 'PGRST116') {
-            console.error('Error fetching lore item detail:', error.message);
+    try {
+        const response = await fetch(`${QUART_API_BASE_URL}/lore/item/${encodeURIComponent(slug)}`);
+        if (!response.ok) {
+            if (response.status === 404) {
+                console.warn(`Lore item with slug '${slug}' not found.`);
+                return null;
+            }
+            console.error(`HTTP error! status: ${response.status}`);
+            return null;
         }
+        const result = await response.json();
+        if (result.status === 'success') {
+            return result.data;
+        } else if (result.status === 'not_found') {
+            console.warn(`Lore item with slug '${slug}' not found (proxy reported).`);
+            return null;
+        } else {
+            console.error('Error fetching lore item detail from proxy:', result.message);
+            return null;
+        }
+    } catch (error) {
+        console.error('Network or other error fetching lore item detail:', error);
         return null;
     }
-    return data;
 }
 
 function getCategoryIcon(category) {
@@ -97,7 +116,8 @@ async function renderSmallCategoryCards(selectedCategory = null) {
             const iconClass = getCategoryIcon(cat);
             const isActive = selectedCategory === cat ? 'active-small-card' : '';
             const cardHtml = `
-                <div class="col-auto"> <div class="feature-card small-feature-card ${isActive}">
+                <div class="col-auto">
+                    <div class="feature-card small-feature-card ${isActive}">
                         <a href="lore.html?category=${encodeURIComponent(cat)}">
                             <i class="fa-solid ${iconClass}"></i>
                             <h5>${cat}</h5>
