@@ -1,4 +1,4 @@
-import { formatCommentDateTime } from './utils.js';
+import { formatCommentDateTime, slugify } from './utils.js';
 import DOMPurify from 'https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.es.min.js';
 
 const API_BASE_URL = 'https://homecraftlodge.serveminecraft.net';
@@ -85,16 +85,23 @@ export async function fetchAndRenderArticles(containerId, selectedCategory = nul
 }
 
 export async function fetchSingleArticle(slug) {
-  if (!slug) return null;
+  if (!slug || slug.toLowerCase() === 'undefined') {
+    console.warn('fetchSingleArticle called with invalid slug:', slug);
+    return null;
+  }
   try {
     const response = await fetch(`${API_BASE_URL}/articles/item/${encodeURIComponent(slug)}`);
     const result = await response.json();
     if (result.status === 'success') return result.data;
+
+    console.warn(`Failed to fetch article for slug "${slug}":`, result.message || result);
     return null;
-  } catch {
+  } catch (error) {
+    console.error(`Error fetching article for slug "${slug}":`, error);
     return null;
   }
 }
+
 
 function renderCategoryButtons(container, categories) {
   container.innerHTML = '';
@@ -119,9 +126,23 @@ function renderArticleCards(container, articles) {
   }
 
   articles.forEach(article => {
+    // Use existing slug or generate one from title
+    const slug = article.slug || (article.title ? slugify(article.title) : '');
+
+    if (!slug) {
+      console.warn('Article missing slug and title to generate slug:', article);
+    }
+
     const formattedDate = article.publication_date ? formatCommentDateTime(article.publication_date) : 'No Date';
+
+    const readArticleLinkHtml = slug
+      ? `<div class="main-button">
+           <a href="#" class="read-article-link" data-slug="${slug}">Read Article</a>
+         </div>`
+      : '';
+
     const articleHtml = `
-      <div class="article-card" data-slug="${article.slug}">
+      <div class="article-card" data-slug="${slug}">
         <h4>${article.title}</h4>
         <div class="meta-info">
           <span><i class="fa fa-user"></i> ${article.author || 'Unknown'}</span>
@@ -129,9 +150,7 @@ function renderArticleCards(container, articles) {
           ${article.category ? `<span><i class="fa fa-tag"></i> ${article.category}</span>` : ''}
         </div>
         <p>${article.summary || (article.content ? article.content.substring(0, 150) + '...' : '')}</p>
-        <div class="main-button">
-          <a href="#" class="read-article-link" data-slug="${article.slug}">Read Article</a>
-        </div>
+        ${readArticleLinkHtml}
       </div>
     `;
     container.insertAdjacentHTML('beforeend', articleHtml);
@@ -140,9 +159,11 @@ function renderArticleCards(container, articles) {
   $(container).find('.read-article-link').on('click', function(event) {
     event.preventDefault();
     const slug = $(this).data('slug');
+    console.log('Read article link clicked, slug:', slug);
     displayFullArticle(slug);
   });
 }
+
 
 async function displayFullArticle(slug) {
   const article = await fetchSingleArticle(slug);
