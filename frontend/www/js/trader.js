@@ -99,7 +99,7 @@ const traderDiscordLoginButton = document.getElementById('traderDiscordLoginButt
 const traderLoginError = document.getElementById('traderLoginError');
 
 async function fetchAllCharacterActivity(characterId) {
-    if (!characterId) return { sales: [], purchases: [], cancellations: [], listing_fees: [], pve_transactions: [] };
+    if (!characterId) return [];
 
     const { data, error } = await supabase.rpc('get_all_character_activity_json', {
         p_character_id: characterId
@@ -107,7 +107,7 @@ async function fetchAllCharacterActivity(characterId) {
 
     if (error) {
         console.error("Error fetching character activity using RPC:", error);
-        return { sales: [], purchases: [], cancellations: [], listing_fees: [], pve_transactions: [] };
+        return [];
     }
 
     const { sales, purchases, cancellations, listing_fees, pve_transactions } = data;

@@ -177,7 +177,7 @@ const renderTransactionTable = (transactions) => {
     if (!salesBody) return;
     salesBody.innerHTML = '';
     if (!transactions || transactions.length === 0) {
-        if (salesBody) salesBody.innerHTML = '<tr><td colspan="9" class="text-center py-4">No transactions recorded yet.</td></tr>'; // Updated colspan
+        if (salesBody) salesBody.innerHTML = '<tr><td colspan="9" class="text-center py-4">No transactions recorded yet.</td></tr>';
         return;
     }
     transactions.forEach(transaction => {
