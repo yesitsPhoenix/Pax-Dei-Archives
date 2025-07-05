@@ -95,7 +95,7 @@
             </div> -->
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <section class="mb-4 p-3 bg-gray-800 rounded-md shadow-md">
                 <h2 class="text-lg font-semibold mb-2 text-white">Daily Total Sales (Gold)</h2>
                 <div class="relative h-48">
@@ -109,14 +109,19 @@
                     <canvas id="daily-avg-price-chart"></canvas>
                 </div>
             </section>
-
             <section class="mb-4 p-3 bg-gray-800 rounded-md shadow-md">
                 <h2 class="text-lg font-semibold mb-2 text-white">Daily Listings Vs Sales</h2>
                 <div class="relative h-48">
                     <canvas id="daily-market-activity-chart"></canvas>
                 </div>
             </section>
-            
+            <section class="mb-4 p-3 bg-gray-800 rounded-md shadow-md">
+                <h2 class="text-lg font-semibold mb-2 text-white">Average Listing Timeframe</h2>
+                <div class="relative h-48">
+                    <canvas id="daily-avg-listing-time-chart"></canvas>
+                </div>
+            </section>
+
             <div class="col-span-1">
                 <label for="item-filter-select" class="block text-white text-sm font-bold mb-2">Specific Item Filter:</label>
                 <select id="item-filter-select" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
