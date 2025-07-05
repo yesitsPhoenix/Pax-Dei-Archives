@@ -49,7 +49,7 @@ const createDataset = (label, dataMap, labels, color) => ({
   data: labels.map(key => Math.round(dataMap[key] || 0)),
   borderColor: color,
   backgroundColor: hexToRGBA(color, 0.2),
-  tension: 0.1,
+  tension: 0.3,
   fill: false
 });
 
