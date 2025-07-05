@@ -25,7 +25,6 @@ import {
     currentSort,
     setCurrentUserId,
     setCurrentListingsPage,
-    marketStallDropdown,
     marketStallTabsContainer,
     tabContentContainer,
     listingsFilter,
@@ -127,9 +126,9 @@ export const initializeListings = async (userId) => {
     if (modalPurchaseItemCategorySelect) {
         await fetchAndPopulateCategories(modalPurchaseItemCategorySelect);
     }
-    if (marketStallDropdown) {
-        await populateMarketStallDropdown(marketStallDropdown);
-    }
+    // if (marketStallDropdown) {
+    //     await populateMarketStallDropdown(marketStallDropdown);
+    // }
     await initializeAddListingModalContent();
     await setupMarketStallTabs();
     if (sortBySelect) {
@@ -462,4 +461,8 @@ export const setupMarketStallTabs = async () => {
 
 export const getUserMarketStallLocations = async (characterId) => {
     return await fetchAndCacheMarketStalls(characterId);
+};
+
+export const clearMarketStallsCache = () => {
+  cachedMarketStalls = null;
 };

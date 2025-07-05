@@ -12,7 +12,8 @@ import {
     loadActiveListings,
     populateMarketStallDropdown,
     setupMarketStallTabs,
-    getUserMarketStallLocations
+    getUserMarketStallLocations,
+    clearMarketStallsCache
 } from './init.js';
 import {
     getEditListingModalElements,
@@ -27,7 +28,8 @@ import {
     addMarketStallBtn,
     createStallError,
     marketStallsList,
-    deleteStallError
+    deleteStallError,
+    modalMarketStallLocationSelect
 } from './dom.js';
 
 const getOrCreateItemId = async (itemName, categoryId) => {
@@ -829,7 +831,7 @@ export const handleEditMarketStallName = async (stallId, newStallName, editInput
         //console.log('UI updated after stall name save.');
 
         //console.log('Calling populateMarketStallDropdown and setupMarketStallTabs after stall name edit.');
-        await populateMarketStallDropdown();
+        await populateMarketStallDropdown(marketStallDropdown);
         await setupMarketStallTabs();
 
     } catch (e) {
@@ -867,7 +869,6 @@ const renderMarketStallsInModal = async () => {
 
         marketStallsList.innerHTML = ''; // Clear loading message
         stalls.forEach(stall => {
-            // ... (rest of your stall rendering logic remains the same)
             const stallDiv = document.createElement('div');
             stallDiv.classList.add('flex', 'flex-wrap', 'items-center', 'justify-between', 'bg-gray-100', 'p-3', 'rounded-lg', 'shadow-sm', 'mb-2');
             stallDiv.dataset.stallId = stall.id;
@@ -966,70 +967,8 @@ const renderMarketStallsInModal = async () => {
     }
 };
 
-export const handleAddMarketStall = async (e) => {
-    //console.log('handleAddMarketStall called.');
-    e.preventDefault();
-    createStallError.classList.add('hidden');
-
-    if (!currentCharacterId) {
-        createStallError.textContent = 'Please select a character first.';
-        createStallError.classList.remove('hidden');
-        console.error('handleAddMarketStall: No character selected. Aborting.');
-        return;
-    }
-    //console.log('Character ID present.');
-
-    const stallName = newMarketStallNameInput.value.trim();
-    if (!stallName) {
-        createStallError.textContent = 'Market Stall Name cannot be empty.';
-        createStallError.classList.remove('hidden');
-        console.error('handleAddMarketStall: Stall name is empty. Aborting.');
-        return;
-    }
-    //console.log('New stall name:', stallName);
-
-    addMarketStallBtn.disabled = true;
-    addMarketStallBtn.textContent = 'Creating Stall...';
-    //console.log('Add market stall button disabled.');
 
 
-    try {
-        const {
-            error
-        } = await supabase
-            .from('market_stalls')
-            .insert({
-                stall_name: stallName,
-                character_id: currentCharacterId
-            });
-
-        if (error) {
-            throw error;
-        }
-        //console.log('Market stall inserted into DB successfully.');
-
-        await showCustomModal('Success', 'Market Stall created successfully!', [{
-            text: 'OK',
-            value: true
-        }]);
-        newMarketStallNameInput.value = '';
-        //console.log('Modal shown, input cleared. Calling updates.');
-
-        await populateMarketStallDropdown();
-        await setupMarketStallTabs();
-        await renderMarketStallsInModal();
-        //console.log('Market stall UI elements updated.');
-
-    } catch (e) {
-        console.error('handleAddMarketStall: Error creating market stall:', e.message, e);
-        createStallError.textContent = 'Failed to create market stall: ' + e.message;
-        createStallError.classList.remove('hidden');
-    } finally {
-        addMarketStallBtn.disabled = false;
-        addMarketStallBtn.textContent = 'Create Market Stall';
-        //console.log('Add market stall button re-enabled.');
-    }
-};
 
 export const createDefaultMarketStall = async (characterId, characterName) => {
     //console.log('createDefaultMarketStall called for character:', { characterId, characterName });
@@ -1071,95 +1010,114 @@ export const createDefaultMarketStall = async (characterId, characterName) => {
     }
 };
 
+
+export const handleAddMarketStall = async (e) => {
+  e.preventDefault();
+  createStallError.classList.add('hidden');
+
+  if (!currentCharacterId) {
+    createStallError.textContent = 'Please select a character first.';
+    createStallError.classList.remove('hidden');
+    return;
+  }
+
+  const newStallName = newMarketStallNameInput.value.trim();
+  if (!newStallName) {
+    createStallError.textContent = 'Market Stall Name cannot be empty.';
+    createStallError.classList.remove('hidden');
+    return;
+  }
+
+  addMarketStallBtn.disabled = true;
+  addMarketStallBtn.textContent = 'Creating Stall...';
+
+  try {
+    const { error } = await supabase
+      .from('market_stalls')
+      .insert({
+        stall_name: newStallName,
+        character_id: currentCharacterId
+      });
+
+    if (error) throw error;
+
+    clearMarketStallsCache();
+    await showCustomModal('Success', 'Market Stall created successfully!', [{ text: 'OK', value: true }]);
+    newMarketStallNameInput.value = '';
+    await renderMarketStallsInModal();
+
+    if (modalMarketStallLocationSelect) {
+      await populateMarketStallDropdown(modalMarketStallLocationSelect);
+    }
+
+    await setupMarketStallTabs();
+  } catch (e) {
+    createStallError.textContent = 'Failed to create market stall: ' + e.message;
+    createStallError.classList.remove('hidden');
+  } finally {
+    addMarketStallBtn.disabled = false;
+    addMarketStallBtn.textContent = 'Create Market Stall';
+  }
+};
+
+
 export const handleDeleteMarketStall = async (stallId) => {
-    //console.log('handleDeleteMarketStall called for stall ID:', stallId);
-    deleteStallError.classList.add('hidden');
+  deleteStallError.classList.add('hidden');
 
-    if (!currentCharacterId) {
-        deleteStallError.textContent = 'No character selected.';
-        deleteStallError.classList.remove('hidden');
-        console.error('handleDeleteMarketStall: No character selected. Aborting.');
-        return;
+  if (!currentCharacterId) {
+    deleteStallError.textContent = 'No character selected.';
+    deleteStallError.classList.remove('hidden');
+    return;
+  }
+
+  const confirmation = await showCustomModal(
+    'Confirm Deletion',
+    'Are you sure you want to delete this market stall? This action cannot be undone and can only be performed if the stall has no active listings.',
+    [
+      { text: 'Yes', value: true, class: 'bg-red-500 hover:bg-red-700' },
+      { text: 'No', value: false, class: 'bg-gray-500 hover:bg-gray-700' }
+    ]
+  );
+
+  if (!confirmation) return;
+
+  try {
+    const { data: listings, error: listingsError } = await supabase
+      .from('market_listings')
+      .select('listing_id')
+      .eq('market_stall_id', stallId)
+      .eq('character_id', currentCharacterId)
+      .eq('is_fully_sold', false)
+      .eq('is_cancelled', false);
+
+    if (listingsError) throw listingsError;
+
+    if (listings && listings.length > 0) {
+      await showCustomModal(
+        'Deletion Failed',
+        'Cannot delete stall with active listings.',
+        [{ text: 'OK', value: true }]
+      );
+      return;
     }
-    //console.log('Character ID present.');
 
+    const { error } = await supabase
+      .from('market_stalls')
+      .delete()
+      .eq('id', stallId)
+      .eq('character_id', currentCharacterId);
 
-    const confirmation = await showCustomModal(
-        'Confirm Deletion',
-        'Are you sure you want to delete this market stall? This action cannot be undone and can only be performed if the stall has no active listings.', [{
-            text: 'Yes',
-            value: true,
-            class: 'bg-red-500 hover:bg-red-700'
-        }, {
-            text: 'No',
-            value: false,
-            class: 'bg-gray-500 hover:bg-gray-700'
-        }]
-    );
+    if (error) throw error;
 
-    if (!confirmation) {
-        //console.log('Stall deletion cancelled by user.');
-        return;
+    clearMarketStallsCache();
+    await renderMarketStallsInModal();
+    if (modalMarketStallLocationSelect) {
+      await populateMarketStallDropdown(modalMarketStallLocationSelect);
     }
-    //console.log('Confirmation received for stall deletion.');
+    await setupMarketStallTabs();
 
-
-    try {
-        //console.log('Checking for active listings in stall:', stallId);
-        const {
-            data: listings,
-            error: listingsError
-        } = await supabase
-            .from('market_listings')
-            .select('listing_id')
-            .eq('market_stall_id', stallId)
-            .eq('character_id', currentCharacterId)
-            .eq('is_fully_sold', false)
-            .eq('is_cancelled', false);
-
-        if (listingsError) {
-            throw listingsError;
-        }
-
-        if (listings && listings.length > 0) {
-            console.warn('Stall has active listings. Cannot delete.');
-            await showCustomModal('Deletion Failed', 'This market stall cannot be deleted because it still has active listings. Please cancel or mark all listings as sold first.', [{
-                text: 'OK',
-                value: true
-            }]);
-            return;
-        }
-        //console.log('No active listings found for this stall.');
-
-        const {
-            error: deleteError
-        } = await supabase
-            .from('market_stalls')
-            .delete()
-            .eq('id', stallId)
-            .eq('character_id', currentCharacterId);
-
-        if (deleteError) {
-            throw deleteError;
-        }
-        //console.log('Market stall successfully deleted from DB.');
-
-
-        await showCustomModal('Success', 'Market Stall deleted successfully!', [{
-            text: 'OK',
-            value: true
-        }]);
-        //console.log('Modal shown. Calling UI updates after stall deletion.');
-
-
-        await populateMarketStallDropdown();
-        await setupMarketStallTabs();
-        await renderMarketStallsInModal();
-        //console.log('Market stall UI elements updated after deletion.');
-
-    } catch (e) {
-        console.error('handleDeleteMarketStall: Error deleting market stall:', e.message, e);
-        deleteStallError.textContent = 'Failed to delete market stall: ' + e.message;
-        deleteStallError.classList.remove('hidden');
-    }
+  } catch (e) {
+    deleteStallError.textContent = 'Failed to delete market stall: ' + e.message;
+    deleteStallError.classList.remove('hidden');
+  }
 };

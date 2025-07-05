@@ -20,7 +20,7 @@ export const purchaseItemStacksInput = document.getElementById('purchase-item-st
 export const purchaseItemCountPerStackInput = document.getElementById('purchase-item-count-per-stack');
 export const purchaseItemPricePerStackInput = document.getElementById('purchase-item-price-per-stack');
 
-export const marketStallDropdown = document.getElementById('market-stall-location');
+// export const marketStallDropdown = document.getElementById('market-stall-location');
 
 export const marketStallTabsContainer = document.querySelector('.market-stall-tabs');
 export const tabContentContainer = document.querySelector('.tab-content-container');
