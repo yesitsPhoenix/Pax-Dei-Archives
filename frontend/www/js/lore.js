@@ -1,4 +1,4 @@
-const QUART_API_BASE_URL = 'https:homecraftlodge.serveminecraft.net';
+const QUART_API_BASE_URL = 'https://homecraftlodge.serveminecraft.net';
 
 const renderMarkdown = (markdownText) => {
     if (typeof marked === 'undefined') {
