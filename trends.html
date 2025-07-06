@@ -72,7 +72,7 @@
                 <select id="shard-filter-select" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
                     <option value="all">All Shards</option>
                 </select>
-            </div>
+            </div> -->
             <div class="col-span-1">
                 <label for="province-filter-select" class="block text-white text-sm font-bold mb-2">Filter by Province:</label>
                 <select id="province-filter-select" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
@@ -84,7 +84,7 @@
                 <select id="home-valley-filter-select" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
                     <option value="all">All Home Valleys</option>
                 </select>
-            </div> -->
+            </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -114,19 +114,33 @@
                 </div>
             </section>
 
-            <div class="col-span-1">
-                <label for="item-filter-select" class="block text-white text-sm font-bold mb-2">Specific Item Filter:</label>
+            <div class="col-span-full">
+                <h2 class="text-lg font-semibold mb-2 text-white">Specific Item Price Trends</h2>
+
+                <label for="item-filter-select" class="block text-white text-sm font-bold mb-2">
+                    Specific Item Filter:
+                </label>
                 <select id="item-filter-select" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
                     <option value="all">All Items</option>
                 </select>
-            </div>
-            <section class="mb-4 p-3 bg-gray-800 rounded-md shadow-md col-span-full">
-                <h2 class="text-lg font-semibold mb-2 text-white">Specific Item Price Trend (per unit)</h2>
-                <div class="relative h-48">
-                    <canvas id="specific-item-price-chart"></canvas>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <section class="mb-4 p-3 bg-gray-800 rounded-md shadow-md">
+                    <h3 class="text-white text-sm mb-1">Price per Unit</h3>
+                    <div class="relative h-48">
+                        <canvas id="specific-item-price-chart-unit"></canvas>
+                    </div>
+                    </section>
+
+                    <section class="mb-4 p-3 bg-gray-800 rounded-md shadow-md">
+                    <h3 class="text-white text-sm mb-1">Price per Stack</h3>
+                    <div class="relative h-48">
+                        <canvas id="specific-item-price-chart-stack"></canvas>
+                    </div>
+                    </section>
                 </div>
-            </section>
-        </div>
+                </div>
+</div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
             <section class="mb-4 p-3 bg-gray-800 rounded-md shadow-md">

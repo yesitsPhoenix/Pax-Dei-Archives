@@ -14,11 +14,13 @@ let dailyAvgListingTimeChartInstance = null;
 let currentSelectedItemId = null;
 let currentSelectedRegion = null;
 
+let specificItemPriceChartUnitInstance = null;
+let specificItemPriceChartStackInstance = null;
+
 const formatCurrency = (amount) => (amount !== null && amount !== undefined) ? amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : 'N/A';
 const formatDecimal = (amount, decimals = 2) => (amount !== null && amount !== undefined) ? parseFloat(amount).toFixed(decimals) : 'N/A';
 
 function renderChart(chartId, labels, datasetsConfig, type = 'line') {
-  //console.log('renderChart called for chartId:', chartId);
   const ctx = document.getElementById(chartId)?.getContext('2d');
   if (!ctx) {
     console.warn('Canvas context not found for chartId:', chartId);
@@ -55,9 +57,12 @@ function renderChart(chartId, labels, datasetsConfig, type = 'line') {
     yAxisCallback = function(value) { return formatDecimal(value); };
     tooltipLabelCallback = function(context) {
       let value = context.parsed.y;
+      if (chartId === 'specific-item-price-chart-stack') {
+        return `${context.dataset.label}: ${formatDecimal(value, 0)}`;
+      }
       return `${context.dataset.label}: ${formatDecimal(value)} Gold`;
     };
-    yAxisTitleText = 'Price (Gold)';
+    yAxisTitleText = chartId === 'specific-item-price-chart-stack' ? 'Average Stack Size' : 'Price (Gold)';
   } else if (chartId.includes('sales-chart')) {
     yAxisCallback = function(value) { return formatCurrency(value); };
     tooltipLabelCallback = function(context) {
@@ -119,9 +124,12 @@ function renderChart(chartId, labels, datasetsConfig, type = 'line') {
   } else if (chartId === 'daily-market-activity-chart' && dailyMarketActivityChartInstance) {
     dailyMarketActivityChartInstance.destroy();
     dailyMarketActivityChartInstance = null;
-  } else if (chartId === 'specific-item-price-chart' && specificItemPriceChartInstance) {
+  } else if (chartId === 'specific-item-price-chart-unit' && specificItemPriceChartInstance) {
     specificItemPriceChartInstance.destroy();
     specificItemPriceChartInstance = null;
+  } else if (chartId === 'specific-item-price-chart-stack' && specificItemPriceChartStackInstance) {
+    specificItemPriceChartStackInstance.destroy();
+    specificItemPriceChartStackInstance = null;
   } else if (chartId === 'daily-avg-price-chart' && dailyAvgPriceChartInstance) {
     dailyAvgPriceChartInstance.destroy();
     dailyAvgPriceChartInstance = null;
@@ -131,16 +139,17 @@ function renderChart(chartId, labels, datasetsConfig, type = 'line') {
   }
 
   const newChart = new Chart(ctx, chartConfig);
-  //console.log('Chart instance created for', chartId);
 
   if (chartId === 'daily-sales-chart') dailySalesChartInstance = newChart;
   if (chartId === 'daily-market-activity-chart') dailyMarketActivityChartInstance = newChart;
-  if (chartId === 'specific-item-price-chart') specificItemPriceChartInstance = newChart;
+  if (chartId === 'specific-item-price-chart-unit') specificItemPriceChartInstance = newChart;
+  if (chartId === 'specific-item-price-chart-stack') specificItemPriceChartStackInstance = newChart;
   if (chartId === 'daily-avg-price-chart') dailyAvgPriceChartInstance = newChart;
   if (chartId === 'daily-avg-listing-time-chart') dailyAvgListingTimeChartInstance = newChart;
 
   return newChart;
 }
+
 
 async function loadListTrendsData() {
   //console.log('loadListTrendsData called');
@@ -308,7 +317,7 @@ async function loadDailyTotalSalesChart() {
     const totalSales = data.map(row => row.total_gold_sold);
 
     const datasetsConfig = [{
-      label: 'Total Gold Sold',
+      label: 'Daily Sales in Gold',
       data: totalSales,
       borderColor: 'rgb(75, 192, 192)',
       backgroundColor: 'rgba(75, 192, 192, 0.2)'
@@ -445,7 +454,7 @@ async function loadDailyAverageItemPriceChart() {
     const prices = data.map(row => row.average_price);
 
     const datasetsConfig = [{
-      label: 'Daily Average Item Price',
+      label: 'Daily Average Item Sold Price',
       data: prices,
       borderColor: 'rgb(255, 99, 132)',
       backgroundColor: 'rgba(255, 99, 132, 0.2)'
@@ -543,32 +552,25 @@ async function loadDailyAverageListingTimeframeChart() {
 }
 
 async function loadSpecificItemPriceChart(itemId = null) {
-  //console.log('loadSpecificItemPriceChart called for itemId:', itemId);
   if (!itemId || itemId === 'all') {
-    if (specificItemPriceChartInstance) {
-      specificItemPriceChartInstance.destroy();
-      specificItemPriceChartInstance = null;
+    ['specific-item-price-chart-unit', 'specific-item-price-chart-stack'].forEach(id => {
+      const ctx = document.getElementById(id)?.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '16px Arial';
+        ctx.fillText('  Please select an item to view its price trend.', ctx.canvas.width / 2, ctx.canvas.height / 2);
+      }
+    });
+    if (specificItemPriceChartUnitInstance) {
+      specificItemPriceChartUnitInstance.destroy();
+      specificItemPriceChartUnitInstance = null;
     }
-    const ctx = document.getElementById('specific-item-price-chart')?.getContext('2d');
-    if (ctx) {
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-      const text = 'Please select an item to view its price trend.';
-      let fontSize = 16;
-      const maxWidth = ctx.canvas.width - 20;
-
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#FFFFFF';
-
-      do {
-        ctx.font = `${fontSize}px Arial`;
-        const textWidth = ctx.measureText(text).width;
-        if (textWidth <= maxWidth || fontSize <= 10) break;
-        fontSize--;
-      } while (true);
-
-      ctx.fillText(text, ctx.canvas.width / 2, ctx.canvas.height / 2);
+    if (specificItemPriceChartStackInstance) {
+      specificItemPriceChartStackInstance.destroy();
+      specificItemPriceChartStackInstance = null;
     }
-    //console.log('Specific Item Price Chart cleared or not loaded due to no item selected.');
     return;
   }
 
@@ -579,64 +581,108 @@ async function loadSpecificItemPriceChart(itemId = null) {
     });
 
     if (error) {
-      if (specificItemPriceChartInstance) specificItemPriceChartInstance.destroy();
-      const ctx = document.getElementById('specific-item-price-chart')?.getContext('2d');
+      ['specific-item-price-chart-unit', 'specific-item-price-chart-stack'].forEach(id => {
+        const ctx = document.getElementById(id)?.getContext('2d');
+        if (ctx) {
+          ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+          ctx.textAlign = 'center';
+          ctx.fillStyle = '#FF6666';
+          ctx.font = '16px Arial';
+          ctx.fillText(`Error: ${error.message}`, ctx.canvas.width / 2, ctx.canvas.height / 2);
+        }
+      });
+      if (specificItemPriceChartUnitInstance) {
+        specificItemPriceChartUnitInstance.destroy();
+        specificItemPriceChartUnitInstance = null;
+      }
+      if (specificItemPriceChartStackInstance) {
+        specificItemPriceChartStackInstance.destroy();
+        specificItemPriceChartStackInstance = null;
+      }
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      ['specific-item-price-chart-unit', 'specific-item-price-chart-stack'].forEach(id => {
+        const ctx = document.getElementById(id)?.getContext('2d');
+        if (ctx) {
+          ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+          ctx.textAlign = 'center';
+          ctx.fillStyle = '#B0B0B0';
+          ctx.font = '16px Arial';
+          ctx.fillText('No data available for this item in this region.', ctx.canvas.width / 2, ctx.canvas.height / 2);
+        }
+      });
+      if (specificItemPriceChartUnitInstance) {
+        specificItemPriceChartUnitInstance.destroy();
+        specificItemPriceChartUnitInstance = null;
+      }
+      if (specificItemPriceChartStackInstance) {
+        specificItemPriceChartStackInstance.destroy();
+        specificItemPriceChartStackInstance = null;
+      }
+      return;
+    }
+
+    const labels = data.map(row => row.sale_date);
+    const pricesPerUnit = data.map(row => parseFloat(row.average_price));
+    const averageStackSizes = data.map(row => parseFloat(row.average_stack_size));
+    const itemName = data.length > 0 ? data[0].item_name : `Item ID: ${itemId}`;
+
+    if (specificItemPriceChartUnitInstance) {
+      specificItemPriceChartUnitInstance.destroy();
+      specificItemPriceChartUnitInstance = null;
+    }
+    if (specificItemPriceChartStackInstance) {
+      specificItemPriceChartStackInstance.destroy();
+      specificItemPriceChartStackInstance = null;
+    }
+
+    specificItemPriceChartUnitInstance = renderChart(
+      'specific-item-price-chart-unit',
+      labels,
+      [{
+        label: `${itemName} - Price per Unit`,
+        data: pricesPerUnit,
+        borderColor: 'rgb(54, 162, 235)',
+        backgroundColor: 'rgba(54, 162, 235, 0.2)'
+      }]
+    );
+
+    specificItemPriceChartStackInstance = renderChart(
+      'specific-item-price-chart-stack',
+      labels,
+      [{
+        label: `${itemName} - Average Stack Size Sold`,
+        data: averageStackSizes,
+        borderColor: 'rgb(255, 99, 132)',
+        backgroundColor: 'rgba(255, 99, 132, 0.2)'
+      }]
+    );
+  } catch (err) {
+    ['specific-item-price-chart-unit', 'specific-item-price-chart-stack'].forEach(id => {
+      const ctx = document.getElementById(id)?.getContext('2d');
       if (ctx) {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         ctx.textAlign = 'center';
         ctx.fillStyle = '#FF6666';
         ctx.font = '16px Arial';
-        ctx.fillText(`Error: ${error.message}`, ctx.canvas.width / 2, ctx.canvas.height / 2);
+        ctx.fillText(`An unexpected error occurred: ${err.message}`, ctx.canvas.width / 2, ctx.canvas.height / 2);
       }
-      console.error('Error in get_item_price_history:', error);
-      return;
+    });
+    if (specificItemPriceChartUnitInstance) {
+      specificItemPriceChartUnitInstance.destroy();
+      specificItemPriceChartUnitInstance = null;
     }
-
-    if (!data || data.length === 0) {
-      if (specificItemPriceChartInstance) specificItemPriceChartInstance.destroy();
-      const ctx = document.getElementById('specific-item-price-chart')?.getContext('2d');
-      if (ctx) {
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#B0B0B0';
-        ctx.font = '16px Arial';
-        ctx.fillText('No data available for this item in this region.', ctx.canvas.width / 2, ctx.canvas.height / 2);
-      }
-      console.warn('No data from get_item_price_history.');
-      return;
+    if (specificItemPriceChartStackInstance) {
+      specificItemPriceChartStackInstance.destroy();
+      specificItemPriceChartStackInstance = null;
     }
-
-    const labels = data.map(row => row.sale_date);
-    const prices = data.map(row => row.average_price);
-    const itemName = data.length > 0 ? data[0].item_name : `Item ID: ${itemId}`;
-
-    const datasetsConfig = [{
-      label: `${itemName} Price`,
-      data: prices,
-      borderColor: 'rgb(54, 162, 235)',
-      backgroundColor: 'rgba(54, 162, 235, 0.2)'
-    }];
-
-    if (specificItemPriceChartInstance) specificItemPriceChartInstance.destroy();
-    specificItemPriceChartInstance = renderChart(
-      'specific-item-price-chart',
-      labels,
-      datasetsConfig
-    );
-    //console.log('Specific Item Price chart loaded.');
-  } catch (err) {
-    if (specificItemPriceChartInstance) specificItemPriceChartInstance.destroy();
-    const ctx = document.getElementById('specific-item-price-chart')?.getContext('2d');
-    if (ctx) {
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#FF6666';
-      ctx.font = '16px Arial';
-      ctx.fillText(`An unexpected error occurred: ${err.message}`, ctx.canvas.width / 2, ctx.canvas.height / 2);
-    }
-    console.error('Unexpected error in loadSpecificItemPriceChart:', err);
   }
 }
+
+
+
 
 async function populateDropdown(selectElementId, rpcFunctionName, valueColumn, textColumn, defaultOptionText) {
   //console.log('populateDropdown called for:', selectElementId);
