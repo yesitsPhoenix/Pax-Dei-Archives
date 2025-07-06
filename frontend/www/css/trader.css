@@ -47,13 +47,14 @@
 
 .dashboard-card h3 {
     font-size: 1.1rem;
-    color: #fff;
+    color: #fafafa;
     margin-bottom: 10px;
+    font-weight: bold;
 }
 
 .dashboard-card p {
-    font-size: 1.5rem;
-    color: #ffc107;
+    font-size: 1.2rem;
+    color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
