@@ -610,7 +610,7 @@ async function loadSpecificItemPriceChart(itemId = null) {
           ctx.textAlign = 'center';
           ctx.fillStyle = '#B0B0B0';
           ctx.font = '16px Arial';
-          ctx.fillText('No data available for this item in this region.', ctx.canvas.width / 2, ctx.canvas.height / 2);
+          ctx.fillText('  No data has been recorded for this item yet.', ctx.canvas.width / 2, ctx.canvas.height / 2);
         }
       });
       if (specificItemPriceChartUnitInstance) {
