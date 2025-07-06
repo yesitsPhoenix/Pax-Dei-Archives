@@ -2,7 +2,7 @@ import {
     listingsBody,
     listingsPaginationContainer,
     LISTINGS_PER_PAGE,
-    currentListingsPage,
+    getCurrentListingsPage,
     setCurrentListingsPage
 } from './dom.js';
 import {
@@ -53,7 +53,7 @@ export const renderListingsTable = (listings) => {
     });
 };
 
-export const renderListingsPagination = (totalCount) => {
+export const renderListingsPagination = (totalCount, marketStallId) => {
     if (!listingsPaginationContainer) return;
     const totalPages = Math.ceil(totalCount / LISTINGS_PER_PAGE);
     listingsPaginationContainer.innerHTML = '';
@@ -77,23 +77,25 @@ export const renderListingsPagination = (totalCount) => {
         button.disabled = disabled;
         if (!disabled) {
             button.addEventListener('click', () => {
-                setCurrentListingsPage(page);
-                loadActiveListings();
+                setCurrentListingsPage(page, marketStallId);
+                loadActiveListings(marketStallId);
             });
         }
         return button;
     };
 
-    listingsPaginationContainer.appendChild(createButton('Previous', currentListingsPage - 1, currentListingsPage === 1));
+    const currentPage = getCurrentListingsPage(marketStallId);
 
-    let startPage = Math.max(1, currentListingsPage - halfVisiblePages);
-    let endPage = Math.min(totalPages, currentListingsPage + halfVisiblePages);
+    listingsPaginationContainer.appendChild(createButton('Previous', currentPage - 1, currentPage === 1));
+
+    let startPage = Math.max(1, currentPage - halfVisiblePages);
+    let endPage = Math.min(totalPages, currentPage + halfVisiblePages);
 
     if (endPage - startPage + 1 < MAX_VISIBLE_PAGES) {
-        if (currentListingsPage <= halfVisiblePages) {
+        if (currentPage <= halfVisiblePages) {
             endPage = Math.min(totalPages, MAX_VISIBLE_PAGES);
             startPage = 1;
-        } else if (currentListingsPage > totalPages - halfVisiblePages) {
+        } else if (currentPage > totalPages - halfVisiblePages) {
             startPage = Math.max(1, totalPages - MAX_VISIBLE_PAGES + 1);
             endPage = totalPages;
         }
@@ -110,7 +112,7 @@ export const renderListingsPagination = (totalCount) => {
     }
 
     for (let i = startPage; i <= endPage; i++) {
-        listingsPaginationContainer.appendChild(createButton(i, i, false, i === currentListingsPage));
+        listingsPaginationContainer.appendChild(createButton(i, i, false, i === currentPage));
     }
 
     if (endPage < totalPages) {
@@ -123,5 +125,5 @@ export const renderListingsPagination = (totalCount) => {
         listingsPaginationContainer.appendChild(createButton(totalPages, totalPages));
     }
 
-    listingsPaginationContainer.appendChild(createButton('Next', currentListingsPage + 1, currentListingsPage === totalPages));
+    listingsPaginationContainer.appendChild(createButton('Next', currentPage + 1, currentPage === totalPages));
 };

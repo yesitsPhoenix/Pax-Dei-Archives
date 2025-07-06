@@ -9,7 +9,7 @@ import {
 } from './characters.js';
 import {
     renderListingsTable,
-    renderListingsPagination
+    renderListingsPagination,
 } from './render.js';
 import {
     addListingForm,
@@ -29,7 +29,7 @@ import {
     tabContentContainer,
     listingsFilter,
     LISTINGS_PER_PAGE,
-    currentListingsPage,
+    getCurrentListingsPage,
     getEditListingModalElements,
     itemCategorySelect,
     purchaseItemCategorySelect,
@@ -40,7 +40,9 @@ import {
     addListingFormModal,
     modalItemCategorySelect,
     modalMarketStallLocationSelect,
-    modalPurchaseItemCategorySelect
+    modalPurchaseItemCategorySelect,
+    stallPageMap,
+    getActiveStallId,
 } from './dom.js';
 import {
     handleAddListing,
@@ -57,7 +59,7 @@ import {
     handleRecordPurchase
 } from './purchase.js';
 import {
-    handleFilterChange
+    handleFilterChange,
 } from './filter.js';
 import {
     setupAutocomplete
@@ -126,9 +128,6 @@ export const initializeListings = async (userId) => {
     if (modalPurchaseItemCategorySelect) {
         await fetchAndPopulateCategories(modalPurchaseItemCategorySelect);
     }
-    // if (marketStallDropdown) {
-    //     await populateMarketStallDropdown(marketStallDropdown);
-    // }
     await initializeAddListingModalContent();
     await setupMarketStallTabs();
     if (sortBySelect) {
@@ -140,7 +139,6 @@ export const initializeListings = async (userId) => {
 };
 
 const addListingsEventListeners = () => {
-    //console.log('addListingsEventListeners called');
     if (addListingForm) {
         addListingForm.addEventListener('submit', handleAddListing);
     }
@@ -151,9 +149,18 @@ const addListingsEventListeners = () => {
         addPurchaseForm.addEventListener('submit', handleRecordPurchase);
     }
 
-    filterListingItemNameInput.addEventListener('input', (e) => handleFilterChange('itemName', e.target.value));
-    filterListingCategorySelect.addEventListener('change', (e) => handleFilterChange('categoryId', e.target.value));
-    filterListingStatusSelect.addEventListener('change', (e) => handleFilterChange('status', e.target.value));
+    filterListingItemNameInput.addEventListener('input', (e) => {
+        const activeStallId = getActiveStallId();
+        handleFilterChange('itemName', e.target.value, activeStallId);
+    });
+    filterListingCategorySelect.addEventListener('change', (e) => {
+        const activeStallId = getActiveStallId();
+        handleFilterChange('categoryId', e.target.value, activeStallId);
+    });
+    filterListingStatusSelect.addEventListener('change', (e) => {
+        const activeStallId = getActiveStallId();
+        handleFilterChange('status', e.target.value, activeStallId);
+    });
 
     listingsBody.addEventListener('click', (e) => {
         const target = e.target;
@@ -225,6 +232,7 @@ const addListingsEventListeners = () => {
 export const loadActiveListings = async (marketStallId = null) => {
     let targetContainer = listingsBody.parentElement;
     let targetTable = listingsTable;
+    let actualListingsBody;
     let targetLoader = loader;
 
     if (marketStallId) {
@@ -255,6 +263,7 @@ export const loadActiveListings = async (marketStallId = null) => {
                 targetContainer.innerHTML = '';
                 targetContainer.appendChild(targetTable);
             }
+            actualListingsBody = targetTable.querySelector('tbody');
             const existingLoader = stallTabContent.querySelector('.loader');
             if (existingLoader) {
                 targetLoader = existingLoader;
@@ -266,17 +275,24 @@ export const loadActiveListings = async (marketStallId = null) => {
             }
             stallTabContent.querySelector('p')?.remove();
         }
+    } else {
+        actualListingsBody = listingsBody;
     }
+
     if (!currentCharacterId) {
         targetLoader.style.display = 'none';
         targetTable.style.display = 'table';
-        if (targetTable.querySelector('tbody')) {
-            targetTable.querySelector('tbody').innerHTML = '<tr><td colspan="7" class="text-center py-4">Please select a character or create one to view listings.</td></tr>';
+        if (actualListingsBody) {
+            actualListingsBody.innerHTML = '<tr><td colspan="7" class="text-center py-4">Please select a character or create one to view listings.</td></tr>';
         }
         return;
     }
     targetLoader.style.display = 'block';
     targetTable.style.display = 'none';
+
+    const currentPage = getCurrentListingsPage(marketStallId);
+    //console.log('Loading listings for character:', currentCharacterId, 'stallId:', marketStallId, 'page:', currentPage, 'filter:', listingsFilter, 'sort:', currentSort);
+
     try {
         const {
             data,
@@ -287,7 +303,7 @@ export const loadActiveListings = async (marketStallId = null) => {
             p_category_id: listingsFilter.categoryId ? parseInt(listingsFilter.categoryId) : null,
             p_status: listingsFilter.status,
             p_limit: LISTINGS_PER_PAGE,
-            p_offset: (currentListingsPage - 1) * LISTINGS_PER_PAGE,
+            p_offset: (currentPage - 1) * LISTINGS_PER_PAGE,
             p_sort_by: currentSort.column,
             p_sort_direction: currentSort.direction,
             p_market_stall_id: marketStallId
@@ -295,11 +311,10 @@ export const loadActiveListings = async (marketStallId = null) => {
         if (error) {
             throw error;
         }
-        renderListingsTable(data);
-        const {
-            count: totalListings,
-            error: countError
-        } = await supabase
+        //console.log('Received data for stallId', marketStallId, ':', data);
+        renderListingsTable(data, actualListingsBody);
+
+        let countQuery = supabase
             .from('market_listings')
             .select('*', {
                 count: 'exact',
@@ -309,14 +324,26 @@ export const loadActiveListings = async (marketStallId = null) => {
             .eq('is_fully_sold', false)
             .eq('is_cancelled', false);
 
+        if (marketStallId) {
+            countQuery = countQuery.eq('market_stall_id', marketStallId);
+        }
+
+        const {
+            count: totalListings,
+            error: countError
+        } = await countQuery;
+
         if (countError) {
             throw countError;
         }
-        renderListingsPagination(totalListings);
+        //console.log('Total listings for current view:', totalListings);
+        const totalPages = Math.ceil(totalListings / LISTINGS_PER_PAGE);
+        //console.log('Calculated total pages:', totalPages);
+        renderListingsPagination(totalListings, marketStallId);
     } catch (e) {
         console.error("Error loading active listings:", e.message);
-        if (targetTable.querySelector('tbody')) {
-            targetTable.querySelector('tbody').innerHTML = `<tr><td colspan="7" class="text-center py-4 text-red-500">Error loading listings: ${e.message}</td></tr>`;
+        if (actualListingsBody) {
+            actualListingsBody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-red-500">Error loading listings: ${e.message}</td></tr>`;
         }
     } finally {
         targetLoader.style.display = 'none';
@@ -437,6 +464,7 @@ export const setupMarketStallTabs = async () => {
 
                 tabContent.classList.remove('hidden');
 
+                setCurrentListingsPage(1, stall.id);
                 loadActiveListings(stall.id);
             });
         });
@@ -451,6 +479,7 @@ export const setupMarketStallTabs = async () => {
             if (firstTabContent) {
                 firstTabContent.classList.remove('hidden');
             }
+            setCurrentListingsPage(1, firstStallId);
             loadActiveListings(firstStallId);
         }
     } catch (e) {
@@ -464,5 +493,5 @@ export const getUserMarketStallLocations = async (characterId) => {
 };
 
 export const clearMarketStallsCache = () => {
-  cachedMarketStalls = null;
+    cachedMarketStalls = null;
 };

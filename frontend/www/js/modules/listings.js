@@ -17,7 +17,8 @@ import {
     getEditListingModalElements,
     itemCategorySelect,
     purchaseItemNameInput,
-    purchaseItemCategorySelect
+    purchaseItemCategorySelect,
+    getCurrentListingsPage
 } from './dom.js';
 import {
     handleAddListing,

@@ -1,4 +1,3 @@
-// filter.js
 import {
     supabase
 } from '../supabaseClient.js';
@@ -18,10 +17,10 @@ import {
     loadActiveListings
 } from './init.js';
 
-export const handleFilterChange = (key, value) => {
+export const handleFilterChange = (key, value, marketStallId = null) => {
     setListingsFilter(key, value);
-    setCurrentListingsPage(1);
-    loadActiveListings();
+    setCurrentListingsPage(1, marketStallId);
+    loadActiveListings(marketStallId);
 };
 
 export const fetchAndPopulateCategories = async () => {
