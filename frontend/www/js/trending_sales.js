@@ -513,7 +513,7 @@ async function loadDailyAverageListingTimeframeChart() {
     //console.log('Data for Avg Listing Time:', avgTimes);
 
     const datasetsConfig = [{
-      label: 'Average Listing Time (Days)',
+      label: 'Avg. Days on Market',
       data: avgTimes,
       borderColor: '#8A2BE2',
       backgroundColor: 'rgba(138, 43, 226, 0.2)',
