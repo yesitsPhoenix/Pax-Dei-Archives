@@ -51,7 +51,7 @@ const fetchUserProfile = async () => {
 
     if (userAvatar) userAvatar.src = user.user_metadata.avatar_url || 'https://via.placeholder.com/150';
     if (userDiscordName) userDiscordName.textContent = user.user_metadata.full_name || 'N/A';
-    if (userCreatedAt) userCreatedAt.textContent = new Date(user.created_at).toLocaleDateString();
+    if (userCreatedAt) userCreatedAt.textContent = new Date(userData.created_at).toLocaleDateString();
     if (userLastLoginAt) userLastLoginAt.textContent = userData.last_login_at ? new Date(userData.last_login_at).toLocaleDateString() : 'N/A';
 
     if (profileLoading) profileLoading.style.display = 'none';
