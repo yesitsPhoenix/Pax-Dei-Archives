@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pax Dei Archives - Gems</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script async src="https://paxdei.gaming.tools/embed.js"></script>
+    <link rel="stylesheet" href="frontend/www/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="frontend/www/css/abilities.css">
+    <link rel="stylesheet" href="https://unpkg.com/swiper@7/swiper-bundle.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+    <script> window.gtTooltipConfig = {
+        scale: 0.8,
+        delay: 40,
+        };
+    </script>
+</head>
+<body>
+    <header class="header-area">
+        <div class="container">
+            <nav class="main-nav">
+                <a href="index.html" class="logo">
+                    <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
+                    <h1>Pax Dei Archives</h1>
+                </a>
+                <a class='menu-trigger'>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </a>
+                <div class="nav-and-search-wrapper">
+                    <ul class="nav">
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="abilities.html">Abilities</a></li>
+                        <li><a href="gems.html" class="active">Gems</a></li>
+                        <li><a href="articles.html">Articles</a></li>
+                        <li><a href="news-updates.html">News</a></li>
+                        <li><a href="developer-comments.html">Dev Comments</a></li>
+                        <li><a href="lore.html">Lore</a></li>
+                        <li><a href="ledger.html">Ledger</a></li>
+                        <li><a href="trends.html">Sales Trends</a></li>
+                        <li><a href="map.html">Map</a></li>
+                    </ul>
+                    <div class="search-input">
+                        <form id="search" action="#">
+                            <input type="text" placeholder="Search the Archives" id='searchText' name="searchKeyword" />
+                            <button type="submit" class="search-button"><i class="fa fa-search"></i></button>
+                        </form>
+                        <div id="searchResultsDropdown" class="search-results-dropdown">
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+    <div class="container mt-8 mb-8">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="page-content">
+                    <div class="bg-[#1A202C] p-6 sm:p-8 md:p-10 rounded-lg shadow-xl w-full max-w-10xl mx-auto border border-gray-700">
+                        <h1 class="text-3xl sm:text-4xl font-bold text-center mb-6 text-white-400">Gems & Minerals</h1>
+                        <br>
+                        <em>Special thanks to <strong>(Sanctuary) Ixidor</strong> for the work to gather these details -- <a href="https://discord.com/channels/1071081786962088018/1247148682592256071/1391821269112061952" target="_blank">Source</a></em>
+                        <br>
+                       
+                        <div id="gem-filters" class="mb-8">
+                        </div>
+                        <div id="gems-list" class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
+                                <h3 class="text-xl font-semibold text-white">Topaz</h3>
+                                <p class="text-gray-400">Found in Gneiss, Impure Iron Ore</p>
+                            </div>
+                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
+                                <h3 class="text-xl font-semibold text-white">Garnet</h3>
+                                <p class="text-gray-400">Found in Gneiss, Tin, Copper, Impure Iron Ore, Limestone</p>
+                            </div>
+                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
+                                <h3 class="text-xl font-semibold text-white">Onyx</h3>
+                                <p class="text-gray-400">Found in Gneiss, Iron Ore</p>
+                            </div>
+                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
+                                <h3 class="text-xl font-semibold text-white">Citrine</h3>
+                                <p class="text-gray-400">Found in Tin, Copper, Impure Iron Ore</p>
+                            </div>
+                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
+                                <h3 class="text-xl font-semibold text-white">Pyrite</h3>
+                                <p class="text-gray-400">Found in Impure Iron Ore, Iron Ore</p>
+                            </div>
+                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
+                                <h3 class="text-xl font-semibold text-white">Quartz</h3>
+                                <p class="text-gray-400">Found in Impure Iron Ore, Iron Ore</p>
+                            </div>
+                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
+                                <h3 class="text-xl font-semibold text-white">Agate</h3>
+                                <p class="text-gray-400">Found in Pure Iron Ore</p>
+                            </div>
+                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
+                                <h3 class="text-xl font-semibold text-white">Pearl</h3>
+                                <p class="text-gray-400">Found in Pure Iron Ore, Granite</p>
+                            </div>
+                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
+                                <h3 class="text-xl font-semibold text-white">Fluorite</h3>
+                                <p class="text-gray-400">Found in Pure Iron Ore, Granite</p>
+                            </div>
+                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
+                                <h3 class="text-xl font-semibold text-white">Tourmaline</h3>
+                                <p class="text-gray-400">Found in Pure Iron Ore, Iron Ore</p>
+                            </div>
+                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
+                                <h3 class="text-xl font-semibold text-white">Cuprite</h3>
+                                <p class="text-gray-400">Found in Pure Iron Ore, Granite</p>
+                            </div>
+                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
+                                <h3 class="text-xl font-semibold text-white">Emerald</h3>
+                                <p class="text-gray-400">Found in Pure Iron Ore, Granite</p>
+                            </div>
+                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
+                                <h3 class="text-xl font-semibold text-white">Amber</h3>
+                                <p class="text-gray-400">Found in Iron Ore</p>
+                            </div>
+                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
+                                <h3 class="text-xl font-semibold text-white">Silver</h3>
+                                <p class="text-gray-400">Found in Limestone, Granite</p>
+                            </div>
+                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
+                                <h3 class="text-xl font-semibold text-white">Gold</h3>
+                                <p class="text-gray-400">Found in Limestone, Granite</p>
+                            </div>
+                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
+                                <h3 class="text-xl font-semibold text-white">Turquoise</h3>
+                                <p class="text-gray-400">Found in Granite</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12">
+                    <p>Copyright © 2025 Pax Dei Archives. All rights reserved.</p>
+                    <a href="admin.html">Admin</a>
+                </div>
+            </div>
+        </div>
+        <div class="corner-credit">
+            <div class="corner-credit-top-row"> <img src="frontend/www/assets/phoenix.png" alt="Phoenix profile image" class="profile-image" />
+                <span class="nav-text-profile">Made by Phoenix ✨</span>
+            </div>
+            <div id="utc-clock-display" class="utc-clock"></div>
+        </div>
+    </footer>
+        <div id="floating-avatar-container">
+        <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar js-floating-avatar">
+    </div>
+
+    <div id="auth-modal">
+        <div class="modal-content-wrapper" id="modal-content-wrapper">
+        </div>
+    </div>
+    <div id="gem-popup-overlay" class="popup-overlay"></div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script type="module" src="frontend/www/js/supabaseClient.js"></script>
+    <script type="module" src="frontend/www/js/utils.js"></script>
+    <script type="module" src="frontend/www/js/main.js"></script>
+    <script type="module" src="frontend/www/js/gems.js"></script> 
+    <script type="module" src="frontend/www/js/popoutAuth.js"></script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+[
+  {
+    "name": "Topaz",
+    "found_in": ["Gneiss", "Impure Iron"],
+    "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_rawgemstone_topaz.webp",
+    "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_gemstone_topaz"
+  },
+  {
+    "name": "Garnet",
+    "found_in": ["Gneiss", "Tin", "Copper", "Impure Iron", "Limestone"],
+    "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_rawgemstone_garnet.webp",
+    "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_gemstone_garnet"
+  },
+  {
+    "name": "Onyx",
+    "found_in": ["Gneiss", "Iron"],
+    "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_rawgemstone_onyx.webp",
+    "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_gemstone_onyx"
+  },
+  {
+    "name": "Citrine",
+    "found_in": ["Tin", "Copper", "Impure Iron"],
+    "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_rawgemstone_citrine.webp",
+    "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_gemstone_citrine"
+  },
+  {
+    "name": "Pyrite",
+    "found_in": ["Impure Iron", "Iron"],
+    "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_rawmineral_pyrite.webp",
+    "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_mineral_pyrite"
+  },
+  {
+    "name": "Quartz",
+    "found_in": ["Impure Iron", "Iron"],
+    "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_rawmineral_quartz.webp",
+    "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_mineral_quartz"
+  },
+  {
+    "name": "Agate",
+    "found_in": ["Pure Iron"],
+    "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_rawmineral_agate.webp",
+    "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_mineral_agate"
+  },
+  {
+    "name": "Pearl",
+    "found_in": ["Pure Iron", "Granite"],
+    "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_rawgemstone_pearl.webp",
+    "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_gemstone_pearls"
+  },
+  {
+    "name": "Fluorite",
+    "found_in": ["Pure Iron", "Granite"],
+    "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_rawmineral_fluorite.webp",
+    "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_mineral_fluorite"
+  },
+  {
+    "name": "Tourmaline",
+    "found_in": ["Pure Iron", "Iron"],
+    "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_rawgemstone_tourmaline.webp",
+    "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_gemstone_tourmaline"
+  },
+  {
+    "name": "Cuprite",
+    "found_in": ["Pure Iron", "Granite"],
+    "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_rawmineral_cuprite.webp",
+    "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_mineral_cuprite"
+  },
+  {
+    "name": "Emerald",
+    "found_in": ["Pure Iron", "Granite"],
+    "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_rawgemstone_emerald.webp",
+    "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_gemstone_emerald"
+  },
+  {
+    "name": "Amber",
+    "found_in": ["Iron"],
+    "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_rawgemstone_amber.webp",
+    "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_gemstone_amber"
+  },
+  {
+    "name": "Quicksilver",
+    "found_in": ["Limestone", "Granite"],
+    "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_rawmineral_quicksilver.webp",
+    "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_mineral_quicksilver"
+  },
+  {
+    "name": "Turquoise",
+    "found_in": ["Granite"],
+    "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_rawmineral_turquoise.webp",
+    "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_mineral_turquoise"
+  },
+  {
+    "name": "Sand",
+    "found_in": ["Gneiss", "Tin", "Copper", "Impure Iron", "Iron", "Limestone", "Granite"],
+    "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_earthresources_sand_basket.webp",
+    "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_rock_sand"
+  },
+  {
+    "name": "Obsidian",
+    "found_in": ["Gneiss", "Tin", "Copper", "Impure Iron"],
+    "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_rawgemstone_obsidian.webp",
+    "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_mineral_obsidian"
+  },
+  {
+    "name": "Magnetite",
+    "found_in": ["Gneiss", "Tin", "Copper", "Limestone"],
+    "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_rawmineral_magnetite.webp",
+    "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_mineral_magnetite"
+  },
+  {
+    "name": "Blizzard Stone",
+    "found_in": ["Gneiss", "Tin", "Copper", "Impure Iron"],
+    "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_rawgemstone_blizzardstone.webp",
+    "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_mineral_blizzardstone"
+  },
+  {
+    "name": "Lead",
+    "found_in": ["Gneiss", "Tin", "Copper", "Impure Iron"],
+    "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_rawmineral_lead.webp",
+    "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_mineral_lead"
+  },
+  {
+    "name": "Sulfur",
+    "found_in": ["Iron"],
+    "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_rawmineral_sulfur.webp",
+    "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_mineral_sulfur"
+  },
+  {
+    "name": "Hematite",
+    "found_in": ["Iron"],
+    "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_rawmineral_hematite.webp",
+    "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_mineral_hematite"
+  },
+  {
+    "name": "Opal",
+    "found_in": ["Impure Iron"],
+    "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_rawgemstone_opal.webp",
+    "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_gemstone_opal"
+  }
+]
