@@ -216,5 +216,25 @@
     ],
     "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_rawmineral_turquoise.webp",
     "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_mineral_turquoise"
+  },
+  {
+    "name": "Silver Ore",
+    "found_in": [
+      "Gneiss",
+      "Granite",
+      "Limestone"
+    ],
+    "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_rawore_silver.webp",
+    "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_ore_silver"
+  },
+  {
+    "name": "Aurum/Gold",
+    "found_in": [
+      "Gneiss",
+      "Granite",
+      "Limestone"
+    ],
+    "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_rawore_gold.webp",
+    "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_ore_gold"
   }
 ]

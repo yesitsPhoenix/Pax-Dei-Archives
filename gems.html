@@ -17,6 +17,7 @@
         delay: 40,
         };
     </script>
+
 </head>
 <body>
     <header class="header-area">
@@ -60,80 +61,16 @@
         <div class="row">
             <div class="col-lg-12">
                 <div class="page-content">
-                    <div class="bg-[##2A2A2A] p-6 sm:p-8 md:p-10 rounded-lg w-full max-w-10xl mx-auto">
+                    <div class="p-6 sm:p-8 md:p-10 rounded-lg w-full max-w-10xl mx-auto">
                         <h1 class="text-3xl sm:text-4xl font-bold text-center mb-6 text-white-400">Gems & Minerals</h1>
                         <br>
                         <em>Special thanks to <strong>(Sanctuary) Ixidor</strong> for the work to gather these details -- <a href="https://discord.com/channels/1071081786962088018/1247148682592256071/1391821269112061952" target="_blank">Source</a></em>
                         <br>
-                       
+                        <br>
                         <div id="gem-filters" class="flex flex-wrap gap-2 justify-center mb-6"></div>
                         </div>
                         <div id="gems-list" class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-6">
-                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
-                                <h3 class="text-xl font-semibold text-white">Topaz</h3>
-                                <p class="text-gray-400">Found in Gneiss, Impure Iron Ore</p>
                             </div>
-                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
-                                <h3 class="text-xl font-semibold text-white">Garnet</h3>
-                                <p class="text-gray-400">Found in Gneiss, Tin, Copper, Impure Iron Ore, Limestone</p>
-                            </div>
-                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
-                                <h3 class="text-xl font-semibold text-white">Onyx</h3>
-                                <p class="text-gray-400">Found in Gneiss, Iron Ore</p>
-                            </div>
-                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
-                                <h3 class="text-xl font-semibold text-white">Citrine</h3>
-                                <p class="text-gray-400">Found in Tin, Copper, Impure Iron Ore</p>
-                            </div>
-                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
-                                <h3 class="text-xl font-semibold text-white">Pyrite</h3>
-                                <p class="text-gray-400">Found in Impure Iron Ore, Iron Ore</p>
-                            </div>
-                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
-                                <h3 class="text-xl font-semibold text-white">Quartz</h3>
-                                <p class="text-gray-400">Found in Impure Iron Ore, Iron Ore</p>
-                            </div>
-                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
-                                <h3 class="text-xl font-semibold text-white">Agate</h3>
-                                <p class="text-gray-400">Found in Pure Iron Ore</p>
-                            </div>
-                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
-                                <h3 class="text-xl font-semibold text-white">Pearl</h3>
-                                <p class="text-gray-400">Found in Pure Iron Ore, Granite</p>
-                            </div>
-                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
-                                <h3 class="text-xl font-semibold text-white">Fluorite</h3>
-                                <p class="text-gray-400">Found in Pure Iron Ore, Granite</p>
-                            </div>
-                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
-                                <h3 class="text-xl font-semibold text-white">Tourmaline</h3>
-                                <p class="text-gray-400">Found in Pure Iron Ore, Iron Ore</p>
-                            </div>
-                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
-                                <h3 class="text-xl font-semibold text-white">Cuprite</h3>
-                                <p class="text-gray-400">Found in Pure Iron Ore, Granite</p>
-                            </div>
-                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
-                                <h3 class="text-xl font-semibold text-white">Emerald</h3>
-                                <p class="text-gray-400">Found in Pure Iron Ore, Granite</p>
-                            </div>
-                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
-                                <h3 class="text-xl font-semibold text-white">Amber</h3>
-                                <p class="text-gray-400">Found in Iron Ore</p>
-                            </div>
-                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
-                                <h3 class="text-xl font-semibold text-white">Silver</h3>
-                                <p class="text-gray-400">Found in Limestone, Granite</p>
-                            </div>
-                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
-                                <h3 class="text-xl font-semibold text-white">Gold</h3>
-                                <p class="text-gray-400">Found in Limestone, Granite</p>
-                            </div>
-                            <div class="gem-card bg-gray-800 rounded-lg p-4 text-center">
-                                <h3 class="text-xl font-semibold text-white">Turquoise</h3>
-                                <p class="text-gray-400">Found in Granite</p>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -172,5 +109,12 @@
     <script type="module" src="frontend/www/js/main.js"></script>
     <script type="module" src="frontend/www/js/gems.js"></script> 
     <script type="module" src="frontend/www/js/popoutAuth.js"></script>
+        <style>
+    .active-filter {
+    background-color: #72e0cc;
+    color: #1f2937;
+    font-weight: bold;
+    }
+    </style>
 </body>
 </html>
