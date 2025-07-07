@@ -2,6 +2,7 @@ import { supabase } from '../supabaseClient.js';
 import { currentCharacterId } from './characters.js';
 
 let marketActivityChart = null;
+let pveActivityChart = null;
 
 export const renderSalesChart = (transactions, timeframe = 'daily') => {
   const ctx = document.getElementById('salesChartCanvas')?.getContext('2d');
@@ -18,7 +19,6 @@ export const renderSalesChart = (transactions, timeframe = 'daily') => {
       aggregatedSales,
       aggregatedPurchases,
       aggregatedFees,
-      aggregatedPVE,
       allLabels
     } = aggregateTransactionData(transactions, timeframe);
 
@@ -33,14 +33,48 @@ export const renderSalesChart = (transactions, timeframe = 'daily') => {
         datasets: [
           createDataset('Gross Sales', aggregatedSales, allLabels, '#FFD700'),
           createDataset('Purchases', aggregatedPurchases, allLabels, '#00CED1'),
-          createDataset('Fees Paid', aggregatedFees, allLabels, '#FF6384'),
-          createDataset('PVE Net Gain/Loss', aggregatedPVE, allLabels, '#32CD32')
+          createDataset('Fees Paid', aggregatedFees, allLabels, '#FF6384')
         ]
       },
-      options: chartOptions(timeframe)
+      options: chartOptions(timeframe, 'Market Activity')
     });
   } catch (error) {
     console.error('Error rendering market activity chart:', error.message);
+  }
+};
+
+export const renderPVEChart = (transactions, timeframe = 'daily') => {
+  const ctx = document.getElementById('pveChartCanvas')?.getContext('2d');
+  if (!currentCharacterId || !transactions || !ctx) {
+    if (pveActivityChart) {
+      pveActivityChart.destroy();
+      pveActivityChart = null;
+    }
+    if (ctx) ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    return;
+  }
+  try {
+    const {
+      aggregatedPVE,
+      allLabels
+    } = aggregateTransactionData(transactions, timeframe);
+
+    if (pveActivityChart) {
+      pveActivityChart.destroy();
+    }
+
+    pveActivityChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: allLabels,
+        datasets: [
+          createDataset('PVE Net Gain/Loss', aggregatedPVE, allLabels, '#32CD32')
+        ]
+      },
+      options: chartOptions(timeframe, 'PVE Gold Activity')
+    });
+  } catch (error) {
+    console.error('Error rendering PVE activity chart:', error.message);
   }
 };
 
@@ -53,7 +87,7 @@ const createDataset = (label, dataMap, labels, color) => ({
   fill: false
 });
 
-const chartOptions = (timeframe) => ({
+const chartOptions = (timeframe, titleText) => ({
   responsive: true,
   maintainAspectRatio: false,
   scales: {
@@ -95,7 +129,7 @@ const chartOptions = (timeframe) => ({
     },
     title: {
       display: true,
-      text: `Market & PVE Activity by ${timeframe === 'monthly' ? 'Month' : timeframe === 'weekly' ? 'Week' : 'Day'} in UTC`,
+      text: `${titleText} by ${timeframe === 'monthly' ? 'Month' : timeframe === 'weekly' ? 'Week' : 'Day'} in UTC`,
       font: { size: 18 },
       color: '#ffffff'
     }
@@ -123,7 +157,6 @@ const aggregateTransactionData = (transactions, timeframe) => {
       const week = getWeekNumber(d);
       key = `${year}-W${week.toString().padStart(2, '0')}`;
     } else {
-      // Modified for daily figures to remove the year
       key = `${(transactionDate.getUTCMonth() + 1).toString().padStart(2, '0')}-${transactionDate.getUTCDate().toString().padStart(2, '0')}`;
     }
 
@@ -164,7 +197,5 @@ const hexToRGBA = (hex, alpha = 1) => {
 };
 
 export const setupSalesChartListeners = (getDataCallback) => {
-  document.getElementById('viewSalesWeekly')?.addEventListener('click', () => renderSalesChart(getDataCallback(), 'weekly'));
-  document.getElementById('viewSalesMonthly')?.addEventListener('click', () => renderSalesChart(getDataCallback(), 'monthly'));
-  document.getElementById('viewSalesDaily')?.addEventListener('click', () => renderSalesChart(getDataCallback(), 'daily'));
+
 };

@@ -151,16 +151,31 @@
                 </section>
 
                 <section class="sales-chart-section my-8">
-                    <h2 class="text-2xl font-bold mb-4 text-gray-800">Transaction Trends</h2>
-                    <div class="relative mb-4" style="height: 350px;">
-                        <canvas id="salesChartCanvas"></canvas>
+                    <h2 class="text-2xl font-bold mb-4 text-gray-800">Market Transaction Trends</h2>
+
+                    <div class="flex flex-nowrap gap-4 mb-4 h-[350px]">
+                        <div class="basis-2/3 relative overflow-hidden">
+                        <canvas id="salesChartCanvas" class="absolute inset-0 w-full h-full"></canvas>
+                        </div>
+
+                        <div class="basis-1/3 relative overflow-hidden">
+                        <canvas id="pveChartCanvas" class="absolute inset-0 w-full h-full"></canvas>
+                        </div>
                     </div>
-                    <div class="flex justify-center gap-4">
-                        <button id="viewSalesDaily" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">View Daily</button>
-                        <button id="viewSalesWeekly" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">View Weekly</button>
-                        <button id="viewSalesMonthly" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">View Monthly</button>
+
+                    <div class="flex justify-center gap-4 mb-8">
+                        <button id="viewDaily" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">
+                        View Daily
+                        </button>
+                        <button id="viewWeekly" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">
+                        View Weekly
+                        </button>
+                        <button id="viewMonthly" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">
+                        View Monthly
+                        </button>
                     </div>
                 </section>
+
                 <section id="active-listings-section" class="active-listings">
                     <h2>Active Market Listings</h2>
                     <div class="market-stall-tabs"></div>

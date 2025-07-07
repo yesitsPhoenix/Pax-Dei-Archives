@@ -4,7 +4,7 @@ import { initializeListings, loadActiveListings, populateMarketStallDropdown, se
 import { initializeCharacters, insertCharacterModalHtml, currentCharacterId, getCurrentCharacter } from './modules/characters.js';
 import { initializeSales, loadTransactionHistory, handleDownloadCsv } from './modules/sales.js';
 import { renderDashboard } from './modules/dashboard.js';
-import { renderSalesChart, setupSalesChartListeners } from './modules/salesChart.js';
+import { renderPVEChart, renderSalesChart } from './modules/salesChart.js';
 
 import {
     showAddListingModalBtn,
@@ -172,12 +172,22 @@ async function populateItemData() {
     }
 }
 
+const updateAllCharts = (timeframe) => {
+    if (allCharacterActivityData) {
+        renderSalesChart(allCharacterActivityData, timeframe);
+        renderPVEChart(allCharacterActivityData, timeframe);
+    } else {
+        renderSalesChart([], timeframe);
+        renderPVEChart([], timeframe);
+    }
+};
+
 export const loadTraderPageData = async () => {
     if (!currentUser || !currentUser.id || !currentCharacterId) {
         renderDashboard({}, null);
         await loadActiveListings();
         loadTransactionHistory([]);
-        renderSalesChart([], 'daily');
+        updateAllCharts('daily');
         if (document.querySelector('.market-stall-tabs')) {
             document.querySelector('.market-stall-tabs').innerHTML = '<p class="text-gray-600 text-center py-4">Select a character to manage market stalls.</p>';
         }
@@ -208,12 +218,10 @@ export const loadTraderPageData = async () => {
         renderDashboard(dashboardStats ? dashboardStats[0] : {}, currentCharacterData);
         await loadActiveListings();
         loadTransactionHistory(allCharacterActivityData);
-        renderSalesChart(allCharacterActivityData, 'daily');
-        // Add this line to repopulate the market stall dropdown when character data is loaded
+        updateAllCharts('daily');
         if (modalMarketStallLocationSelect) {
             await populateMarketStallDropdown(modalMarketStallLocationSelect);
         }
-        // Call setupMarketStallTabs to refresh the tabs for the new character
         await setupMarketStallTabs();
 
     } catch (error) {
@@ -258,7 +266,11 @@ const addPageEventListeners = () => {
             }
         });
     }
-    setupSalesChartListeners(() => allCharacterActivityData);
+    document.getElementById('viewDaily')?.addEventListener('click', () => updateAllCharts('daily'));
+    document.getElementById('viewWeekly')?.addEventListener('click', () => updateAllCharts('weekly'));
+    document.getElementById('viewMonthly')?.addEventListener('click', () => updateAllCharts('monthly'));
+
+
     if (showAddListingModalBtn) {
         showAddListingModalBtn.addEventListener('click', () => {
             if (addListingModal) {
@@ -292,7 +304,7 @@ const addPageEventListeners = () => {
             modalItemNameInput.value = selectedItem.item_name;
             const categorySelect = modalItemCategorySelect;
             if (categorySelect) {
-                categorySelect.value = String(selectedItem.category_id); // Convert to string here
+                categorySelect.value = String(selectedItem.category_id);
             }
             modalItemNameInput.dataset.selectedItemId = selectedItem.item_id;
             modalItemNameInput.dataset.selectedPaxDeiSlug = selectedItem.p_slug;
@@ -445,7 +457,7 @@ function initializeAutocomplete(allItems) {
             modalItemNameInput.value = selectedItem.item_name;
             const modalItemCategorySelect = document.getElementById('modal-item-category');
             if (modalItemCategorySelect) {
-                modalItemCategorySelect.value = String(selectedItem.category_id); // Convert to string here
+                modalItemCategorySelect.value = String(selectedItem.category_id);
             }
             modalItemNameInput.dataset.selectedItemId = selectedItem.item_id;
             modalItemNameInput.dataset.selectedPaxDeiSlug = selectedItem.pax_dei_slug;
@@ -461,7 +473,7 @@ function initializeAutocomplete(allItems) {
             modalPurchaseItemNameInput.value = selectedItem.item_name;
             const modalPurchaseItemCategorySelect = document.getElementById('modal-purchase-item-category');
             if (modalPurchaseItemCategorySelect) {
-                modalPurchaseItemCategorySelect.value = String(selectedItem.category_id); // Convert to string here
+                modalPurchaseItemCategorySelect.value = String(selectedItem.category_id);
             }
             modalPurchaseItemNameInput.dataset.selectedItemId = selectedItem.item_id;
             modalPurchaseItemNameInput.dataset.selectedPaxDeiSlug = selectedItem.pax_dei_slug;
