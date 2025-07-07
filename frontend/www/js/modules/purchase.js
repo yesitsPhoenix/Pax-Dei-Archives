@@ -11,6 +11,7 @@ import {
 
 const getOrCreateItemId = async (itemName, categoryId) => {
     if (!currentCharacterId) {
+        console.error('[getOrCreateItemId] No character selected.');
         await showCustomModal('Error', 'No character selected. Cannot create or retrieve item.', [{
             text: 'OK',
             value: true
@@ -29,6 +30,7 @@ const getOrCreateItemId = async (itemName, categoryId) => {
         .limit(1);
 
     if (selectError) {
+        console.error('[getOrCreateItemId] Failed to check for existing item:', selectError);
         await showCustomModal('Error', 'Failed to check for existing item.', [{
             text: 'OK',
             value: true
@@ -36,7 +38,9 @@ const getOrCreateItemId = async (itemName, categoryId) => {
         return null;
     }
 
-    if (items && items.length > 0) return items[0].item_id;
+    if (items && items.length > 0) {
+        return items[0].item_id;
+    }
 
     const {
         data: newItem,
@@ -52,7 +56,7 @@ const getOrCreateItemId = async (itemName, categoryId) => {
         .single();
 
     if (insertError) {
-        console.error('Supabase insert error:', insertError);
+        console.error('[getOrCreateItemId] Supabase insert error for new item:', insertError);
         console.error('Details:', insertError.details);
         console.error('Hint:', insertError.hint);
         await showCustomModal('Error', 'Failed to create new item record: ' + insertError.message, [{
@@ -69,6 +73,7 @@ export const handleRecordPurchase = async (e) => {
     e.preventDefault();
 
     if (!currentCharacterId) {
+        console.error('[handleRecordPurchase] No character selected.');
         await showCustomModal('Error', 'Please select a character first.', [{
             text: 'OK',
             value: true
@@ -82,16 +87,18 @@ export const handleRecordPurchase = async (e) => {
         submitButton.textContent = 'Recording...';
     }
 
-    const itemName = document.getElementById('purchase-item-name').value;
+    const itemName = document.getElementById('modal-purchase-item-name').value;
     const categoryId = document.getElementById('purchase-item-category').value;
-    const quantity = parseInt(document.getElementById('purchase-quantity').value, 10);
-    const costPerItem = parseInt(document.getElementById('purchase-cost-per-item').value, 10);
-    const date = document.getElementById('purchase-date').value;
-    const notes = document.getElementById('purchase-notes').value;
-    const marketStallId = document.getElementById('purchase-market-stall-location').value;
+    const numStacks = parseInt(document.getElementById('modal-purchase-item-stacks').value, 10) || 1;
+    const countPerStack = parseInt(document.getElementById('modal-purchase-item-count-per-stack').value, 10);
+    const pricePerStack = parseFloat(document.getElementById('modal-purchase-item-price-per-stack').value);
+    const date = new Date().toISOString();
+    const notes = '';
 
-    if (!itemName || !categoryId || isNaN(quantity) || isNaN(costPerItem) || !date || !marketStallId) {
-        await showCustomModal('Error', 'Please fill in all required fields: Item Name, Category, Quantity, Cost Per Item, Date, and Market Stall.', [{
+
+    if (!itemName || !categoryId || isNaN(numStacks) || isNaN(countPerStack) || isNaN(pricePerStack)) {
+        console.error('[handleRecordPurchase] Validation failed: Missing or invalid required fields.');
+        await showCustomModal('Error', 'Please fill in all required fields: Item Name, Category, Stacks, Count per Stack, and Price per Stack.', [{
             text: 'OK',
             value: true
         }]);
@@ -104,6 +111,7 @@ export const handleRecordPurchase = async (e) => {
 
     const integerCategoryId = parseInt(categoryId, 10);
     if (isNaN(integerCategoryId)) {
+        console.error('[handleRecordPurchase] Validation failed: Invalid category ID.');
         await showCustomModal('Error', 'Invalid category selected. Please ensure a valid category is chosen.', [{
             text: 'OK',
             value: true
@@ -118,6 +126,7 @@ export const handleRecordPurchase = async (e) => {
     try {
         const itemId = await getOrCreateItemId(itemName, integerCategoryId);
         if (!itemId) {
+            console.warn('[handleRecordPurchase] Item ID could not be obtained. Aborting purchase record.');
             if (submitButton) {
                 submitButton.disabled = false;
                 submitButton.textContent = 'Record Purchase';
@@ -125,8 +134,7 @@ export const handleRecordPurchase = async (e) => {
             return;
         }
 
-        const totalCost = quantity * costPerItem;
-
+        const totalCostOfAllStacks = numStacks * pricePerStack;
         const {
             data: existingGoldData,
             error: goldError
@@ -137,13 +145,15 @@ export const handleRecordPurchase = async (e) => {
             .single();
 
         if (goldError) {
+            console.error('[handleRecordPurchase] Error fetching character gold:', goldError);
             throw goldError;
         }
 
         const currentGold = existingGoldData.gold || 0;
 
-        if (currentGold < totalCost) {
-            await showCustomModal('Error', `Not enough gold. Current gold: ${currentGold.toLocaleString()}. Purchase cost: ${totalCost.toLocaleString()}.`, [{
+        if (currentGold < totalCostOfAllStacks) {
+            console.warn('[handleRecordPurchase] Not enough gold for purchase.');
+            await showCustomModal('Error', `Not enough gold. Current gold: ${currentGold.toLocaleString()}. Purchase cost: ${totalCostOfAllStacks.toLocaleString()}.`, [{
                 text: 'OK',
                 value: true
             }]);
@@ -154,42 +164,37 @@ export const handleRecordPurchase = async (e) => {
             return;
         }
 
-        // Handle multiple stacks if inputs are provided
-        const numStacks = parseInt(document.getElementById('purchase-item-stacks').value, 10) || 1;
-        const countPerStack = parseInt(document.getElementById('purchase-item-count-per-stack').value, 10) || quantity;
-
         const recordsToInsert = [];
         for (let i = 0; i < numStacks; i++) {
             recordsToInsert.push({
                 item_id: itemId,
                 character_id: currentCharacterId,
-                market_stall_id: marketStallId,
-                purchase_quantity: (numStacks > 1) ? countPerStack : quantity, // Use countPerStack if multiple stacks, else use total quantity
-                cost_per_item: costPerItem,
-                total_cost: (numStacks > 1) ? (countPerStack * costPerItem) : totalCost,
+                quantity_purchased: countPerStack,
+                purchase_price_per_unit: pricePerStack / countPerStack,
+                total_purchase_price: pricePerStack,
                 purchase_date: date,
-                notes: notes,
             });
         }
 
-
         const {
+            data: insertedData,
             error: insertPurchaseError,
-            count: successCount
         } = await supabase
             .from('purchases')
             .insert(recordsToInsert)
-            .select('*', {
-                count: 'exact'
-            });
+            .select('*');
+
+        const actualSuccessCount = insertedData ? insertedData.length : 0;
 
 
         if (insertPurchaseError) {
+            console.error('[handleRecordPurchase] Supabase insert error:', insertPurchaseError);
             throw insertPurchaseError;
         }
 
-        if (successCount > 0) {
-            const newGold = currentGold - totalCost;
+        if (actualSuccessCount > 0) {
+            const newGold = currentGold - totalCostOfAllStacks;
+
             const {
                 error: updateGoldError
             } = await supabase
@@ -200,13 +205,13 @@ export const handleRecordPurchase = async (e) => {
                 .eq('character_id', currentCharacterId);
 
             if (updateGoldError) {
+                console.error('[handleRecordPurchase] SUCCESS BLOCK: Error deducting gold:', updateGoldError.message);
                 await showCustomModal('Error', 'Successfully recorded purchase(s), but failed to deduct gold: ' + updateGoldError.message, [{
                     text: 'OK',
                     value: true
                 }]);
-                console.error('Error deducting gold:', updateGoldError.message);
             } else {
-                await showCustomModal('Success', `Successfully recorded ${successCount} new purchase(s) and deducted ${totalCost.toLocaleString()} gold!`, [{
+                await showCustomModal('Success', `Successfully recorded ${actualSuccessCount} new purchase(s) and deducted ${totalCostOfAllStacks.toLocaleString()} gold!`, [{
                     text: 'OK',
                     value: true
                 }]);
@@ -214,14 +219,15 @@ export const handleRecordPurchase = async (e) => {
                 await loadTraderPageData();
             }
         } else {
-            await showCustomModal('Error', 'Failed to record any purchases. Errors: ' + errors.join(', '), [{
+            console.warn('[handleRecordPurchase] FALLBACK BLOCK: Insert operation reported no error but 0 actual inserts (returned data array was empty).');
+            await showCustomModal('Error', 'Failed to record any purchases. The database reported no error but inserted 0 rows. Please check console logs for details, especially the "Records to Insert" content and Supabase Database Logs for hidden constraints.', [{
                 text: 'OK',
                 value: true
             }]);
         }
     } catch (e) {
-        console.error('Error recording purchase:', e);
-        await showCustomModal('Error', 'An unexpected error occurred while recording the purchase.', [{
+        console.error('[handleRecordPurchase] An unhandled error occurred during purchase recording:', e);
+        await showCustomModal('Error', 'An unexpected error occurred while recording the purchase: ' + e.message, [{
             text: 'OK',
             value: true
         }]);

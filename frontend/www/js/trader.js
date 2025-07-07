@@ -178,7 +178,6 @@ export const loadTraderPageData = async () => {
         await loadActiveListings();
         loadTransactionHistory([]);
         renderSalesChart([], 'daily');
-        // If no character selected, clear and hide market stall tabs
         if (document.querySelector('.market-stall-tabs')) {
             document.querySelector('.market-stall-tabs').innerHTML = '<p class="text-gray-600 text-center py-4">Select a character to manage market stalls.</p>';
         }

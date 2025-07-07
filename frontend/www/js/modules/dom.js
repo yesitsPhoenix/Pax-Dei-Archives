@@ -13,7 +13,7 @@ export const listingsPaginationContainer = document.getElementById('listings-pag
 export const sortBySelect = document.getElementById('sort-by');
 export const sortDirectionSelect = document.getElementById('sort-direction');
 
-export const addPurchaseForm = document.getElementById('add-purchase-form');
+export const addPurchaseForm = document.getElementById('recordPurchaseFormModal');
 export const purchaseItemNameInput = document.getElementById('purchase-item-name');
 export const purchaseItemCategorySelect = document.getElementById('purchase-item-category');
 export const purchaseItemStacksInput = document.getElementById('purchase-item-stacks');
