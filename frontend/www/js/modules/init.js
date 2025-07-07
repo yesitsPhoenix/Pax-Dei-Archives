@@ -87,7 +87,10 @@ export const fetchAndPopulateCategories = async (selectElement) => {
 
     if (cachedCategories === null) {
         try {
-            const { data, error } = await supabase
+            const {
+                data,
+                error
+            } = await supabase
                 .from('item_categories')
                 .select('category_id, category_name')
                 .order('category_name');
@@ -361,7 +364,10 @@ export const fetchAndCacheMarketStalls = async (characterId) => {
         return cachedMarketStalls;
     }
     try {
-        const { data, error } = await supabase
+        const {
+            data,
+            error
+        } = await supabase
             .from('market_stalls')
             .select('id, stall_name')
             .eq('character_id', characterId)
@@ -430,12 +436,38 @@ export const setupMarketStallTabs = async () => {
 
         let firstStallId = null;
 
-        marketStalls.forEach((stall, index) => {
+        const stallsWithCounts = await Promise.all(marketStalls.map(async (stall) => {
+            const {
+                count,
+                error: countError
+            } = await supabase
+                .from('market_listings')
+                .select('*', {
+                    count: 'exact',
+                    head: true
+                })
+                .eq('market_stall_id', stall.id)
+                .eq('character_id', currentCharacterId)
+                .eq('is_fully_sold', false)
+                .eq('is_cancelled', false);
+
+            if (countError) {
+                console.error(`Error fetching listing count for stall ${stall.stall_name}:`, countError);
+                return { ...stall,
+                    listingCount: 0
+                };
+            }
+            return { ...stall,
+                listingCount: count
+            };
+        }));
+
+        stallsWithCounts.forEach((stall, index) => {
             const tabButton = document.createElement('button');
             tabButton.type = 'button';
             tabButton.dataset.stallId = stall.id;
             tabButton.classList.add('tab-button', 'px-4', 'py-2', 'font-medium', 'text-sm', 'rounded-t-lg', 'focus:outline-none', 'transition-colors', 'duration-200');
-            tabButton.textContent = stall.stall_name;
+            tabButton.textContent = `${stall.stall_name} - ${stall.listingCount}`;
 
             const tabContent = document.createElement('div');
             tabContent.id = `listings-for-${stall.id}`;
