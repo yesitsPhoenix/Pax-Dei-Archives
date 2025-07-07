@@ -1,0 +1,686 @@
+[
+  {
+    "id": "397cb8e6-37cd-4a16-844d-d93fe886f769",
+    "type": "Light Tunic",
+    "name": "Alacrity",
+    "description": "Increases your spell casting speed by 100% and decreases spirit cost by 25% for 20 seconds.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Light Tunic",
+    "weapon_type": null
+  },
+  {
+    "id": "20788abf-ceda-4b08-886d-7d13caa07d44",
+    "type": "Medium Chest",
+    "name": "Ambush",
+    "description": "You meld into the environment. Become invisible to your enemies for 8 seconds or until you attack or cast another spell. Gain Ambush damage charges over time which will **greatly empower your next attack**.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Medium Chest",
+    "weapon_type": null
+  },
+  {
+    "id": "b735c75e-8226-4470-9b53-8d9d12fd8427",
+    "type": "Great Axe",
+    "name": "Armor Shred",
+    "description": "Deliver a powerful overhead chop, dealing 162 damage and each strike adds a **armor shred** on the target. Reduces the target’s physical defense by -20 for 10 seconds. Stacks up to 3 times.",
+    "image_url": "frontend/www/assets/abilities/armor_shred.png",
+    "armor_type": null,
+    "weapon_type": "Great Axe"
+  },
+  {
+    "id": "deb594f1-c24f-4c40-a97f-1468f2d42982",
+    "type": "Heavy Greaves",
+    "name": "Aura of Life",
+    "description": "Grants allies in radius with +414 maximum health for 20 seconds. Additionally allies in close proximity to you will get 12% increased healing received while the effect is active.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Heavy Greaves",
+    "weapon_type": null
+  },
+  {
+    "id": "ee701a54-3dbc-4ee1-a3af-a32816a47a29",
+    "type": "Handspear",
+    "name": "Barrage",
+    "description": "Overwhelm your target with relentless pressure. Deliver a rapid series of thrusts, each striking for 148.",
+    "image_url": "frontend/www/assets/abilities/barrage.png",
+    "armor_type": null,
+    "weapon_type": "Handspear"
+  },
+  {
+    "id": "5b5e4d37-1ded-41db-8195-1d106a98d57b",
+    "type": "Heavy Torso",
+    "name": "Blessed Breath",
+    "description": "Regain **744 health** and **90 spirit** over the duration of the prayer. Can only be used while out of combat.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Heavy Torso",
+    "weapon_type": null
+  },
+  {
+    "id": "7ee8e846-1980-41c0-bea2-9a1b76e81ef9",
+    "type": "Medium Chest",
+    "name": "Blessed Breath",
+    "description": "Regain **744 health** and **90 spirit** over the duration of the prayer. Can only be used while out of combat.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Medium Chest",
+    "weapon_type": null
+  },
+  {
+    "id": "555aaf3f-6184-4bca-9ffd-aa35466dd752",
+    "type": "Light Tunic",
+    "name": "Blessed Breath",
+    "description": "Regain **744 health** and **90 spirit** over the duration of the prayer. Can only be used while out of combat.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Light Tunic",
+    "weapon_type": null
+  },
+  {
+    "id": "bbfd4880-1df8-4c0d-a581-74964cbd4061",
+    "type": "Sylvan Staff",
+    "name": "Bloodfed Grove",
+    "description": "Place a 8 meter area lasting 5 seconds which applies a scaling heal over time based on the number of enemies inside the area for 106 | 112 | 123 | 123 | 135.",
+    "image_url": "frontend/www/assets/abilities/bloodfed_grove.png",
+    "armor_type": null,
+    "weapon_type": "Sylvan Staff"
+  },
+  {
+    "id": "a070b29b-564a-4433-a415-3521f8b44540",
+    "type": "Medium Pants",
+    "name": "Breath of Balance",
+    "description": "Replenish 74 stamina of a non-hostile target.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Medium Pants",
+    "weapon_type": null
+  },
+  {
+    "id": "8cca444f-1c5d-4fdc-8bc9-9018df2baa84",
+    "type": "Heavy Greaves",
+    "name": "Breath of Balance",
+    "description": "Replenish 74 stamina of a non-hostile target.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Heavy Greaves",
+    "weapon_type": null
+  },
+  {
+    "id": "551f64f3-5922-4e2a-8ff3-0ffbaf2f1bb1",
+    "type": "Light Pants",
+    "name": "Breath of Balance",
+    "description": "Replenish 74 stamina of a non-hostile target.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Light Pants",
+    "weapon_type": null
+  },
+  {
+    "id": "9ded430c-a1e7-464e-8245-e42a0bf2310b",
+    "type": "Light Shoes",
+    "name": "Breath Of Joy / Breath of Joy II",
+    "description": "Increases movement speed by 20% for 8 seconds. (Breath of Joy II:) Sprinting does not consume stamina during the effect.",
+    "image_url": "frontend/www/assets/abilities/breath_of_joy.png",
+    "armor_type": "Light Shoes",
+    "weapon_type": null
+  },
+  {
+    "id": "1110b38b-32ce-4b78-a0cb-7f22409dc5ae",
+    "type": "Heavy Boots",
+    "name": "Breath Of Joy / Breath of Joy II",
+    "description": "Increases movement speed by 20% for 8 seconds. (Breath of Joy II:) Sprinting does not consume stamina during the effect.",
+    "image_url": "frontend/www/assets/abilities/breath_of_joy.png",
+    "armor_type": "Heavy Boots",
+    "weapon_type": null
+  },
+  {
+    "id": "dff0a558-cb9f-4093-b54a-a666ba625b84",
+    "type": "Medium Boots",
+    "name": "Breath Of Joy / Breath of Joy II",
+    "description": "Increases movement speed by 20% for 8 seconds. (Breath of Joy II:) Sprinting does not consume stamina during the effect.",
+    "image_url": "frontend/www/assets/abilities/breath_of_joy.png",
+    "armor_type": "Medium Boots",
+    "weapon_type": null
+  },
+  {
+    "id": "c2f8aa2f-0ca1-498f-a3a5-9f41ad0b87c7",
+    "type": "Light Tunic",
+    "name": "Breath of life",
+    "description": "Regain **1086 health** over the duration of the prayer. Can only be used while out of combat.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Light Tunic",
+    "weapon_type": null
+  },
+  {
+    "id": "c62b9ffa-3bf7-4aea-9b30-636c708d0419",
+    "type": "Heavy Torso",
+    "name": "Breath of life",
+    "description": "Regain **1086 health** over the duration of the prayer. Can only be used while out of combat.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Heavy Torso",
+    "weapon_type": null
+  },
+  {
+    "id": "371954e3-aa0f-41e4-8b91-ad8924168ed5",
+    "type": "Medium Chest",
+    "name": "Breath of life",
+    "description": "Regain **1086 health** over the duration of the prayer. Can only be used while out of combat.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Medium Chest",
+    "weapon_type": null
+  },
+  {
+    "id": "23671f06-3291-43d8-9cca-df7a240be52a",
+    "type": "Light Cap",
+    "name": "Breath Of Spirit",
+    "description": "Replenish 64 spirit.",
+    "image_url": "frontend/www/assets/abilities/breath_of_spirit.png",
+    "armor_type": "Light Cap",
+    "weapon_type": null
+  },
+  {
+    "id": "78ec10f1-a0ac-49dc-a689-4deca88f8527",
+    "type": "Medium Helm",
+    "name": "Breath Of Spirit",
+    "description": "Replenish 64 spirit.",
+    "image_url": "frontend/www/assets/abilities/breath_of_spirit.png",
+    "armor_type": "Medium Helm",
+    "weapon_type": null
+  },
+  {
+    "id": "40ae0c4b-3f5e-43d3-a0dc-4f3339189c4b",
+    "type": "Heavy Helm",
+    "name": "Breath Of Spirit",
+    "description": "Replenish 64 spirit.",
+    "image_url": "frontend/www/assets/abilities/breath_of_spirit.png",
+    "armor_type": "Heavy Helm",
+    "weapon_type": null
+  },
+  {
+    "id": "1f1f3612-bc25-4d07-86eb-8372172eb6e9",
+    "type": "Light Cap",
+    "name": "Chronoseer",
+    "description": "Advances all currently active cooldowns by 19 seconds.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Light Cap",
+    "weapon_type": null
+  },
+  {
+    "id": "6e2e7875-073c-4aed-989b-a2b713a4952a",
+    "type": "Medium Chest",
+    "name": "Chrono Ward",
+    "description": "Over the next 4 seconds any melee damage received will refresh all of your ability cooldowns. Can only activate once.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Medium Chest",
+    "weapon_type": null
+  },
+  {
+    "id": "14fd5653-be83-4d42-8a1d-398bc21a89d0",
+    "type": "Mace",
+    "name": "Commanding Strike",
+    "description": "Swing your weapon with authority. Deal 130 damage and become **threatening**, 334% increased threat generation for 10 seconds.",
+    "image_url": "frontend/www/assets/abilities/commanding_strike.png",
+    "armor_type": null,
+    "weapon_type": "Mace"
+  },
+  {
+    "id": "bb00411b-acaa-44de-a125-f6d01ce4a34b",
+    "type": "Light Pants",
+    "name": "Consecrated Ground",
+    "description": "Consecrates an area surrounding the caster - increases defenses of all allies inside its limits by 21.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Light Pants",
+    "weapon_type": null
+  },
+  {
+    "id": "0a904649-8ddd-4002-810e-87ea16f0cd1f",
+    "type": "Sword",
+    "name": "Crusader’s Bid",
+    "description": "Deals damage based on the amount of **divine rapture** stacks on you. 199 | 319 | 478 | 677 damage. Consumes all stacks when used.",
+    "image_url": "frontend/www/assets/abilities/crusaders_bid.png",
+    "armor_type": null,
+    "weapon_type": "Sword"
+  },
+  {
+    "id": "8f9a526e-446a-4e9a-9f2e-e44f16572fad",
+    "type": "Greatsword",
+    "name": "Crusader’s Closing",
+    "description": "Deals damage based on the amount of **divine rapture** stacks on you. 274 | 440 | 659 | 933 damage. Consumes all stacks when used.",
+    "image_url": "frontend/www/assets/abilities/crusaders_closing.png",
+    "armor_type": null,
+    "weapon_type": "Greatsword"
+  },
+  {
+    "id": "e120cc56-3b1a-4a81-9b7b-1c088cfe7441",
+    "type": "Staff of Divine (Cleric Staff)",
+    "name": "Detonation of Life",
+    "description": "Place a 5 meter area which will burst after 2 seconds giving allies in the area 443 health.",
+    "image_url": "frontend/www/assets/abilities/detonation_of_life.png",
+    "armor_type": null,
+    "weapon_type": "Staff of Divine (Cleric Staff)"
+  },
+  {
+    "id": "687a0c1d-a696-47a4-9800-2b20e0dbb40e",
+    "type": "Staff of Zephyr (Cleric Staff)",
+    "name": "Divine Intervention",
+    "description": "Heal a target below 40% health for 336, otherwise heal for a reduced amount 152.",
+    "image_url": "frontend/www/assets/abilities/divine_intervention.png",
+    "armor_type": null,
+    "weapon_type": "Staff of Zephyr (Cleric Staff)"
+  },
+  {
+    "id": "7063781c-16d7-4b76-b4d3-3a1605f39158",
+    "type": "Staff of Divine (Cleric Staff)",
+    "name": "Divine Intervention",
+    "description": "Heal a target below 40% health for 336, otherwise heal for a reduced amount 152.",
+    "image_url": "frontend/www/assets/abilities/divine_intervention.png",
+    "armor_type": null,
+    "weapon_type": "Staff of Divine (Cleric Staff)"
+  },
+  {
+    "id": "2bfa5e81-9f1f-440c-9624-c8ba5bf156da",
+    "type": "Staff of Zephyr (Cleric Staff)",
+    "name": "Divine Orb",
+    "description": "Fire a projectile which will splash 152 health to allies within 4 meters.",
+    "image_url": "frontend/www/assets/abilities/divine_orb.png",
+    "armor_type": null,
+    "weapon_type": "Staff of Zephyr (Cleric Staff)"
+  },
+  {
+    "id": "2d1d2357-9883-4be3-8669-6b173d371502",
+    "type": "Light Tunic",
+    "name": "Divine Shield",
+    "description": "For the next 4 seconds reflect all melee damage taken back to the attacker and heal for the same amount.",
+    "image_url": "frontend/www/assets/abilities/divine_shield.png",
+    "armor_type": "Light Tunic",
+    "weapon_type": null
+  },
+  {
+    "id": "89135029-32c7-4056-95da-ef5018ad2f35",
+    "type": "Mace",
+    "name": "Earthquake",
+    "description": "Smash down violently, fracturing the ground beneath you. The impact deals 391 damage and **weakens** enemies, reducing their damage by -12,3% for 18 seconds.",
+    "image_url": "frontend/www/assets/abilities/earthquake.png",
+    "armor_type": null,
+    "weapon_type": "Mace"
+  },
+  {
+    "id": "8188342c-6c15-41f6-a9d2-2dd65702bc74",
+    "type": "Mace",
+    "name": "Forceful Strike",
+    "description": "Perform a heavy strike, dealing 116 damage and **stunning** enemies for 2 seconds.",
+    "image_url": "frontend/www/assets/abilities/forceful_strike.png",
+    "armor_type": null,
+    "weapon_type": "Mace"
+  },
+  {
+    "id": "8491f204-442a-47c4-8e50-e7d7447726a7",
+    "type": "Medium Chest",
+    "name": "Frenzy",
+    "description": "Increases melee attack speed by 27% and melee attack damage by 8% for 10 seconds.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Medium Chest",
+    "weapon_type": null
+  },
+  {
+    "id": "4347514e-5f88-4fa4-9240-a02cf8ec318e",
+    "type": "Greatsword",
+    "name": "Guardbreaker",
+    "description": "Perform a heavy rising slash that breaks through blocks, dealing 337 damage. Successfully breaking a block briefly stuns the enemy.",
+    "image_url": "frontend/www/assets/abilities/guardbreaker.png",
+    "armor_type": null,
+    "weapon_type": "Greatsword"
+  },
+  {
+    "id": "9665b0e4-e8dc-4fcc-94c1-810947a97bb5",
+    "type": "Light Pants",
+    "name": "Haunted Memories",
+    "description": "Mesmerizes up to 3 enemies within range, rendering them paralyzed for 21 seconds or until they take damage. You can only mesmerize up to three enemies at any given time.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Light Pants",
+    "weapon_type": null
+  },
+  {
+    "id": "6c5ebac1-8135-4fe7-a5b5-0bbd6fd3ff2f",
+    "type": "Polearm",
+    "name": "Heavy Thrust",
+    "description": "Thrust the spear forward to deal 224 damage.",
+    "image_url": "frontend/www/assets/abilities/heavy_thrust.png",
+    "armor_type": null,
+    "weapon_type": "Polearm"
+  },
+  {
+    "id": "b1e9b4dd-c4a9-43bc-8582-7f1a574d2c34",
+    "type": "Polearm",
+    "name": "Impaling Strike",
+    "description": "Drive the spear down to incapacitate your target, causing them to be **chained** for 7 seconds. Deals 411 damage.",
+    "image_url": "frontend/www/assets/abilities/impaling_strike.png",
+    "armor_type": null,
+    "weapon_type": "Polearm"
+  },
+  {
+    "id": "facd00bf-3d2d-441c-8bd0-adadfd0bcce3",
+    "type": "Handspear",
+    "name": "Intercept",
+    "description": "Leap forward to deliver a crippling strike, dealing 365 and reducing the target movement speed by 50% for 8 seconds.",
+    "image_url": "frontend/www/assets/abilities/intercept.png",
+    "armor_type": null,
+    "weapon_type": "Handspear"
+  },
+  {
+    "id": "eb7e2330-6310-4d47-b933-7bd3b01a46b3",
+    "type": "Heavy Torso",
+    "name": "Ironroot Grasp",
+    "description": "While channeling, the caster becomes immobile, entering a trance-like state. Enemies within a 5m radius are **chained** to the ground.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Heavy Torso",
+    "weapon_type": null
+  },
+  {
+    "id": "fc4a1ba0-e5de-4f24-9b69-eceed5bf0347",
+    "type": "Medium Helm",
+    "name": "Jester’s Flask",
+    "description": "Throw a flask that splashes on impact, reducing the movement speed of affected enemies by 40% and reduces physical damage dealt by 12%. Lasts for 10 seconds.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Medium Helm",
+    "weapon_type": null
+  },
+  {
+    "id": "f7837c3d-ba10-4b79-83c8-855614d6587a",
+    "type": "Sword",
+    "name": "Jolting Kick",
+    "description": "Perform a kick that deals 192 damage and **interrupts** enemy spell casting. If a spell is interrupted, the target also becomes silenced for 10 seconds.",
+    "image_url": "frontend/www/assets/abilities/jolting_kick.png",
+    "armor_type": null,
+    "weapon_type": "Sword"
+  },
+  {
+    "id": "51cdba28-7a24-4eef-9b7f-23f60ad339e2",
+    "type": "Medium Helm",
+    "name": "Killmark",
+    "description": "Marks an enemy for 30 seconds, increasing all damage they take by 12%. Killing the marked target grants the killer increased movement speed for a duration.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Medium Helm",
+    "weapon_type": null
+  },
+  {
+    "id": "0fc4e7f3-1cad-4a70-8dd7-24c8ed9c6140",
+    "type": "Heavy Helm",
+    "name": "Mental Fortitude",
+    "description": "Makes you **immune to displacement** effects and increases your crowd control resistance by 25 for 20s.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Heavy Helm",
+    "weapon_type": null
+  },
+  {
+    "id": "ad43cca3-9dc1-476e-b67a-c5f0e372c405",
+    "type": "Light Pants",
+    "name": "Mesmerize",
+    "description": "Mesmerizes enemy within range, rendering them entranced for 21 seconds or until they take damage. You can only mesmerize up to one enemy at a time.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Light Pants",
+    "weapon_type": null
+  },
+  {
+    "id": "844e7fc2-b66e-4ca3-9987-d8b35cd6b930",
+    "type": "Medium Pants",
+    "name": "Netfall",
+    "description": "Throw a net forward that chains the first enemy hit for 10 seconds.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Medium Pants",
+    "weapon_type": null
+  },
+  {
+    "id": "2edf2e91-b610-4815-bffe-82d604cb184c",
+    "type": "Sylvan Staff",
+    "name": "Overgrowth",
+    "description": "Heal allies within 7 meters based on the number of **regrowth** stacks on them for 98 | 120 | 160 | 205 and refresh the duration of all **regrowth effects**.",
+    "image_url": "frontend/www/assets/abilities/overgrowth.png",
+    "armor_type": null,
+    "weapon_type": "Sylvan Staff"
+  },
+  {
+    "id": "f18a9daa-5a9d-4e3b-b5a5-28220fc0067b",
+    "type": "Great Maul",
+    "name": "Overhead Slam",
+    "description": "Prepare for a powerful strike and slam your mace down, dealing 380 damage and 132 threat.",
+    "image_url": "frontend/www/assets/abilities/overhead_slam.png",
+    "armor_type": null,
+    "weapon_type": "Great Maul"
+  },
+  {
+    "id": "52a19196-74af-4381-8b2c-bbd12557babf",
+    "type": "Polearm",
+    "name": "Overhook",
+    "description": "Perform a full reach thrust for 367 damage. Pull the polearm back to launch the enemy behind your position. Enemy is **chained** for 2 seconds on landing.",
+    "image_url": "frontend/www/assets/abilities/overhook.png",
+    "armor_type": null,
+    "weapon_type": "Polearm"
+  },
+  {
+    "id": "70bd4897-9096-463b-a76b-a0d7251100bf",
+    "type": "Light Cap",
+    "name": "Pacify",
+    "description": "Places an unknowing target into a lulled state, reducing their awareness by -75%. Has no effect on enemies who are already aware of your presence. Effect lasts for 50 seconds.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Light Cap",
+    "weapon_type": null
+  },
+  {
+    "id": "1a163652-9ce8-4ecf-a308-a76bd771069b",
+    "type": "Light Cap",
+    "name": "Purify Self",
+    "description": "Remove all harmful effects from yourself.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Light Cap",
+    "weapon_type": null
+  },
+  {
+    "id": "fb95e392-8cfe-42cb-b66b-5d69a8c58bb6",
+    "type": "Light Tunic",
+    "name": "Purify Target",
+    "description": "Remove a harmful effect from a friend.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Light Tunic",
+    "weapon_type": null
+  },
+  {
+    "id": "dd905711-1714-4f04-907d-628e726fe4fa",
+    "type": "Heavy Helm",
+    "name": "Quick Remedy",
+    "description": "Increases healing received by **25%** for **10** seconds. Heal yourself and allies in close proximity by **170 health**.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Heavy Helm",
+    "weapon_type": null
+  },
+  {
+    "id": "c3c5e488-5bee-4935-b2a0-2853d9309743",
+    "type": "Heavy Boots",
+    "name": "Quiet Stance",
+    "description": "Increases all physical defenses by 18 for 8 seconds. Protects for the next 12 instances of damage. Reduces mobility for the duration. Can be turned off by activating again.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Heavy Boots",
+    "weapon_type": null
+  },
+  {
+    "id": "84732929-0dec-42b8-a900-0f6b63af8bc6",
+    "type": "Great Axe",
+    "name": "Radiant Cleave",
+    "description": "A vicious twirling, forward moving attack - sending the axe blade’s razor cutting edge through anything within reach. Deals 333 damage on both swings.",
+    "image_url": "frontend/www/assets/abilities/radiant_cleave.png",
+    "armor_type": null,
+    "weapon_type": "Great Axe"
+  },
+  {
+    "id": "c2b0539d-fd00-4570-b139-6d19c26a5225",
+    "type": "Heavy Greaves",
+    "name": "Rallying Banner",
+    "description": "Call down a battle standard that stuns enemies on landing. The flag motivates allies, increasing their attack speed by 9% while in its proximity. The flag disappears after 30 seconds.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Heavy Greaves",
+    "weapon_type": null
+  },
+  {
+    "id": "b11e9a4b-126b-4fbf-b106-fba842b52855",
+    "type": "Sylvan Staff",
+    "name": "Regrowth",
+    "description": "Give a stack of **regrowth** to an ally, providing 14 | 27 | 39 health per second for 8 seconds. After 3 stacks have been applied, the next stack will overflow giving 152 health and removing all stacks.",
+    "image_url": "frontend/www/assets/abilities/regrowth.png",
+    "armor_type": null,
+    "weapon_type": "Sylvan Staff"
+  },
+  {
+    "id": "870441dd-6d08-4fd6-b0c1-6e5a18d0867f",
+    "type": "Staff of Divine (Cleric Staff)",
+    "name": "Remedy",
+    "description": "Heal a single ally, or yourself for 179 health.",
+    "image_url": "frontend/www/assets/abilities/remedy.png",
+    "armor_type": null,
+    "weapon_type": "Staff of Divine (Cleric Staff)"
+  },
+  {
+    "id": "1686b3d2-4ca1-4cc0-8f33-fbf4cf98dc58",
+    "type": "Medium Helm",
+    "name": "Revoke",
+    "description": "Remove all positive effects from an enemy.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Medium Helm",
+    "weapon_type": null
+  },
+  {
+    "id": "870316b9-2330-44f8-a648-c3152ae7e018",
+    "type": "Greatsword",
+    "name": "Righteous Slash",
+    "description": "Deal 214 damage. Each strike fills you with **divine rapture**, increasing attack speed by 4% and movement speed by 5% for 10 seconds. Effect stacks up to 4 times.",
+    "image_url": "frontend/www/assets/abilities/righteous_slash.png",
+    "armor_type": null,
+    "weapon_type": "Greatsword"
+  },
+  {
+    "id": "76c54d8e-8db2-4f2f-aaac-73f2c374db89",
+    "type": "Sword",
+    "name": "Righteous Strike",
+    "description": "Deal 193 damage. Each strike fills you with **divine rapture**, increasing attack speed by 4% and movement speed by 5% for 10 seconds. Effect stacks up to 4 times.",
+    "image_url": "frontend/www/assets/abilities/righteous_strike.png",
+    "armor_type": null,
+    "weapon_type": "Sword"
+  },
+  {
+    "id": "ee6c1e76-c13e-4c3e-94aa-746e96ff66c2",
+    "type": "Heavy Helm",
+    "name": "Roar",
+    "description": "Generates 50 aggro towards all enemies in a cone in front of you. Gain stamina over time based on how many enemies were affected.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Heavy Helm",
+    "weapon_type": null
+  },
+  {
+    "id": "8d62d1fd-fc99-417d-a34b-16b33912ecc0",
+    "type": "Medium Pants",
+    "name": "Sacrament of Strife",
+    "description": "Restore 39 health whenever you deal non-periodic melee damage to a target within 7 seconds. Effect can be activated up to 12 times.",
+    "image_url": "frontend/www/assets/abilities/sacrament_of_strife.png",
+    "armor_type": "Medium Pants",
+    "weapon_type": null
+  },
+  {
+    "id": "70d1dc24-3f5b-46e6-a76f-b45dd138bb0a",
+    "type": "Heavy Greaves",
+    "name": "Sanctified Stand",
+    "description": "Increases all physical defenses by 33 for 8 seconds. Protects for the next 12 instances of damage. Reduces mobility for the duration. Can be turned off by activating again.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Heavy Greaves",
+    "weapon_type": null
+  },
+  {
+    "id": "8c6a1be8-9fc6-443d-a2a6-ff6f084e8c60",
+    "type": "Heavy Greaves",
+    "name": "Searing Rage",
+    "description": "When active gain 8% damage bonus and 8% Crowd Control effectiveness every time you take damage. Effect stacks up to 10 times.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Heavy Greaves",
+    "weapon_type": null
+  },
+  {
+    "id": "590de1eb-a330-465c-b168-516ed610d336",
+    "type": "Light Shoes",
+    "name": "Spirit Stride",
+    "description": "Increases your movement speed by 20% and regenerates 6.1 Spirit per second for 7 seconds.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Light Shoes",
+    "weapon_type": null
+  },
+  {
+    "id": "6df25db9-2e05-4ac5-bc53-6c7718174c90",
+    "type": "Heavy Boots",
+    "name": "Surging Stride",
+    "description": "Increase movement speed by 4% every second. Stacks up to 10 times. Effect lasts for 15 seconds.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Heavy Boots",
+    "weapon_type": null
+  },
+  {
+    "id": "29084564-602e-4eb3-9e88-922469b9d3f6",
+    "type": "Handspear",
+    "name": "Swift Jab",
+    "description": "Quickly drive your spear forward in a focused thrust, dealing 194 damage.",
+    "image_url": "frontend/www/assets/abilities/swift_jab.png",
+    "armor_type": null,
+    "weapon_type": "Handspear"
+  },
+  {
+    "id": "4777e4f6-963a-4e52-92ca-c55e1f88e7e7",
+    "type": "Heavy Torso",
+    "name": "Taunt",
+    "description": "Taunts an enemy forcing them to attack you for a while. Additionally target's damage is reduced by -24% for 4 seconds.",
+    "image_url": "https://i.postimg.cc/PJ8LvJzc/question-mark.png",
+    "armor_type": "Heavy Torso",
+    "weapon_type": null
+  },
+  {
+    "id": "1e50cd9f-9500-46e1-9c94-750fcb380625",
+    "type": "Great Maul",
+    "name": "Tempest Command",
+    "description": "Become the eye of a storm. Command violent winds to spiral around you, pulling nearby enemies into your reach. Enemies are chained for 2 seconds upon landing.",
+    "image_url": "frontend/www/assets/abilities/tempest_command.png",
+    "armor_type": null,
+    "weapon_type": "Great Maul"
+  },
+  {
+    "id": "e15b79a3-ce80-47b7-b085-647219c8e961",
+    "type": "Light Tunic",
+    "name": "Verdant Mend",
+    "description": "Heals all allies within range by 245 health and grant them a blessing that increases healing received for 20s.",
+    "image_url": "frontend/www/assets/abilities/verdant_mend.png",
+    "armor_type": "Light Tunic",
+    "weapon_type": null
+  },
+  {
+    "id": "54c166d7-94fc-42be-8c20-ed8bf1a64f3f",
+    "type": "Great Maul",
+    "name": "Vexing Sweep",
+    "description": "Deliver a powerful sideways smash, dealing 321 damage and generating 100 threat.",
+    "image_url": "frontend/www/assets/abilities/vexing_sweep.png",
+    "armor_type": null,
+    "weapon_type": "Great Maul"
+  },
+  {
+    "id": "28761503-ef9e-4af0-9bea-254f8fd70209",
+    "type": "Great Axe",
+    "name": "Vicious Sweep",
+    "description": "Swing in a broad arc, dealing 342 damage. All enemies struck gain **armor shred** charges equal to the highest count among targets hit.",
+    "image_url": "frontend/www/assets/abilities/vicious_sweep.png",
+    "armor_type": null,
+    "weapon_type": "Great Axe"
+  },
+  {
+    "id": "bb814dc5-3c9f-4d79-9656-66c158767a27",
+    "type": "Heavy Torso",
+    "name": "Windlash",
+    "description": "Pull an enemy to you and cause them to become **chained** for 2 seconds.",
+    "image_url": "frontend/www/assets/abilities/windlash.png",
+    "armor_type": "Heavy Torso",
+    "weapon_type": null
+  },
+  {
+    "id": "aeb1a6a1-cf8f-4dbb-996a-d2f095cf6179",
+    "type": "Staff of Zephyr (Cleric Staff)",
+    "name": "Zephyr of Life",
+    "description": "Channel healing energy within 6 meter radius around you, giving 160 health up to 6 times.",
+    "image_url": "frontend/www/assets/abilities/zephyr_of_life.png",
+    "armor_type": null,
+    "weapon_type": "Staff of Zephyr (Cleric Staff)"
+  }
+]

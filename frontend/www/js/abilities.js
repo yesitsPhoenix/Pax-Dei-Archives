@@ -1,5 +1,3 @@
-import { supabase } from './supabaseClient.js';
-
 document.addEventListener('DOMContentLoaded', async () => {
     const abilitiesListContainer = document.getElementById('abilities-list');
     const abilityFilterContainer = document.getElementById('ability-filters');
@@ -12,11 +10,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    const { data: abilities, error } = await supabase
-        .from('abilities')
-        .select('*');
-
-    if (error) {
+    let abilities = [];
+    try {
+        const response = await fetch('backend/data/abilities.json');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        abilities = await response.json();
+    } catch (error) {
         console.error('Error fetching abilities:', error.message);
         abilitiesListContainer.innerHTML = `<p class="text-red-500 text-center">Failed to load abilities. Please try again later.</p>`;
         return;
@@ -53,7 +54,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const renderFilters = () => {
         let armorFilterOptions = Array.from(allArmorTypes).sort().map(type => `<option value="${type}">${type}</option>`).join('');
-        let weaponFilterOptions = Array.from(allWeaponTypes).sort().map(type => `<option value="">All Weapon Types</option>`).join('');
+        let weaponFilterOptions = Array.from(allWeaponTypes).sort().map(type => `<option value="${type}">${type}</option>`).join('');
 
         abilityFilterContainer.innerHTML = `
             <div class="mb-6 flex flex-col md:flex-row gap-4 justify-center items-center">
@@ -177,9 +178,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     sortedAbilityNames.forEach(abilityName => {
         const abilityData = groupedAbilities[abilityName];
         const appliesToArray = Array.from(abilityData.applies_to).sort();
-        const parsedDescription = marked.parse(abilityData.description);
         
-
         const abilityId = abilityName.toLowerCase().replace(/\s+/g, '-').replace(/'/g, '');
 
         const abilityCard = document.createElement('div');
