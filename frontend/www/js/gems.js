@@ -51,11 +51,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         filtersContainer.innerHTML = `
             <div class="mb-6 flex flex-wrap gap-2 justify-center items-center">
                 ${sortedSources.map(source => `
-                    <button class="source-filter-btn bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-600 transition text-sm ${activeFilters.has(source) ? 'active-filter' : ''}" data-source="${source}">
+                    <button class="source-filter-btn bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600 transition text-sm ${activeFilters.has(source) ? 'active-filter' : ''}" data-source="${source}">
                         ${source}
                     </button>
                 `).join('')}
-                <button id="clear-filters-btn" class="bg-[#E5C715] text-black hover:bg-gray-400 font-bold py-1 px-3 rounded transition duration-200 text-sm">
+                <button id="clear-filters-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-200">
                     Clear Filters
                 </button>
             </div>
