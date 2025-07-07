@@ -128,11 +128,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ${foundInArray.map(source => `<span class="bg-gray-700 text-gray-200 px-3 py-1 rounded-full text-xs whitespace-nowrap">${source}</span>`).join('')}
                     </div>
                 </div>
-                <div class="flex justify-center mt-4">
-                    <button id="copy-link-button" class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-4 rounded transition duration-200">
-                        Copy Link
-                    </button>
-                </div>
+
             </div>
         `;
         gemPopupOverlay.classList.add('show');
