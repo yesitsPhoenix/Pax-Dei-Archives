@@ -1,6 +1,6 @@
 // trader.js
 import { supabase } from './supabaseClient.js';
-import { initializeListings, loadActiveListings, populateMarketStallDropdown, setupMarketStallTabs } from './modules/listings.js';
+import { initializeListings, loadActiveListings, populateMarketStallDropdown, setupMarketStallTabs, clearMarketStallsCache } from './modules/init.js';
 import { initializeCharacters, insertCharacterModalHtml, currentCharacterId, getCurrentCharacter } from './modules/characters.js';
 import { initializeSales, loadTransactionHistory, handleDownloadCsv } from './modules/sales.js';
 import { renderDashboard } from './modules/dashboard.js';
@@ -198,7 +198,7 @@ export const loadTraderPageData = async () => {
     }
 
     try {
-
+        clearMarketStallsCache();
         const [
             { data: dashboardStats, error: dashboardError },
             currentCharacterData,

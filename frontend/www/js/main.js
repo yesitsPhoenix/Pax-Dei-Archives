@@ -559,3 +559,15 @@ export const updateUtcClock = (element) => {
     ];
     element.textContent = `${monthNames[month]} ${day}, ${hours}:${minutes} UTC`;
 };
+
+// const originalFrom = supabase.from.bind(supabase);
+// supabase.from = (table) => {
+//   console.log(`📦 supabase.from('${table}') called`);
+//   return originalFrom(table);
+// };
+
+// const originalRpc = supabase.rpc.bind(supabase);
+// supabase.rpc = (fn, args) => {
+//   console.log(`📦 supabase.rpc('${fn}') called with`, args);
+//   return originalRpc(fn, args);
+// };

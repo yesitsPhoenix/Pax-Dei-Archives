@@ -257,7 +257,7 @@ export const handleAddListing = async (e) => {
             }]);
         }
         //console.log('Calling loadActiveListings and loadTraderPageData.');
-        await loadActiveListings();
+        //await loadActiveListings();
         await loadTraderPageData();
         form.reset();
         //console.log('Form reset.');

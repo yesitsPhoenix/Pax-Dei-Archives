@@ -18,7 +18,10 @@ export const renderDashboard = (dashboardStats, characterData) => {
     const netProfit = grossSales - feesPaid;
     const pveGoldTotal = dashboardStats.pve_gold_total || 0;
 
-    const formatCurrency = (amount) => amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    const formatCurrency = (amount) => {
+    const safeAmount = typeof amount === 'number' && !isNaN(amount) ? amount : 0;
+    return safeAmount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    };
 
     grossSalesEl.innerHTML = `${formatCurrency(grossSales)} <i class="fa-solid fa-chart-line"></i>`;
     feesPaidEl.innerHTML = `${formatCurrency(feesPaid)} <i class="fa-solid fa-arrow-trend-down"></i>`;
