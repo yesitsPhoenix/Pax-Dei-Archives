@@ -30,6 +30,8 @@ let customModalContainer = null;
 let customModalContentWrapper = null;
 let customModalResolvePromise = null;
 
+export let currentPage = 1;
+
 export const showCustomModal = (title, message, buttons) => {
     return new Promise(resolve => {
         customModalResolvePromise = resolve;
@@ -190,7 +192,7 @@ const updateAllCharts = (timeframe) => {
 export const loadTraderPageData = async () => {
     if (!currentUser || !currentUser.id || !currentCharacterId) {
         renderDashboard({}, null);
-        await loadActiveListings();
+        //await loadActiveListings();
         loadTransactionHistory([]);
         updateAllCharts('daily');
         if (document.querySelector('.market-stall-tabs')) {
@@ -227,7 +229,7 @@ export const loadTraderPageData = async () => {
         allCharacterActivityData = allActivityData;
 
         renderDashboard(dashboardStats ? dashboardStats[0] : {}, currentCharacterData);
-        await loadActiveListings();
+        //await loadActiveListings();
         loadTransactionHistory(allCharacterActivityData);
         updateAllCharts('daily');
         if (modalMarketStallLocationSelect) {
@@ -509,4 +511,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     await checkUser();
     await populateItemData();
     addPageEventListeners();
+    loadActiveListings();
 });

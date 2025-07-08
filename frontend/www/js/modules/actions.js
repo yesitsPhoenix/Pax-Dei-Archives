@@ -2,8 +2,10 @@ import {
     supabase
 } from '../supabaseClient.js';
 import {
-    showCustomModal,
-    loadTraderPageData
+    showCustomModal
+} from '../trader.js';
+import {
+    currentPage // Keep currentPage as it's used by loadActiveListings
 } from '../trader.js';
 import {
     currentCharacterId
@@ -15,6 +17,9 @@ import {
     getUserMarketStallLocations,
     clearMarketStallsCache
 } from './init.js';
+import {
+    renderDashboard
+} from '../modules/dashboard.js';
 import {
     getEditListingModalElements,
     setOriginalListingFee,
@@ -47,7 +52,7 @@ const getOrCreateItemId = async (itemName, categoryId) => {
         .from('items')
         .select('item_id')
         .eq('item_name', itemName)
-        .eq('character_id', currentCharacterId)
+        .eq('category_id', categoryId)
         .limit(1);
     if (selectError) {
         console.error('getOrCreateItemId: Failed to check for existing item.', selectError);
@@ -68,7 +73,7 @@ const getOrCreateItemId = async (itemName, categoryId) => {
         .insert({
             item_name: itemName,
             category_id: categoryId,
-            character_id: currentCharacterId
+            created_by_character_id: currentCharacterId
         })
         .select('item_id')
         .single();
@@ -225,7 +230,21 @@ export const handleAddListing = async (e) => {
                 value: true
             }]);
         }
-        await loadTraderPageData();
+        await loadActiveListings(null, currentPage);
+
+        const {
+            data: dashboardStats,
+            error: dashboardError
+        } = await supabase.rpc('get_character_dashboard_stats', {
+            p_character_id: currentCharacterId
+        });
+
+        if (dashboardError) {
+            console.error("Error fetching dashboard stats after adding listing:", dashboardError.message);
+        } else {
+            renderDashboard(dashboardStats ? dashboardStats[0] : {}, null);
+        }
+
         form.reset();
     } catch (e) {
         console.error("Unexpected error during handleAddListing:", e);
@@ -344,7 +363,21 @@ export const handleMarkAsSold = async (listingId) => {
                 }
             }
         }
-        await loadTraderPageData();
+        await loadActiveListings(null, currentPage);
+
+        const {
+            data: dashboardStats,
+            error: dashboardError
+        } = await supabase.rpc('get_character_dashboard_stats', {
+            p_character_id: currentCharacterId
+        });
+
+        if (dashboardError) {
+            console.error("Error fetching dashboard stats after sale:", dashboardError.message);
+        } else {
+            renderDashboard(dashboardStats ? dashboardStats[0] : {}, null);
+        }
+
     } catch (e) {
         console.error('handleMarkAsSold: An unexpected error occurred while marking the listing as sold.', e);
         await showCustomModal('Error', 'An unexpected error occurred while marking the listing as sold.', [{
@@ -405,7 +438,21 @@ export const handleCancelListing = async (listingId) => {
             text: 'OK',
             value: true
         }]);
-        await loadTraderPageData();
+        await loadActiveListings(null, currentPage);
+
+        const {
+            data: dashboardStats,
+            error: dashboardError
+        } = await supabase.rpc('get_character_dashboard_stats', {
+            p_character_id: currentCharacterId
+        });
+
+        if (dashboardError) {
+            console.error("Error fetching dashboard stats after cancellation:", dashboardError.message);
+        } else {
+            renderDashboard(dashboardStats ? dashboardStats[0] : {}, null);
+        }
+
     } catch (e) {
         console.error('handleCancelListing: An unexpected error occurred while canceling the listing.', e);
         await showCustomModal('Error', 'An unexpected error occurred while canceling the listing.', [{
@@ -608,7 +655,21 @@ export const handleEditListingSave = async (e) => {
             }]);
         }
         editModal.classList.add('hidden');
-        await loadTraderPageData();
+        await loadActiveListings(null, currentPage);
+
+        const {
+            data: dashboardStats,
+            error: dashboardError
+        } = await supabase.rpc('get_character_dashboard_stats', {
+            p_character_id: currentCharacterId
+        });
+
+        if (dashboardError) {
+            console.error("Error fetching dashboard stats after editing listing:", dashboardError.message);
+        } else {
+            renderDashboard(dashboardStats ? dashboardStats[0] : {}, null);
+        }
+
     } catch (e) {
         console.error('handleEditListingSave: An unexpected error occurred while saving changes.', e);
         await showCustomModal('Error', 'An unexpected error occurred while saving changes.', [{
@@ -918,6 +979,22 @@ export const handleDeleteMarketStall = async (stallId) => {
             await populateMarketStallDropdown(modalMarketStallLocationSelect);
         }
         await setupMarketStallTabs();
+
+        await loadActiveListings(null, currentPage);
+
+        const {
+            data: dashboardStats,
+            error: dashboardError
+        } = await supabase.rpc('get_character_dashboard_stats', {
+            p_character_id: currentCharacterId
+        });
+
+        if (dashboardError) {
+            console.error("Error fetching dashboard stats after deleting stall:", dashboardError.message);
+        } else {
+            renderDashboard(dashboardStats ? dashboardStats[0] : {}, null);
+        }
+
     } catch (e) {
         deleteStallError.textContent = 'Failed to delete market stall: ' + e.message;
         deleteStallError.classList.remove('hidden');
