@@ -33,9 +33,7 @@ import {
 } from './dom.js';
 
 const getOrCreateItemId = async (itemName, categoryId) => {
-    //console.log('getOrCreateItemId called with:', { itemName, categoryId });
     if (!currentCharacterId) {
-        console.warn("getOrCreateItemId: No character selected.");
         await showCustomModal('Error', 'No character selected. Cannot create or retrieve item.', [{
             text: 'OK',
             value: true
@@ -63,11 +61,9 @@ const getOrCreateItemId = async (itemName, categoryId) => {
     }
 
     if (items && items.length > 0) {
-        //console.log('getOrCreateItemId: Existing item found, ID:', items[0].item_id);
         return items[0].item_id;
     }
 
-    //console.log('getOrCreateItemId: No existing item, attempting to create new item.');
     const {
         data: newItem,
         error: insertError
@@ -89,13 +85,11 @@ const getOrCreateItemId = async (itemName, categoryId) => {
         }]);
         return null;
     }
-    //console.log('getOrCreateItemId: New item created, ID:', newItem.item_id);
     return newItem.item_id;
 };
 
 
 export const handleAddListing = async (e) => {
-    //console.log('handleAddListing called.');
     e.preventDefault();
     const form = e.target;
     const submitButton = form.querySelector('button[type="submit"]');
@@ -103,7 +97,6 @@ export const handleAddListing = async (e) => {
     if (submitButton) {
         submitButton.disabled = true;
         submitButton.textContent = 'Adding Listing...';
-        //console.log('Submit button disabled and text changed.');
     }
 
     try {
@@ -115,8 +108,6 @@ export const handleAddListing = async (e) => {
             console.error("Validation Error: No character selected. Aborting listing creation.");
             return;
         }
-        //console.log('Current Character ID:', currentCharacterId);
-
 
         const itemName = form.querySelector('[name="item-name"]').value.trim();
         const itemCategory = parseInt(form.querySelector('[name="item-category"]').value, 10);
@@ -125,15 +116,18 @@ export const handleAddListing = async (e) => {
         const itemPricePerStack = parseFloat(form.querySelector('[name="item-price-per-stack"]').value);
         const marketStallId = form.querySelector('[name="market-stall-location"]').value;
 
-        //console.log('Form values retrieved:', { itemName, itemCategory, itemStacks, itemCountPerStack, itemPricePerStack, marketStallId });
-
-
         if (!itemName || isNaN(itemStacks) || isNaN(itemCountPerStack) || isNaN(itemPricePerStack) || !marketStallId) {
             await showCustomModal('Validation Error', 'Please fill in all listing fields correctly.', [{
                 text: 'OK',
                 value: true
             }]);
-            console.error("Validation Error: Missing or invalid form fields. Aborting.", { itemName, itemStacks, itemCountPerStack, itemPricePerStack, marketStallId });
+            console.error("Validation Error: Missing or invalid form fields. Aborting.", {
+                itemName,
+                itemStacks,
+                itemCountPerStack,
+                itemPricePerStack,
+                marketStallId
+            });
             return;
         }
 
@@ -142,7 +136,9 @@ export const handleAddListing = async (e) => {
                 text: 'OK',
                 value: true
             }]);
-            console.error("Validation Error: Invalid item category. Aborting.", { itemCategory });
+            console.error("Validation Error: Invalid item category. Aborting.", {
+                itemCategory
+            });
             return;
         }
 
@@ -151,21 +147,20 @@ export const handleAddListing = async (e) => {
             console.error("Error: Could not get or create item ID. Aborting listing creation.");
             return;
         }
-        //console.log('Item ID obtained/created:', itemId);
-
 
         const quantityPerListing = itemCountPerStack;
         const totalListedPricePerListing = itemPricePerStack;
         const pricePerUnitPerListing = itemPricePerStack / itemCountPerStack;
         const marketFeePerListing = Math.ceil(totalListedPricePerListing * 0.05);
-        //console.log('Listing calculations:', { quantityPerListing, totalListedPricePerListing, pricePerUnitPerListing, marketFeePerListing });
-
 
         let successCount = 0;
         let failedCount = 0;
         const errors = [];
 
-        const { data: characterData, error: fetchCharacterError } = await supabase
+        const {
+            data: characterData,
+            error: fetchCharacterError
+        } = await supabase
             .from('characters')
             .select('gold')
             .eq('character_id', currentCharacterId)
@@ -185,8 +180,6 @@ export const handleAddListing = async (e) => {
         for (let i = 0; i < itemStacks; i++) {
             totalFees += marketFeePerListing;
         }
-        //console.log('Character gold:', currentGold, 'Total fees for all stacks:', totalFees);
-
 
         if (currentGold < totalFees) {
             await showCustomModal('Validation Error', `Not enough gold! You need ${totalFees.toLocaleString()} gold for fees but only have ${currentGold.toLocaleString()}.`, [{
@@ -197,10 +190,10 @@ export const handleAddListing = async (e) => {
             return;
         }
 
-        //console.log(`Proceeding to insert ${itemStacks} listings.`);
         for (let i = 0; i < itemStacks; i++) {
-            //console.log(`Attempting to insert listing ${i + 1}/${itemStacks}`);
-            const { error } = await supabase.from('market_listings').insert({
+            const {
+                error
+            } = await supabase.from('market_listings').insert({
                 item_id: itemId,
                 character_id: currentCharacterId,
                 quantity_listed: quantityPerListing,
@@ -216,16 +209,18 @@ export const handleAddListing = async (e) => {
                 console.error(`Supabase Insert Error for listing ${i + 1}:`, error);
             } else {
                 successCount++;
-                //console.log(`Listing ${i + 1} successfully inserted.`);
             }
         }
 
         if (successCount > 0) {
-            //console.log(`Successfully added ${successCount} listings. Updating character gold.`);
             const newGold = currentGold - totalFees;
-            const { error: updateGoldError } = await supabase
+            const {
+                error: updateGoldError
+            } = await supabase
                 .from('characters')
-                .update({ gold: newGold })
+                .update({
+                    gold: newGold
+                })
                 .eq('character_id', currentCharacterId);
 
             if (updateGoldError) {
@@ -235,7 +230,6 @@ export const handleAddListing = async (e) => {
                 }]);
                 console.error("Supabase Error: Failed to update character gold.", updateGoldError);
             } else {
-                //console.log(`Character gold updated from ${currentGold} to ${newGold}.`);
                 let successMessage = `Successfully added ${successCount} listing(s)!`;
                 if (failedCount > 0) {
                     successMessage += ` ${failedCount} listing(s) failed.`;
@@ -256,11 +250,8 @@ export const handleAddListing = async (e) => {
                 value: true
             }]);
         }
-        //console.log('Calling loadActiveListings and loadTraderPageData.');
-        await loadActiveListings();
         await loadTraderPageData();
         form.reset();
-        //console.log('Form reset.');
 
     } catch (e) {
         console.error("Unexpected error during handleAddListing:", e);
@@ -272,13 +263,11 @@ export const handleAddListing = async (e) => {
         if (submitButton) {
             submitButton.disabled = false;
             submitButton.textContent = 'Add Listing';
-            //console.log('Submit button re-enabled and text reset.');
         }
     }
 };
 
 export const handleMarkAsSold = async (listingId) => {
-    //console.log('handleMarkAsSold called for listing ID:', listingId);
     const confirmation = await showCustomModal('Confirm Sale', 'Are you sure you want to mark this listing as sold? This action cannot be undone.', [{
         text: 'Yes',
         value: true,
@@ -290,10 +279,8 @@ export const handleMarkAsSold = async (listingId) => {
     }]);
 
     if (!confirmation) {
-        //console.log('Mark as sold cancelled by user.');
         return;
     }
-    //console.log('Confirmation received for marking as sold.');
 
     try {
         const {
@@ -313,8 +300,6 @@ export const handleMarkAsSold = async (listingId) => {
             }]);
             return;
         }
-        //console.log('Listing fetched for marking as sold:', listing);
-
 
         const {
             error: updateError
@@ -335,8 +320,6 @@ export const handleMarkAsSold = async (listingId) => {
             }]);
             return;
         }
-        //console.log('Listing successfully marked as sold in DB.');
-
 
         const {
             error: insertSaleError
@@ -357,7 +340,6 @@ export const handleMarkAsSold = async (listingId) => {
                 value: true
             }]);
         } else {
-            //console.log('Sales record inserted successfully. Fetching character gold.');
             const {
                 data: characterData,
                 error: fetchGoldError
@@ -375,7 +357,6 @@ export const handleMarkAsSold = async (listingId) => {
                 }]);
             } else {
                 const newGold = (characterData.gold || 0) + listing.total_listed_price;
-                //console.log(`Updating character gold from ${characterData.gold} to ${newGold}.`);
                 const {
                     error: updateGoldError
                 } = await supabase
@@ -396,7 +377,6 @@ export const handleMarkAsSold = async (listingId) => {
                         text: 'OK',
                         value: true
                     }]);
-                    //console.log('Character gold updated successfully. Loading trader page data.');
                     await loadTraderPageData();
                 }
             }
@@ -407,14 +387,10 @@ export const handleMarkAsSold = async (listingId) => {
             text: 'OK',
             value: true
         }]);
-    } finally {
-        //console.log('handleMarkAsSold finished. Calling loadActiveListings.');
-        loadActiveListings();
     }
 };
 
 export const handleCancelListing = async (listingId) => {
-    //console.log('handleCancelListing called for listing ID:', listingId);
     const confirmation = await showCustomModal('Confirm Cancel', 'Are you sure you want to cancel this listing? This action cannot be undone.', [{
         text: 'Yes',
         value: true,
@@ -426,10 +402,8 @@ export const handleCancelListing = async (listingId) => {
     }]);
 
     if (!confirmation) {
-        //console.log('Cancellation cancelled by user.');
         return;
     }
-    //console.log('Confirmation received for cancellation.');
 
     try {
         const {
@@ -449,8 +423,6 @@ export const handleCancelListing = async (listingId) => {
             }]);
             return;
         }
-        //console.log('Listing fetched for cancellation:', listing);
-
 
         const {
             error: updateError
@@ -471,14 +443,11 @@ export const handleCancelListing = async (listingId) => {
             }]);
             return;
         }
-        //console.log('Listing successfully marked as cancelled in DB.');
-
 
         await showCustomModal('Success', 'Listing canceled successfully!', [{
             text: 'OK',
             value: true
         }]);
-        //console.log('Calling loadTraderPageData after cancellation.');
         await loadTraderPageData();
     } catch (e) {
         console.error('handleCancelListing: An unexpected error occurred while canceling the listing.', e);
@@ -486,14 +455,10 @@ export const handleCancelListing = async (listingId) => {
             text: 'OK',
             value: true
         }]);
-    } finally {
-        //console.log('handleCancelListing finished. Calling loadActiveListings.');
-        loadActiveListings();
     }
 };
 
 export const showEditListingModal = async (listingId) => {
-    //console.log('showEditListingModal called for listing ID:', listingId);
     setCurrentEditingListingId(listingId);
     const {
         editModal,
@@ -520,8 +485,6 @@ export const showEditListingModal = async (listingId) => {
             }]);
             return;
         }
-        //console.log('Listing data fetched for edit modal:', listing);
-
 
         setOriginalListingPrice(listing.total_listed_price || 0);
         setOriginalListingFee(listing.market_fee || 0);
@@ -530,7 +493,6 @@ export const showEditListingModal = async (listingId) => {
         editTotalPriceInput.value = Math.round(listing.total_listed_price || 0);
         updateEditFeeInfo();
         editModal.classList.remove('hidden');
-        //console.log('Edit modal displayed.');
     } catch (e) {
         console.error('showEditListingModal: An unexpected error occurred while preparing the edit form.', e);
         await showCustomModal('Error', 'An unexpected error occurred while preparing the edit form.', [{
@@ -541,29 +503,23 @@ export const showEditListingModal = async (listingId) => {
 };
 
 export const updateEditFeeInfo = () => {
-    //console.log('updateEditFeeInfo called.');
     const {
         editTotalPriceInput,
         editFeeInfo
     } = getEditListingModalElements();
     const newPrice = parseFloat(editTotalPriceInput.value) || 0;
     const estimatedNewFee = Math.ceil(newPrice * 0.05);
-    //console.log('New price:', newPrice, 'Estimated new fee:', estimatedNewFee);
-
 
     if (newPrice > originalListingPrice) {
         let additionalFee = estimatedNewFee - originalListingFee;
         if (additionalFee < 0) additionalFee = 0;
         editFeeInfo.textContent = `Estimated additional fee: ${additionalFee.toLocaleString()} (Total estimated fee: ${estimatedNewFee.toLocaleString()})`;
-        //console.log('Price increased. Additional fee:', additionalFee);
     } else {
         editFeeInfo.textContent = `Current fee: ${originalListingFee.toLocaleString()}`;
-        //console.log('Price not increased. Current fee:', originalListingFee);
     }
 };
 
 export const handleEditListingSave = async (e) => {
-    //console.log('handleEditListingSave called.');
     e.preventDefault();
     const {
         editModal,
@@ -574,7 +530,6 @@ export const handleEditListingSave = async (e) => {
     if (submitButton) {
         submitButton.disabled = true;
         submitButton.textContent = 'Saving...';
-        //console.log('Edit save button disabled and text changed.');
     }
 
     try {
@@ -586,13 +541,9 @@ export const handleEditListingSave = async (e) => {
             console.error('handleEditListingSave: No current editing listing ID. Aborting.');
             return;
         }
-        //console.log('Current editing listing ID:', currentEditingListingId);
-
 
         const quantity_listed = parseInt(editQuantityListedInput.value, 10);
         const total_listed_price = parseFloat(editTotalPriceInput.value);
-        //console.log('New quantity:', quantity_listed, 'New total price:', total_listed_price);
-
 
         if (isNaN(quantity_listed) || isNaN(total_listed_price) || quantity_listed <= 0 || total_listed_price <= 0) {
             await showCustomModal('Validation Error', 'Please enter valid quantity and price.', [{
@@ -621,14 +572,10 @@ export const handleEditListingSave = async (e) => {
             }]);
             return;
         }
-        //console.log('Old listing details:', oldListing);
-
 
         const oldPrice = oldListing.total_listed_price;
         const currentStoredFee = oldListing.market_fee;
         const priceIncrease = total_listed_price - oldPrice;
-        //console.log('Old price:', oldPrice, 'Current stored fee:', currentStoredFee, 'Price increase:', priceIncrease);
-
 
         let additionalFeeToDeduct = 0;
         let newCalculatedFee = currentStoredFee;
@@ -639,11 +586,9 @@ export const handleEditListingSave = async (e) => {
                 newCalculatedFee = currentStoredFee;
             }
             additionalFeeToDeduct = newCalculatedFee - currentStoredFee;
-            //console.log('Price increased. New calculated fee:', newCalculatedFee, 'Additional fee to deduct:', additionalFeeToDeduct);
         } else {
             additionalFeeToDeduct = 0;
             newCalculatedFee = currentStoredFee;
-            //console.log('Price not increased or decreased. No additional fee.');
         }
 
         const {
@@ -665,8 +610,6 @@ export const handleEditListingSave = async (e) => {
         }
 
         let currentGold = characterData.gold || 0;
-        //console.log('Character gold before fee deduction:', currentGold);
-
 
         if (additionalFeeToDeduct > 0 && currentGold < additionalFeeToDeduct) {
             await showCustomModal('Validation Error', `Not enough gold! You need ${additionalFeeToDeduct.toLocaleString()} gold for the additional fee but only have ${currentGold.toLocaleString()}.`, [{
@@ -678,8 +621,6 @@ export const handleEditListingSave = async (e) => {
         }
 
         const listed_price_per_unit = total_listed_price / quantity_listed;
-        //console.log('New price per unit:', listed_price_per_unit);
-
 
         const {
             error: updateListingError
@@ -702,8 +643,6 @@ export const handleEditListingSave = async (e) => {
             }]);
             return;
         }
-        //console.log('Listing successfully updated in DB.');
-
 
         if (additionalFeeToDeduct > 0) {
             const newGold = currentGold - additionalFeeToDeduct;
@@ -727,17 +666,14 @@ export const handleEditListingSave = async (e) => {
                     text: 'OK',
                     value: true
                 }]);
-                //console.log(`Character gold updated from ${currentGold} to ${newGold} after fee deduction.`);
             }
         } else {
             await showCustomModal('Success', 'Listing updated successfully!', [{
                 text: 'OK',
                 value: true
             }]);
-            //console.log('Listing updated, no additional fee to deduct.');
         }
         editModal.classList.add('hidden');
-        //console.log('Edit modal hidden. Calling loadTraderPageData.');
         await loadTraderPageData();
     } catch (e) {
         console.error('handleEditListingSave: An unexpected error occurred while saving changes.', e);
@@ -749,16 +685,12 @@ export const handleEditListingSave = async (e) => {
         if (submitButton) {
             submitButton.disabled = false;
             submitButton.textContent = 'Save Changes';
-            //console.log('Edit save button re-enabled and text reset.');
         }
-        //console.log('Calling loadActiveListings after edit save.');
-        loadActiveListings();
     }
 };
 
 
 export const showManageMarketStallsModal = async () => {
-    //console.log('showManageMarketStallsModal called.');
     if (!manageMarketStallsModal) {
         console.error('showManageMarketStallsModal: manageMarketStallsModal element not found.');
         return;
@@ -772,20 +704,16 @@ export const showManageMarketStallsModal = async () => {
         console.error('showManageMarketStallsModal: No character selected. Aborting.');
         return;
     }
-    //console.log('Character ID present. Preparing manage market stalls modal.');
 
     createStallError.classList.add('hidden');
     deleteStallError.classList.add('hidden');
     newMarketStallNameInput.value = '';
-    //console.log('Cleared previous errors and input for new stall.');
 
     await renderMarketStallsInModal();
     manageMarketStallsModal.classList.remove('hidden');
-    //console.log('Manage Market Stalls modal displayed.');
 };
 
 export const handleEditMarketStallName = async (stallId, newStallName, editInput, saveButton, cancelButton, stallNameSpan, editButton, deleteButton) => {
-    //console.log('handleEditMarketStallName called for stall ID:', stallId, 'New name:', newStallName);
     saveButton.disabled = true;
     saveButton.textContent = 'Saving...';
 
@@ -814,7 +742,6 @@ export const handleEditMarketStallName = async (stallId, newStallName, editInput
         if (error) {
             throw error;
         }
-        //console.log('Market stall name updated in DB successfully.');
 
         await showCustomModal('Success', 'Market Stall name updated successfully!', [{
             text: 'OK',
@@ -828,10 +755,8 @@ export const handleEditMarketStallName = async (stallId, newStallName, editInput
         cancelButton.classList.add('hidden');
         editButton.classList.remove('hidden');
         deleteButton.classList.remove('hidden');
-        //console.log('UI updated after stall name save.');
 
-        //console.log('Calling populateMarketStallDropdown and setupMarketStallTabs after stall name edit.');
-        await populateMarketStallDropdown(marketStallDropdown);
+        await populateMarketStallDropdown(modalMarketStallLocationSelect); // Corrected to use modalMarketStallLocationSelect
         await setupMarketStallTabs();
 
     } catch (e) {
@@ -843,13 +768,11 @@ export const handleEditMarketStallName = async (stallId, newStallName, editInput
     } finally {
         saveButton.disabled = false;
         saveButton.textContent = 'Save';
-        //console.log('Edit stall name save button re-enabled.');
     }
 };
 
 
 const renderMarketStallsInModal = async () => {
-    //console.log('renderMarketStallsInModal called.');
     if (!marketStallsList) {
         console.error('renderMarketStallsInModal: marketStallsList element not found.');
         return;
@@ -859,15 +782,13 @@ const renderMarketStallsInModal = async () => {
 
     try {
         const stalls = await getUserMarketStallLocations(currentCharacterId);
-        //console.log('Market stalls fetched for modal rendering:', stalls);
 
         if (stalls.length === 0) {
             marketStallsList.innerHTML = '<p class="text-gray-600">No market stalls found for this character. Create one below!</p>';
-            //console.log('No market stalls found to render.');
             return;
         }
 
-        marketStallsList.innerHTML = ''; // Clear loading message
+        marketStallsList.innerHTML = '';
         stalls.forEach(stall => {
             const stallDiv = document.createElement('div');
             stallDiv.classList.add('flex', 'flex-wrap', 'items-center', 'justify-between', 'bg-gray-100', 'p-3', 'rounded-lg', 'shadow-sm', 'mb-2');
@@ -920,7 +841,6 @@ const renderMarketStallsInModal = async () => {
             marketStallsList.appendChild(stallDiv);
 
             editButton.addEventListener('click', () => {
-                //console.log('Edit button clicked for stall:', stall.id);
                 stallNameSpan.classList.add('hidden');
                 editInput.classList.remove('hidden');
                 saveButton.classList.remove('hidden');
@@ -931,7 +851,6 @@ const renderMarketStallsInModal = async () => {
             });
 
             cancelButton.addEventListener('click', () => {
-                //console.log('Cancel button clicked for stall:', stall.id);
                 editInput.value = stall.stall_name;
                 stallNameSpan.classList.remove('hidden');
                 editInput.classList.add('hidden');
@@ -942,7 +861,6 @@ const renderMarketStallsInModal = async () => {
             });
 
             saveButton.addEventListener('click', () => {
-                //console.log('Save button clicked for stall:', stall.id);
                 handleEditMarketStallName(
                     stall.id,
                     editInput.value,
@@ -956,7 +874,6 @@ const renderMarketStallsInModal = async () => {
             });
 
             deleteButton.addEventListener('click', () => {
-                //console.log('Delete button clicked for stall:', stall.id);
                 handleDeleteMarketStall(stall.id);
             });
         });
@@ -967,11 +884,7 @@ const renderMarketStallsInModal = async () => {
     }
 };
 
-
-
-
 export const createDefaultMarketStall = async (characterId, characterName) => {
-    //console.log('createDefaultMarketStall called for character:', { characterId, characterName });
     if (!characterId) {
         console.error('createDefaultMarketStall: No character ID provided for creating default market stall.');
         return null;
@@ -983,7 +896,6 @@ export const createDefaultMarketStall = async (characterId, characterName) => {
     }
 
     const defaultStallName = `${characterName} - Default Stall`;
-    //console.log('Default stall name:', defaultStallName);
 
     try {
         const {
@@ -1002,7 +914,6 @@ export const createDefaultMarketStall = async (characterId, characterName) => {
             throw error;
         }
 
-        //console.log('Default market stall created with ID:', data.id);
         return data.id;
     } catch (e) {
         console.error('createDefaultMarketStall: Error creating default market stall:', e.message, e);
@@ -1012,112 +923,130 @@ export const createDefaultMarketStall = async (characterId, characterName) => {
 
 
 export const handleAddMarketStall = async (e) => {
-  e.preventDefault();
-  createStallError.classList.add('hidden');
+    e.preventDefault();
+    createStallError.classList.add('hidden');
 
-  if (!currentCharacterId) {
-    createStallError.textContent = 'Please select a character first.';
-    createStallError.classList.remove('hidden');
-    return;
-  }
-
-  const newStallName = newMarketStallNameInput.value.trim();
-  if (!newStallName) {
-    createStallError.textContent = 'Market Stall Name cannot be empty.';
-    createStallError.classList.remove('hidden');
-    return;
-  }
-
-  addMarketStallBtn.disabled = true;
-  addMarketStallBtn.textContent = 'Creating Stall...';
-
-  try {
-    const { error } = await supabase
-      .from('market_stalls')
-      .insert({
-        stall_name: newStallName,
-        character_id: currentCharacterId
-      });
-
-    if (error) throw error;
-
-    clearMarketStallsCache();
-    await showCustomModal('Success', 'Market Stall created successfully!', [{ text: 'OK', value: true }]);
-    newMarketStallNameInput.value = '';
-    await renderMarketStallsInModal();
-
-    if (modalMarketStallLocationSelect) {
-      await populateMarketStallDropdown(modalMarketStallLocationSelect);
+    if (!currentCharacterId) {
+        createStallError.textContent = 'Please select a character first.';
+        createStallError.classList.remove('hidden');
+        return;
     }
 
-    await setupMarketStallTabs();
-  } catch (e) {
-    createStallError.textContent = 'Failed to create market stall: ' + e.message;
-    createStallError.classList.remove('hidden');
-  } finally {
-    addMarketStallBtn.disabled = false;
-    addMarketStallBtn.textContent = 'Create Market Stall';
-  }
+    const newStallName = newMarketStallNameInput.value.trim();
+    if (!newStallName) {
+        createStallError.textContent = 'Market Stall Name cannot be empty.';
+        createStallError.classList.remove('hidden');
+        return;
+    }
+
+    addMarketStallBtn.disabled = true;
+    addMarketStallBtn.textContent = 'Creating Stall...';
+
+    try {
+        const {
+            error
+        } = await supabase
+            .from('market_stalls')
+            .insert({
+                stall_name: newStallName,
+                character_id: currentCharacterId
+            });
+
+        if (error) throw error;
+
+        clearMarketStallsCache();
+        await showCustomModal('Success', 'Market Stall created successfully!', [{
+            text: 'OK',
+            value: true
+        }]);
+        newMarketStallNameInput.value = '';
+        await renderMarketStallsInModal();
+
+        if (modalMarketStallLocationSelect) {
+            await populateMarketStallDropdown(modalMarketStallLocationSelect);
+        }
+
+        await setupMarketStallTabs();
+    } catch (e) {
+        createStallError.textContent = 'Failed to create market stall: ' + e.message;
+        createStallError.classList.remove('hidden');
+    } finally {
+        addMarketStallBtn.disabled = false;
+        addMarketStallBtn.textContent = 'Create Market Stall';
+    }
 };
 
 
 export const handleDeleteMarketStall = async (stallId) => {
-  deleteStallError.classList.add('hidden');
+    deleteStallError.classList.add('hidden');
 
-  if (!currentCharacterId) {
-    deleteStallError.textContent = 'No character selected.';
-    deleteStallError.classList.remove('hidden');
-    return;
-  }
-
-  const confirmation = await showCustomModal(
-    'Confirm Deletion',
-    'Are you sure you want to delete this market stall? This action cannot be undone and can only be performed if the stall has no active listings.',
-    [
-      { text: 'Yes', value: true, class: 'bg-red-500 hover:bg-red-700' },
-      { text: 'No', value: false, class: 'bg-gray-500 hover:bg-gray-700' }
-    ]
-  );
-
-  if (!confirmation) return;
-
-  try {
-    const { data: listings, error: listingsError } = await supabase
-      .from('market_listings')
-      .select('listing_id')
-      .eq('market_stall_id', stallId)
-      .eq('character_id', currentCharacterId)
-      .eq('is_fully_sold', false)
-      .eq('is_cancelled', false);
-
-    if (listingsError) throw listingsError;
-
-    if (listings && listings.length > 0) {
-      await showCustomModal(
-        'Deletion Failed',
-        'Cannot delete stall with active listings.',
-        [{ text: 'OK', value: true }]
-      );
-      return;
+    if (!currentCharacterId) {
+        deleteStallError.textContent = 'No character selected.';
+        deleteStallError.classList.remove('hidden');
+        return;
     }
 
-    const { error } = await supabase
-      .from('market_stalls')
-      .delete()
-      .eq('id', stallId)
-      .eq('character_id', currentCharacterId);
+    const confirmation = await showCustomModal(
+        'Confirm Deletion',
+        'Are you sure you want to delete this market stall? This action cannot be undone and can only be performed if the stall has no active listings.',
+        [{
+            text: 'Yes',
+            value: true,
+            class: 'bg-red-500 hover:bg-red-700'
+        }, {
+            text: 'No',
+            value: false,
+            class: 'bg-gray-500 hover:bg-gray-700'
+        }]
+    );
 
-    if (error) throw error;
+    if (!confirmation) return;
 
-    clearMarketStallsCache();
-    await renderMarketStallsInModal();
-    if (modalMarketStallLocationSelect) {
-      await populateMarketStallDropdown(modalMarketStallLocationSelect);
+    try {
+        const {
+            data: listings,
+            error: listingsError
+        } = await supabase
+            .from('market_listings')
+            .select('listing_id')
+            .eq('market_stall_id', stallId)
+            .eq('character_id', currentCharacterId)
+            .eq('is_fully_sold', false)
+            .eq('is_cancelled', false);
+
+        if (listingsError) throw listingsError;
+
+        if (listings && listings.length > 0) {
+            await showCustomModal(
+                'Deletion Failed',
+                'Cannot delete stall with active listings.',
+                [{
+                    text: 'OK',
+                    value: true
+                }]
+            );
+            return;
+        }
+
+        const {
+            error
+        } = await supabase
+            .from('market_stalls')
+            .delete()
+            .eq('id', stallId)
+            .eq('character_id', currentCharacterId);
+
+        if (error) throw error;
+
+        clearMarketStallsCache();
+        await renderMarketStallsInModal();
+        if (modalMarketStallLocationSelect) {
+            await populateMarketStallDropdown(modalMarketStallLocationSelect);
+        }
+        await setupMarketStallTabs();
+
+    } catch (e) {
+        deleteStallError.textContent = 'Failed to delete market stall: ' + e.message;
+        deleteStallError.classList.remove('hidden');
     }
-    await setupMarketStallTabs();
-
-  } catch (e) {
-    deleteStallError.textContent = 'Failed to delete market stall: ' + e.message;
-    deleteStallError.classList.remove('hidden');
-  }
 };

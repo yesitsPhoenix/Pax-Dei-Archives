@@ -17,6 +17,11 @@ import {
     modalMarketStallLocationSelect
 } from './modules/dom.js';
 
+import {
+
+    clearMarketStallsCache
+} from './modules/init.js';
+
 let currentUser = null;
 let allCharacterActivityData = [];
 let allItems = [];
@@ -198,13 +203,19 @@ export const loadTraderPageData = async () => {
     }
 
     try {
+        clearMarketStallsCache();
 
         const [
-            { data: dashboardStats, error: dashboardError },
+            {
+                data: dashboardStats,
+                error: dashboardError
+            },
             currentCharacterData,
             allActivityData
         ] = await Promise.all([
-            supabase.rpc('get_character_dashboard_stats', { p_character_id: currentCharacterId }),
+            supabase.rpc('get_character_dashboard_stats', {
+                p_character_id: currentCharacterId
+            }),
             getCurrentCharacter(),
             fetchAllCharacterActivity(currentCharacterId)
         ]);
@@ -226,7 +237,10 @@ export const loadTraderPageData = async () => {
 
     } catch (error) {
         console.error('Error loading trader page data:', error.message);
-        await showCustomModal('Error', 'Failed to load trader data: ' + error.message, [{ text: 'OK', value: true }]);
+        await showCustomModal('Error', 'Failed to load trader data: ' + error.message, [{
+            text: 'OK',
+            value: true
+        }]);
     }
 };
 
