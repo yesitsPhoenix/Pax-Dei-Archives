@@ -248,7 +248,7 @@ export const loadTraderPageData = async (reloadActiveListings = true) => {
             rawActivityData
         ] = await Promise.all([
             supabase.rpc('get_character_dashboard_stats', { p_character_id: currentCharacterId }),
-            getCurrentCharacter(),
+            getCurrentCharacter(true),
             fetchCharacterActivity(currentCharacterId)
         ]);
 

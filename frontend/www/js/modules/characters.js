@@ -769,14 +769,13 @@ const showPveGoldInputModal = async (onConfirm, onCancel) => {
     pveGoldAmountInput.focus();
 };
 
-export const getCurrentCharacter = async () => {
+export const getCurrentCharacter = async (forceRefresh = false) => {
     if (!currentCharacterId) return null;
-    // Return from cache if available
-    if (_currentCharacter && _currentCharacter.character_id === currentCharacterId) {
+
+    if (!forceRefresh && _currentCharacter && _currentCharacter.character_id === currentCharacterId) {
         return _currentCharacter;
     }
 
-    // Fallback to fetch from DB if not in cache (should be rare if loadCharacters is called correctly)
     const { data, error } = await supabase
         .from('characters')
         .select('character_id, character_name, gold')
@@ -788,7 +787,7 @@ export const getCurrentCharacter = async () => {
         await showCustomModal('Error', 'Failed to fetch current character data.', [{ text: 'OK', value: true }]);
         return null;
     }
-    _currentCharacter = data; // Cache the fetched character
+    _currentCharacter = data;
     return data;
 };
 

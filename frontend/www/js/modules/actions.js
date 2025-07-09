@@ -259,6 +259,7 @@ export const handleAddListing = async (e) => {
         //console.log('Calling loadActiveListings and loadTraderPageData.');
         //await loadActiveListings();
         await loadTraderPageData();
+        console.log('handleAddListing: loadTraderPageData completed. Checking UI update.'); // ADD THIS LOG
         form.reset();
         //console.log('Form reset.');
 
@@ -739,6 +740,7 @@ export const handleEditListingSave = async (e) => {
         editModal.classList.add('hidden');
         //console.log('Edit modal hidden. Calling loadTraderPageData.');
         await loadTraderPageData();
+        
     } catch (e) {
         console.error('handleEditListingSave: An unexpected error occurred while saving changes.', e);
         await showCustomModal('Error', 'An unexpected error occurred while saving changes.', [{
