@@ -483,6 +483,7 @@ export const setupMarketStallTabs = async () => {
                 firstTabContent.classList.remove('hidden');
             }
             setCurrentListingsPage(1, firstStallId);
+            loadActiveListings(firstStallId);
         }
     } catch (e) {
         console.error("Error setting up market stall tabs:", e.message);
