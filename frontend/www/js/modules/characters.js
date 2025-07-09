@@ -1,3 +1,4 @@
+// characters.js
 import { supabase } from '../supabaseClient.js';
 import { showCustomModal, loadTraderPageData } from '../trader.js';
 import { loadTransactionHistory } from './sales.js';
@@ -27,9 +28,18 @@ const closeAddPveTransactionModalBtn = document.getElementById('closeAddPveTrans
 let currentUserId = null;
 export let currentCharacterId = null;
 export let currentCharacterGold = 0;
+// New: Cache for all characters associated with the current user
+let cachedUserCharacters = [];
+// New: Store the currently selected character object
+let _currentCharacter = null;
+// New: Cache for all regions data
+let cachedRegions = null;
 
 export const setCurrentCharacterGold = (gold) => {
     currentCharacterGold = gold;
+    if (_currentCharacter) {
+        _currentCharacter.gold = gold; // Update the cached object as well
+    }
 };
 
 export const insertCharacterModalHtml = () => {
@@ -104,7 +114,7 @@ export const insertCharacterModalHtml = () => {
         createCharacterForm.addEventListener('submit', handleCreateCharacter);
     }
 
-    populateRegionDropdowns();
+    populateRegionDropdowns(); // This will now fetch and cache all regions
 };
 
 export const initializeCharacters = async (userId = null, onCharacterSelectedCallback) => {
@@ -141,6 +151,7 @@ export const loadCharacters = async (onCharacterSelectedCallback) => {
     const setGoldBtn = document.getElementById('setGoldBtn');
     const pveBtn = document.getElementById('pveBtn');
 
+    // Fetch characters
     const { data, error } = await supabase
         .from('characters')
         .select('character_id, character_name, gold')
@@ -152,7 +163,8 @@ export const loadCharacters = async (onCharacterSelectedCallback) => {
         return;
     }
 
-    const characters = data || [];
+    cachedUserCharacters = data || []; // Cache the fetched characters
+    const characters = cachedUserCharacters;
     characterSelect.innerHTML = '';
 
     if (characters.length === 0) {
@@ -162,6 +174,8 @@ export const loadCharacters = async (onCharacterSelectedCallback) => {
         characterSelect.appendChild(option);
         characterSelect.disabled = true;
         currentCharacterId = null;
+        _currentCharacter = null; // Clear cached current character
+        setCurrentCharacterGold(0); // Reset gold
         if (deleteCharacterBtn) deleteCharacterBtn.style.display = 'none';
         if (setGoldBtn) setGoldBtn.style.display = 'none';
         if (pveBtn) pveBtn.style.display = 'none';
@@ -178,10 +192,13 @@ export const loadCharacters = async (onCharacterSelectedCallback) => {
             characterSelect.appendChild(option);
         });
 
+        // Set current character if not already set or if current one was deleted
         if (!currentCharacterId || !characters.some(char => char.character_id === currentCharacterId)) {
             currentCharacterId = characters[0].character_id;
         }
         characterSelect.value = currentCharacterId;
+        _currentCharacter = characters.find(char => char.character_id === currentCharacterId);
+        setCurrentCharacterGold(_currentCharacter ? _currentCharacter.gold : 0);
     }
 
     if (onCharacterSelectedCallback) {
@@ -194,6 +211,7 @@ const showAddPveTransactionModal = async () => {
     if (addPveTransactionModal) {
         addPveTransactionModal.classList.remove('hidden');
         if (pveAmountInput) {
+            // Use currentCharacterGold directly as it's kept updated
             pveAmountInput.value = currentCharacterGold;
         }
         if (pveTransactionTypeSelect) {
@@ -210,28 +228,35 @@ const hideAddPveTransactionModal = () => {
 
 const handleCharacterSelection = async (event) => {
     currentCharacterId = event.target.value;
-    if (currentCharacterId) {
-        const characterData = await getCurrentCharacter();
-        if (characterData) {
-            setCurrentCharacterGold(characterData.gold);
-        }
+    // Update currentCharacter and gold from cache
+    _currentCharacter = cachedUserCharacters.find(char => char.character_id === currentCharacterId);
+    if (_currentCharacter) {
+        setCurrentCharacterGold(_currentCharacter.gold);
+    } else {
+        setCurrentCharacterGold(0); // Should not happen if cachedUserCharacters is correct
     }
     await loadTraderPageData();
 };
 
 const populateRegionDropdowns = async () => {
-    const { data, error } = await supabase
-        .from('regions')
-        .select('region_name')
-        .order('region_name', { ascending: true });
+    if (cachedRegions === null) {
+        const { data, error } = await supabase
+            .from('regions')
+            .select('id, region_name, shard, province, home_valley')
+            .order('region_name', { ascending: true })
+            .order('shard', { ascending: true })
+            .order('province', { ascending: true })
+            .order('home_valley', { ascending: true });
 
-    if (error) {
-        console.error('Error fetching distinct region names:', error);
-        await showCustomModal('Error', 'Failed to load region names. Please try again.', [{ text: 'OK', value: true }]);
-        return;
+        if (error) {
+            console.error('Error fetching all regions for caching:', error);
+            await showCustomModal('Error', 'Failed to load region data. Please try again.', [{ text: 'OK', value: true }]);
+            return;
+        }
+        cachedRegions = data;
     }
 
-    const distinctRegionNames = [...new Set(data.map(item => item.region_name))];
+    const distinctRegionNames = [...new Set(cachedRegions.map(item => item.region_name))];
 
     if (newCharacterRegionNameSelect) {
         newCharacterRegionNameSelect.innerHTML = '<option value="" disabled selected>Select Region Name</option>';
@@ -255,26 +280,15 @@ const populateRegionDropdowns = async () => {
 
             const selectedRegionName = newCharacterRegionNameSelect.value;
             if (selectedRegionName) {
-                await populateShardDropdowns(selectedRegionName);
+                populateShardDropdowns(selectedRegionName); // No 'await' needed here
             }
         });
     }
 };
 
-const populateShardDropdowns = async (regionName) => {
-    const { data, error } = await supabase
-        .from('regions')
-        .select('shard')
-        .eq('region_name', regionName)
-        .order('shard', { ascending: true });
-
-    if (error) {
-        console.error('Error fetching shards:', error);
-        await showCustomModal('Error', 'Failed to load shards. Please try again.', [{ text: 'OK', value: true }]);
-        return;
-    }
-
-    const distinctShards = [...new Set(data.map(item => item.shard))];
+const populateShardDropdowns = (regionName) => {
+    const filteredShards = cachedRegions.filter(item => item.region_name === regionName);
+    const distinctShards = [...new Set(filteredShards.map(item => item.shard))];
 
     if (newCharacterShardSelect) {
         newCharacterShardSelect.innerHTML = '<option value="" disabled selected>Select Shard</option>';
@@ -302,25 +316,13 @@ const handleShardChange = async () => {
     const selectedRegionName = newCharacterRegionNameSelect.value;
     const selectedShard = newCharacterShardSelect.value;
     if (selectedRegionName && selectedShard) {
-        await populateProvinceDropdowns(selectedRegionName, selectedShard);
+        populateProvinceDropdowns(selectedRegionName, selectedShard); // No 'await' needed here
     }
 };
 
-const populateProvinceDropdowns = async (regionName, shard) => {
-    const { data, error } = await supabase
-        .from('regions')
-        .select('province')
-        .eq('region_name', regionName)
-        .eq('shard', shard)
-        .order('province', { ascending: true });
-
-    if (error) {
-        console.error('Error fetching provinces:', error);
-        await showCustomModal('Error', 'Failed to load provinces. Please try again.', [{ text: 'OK', value: true }]);
-        return;
-    }
-
-    const distinctProvinces = [...new Set(data.map(item => item.province))];
+const populateProvinceDropdowns = (regionName, shard) => {
+    const filteredProvinces = cachedRegions.filter(item => item.region_name === regionName && item.shard === shard);
+    const distinctProvinces = [...new Set(filteredProvinces.map(item => item.province))];
 
     if (newCharacterProvinceSelect) {
         newCharacterProvinceSelect.innerHTML = '<option value="" disabled selected>Select Province</option>';
@@ -347,26 +349,13 @@ const handleProvinceChange = async () => {
     const selectedShard = newCharacterShardSelect.value;
     const selectedProvince = newCharacterProvinceSelect.value;
     if (selectedRegionName && selectedShard && selectedProvince) {
-        await populateHomeValleyDropdowns(selectedRegionName, selectedShard, selectedProvince);
+        populateHomeValleyDropdowns(selectedRegionName, selectedShard, selectedProvince); // No 'await' needed here
     }
 };
 
-const populateHomeValleyDropdowns = async (regionName, shard, province) => {
-    const { data, error } = await supabase
-        .from('regions')
-        .select('home_valley')
-        .eq('region_name', regionName)
-        .eq('shard', shard)
-        .eq('province', province)
-        .order('home_valley', { ascending: true });
-
-    if (error) {
-        console.error('Error fetching home valleys:', error);
-        await showCustomModal('Error', 'Failed to load home valleys. Please try again.', [{ text: 'OK', value: true }]);
-        return;
-    }
-
-    const distinctHomeValleys = [...new Set(data.map(item => item.home_valley))];
+const populateHomeValleyDropdowns = (regionName, shard, province) => {
+    const filteredHomeValleys = cachedRegions.filter(item => item.region_name === regionName && item.shard === shard && item.province === province);
+    const distinctHomeValleys = [...new Set(filteredHomeValleys.map(item => item.home_valley))];
 
     if (newCharacterHomeValleySelect) {
         newCharacterHomeValleySelect.innerHTML = '<option value="" disabled selected>Select Home Valley</option>';
@@ -405,17 +394,16 @@ const handleCreateCharacter = async (e) => {
         return;
     }
 
-    const { data: regionEntry, error: regionEntryError } = await supabase
-        .from('regions')
-        .select('id')
-        .eq('region_name', selectedRegionName)
-        .eq('shard', selectedShard)
-        .eq('province', selectedProvince)
-        .eq('home_valley', selectedHomeValley)
-        .single();
+    // Get region_entry_id from cachedRegions
+    const regionEntry = cachedRegions.find(
+        r => r.region_name === selectedRegionName &&
+             r.shard === selectedShard &&
+             r.province === selectedProvince &&
+             r.home_valley === selectedHomeValley
+    );
 
-    if (regionEntryError || !regionEntry) {
-        console.error('Error fetching region entry ID:', regionEntryError);
+    if (!regionEntry) {
+        console.error('Error: Selected region combination not found in cache.');
         await showCustomModal('Error', 'Failed to find the selected region combination. Please ensure all fields are correctly selected.', [{ text: 'OK', value: true }]);
         return;
     }
@@ -425,7 +413,7 @@ const handleCreateCharacter = async (e) => {
     const { data, error } = await supabase
         .from('characters')
         .insert([{ user_id: currentUserId, character_name: characterName, gold: initialGold, region: selectedRegionName, region_entry_id: regionEntryId }])
-        .select('character_id');
+        .select('character_id, character_name, gold'); // Select full data for immediate caching
 
     if (error) {
         if (error.code === '23505') {
@@ -437,7 +425,11 @@ const handleCreateCharacter = async (e) => {
         return;
     }
 
-    currentCharacterId = data[0].character_id;
+    const newCharacter = data[0];
+    currentCharacterId = newCharacter.character_id;
+    _currentCharacter = newCharacter; // Update current character object
+    setCurrentCharacterGold(newCharacter.gold); // Update current character gold
+    cachedUserCharacters.push(newCharacter); // Add new character to cache
 
     await createDefaultMarketStall(currentCharacterId, characterName);
 
@@ -451,12 +443,12 @@ const handleCreateCharacter = async (e) => {
     newCharacterShardSelect.innerHTML = '<option value="" disabled selected>Select Shard</option>';
     newCharacterProvinceSelect.innerHTML = '<option value="" disabled selected>Select Province</option>';
     newCharacterHomeValleySelect.innerHTML = '<option value="" disabled selected>Select Home Valley</option>';
-    
+
     newCharacterShardSelect.disabled = true;
     newCharacterProvinceSelect.disabled = true;
     newCharacterHomeValleySelect.disabled = true;
 
-    await loadCharacters(loadTraderPageData);
+    await loadCharacters(loadTraderPageData); // Reload characters to update dropdown
 };
 
 export const handleDeleteCharacter = async (characterIdParam = null) => {
@@ -544,10 +536,12 @@ export const handleDeleteCharacter = async (characterIdParam = null) => {
 
         await showCustomModal('Success', 'Character deleted successfully!', [{ text: 'OK', value: true }]);
 
-        await initializeCharacters();
+        // Remove deleted character from cache
+        cachedUserCharacters = cachedUserCharacters.filter(char => char.character_id !== characterId);
+        _currentCharacter = null; // Clear current character if deleted
 
+        await loadCharacters(loadTraderPageData); // Reload characters to update dropdown and current selection
         if (document.getElementById('listingsContainer')) {
-            await loadTraderPageData();
             loadTransactionHistory();
             renderSalesChart();
         }
@@ -577,6 +571,9 @@ const updateCharacterGold = async (newGoldAmount) => {
         return;
     }
 
+    // Update cached gold immediately
+    setCurrentCharacterGold(newGoldAmount);
+
     await showCustomModal('Success', `Gold updated to ${newGoldAmount.toLocaleString()}.`, [{ text: 'OK', value: true }]);
     await loadTraderPageData();
 };
@@ -592,18 +589,14 @@ const updateCharacterGoldByPveTransaction = async (newTotalGold, description = '
         return;
     }
 
-    const currentCharacter = await getCurrentCharacter();
-    if (!currentCharacter) {
-        return;
-    }
-
-    const goldChange = newTotalGold - currentCharacter.gold;
+    // Use the cached currentCharacterGold directly
+    const goldChange = newTotalGold - currentCharacterGold;
 
     if (newTotalGold < 0) {
         await showCustomModal("Validation Error", "PVE transaction would result in negative gold. Please enter a valid non-negative amount.", [{ text: 'OK', value: true }]);
         return;
     }
-    
+
     if (goldChange === 0) {
         await showCustomModal('Info', 'Gold amount is unchanged. No PVE transaction recorded.', [{ text: 'OK', value: true }]);
         return;
@@ -620,6 +613,9 @@ const updateCharacterGoldByPveTransaction = async (newTotalGold, description = '
         console.error('Error updating character gold for PVE:', updateCharError.message);
         return;
     }
+
+    // Update cached gold immediately
+    setCurrentCharacterGold(newTotalGold);
 
     const finalDescription = description.trim() !== ''
         ? description
@@ -696,14 +692,14 @@ const showSetGoldInputModal = (onConfirm, onCancel) => {
 const showPveGoldInputModal = async (onConfirm, onCancel) => {
     const modalId = `pveGoldInputModal-${Date.now()}`;
 
-    const currentCharacter = await getCurrentCharacter();
-    const currentGold = currentCharacter ? currentCharacter.gold : 0;
+    // Use currentCharacterGold directly from the global export
+    const currentGold = currentCharacterGold;
 
     const modalHtml = `
         <div id="${modalId}" class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50">
             <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full text-gray-800">
                 <h3 class="text-xl font-bold mb-4">Set Character Gold (PVE)</h3>
-                
+
                 <div class="mb-4">
                     <label for="pveGoldAmountInput" class="block text-sm font-bold mb-2">New Total Gold</label>
                     <p class="text-lg text-white-600 mb-1">Current: ${currentGold.toLocaleString()}</p>
@@ -737,7 +733,7 @@ const showPveGoldInputModal = async (onConfirm, onCancel) => {
     const confirmButton = document.getElementById('confirmPveGold');
     const cancelButton = document.getElementById('cancelPveGold');
     const errorEl = document.getElementById('pveGoldInputError');
-    
+
     pveGoldChangeInput.addEventListener('input', () => {
         const adjustment = parseInt(pveGoldChangeInput.value, 10);
         if (!isNaN(adjustment)) {
@@ -775,6 +771,12 @@ const showPveGoldInputModal = async (onConfirm, onCancel) => {
 
 export const getCurrentCharacter = async () => {
     if (!currentCharacterId) return null;
+    // Return from cache if available
+    if (_currentCharacter && _currentCharacter.character_id === currentCharacterId) {
+        return _currentCharacter;
+    }
+
+    // Fallback to fetch from DB if not in cache (should be rare if loadCharacters is called correctly)
     const { data, error } = await supabase
         .from('characters')
         .select('character_id, character_name, gold')
@@ -786,6 +788,7 @@ export const getCurrentCharacter = async () => {
         await showCustomModal('Error', 'Failed to fetch current character data.', [{ text: 'OK', value: true }]);
         return null;
     }
+    _currentCharacter = data; // Cache the fetched character
     return data;
 };
 
@@ -820,7 +823,7 @@ const addCharacterEventListeners = () => {
                 showCustomModal("Error", "Please select a character first to record PVE gold.", [{ text: 'OK', value: true }]);
                 return;
             }
-            
+
             showAddPveTransactionModal();
         });
     }

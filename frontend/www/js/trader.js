@@ -2,7 +2,7 @@
 import { supabase } from './supabaseClient.js';
 import { initializeListings, loadActiveListings, populateMarketStallDropdown, setupMarketStallTabs, clearMarketStallsCache } from './modules/init.js';
 import { initializeCharacters, insertCharacterModalHtml, currentCharacterId, getCurrentCharacter } from './modules/characters.js';
-import { initializeSales, loadTransactionHistory, handleDownloadCsv } from './modules/sales.js';
+import { initializeSales, loadTransactionHistory } from './modules/sales.js';
 import { renderDashboard } from './modules/dashboard.js';
 import { renderPVEChart, renderSalesChart } from './modules/salesChart.js';
 
@@ -21,35 +21,45 @@ let currentUser = null;
 let allCharacterActivityData = [];
 let allItems = [];
 
-let customModalContainer = null;
-let customModalContentWrapper = null;
-let customModalResolvePromise = null;
+// Refactored Modal Management
+// --- New Function: initCustomModal ---
+// Initializes the custom modal container once.
+const initCustomModal = () => {
+    const modalHtml = `
+        <div id="customModalContainer" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden" style="z-index: 10000;">
+            <div id="customModalContentWrapper" class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm mx-4 sm:mx-auto font-inter">
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const customModalContainer = document.getElementById('customModalContainer');
+    const customModalContentWrapper = document.getElementById('customModalContentWrapper');
 
+    customModalContainer.addEventListener('click', (event) => {
+        if (event.target === customModalContainer) {
+            customModalContainer.classList.add('hidden');
+            if (window.customModalResolvePromise) {
+                window.customModalResolvePromise(false);
+                window.customModalResolvePromise = null;
+            }
+        }
+    });
+
+    return { customModalContainer, customModalContentWrapper };
+};
+
+// --- Modified showCustomModal to use a global resolver and initialized elements ---
+// This function is kept largely the same, but it now relies on `window.customModalResolvePromise`
+// and `window.customModalElements` to manage the modal state and elements.
 export const showCustomModal = (title, message, buttons) => {
     return new Promise(resolve => {
-        customModalResolvePromise = resolve;
+        window.customModalResolvePromise = resolve;
 
-        if (!customModalContainer) {
-            const modalHtml = `
-                <div id="customModalContainer" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden" style="z-index: 10000;">
-                    <div id="customModalContentWrapper" class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm mx-4 sm:mx-auto font-inter">
-                    </div>
-                </div>
-            `;
-            document.body.insertAdjacentHTML('beforeend', modalHtml);
-            customModalContainer = document.getElementById('customModalContainer');
-            customModalContentWrapper = document.getElementById('customModalContentWrapper');
-
-            customModalContainer.addEventListener('click', (event) => {
-                if (event.target === customModalContainer) {
-                    customModalContainer.classList.add('hidden');
-                    if (customModalResolvePromise) {
-                        customModalResolvePromise(false);
-                        customModalResolvePromise = null;
-                    }
-                }
-            });
+        if (!window.customModalElements) {
+            window.customModalElements = initCustomModal();
         }
+
+        const { customModalContainer, customModalContentWrapper } = window.customModalElements;
 
         customModalContentWrapper.innerHTML = '';
 
@@ -82,9 +92,9 @@ export const showCustomModal = (title, message, buttons) => {
 
             button.addEventListener('click', () => {
                 customModalContainer.classList.add('hidden');
-                if (customModalResolvePromise) {
-                    customModalResolvePromise(btn.value);
-                    customModalResolvePromise = null;
+                if (window.customModalResolvePromise) {
+                    window.customModalResolvePromise(btn.value);
+                    window.customModalResolvePromise = null;
                 }
             });
             buttonContainer.appendChild(button);
@@ -98,7 +108,9 @@ const showCreateCharacterModalBtn = document.getElementById('showCreateCharacter
 const traderDiscordLoginButton = document.getElementById('traderDiscordLoginButton');
 const traderLoginError = document.getElementById('traderLoginError');
 
-async function fetchAllCharacterActivity(characterId) {
+// --- Refactored: fetchCharacterActivity
+// This function is now solely responsible for fetching character activity.
+async function fetchCharacterActivity(characterId) {
     if (!characterId) return [];
 
     const { data, error } = await supabase.rpc('get_all_character_activity_json', {
@@ -109,9 +121,14 @@ async function fetchAllCharacterActivity(characterId) {
         console.error("Error fetching character activity using RPC:", error);
         return [];
     }
+    return data;
+}
 
-    const { sales, purchases, cancellations, listing_fees, pve_transactions } = data;
-
+// --- New Function: processCharacterActivityData ---
+// Processes the raw data fetched by `fetchCharacterActivity` into a usable format.
+const processCharacterActivityData = (rawData) => {
+    if (!rawData) return [];
+    const { sales, purchases, cancellations, listing_fees, pve_transactions } = rawData;
     const allTransactions = [
         ...(sales || []),
         ...(purchases || []),
@@ -119,30 +136,24 @@ async function fetchAllCharacterActivity(characterId) {
         ...(listing_fees || []),
         ...(pve_transactions || [])
     ];
-
     allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
     return allTransactions;
-}
+};
 
-const checkUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+// --- Refactored: handleUserAuthentication ---
+// Handles the display logic for login/dashboard based on user status.
+const handleUserAuthentication = (user) => {
     const traderLoginContainer = document.getElementById('traderLoginContainer');
     const traderDashboardAndForms = document.getElementById('traderDashboardAndForms');
+
     if (user) {
         currentUser = user;
         if (traderLoginContainer) {
             traderLoginContainer.style.display = 'none';
         }
-        insertCharacterModalHtml();
-        await initializeCharacters(currentUser.id, async () => {
-            await loadTraderPageData();
-        });
-        initializeListings(currentUser.id);
-        initializeSales();
         if (traderDashboardAndForms) {
             traderDashboardAndForms.style.display = 'block';
         }
-
     } else {
         if (traderLoginContainer) {
             traderLoginContainer.style.display = 'block';
@@ -153,25 +164,47 @@ const checkUser = async () => {
     }
 };
 
+// --- Modified: checkUser ---
+// Orchestrates user authentication checks and subsequent initializations.
+const checkUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    handleUserAuthentication(user);
+
+    if (user) {
+        insertCharacterModalHtml();
+        await initializeCharacters(currentUser.id, async () => {
+            await loadTraderPageData();
+        });
+        initializeListings(currentUser.id);
+        initializeSales();
+    }
+};
+
+// --- Refactored: fetchAllItemsForDropdown ---
+// Dedicated function for fetching item data.
+async function fetchAllItemsForDropdown() {
+    const { data, error } = await supabase.rpc('get_all_items_for_dropdown');
+    if (error) {
+        console.error('Error fetching items for dropdowns:', error);
+        console.error('Supabase RPC error details:', error.message, error.details, error.hint);
+        throw error;
+    }
+    return data;
+}
+
+// --- Modified: populateItemData ---
+// Uses the dedicated fetch function and handles the assignment.
 async function populateItemData() {
     try {
-        const { data, error } = await supabase.rpc('get_all_items_for_dropdown');
-
-        if (error) {
-            console.error('Error fetching items for dropdowns:', error);
-            console.error('Supabase RPC error details:', error.message, error.details, error.hint);
-            return;
-        }
-
-        allItems = data;
-
+        allItems = await fetchAllItemsForDropdown();
         initializeAutocomplete(allItems);
-
     } catch (err) {
         console.error('An unexpected error occurred while fetching item data:', err);
     }
 }
 
+// --- Refactored: updateAllCharts ---
+// This function remains largely the same, but its dependency on `allCharacterActivityData` is clear.
 const updateAllCharts = (timeframe) => {
     if (allCharacterActivityData) {
         renderSalesChart(allCharacterActivityData, timeframe);
@@ -182,41 +215,53 @@ const updateAllCharts = (timeframe) => {
     }
 };
 
-export const loadTraderPageData = async () => {
+// --- New Function: clearTraderPageUI ---
+// Clears relevant UI elements when no user/character is selected.
+const clearTraderPageUI = () => {
+    renderDashboard({}, null);
+    loadTransactionHistory([]);
+    if (document.querySelector('.market-stall-tabs')) {
+        document.querySelector('.market-stall-tabs').innerHTML = '<p class="text-gray-600 text-center py-4">Select a character to manage market stalls.</p>';
+    }
+    if (document.querySelector('.tab-content-container')) {
+        document.querySelector('.tab-content-container').innerHTML = '';
+    }
+};
+
+// --- Modified: loadTraderPageData ---
+// Orchestrates the loading of all data and UI rendering for the trader page.
+export const loadTraderPageData = async (reloadActiveListings = true) => {
     if (!currentUser || !currentUser.id || !currentCharacterId) {
-        renderDashboard({}, null);
-        await loadActiveListings();
-        loadTransactionHistory([]);
+        clearTraderPageUI();
+        if (reloadActiveListings) {
+            await loadActiveListings();
+        }
         updateAllCharts('daily');
-        if (document.querySelector('.market-stall-tabs')) {
-            document.querySelector('.market-stall-tabs').innerHTML = '<p class="text-gray-600 text-center py-4">Select a character to manage market stalls.</p>';
-        }
-        if (document.querySelector('.tab-content-container')) {
-            document.querySelector('.tab-content-container').innerHTML = '';
-        }
         return;
     }
 
     try {
         clearMarketStallsCache();
         const [
-            { data: dashboardStats, error: dashboardError },
+            dashboardStatsResult,
             currentCharacterData,
-            allActivityData
+            rawActivityData
         ] = await Promise.all([
             supabase.rpc('get_character_dashboard_stats', { p_character_id: currentCharacterId }),
             getCurrentCharacter(),
-            fetchAllCharacterActivity(currentCharacterId)
+            fetchCharacterActivity(currentCharacterId)
         ]);
 
-        if (dashboardError) {
-            throw dashboardError;
+        if (dashboardStatsResult.error) {
+            throw dashboardStatsResult.error;
         }
 
-        allCharacterActivityData = allActivityData;
+        allCharacterActivityData = processCharacterActivityData(rawActivityData);
 
-        renderDashboard(dashboardStats ? dashboardStats[0] : {}, currentCharacterData);
-        await loadActiveListings();
+        renderDashboard(dashboardStatsResult.data ? dashboardStatsResult.data[0] : {}, currentCharacterData);
+        if (reloadActiveListings) {
+            await loadActiveListings();
+        }
         loadTransactionHistory(allCharacterActivityData);
         updateAllCharts('daily');
         if (modalMarketStallLocationSelect) {
@@ -230,47 +275,45 @@ export const loadTraderPageData = async () => {
     }
 };
 
-const addPageEventListeners = () => {
-    if (showCreateCharacterModalBtn) {
-        showCreateCharacterModalBtn.addEventListener('click', () => {
-            const createCharacterModal = document.getElementById('createCharacterModal');
-            if (createCharacterModal) {
-                createCharacterModal.classList.remove('hidden');
-            }
-        });
-    }
-    if (traderDiscordLoginButton) {
-        traderDiscordLoginButton.addEventListener('click', async () => {
-            let currentPath = window.location.pathname;
+// --- New Function: handleDiscordLogin ---
+// Encapsulates the Discord login logic.
+const handleDiscordLogin = async () => {
+    let currentPath = window.location.pathname;
 
-            if (!currentPath.includes('/Pax-Dei-Archives')) {
-                if (currentPath === '/') {
-                    currentPath = '/Pax-Dei-Archives/';
-                } else {
-                    currentPath = '/Pax-Dei-Archives' + currentPath;
-                }
-            }
-
-            const { error } = await supabase.auth.signInWithOAuth({
-                provider: 'discord',
-                options: {
-                    redirectTo: window.location.origin + currentPath
-                }
-            });
-            if (error) {
-                console.error('Error logging in with Discord:', error.message);
-                if (traderLoginError) {
-                    traderLoginError.textContent = 'Login failed: ' + error.message;
-                    traderLoginError.style.display = 'block';
-                }
-            }
-        });
+    if (!currentPath.includes('/Pax-Dei-Archives')) {
+        if (currentPath === '/') {
+            currentPath = '/Pax-Dei-Archives/';
+        } else {
+            currentPath = '/Pax-Dei-Archives' + currentPath;
+        }
     }
+
+    const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'discord',
+        options: {
+            redirectTo: window.location.origin + currentPath
+        }
+    });
+    if (error) {
+        console.error('Error logging in with Discord:', error.message);
+        if (traderLoginError) {
+            traderLoginError.textContent = 'Login failed: ' + error.message;
+            traderLoginError.style.display = 'block';
+        }
+    }
+};
+
+// --- New Function: setupChartTimeframeListeners ---
+// Sets up event listeners for chart timeframe buttons.
+const setupChartTimeframeListeners = () => {
     document.getElementById('viewDaily')?.addEventListener('click', () => updateAllCharts('daily'));
     document.getElementById('viewWeekly')?.addEventListener('click', () => updateAllCharts('weekly'));
     document.getElementById('viewMonthly')?.addEventListener('click', () => updateAllCharts('monthly'));
+};
 
-
+// --- New Function: setupAddListingModalListeners ---
+// Sets up event listeners for the Add Listing modal.
+const setupAddListingModalListeners = () => {
     if (showAddListingModalBtn) {
         showAddListingModalBtn.addEventListener('click', () => {
             if (addListingModal) {
@@ -297,43 +340,49 @@ const addPageEventListeners = () => {
             }
         });
     }
-
-
-    if (modalItemNameInput && modalItemNameSuggestions && allItems) {
-        setupCustomAutocomplete(modalItemNameInput, modalItemNameSuggestions, allItems, (selectedItem) => {
-            modalItemNameInput.value = selectedItem.item_name;
-            const categorySelect = modalItemCategorySelect;
-            if (categorySelect) {
-                categorySelect.value = String(selectedItem.category_id);
-            }
-            modalItemNameInput.dataset.selectedItemId = selectedItem.item_id;
-            modalItemNameInput.dataset.selectedPaxDeiSlug = selectedItem.p_slug;
-            modalItemNameInput.dataset.selectedItemCategory = selectedItem.category_id;
-        });
-    }
-
 };
 
+// --- Modified: addPageEventListeners ---
+// Orchestrates the attachment of all page-level event listeners.
+const addPageEventListeners = () => {
+    if (showCreateCharacterModalBtn) {
+        showCreateCharacterModalBtn.addEventListener('click', () => {
+            const createCharacterModal = document.getElementById('createCharacterModal');
+            if (createCharacterModal) {
+                createCharacterModal.classList.remove('hidden');
+            }
+        });
+    }
+    if (traderDiscordLoginButton) {
+        traderDiscordLoginButton.addEventListener('click', handleDiscordLogin);
+    }
+    setupChartTimeframeListeners();
+    setupAddListingModalListeners();
 
+    // Autocomplete setup is now handled by initializeAutocomplete
+};
 
-function setupCustomAutocomplete(inputElement, suggestionsContainerElement, dataArray, selectionCallback) {
+// Refactored Autocomplete
+// --- New Function: createAutocompleteHandlers ---
+// Factory function to create common autocomplete handlers.
+function createAutocompleteHandlers(inputElement, suggestionsContainerElement, dataArray, selectionCallback) {
     let currentFocus = -1;
     let filteredData = [];
 
-    function showSuggestions() {
+    const showSuggestions = () => {
         if (suggestionsContainerElement.children.length > 0) {
             suggestionsContainerElement.style.display = 'block';
         } else {
             suggestionsContainerElement.style.display = 'none';
         }
-    }
+    };
 
-    function hideSuggestions() {
+    const hideSuggestions = () => {
         suggestionsContainerElement.style.display = 'none';
         currentFocus = -1;
-    }
+    };
 
-    function renderSuggestions(items) {
+    const renderSuggestions = (items) => {
         suggestionsContainerElement.innerHTML = '';
         filteredData = items;
 
@@ -362,9 +411,9 @@ function setupCustomAutocomplete(inputElement, suggestionsContainerElement, data
             });
         }
         showSuggestions();
-    }
+    };
 
-    function filterItems(inputValue) {
+    const filterItems = (inputValue) => {
         const lowerCaseInput = inputValue.toLowerCase();
         return dataArray.filter(item =>
             item.item_name.toLowerCase().includes(lowerCaseInput)
@@ -377,109 +426,108 @@ function setupCustomAutocomplete(inputElement, suggestionsContainerElement, data
             if (!nameA.startsWith(lowerCaseInput) && nameB.startsWith(lowerCaseInput)) return -1;
             return nameA.localeCompare(nameB);
         });
-    }
+    };
 
-    inputElement.addEventListener('input', function() {
-        const val = this.value;
-        if (val.length === 0) {
-            hideSuggestions();
-            delete this.dataset.selectedItemId;
-            delete this.dataset.selectedPaxDeiSlug;
-            delete this.dataset.selectedItemCategory;
-            return;
-        }
-
-        const filtered = filterItems(val);
-        renderSuggestions(filtered);
-    });
-
-    inputElement.addEventListener('keydown', function(e) {
-        let x = suggestionsContainerElement.getElementsByClassName('autocomplete-suggestion-item');
-        if (e.keyCode == 40) {
-            currentFocus++;
-            addActive(x);
-        } else if (e.keyCode == 38) {
-            currentFocus--;
-            addActive(x);
-        } else if (e.keyCode == 13) {
-            e.preventDefault();
-            if (currentFocus > -1 && x[currentFocus]) {
-                x[currentFocus].click();
-            } else if (filteredData.length === 1 && inputElement.value.toLowerCase() === filteredData[0].item_name.toLowerCase()) {
-                selectionCallback(filteredData[0]);
-                hideSuggestions();
-            }
-        } else if (e.keyCode == 27) {
-            hideSuggestions();
-        }
-    });
-
-    function addActive(x) {
+    const addActive = (x) => {
         if (!x) return false;
         removeActive(x);
         if (currentFocus >= x.length) currentFocus = 0;
         if (currentFocus < 0) currentFocus = (x.length - 1);
         x[currentFocus].classList.add('highlighted');
         x[currentFocus].scrollIntoView({ block: 'nearest', inline: 'nearest' });
-    }
+    };
 
-    function removeActive(x) {
+    const removeActive = (x) => {
         for (let i = 0; i < x.length; i++) {
             x[i].classList.remove('highlighted');
         }
-    }
+    };
+
+    return {
+        handleInput: function() {
+            const val = inputElement.value;
+            if (val.length === 0) {
+                hideSuggestions();
+                delete inputElement.dataset.selectedItemId;
+                delete inputElement.dataset.selectedPaxDeiSlug;
+                delete inputElement.dataset.selectedItemCategory;
+                return;
+            }
+            const filtered = filterItems(val);
+            renderSuggestions(filtered);
+        },
+        handleKeydown: function(e) {
+            let x = suggestionsContainerElement.getElementsByClassName('autocomplete-suggestion-item');
+            if (e.keyCode == 40) { // Down arrow
+                currentFocus++;
+                addActive(x);
+            } else if (e.keyCode == 38) { // Up arrow
+                currentFocus--;
+                addActive(x);
+            } else if (e.keyCode == 13) { // Enter key
+                e.preventDefault();
+                if (currentFocus > -1 && x[currentFocus]) {
+                    x[currentFocus].click();
+                } else if (filteredData.length === 1 && inputElement.value.toLowerCase() === filteredData[0].item_name.toLowerCase()) {
+                    selectionCallback(filteredData[0]);
+                    hideSuggestions();
+                }
+            } else if (e.keyCode == 27) { // Escape key
+                hideSuggestions();
+            }
+        },
+        handleBlur: function() {
+            const exactMatch = dataArray.find(item => item.item_name.toLowerCase() === inputElement.value.toLowerCase());
+            if (exactMatch) {
+                selectionCallback(exactMatch);
+            } else {
+                delete inputElement.dataset.selectedItemId;
+                delete inputElement.dataset.selectedPaxDeiSlug;
+                delete inputElement.dataset.selectedItemCategory;
+            }
+            setTimeout(() => hideSuggestions(), 150);
+        }
+    };
+}
+
+// --- Modified: setupCustomAutocomplete ---
+// This function now uses the `createAutocompleteHandlers` to attach listeners.
+function setupCustomAutocomplete(inputElement, suggestionsContainerElement, dataArray, selectionCallback) {
+    const handlers = createAutocompleteHandlers(inputElement, suggestionsContainerElement, dataArray, selectionCallback);
+
+    inputElement.addEventListener('input', handlers.handleInput);
+    inputElement.addEventListener('keydown', handlers.handleKeydown);
+    inputElement.addEventListener('blur', handlers.handleBlur);
 
     document.addEventListener('click', function(e) {
         if (!inputElement.contains(e.target) && !suggestionsContainerElement.contains(e.target)) {
-            hideSuggestions();
+            handlers.handleBlur(); // Use blur handler to hide and potentially select
         }
-    });
-
-    inputElement.addEventListener('blur', function() {
-        const exactMatch = dataArray.find(item => item.item_name.toLowerCase() === this.value.toLowerCase());
-        if (exactMatch) {
-            selectionCallback(exactMatch);
-        } else {
-            delete this.dataset.selectedItemId;
-            delete this.dataset.selectedPaxDeiSlug;
-            delete this.dataset.selectedItemCategory;
-        }
-        setTimeout(() => hideSuggestions(), 150);
     });
 }
 
+// --- Modified: initializeAutocomplete ---
+// Centralized setup for all autocomplete instances.
 function initializeAutocomplete(allItems) {
-    const modalItemNameInput = document.getElementById('modal-item-name');
-    const modalItemNameSuggestions = document.getElementById('modal-item-name-suggestions');
+    const setupInputAutocomplete = (inputNameId, suggestionsId, categorySelectId) => {
+        const inputElement = document.getElementById(inputNameId);
+        const suggestionsElement = document.getElementById(suggestionsId);
+        if (inputElement && suggestionsElement) {
+            setupCustomAutocomplete(inputElement, suggestionsElement, allItems, (selectedItem) => {
+                inputElement.value = selectedItem.item_name;
+                const categorySelect = document.getElementById(categorySelectId);
+                if (categorySelect) {
+                    categorySelect.value = String(selectedItem.category_id);
+                }
+                inputElement.dataset.selectedItemId = selectedItem.item_id;
+                inputElement.dataset.selectedPaxDeiSlug = selectedItem.pax_dei_slug;
+                inputElement.dataset.selectedItemCategory = selectedItem.category_id;
+            });
+        }
+    };
 
-    if (modalItemNameInput && modalItemNameSuggestions) {
-        setupCustomAutocomplete(modalItemNameInput, modalItemNameSuggestions, allItems, (selectedItem) => {
-            modalItemNameInput.value = selectedItem.item_name;
-            const modalItemCategorySelect = document.getElementById('modal-item-category');
-            if (modalItemCategorySelect) {
-                modalItemCategorySelect.value = String(selectedItem.category_id);
-            }
-            modalItemNameInput.dataset.selectedItemId = selectedItem.item_id;
-            modalItemNameInput.dataset.selectedPaxDeiSlug = selectedItem.pax_dei_slug;
-            modalItemNameInput.dataset.selectedItemCategory = selectedItem.category_id;
-        });
-    }
-
-    const modalPurchaseItemNameInput = document.getElementById('modal-purchase-item-name');
-    const modalPurchaseItemNameSuggestions = document.getElementById('modal-purchase-item-name-suggestions');
-
-    if (modalPurchaseItemNameInput && modalPurchaseItemNameSuggestions) {
-        setupCustomAutocomplete(modalPurchaseItemNameInput, modalPurchaseItemNameSuggestions, allItems, (selectedItem) => {
-            modalPurchaseItemNameInput.value = selectedItem.item_name;
-            const modalPurchaseItemCategorySelect = document.getElementById('modal-purchase-item-category');
-            if (modalPurchaseItemCategorySelect) {
-                modalPurchaseItemCategorySelect.value = String(selectedItem.category_id);
-            }
-            modalPurchaseItemNameInput.dataset.selectedItemId = selectedItem.item_id;
-            modalPurchaseItemNameInput.dataset.selectedPaxDeiSlug = selectedItem.pax_dei_slug;
-            modalPurchaseItemNameInput.dataset.selectedItemCategory = selectedItem.category_id;
-        });
-    }
+    setupInputAutocomplete('modal-item-name', 'modal-item-name-suggestions', 'modal-item-category');
+    setupInputAutocomplete('modal-purchase-item-name', 'modal-purchase-item-name-suggestions', 'modal-purchase-item-category');
 
     const filterListingItemNameInput = document.getElementById('filter-listing-item-name');
     const filterListingItemNameSuggestions = document.getElementById('filter-listing-item-name-suggestions');
@@ -492,6 +540,9 @@ function initializeAutocomplete(allItems) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize custom modal elements early
+    window.customModalElements = initCustomModal();
+
     await checkUser();
     await populateItemData();
     addPageEventListeners();

@@ -61,22 +61,16 @@ import {
 import {
     handleFilterChange,
 } from './filter.js';
-import {
-    setupAutocomplete
-} from './autocomplete.js';
-
 
 let cachedCategories = null;
 let cachedMarketStalls = null;
 
 const initializeAddListingModalContent = async () => {
-
     if (modalMarketStallLocationSelect) {
         await populateMarketStallDropdown(modalMarketStallLocationSelect);
     } else {
         console.error("Error: modalMarketStallLocationSelect element not found in DOM.");
     }
-
 };
 
 export const fetchAndPopulateCategories = async (selectElement) => {
@@ -116,23 +110,17 @@ export const fetchAndPopulateCategories = async (selectElement) => {
 export const initializeListings = async (userId) => {
     setCurrentUserId(userId);
     addListingsEventListeners();
-    if (itemCategorySelect) {
-        await fetchAndPopulateCategories(itemCategorySelect);
-    }
-    if (filterListingCategorySelect) {
-        await fetchAndPopulateCategories(filterListingCategorySelect);
-    }
-    if (purchaseItemCategorySelect) {
-        await fetchAndPopulateCategories(purchaseItemCategorySelect);
-    }
-    if (modalItemCategorySelect) {
-        await fetchAndPopulateCategories(modalItemCategorySelect);
-    }
-    if (modalPurchaseItemCategorySelect) {
-        await fetchAndPopulateCategories(modalPurchaseItemCategorySelect);
-    }
+    await Promise.all([
+        itemCategorySelect && fetchAndPopulateCategories(itemCategorySelect),
+        filterListingCategorySelect && fetchAndPopulateCategories(filterListingCategorySelect),
+        purchaseItemCategorySelect && fetchAndPopulateCategories(purchaseItemCategorySelect),
+        modalItemCategorySelect && fetchAndPopulateCategories(modalItemCategorySelect),
+        modalPurchaseItemCategorySelect && fetchAndPopulateCategories(modalPurchaseItemCategorySelect)
+    ].filter(Boolean));
+
     await initializeAddListingModalContent();
     await setupMarketStallTabs();
+
     if (sortBySelect) {
         sortBySelect.value = currentSort.column;
     }
@@ -294,13 +282,10 @@ export const loadActiveListings = async (marketStallId = null) => {
     targetTable.style.display = 'none';
 
     const currentPage = getCurrentListingsPage(marketStallId);
-    //console.log('Loading listings for character:', currentCharacterId, 'stallId:', marketStallId, 'page:', currentPage, 'filter:', listingsFilter, 'sort:', currentSort);
 
     try {
-        const {
-            data,
-            error
-        } = await supabase.rpc('search_trader_listings', {
+        // Fetch the raw response from Supabase
+        const response = await supabase.rpc('search_trader_listings', {
             p_character_id: currentCharacterId,
             p_item_name: listingsFilter.itemName || null,
             p_category_id: listingsFilter.categoryId ? parseInt(listingsFilter.categoryId) : null,
@@ -311,38 +296,33 @@ export const loadActiveListings = async (marketStallId = null) => {
             p_sort_direction: currentSort.direction,
             p_market_stall_id: marketStallId
         });
+
+        // Log the raw response for debugging purposes (you can remove this after it works)
+        //console.log("Supabase RPC Raw Response:", response);
+
+        const { data, error } = response; // Safely destructure data and error from the response
+
+        // Log data and error specifically
+        //console.log("Supabase RPC Data:", data);
+        //console.log("Supabase RPC Error:", error);
+
         if (error) {
-            throw error;
-        }
-        //console.log('Received data for stallId', marketStallId, ':', data);
-        renderListingsTable(data, actualListingsBody);
-
-        let countQuery = supabase
-            .from('market_listings')
-            .select('*', {
-                count: 'exact',
-                head: true
-            })
-            .eq('character_id', currentCharacterId)
-            .eq('is_fully_sold', false)
-            .eq('is_cancelled', false);
-
-        if (marketStallId) {
-            countQuery = countQuery.eq('market_stall_id', marketStallId);
+            throw error; // If Supabase reports an error, throw it to the catch block
         }
 
-        const {
-            count: totalListings,
-            error: countError
-        } = await countQuery;
-
-        if (countError) {
-            throw countError;
+        // Validate that data is an array as expected from a TABLE RPC
+        if (!Array.isArray(data)) {
+            // This is a crucial check to ensure the data format is as expected
+            throw new Error("Unexpected data format from search_trader_listings RPC. Expected an array.");
         }
-        //console.log('Total listings for current view:', totalListings);
-        const totalPages = Math.ceil(totalListings / LISTINGS_PER_PAGE);
-        //console.log('Calculated total pages:', totalPages);
-        renderListingsPagination(totalListings, marketStallId);
+
+        const listings = data;
+        // 'total_count' is a property on each item in the array, so get it from the first item if available.
+        const total_count = listings.length > 0 ? listings[0].total_count : 0;
+
+        renderListingsTable(listings, actualListingsBody);
+        renderListingsPagination(total_count, marketStallId);
+
     } catch (e) {
         console.error("Error loading active listings:", e.message);
         if (actualListingsBody) {
@@ -436,38 +416,29 @@ export const setupMarketStallTabs = async () => {
 
         let firstStallId = null;
 
-        const stallsWithCounts = await Promise.all(marketStalls.map(async (stall) => {
-            const {
-                count,
-                error: countError
-            } = await supabase
-                .from('market_listings')
-                .select('*', {
-                    count: 'exact',
-                    head: true
-                })
-                .eq('market_stall_id', stall.id)
-                .eq('character_id', currentCharacterId)
-                .eq('is_fully_sold', false)
-                .eq('is_cancelled', false);
+        const {
+            data: stallCountsData,
+            error: countsError
+        } = await supabase.rpc('get_market_stall_listing_counts_for_character', {
+            p_character_id: currentCharacterId
+        });
 
-            if (countError) {
-                console.error(`Error fetching listing count for stall ${stall.stall_name}:`, countError);
-                return { ...stall,
-                    listingCount: 0
-                };
-            }
-            return { ...stall,
-                listingCount: count
-            };
-        }));
+        if (countsError) {
+            console.error("Error fetching market stall listing counts:", countsError);
+            throw countsError;
+        }
 
-        stallsWithCounts.forEach((stall, index) => {
+        const listingCountsMap = new Map();
+        stallCountsData.forEach(item => listingCountsMap.set(item.market_stall_id, item.count));
+
+
+        marketStalls.forEach((stall, index) => {
+            const listingCount = listingCountsMap.get(stall.id) || 0;
             const tabButton = document.createElement('button');
             tabButton.type = 'button';
             tabButton.dataset.stallId = stall.id;
             tabButton.classList.add('tab-button', 'px-4', 'py-2', 'font-medium', 'text-sm', 'rounded-t-lg', 'focus:outline-none', 'transition-colors', 'duration-200');
-            tabButton.textContent = `${stall.stall_name} - ${stall.listingCount}`;
+            tabButton.textContent = `${stall.stall_name} - ${listingCount}`;
 
             const tabContent = document.createElement('div');
             tabContent.id = `listings-for-${stall.id}`;
@@ -512,7 +483,6 @@ export const setupMarketStallTabs = async () => {
                 firstTabContent.classList.remove('hidden');
             }
             setCurrentListingsPage(1, firstStallId);
-            //loadActiveListings(firstStallId);
         }
     } catch (e) {
         console.error("Error setting up market stall tabs:", e.message);

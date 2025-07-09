@@ -6,7 +6,8 @@ import {
     loadTraderPageData
 } from '../trader.js';
 import {
-    currentCharacterId
+    currentCharacterId,
+    setCurrentCharacterGold // Import this function
 } from './characters.js';
 
 const getOrCreateItemId = async (itemName, categoryId) => {
@@ -26,7 +27,6 @@ const getOrCreateItemId = async (itemName, categoryId) => {
         .from('items')
         .select('item_id')
         .eq('item_name', itemName)
-        .eq('character_id', currentCharacterId)
         .limit(1);
 
     if (selectError) {
@@ -50,7 +50,6 @@ const getOrCreateItemId = async (itemName, categoryId) => {
         .insert([{
             item_name: itemName,
             category_id: categoryId,
-            character_id: currentCharacterId
         }])
         .select('item_id')
         .single();
@@ -216,7 +215,8 @@ export const handleRecordPurchase = async (e) => {
                     value: true
                 }]);
                 e.target.reset();
-                await loadTraderPageData();
+                setCurrentCharacterGold(newGold); // ADDED THIS LINE
+                await loadTraderPageData(false);
             }
         } else {
             console.warn('[handleRecordPurchase] FALLBACK BLOCK: Insert operation reported no error but 0 actual inserts (returned data array was empty).');
