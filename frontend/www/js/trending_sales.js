@@ -52,7 +52,6 @@ function renderChart(chartId, labels, datasetsConfig, type = 'line') {
       return `${context.dataset.label}: ${formatDecimal(value, 1)} Days`;
     };
     yAxisTitleText = 'Days';
-    yAxisColor = '#8A2BE2';
   } else if (chartId.includes('avg') || chartId.includes('specific-item-price')) {
     yAxisCallback = function(value) { return formatDecimal(value); };
     tooltipLabelCallback = function(context) {
@@ -482,12 +481,10 @@ async function loadDailyAverageItemPriceChart() {
 }
 
 async function loadDailyAverageListingTimeframeChart() {
-  //console.log('loadDailyAverageListingTimeframeChart called');
   try {
     const { data, error } = await supabase.rpc('get_average_listing_timeframe', {
       p_region_filter: currentSelectedRegion
     });
-
     if (error) {
       if (dailyAvgListingTimeChartInstance) dailyAvgListingTimeChartInstance.destroy();
       const ctx = document.getElementById('daily-avg-listing-time-chart')?.getContext('2d');
@@ -501,7 +498,6 @@ async function loadDailyAverageListingTimeframeChart() {
       console.error('Error in get_average_listing_timeframe:', error);
       return;
     }
-
     if (!data || data.length === 0) {
       if (dailyAvgListingTimeChartInstance) dailyAvgListingTimeChartInstance.destroy();
       const ctx = document.getElementById('daily-avg-listing-time-chart')?.getContext('2d');
@@ -515,28 +511,22 @@ async function loadDailyAverageListingTimeframeChart() {
       console.warn('No data from get_average_listing_timeframe.');
       return;
     }
-
     const labels = data.map(row => row.sale_date);
     const avgTimes = data.map(row => row.average_listing_time_days);
-    //console.log('Labels for Avg Listing Time:', labels);
-    //console.log('Data for Avg Listing Time:', avgTimes);
-
     const datasetsConfig = [{
       label: 'Avg. Days on Market',
       data: avgTimes,
-      borderColor: '#8A2BE2',
-      backgroundColor: 'rgba(138, 43, 226, 0.2)',
+      borderColor: '#4285F4', // A good blue
+      backgroundColor: 'rgba(66, 133, 244, 0.2)', // Transparent blue for the area
       tension: 0.3,
-      fill: false
+      fill: true // Keep the area fill
     }];
-
     if (dailyAvgListingTimeChartInstance) dailyAvgListingTimeChartInstance.destroy();
     dailyAvgListingTimeChartInstance = renderChart(
       'daily-avg-listing-time-chart',
       labels,
       datasetsConfig
     );
-    //console.log('Daily Average Listing Timeframe chart loaded.');
   } catch (err) {
     if (dailyAvgListingTimeChartInstance) dailyAvgListingTimeChartInstance.destroy();
     const ctx = document.getElementById('daily-avg-listing-time-chart')?.getContext('2d');
