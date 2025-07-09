@@ -50,7 +50,7 @@ const getOrCreateItemId = async (itemName, categoryId) => {
         .from('items')
         .select('item_id')
         .eq('item_name', itemName)
-        .eq('character_id', currentCharacterId)
+        //.eq('character_id', currentCharacterId)
         .limit(1);
 
     if (selectError) {
