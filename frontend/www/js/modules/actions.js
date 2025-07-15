@@ -31,6 +31,7 @@ import {
     deleteStallError,
     modalMarketStallLocationSelect
 } from './dom.js';
+import { loadTransactionHistory } from './sales.js';
 
 const getOrCreateItemId = async (itemName, categoryId) => {
     //console.log('getOrCreateItemId called with:', { itemName, categoryId });
@@ -95,7 +96,6 @@ const getOrCreateItemId = async (itemName, categoryId) => {
 
 
 export const handleAddListing = async (e) => {
-    //console.log('handleAddListing called.');
     e.preventDefault();
     const form = e.target;
     const submitButton = form.querySelector('button[type="submit"]');
@@ -103,7 +103,6 @@ export const handleAddListing = async (e) => {
     if (submitButton) {
         submitButton.disabled = true;
         submitButton.textContent = 'Adding Listing...';
-        //console.log('Submit button disabled and text changed.');
     }
 
     try {
@@ -115,8 +114,6 @@ export const handleAddListing = async (e) => {
             console.error("Validation Error: No character selected. Aborting listing creation.");
             return;
         }
-        //console.log('Current Character ID:', currentCharacterId);
-
 
         const itemName = form.querySelector('[name="item-name"]').value.trim();
         const itemCategory = parseInt(form.querySelector('[name="item-category"]').value, 10);
@@ -124,9 +121,6 @@ export const handleAddListing = async (e) => {
         const itemCountPerStack = parseInt(form.querySelector('[name="item-count-per-stack"]').value, 10);
         const itemPricePerStack = parseFloat(form.querySelector('[name="item-price-per-stack"]').value);
         const marketStallId = form.querySelector('[name="market-stall-location"]').value;
-
-        //console.log('Form values retrieved:', { itemName, itemCategory, itemStacks, itemCountPerStack, itemPricePerStack, marketStallId });
-
 
         if (!itemName || isNaN(itemStacks) || isNaN(itemCountPerStack) || isNaN(itemPricePerStack) || !marketStallId) {
             await showCustomModal('Validation Error', 'Please fill in all listing fields correctly.', [{
@@ -151,15 +145,11 @@ export const handleAddListing = async (e) => {
             console.error("Error: Could not get or create item ID. Aborting listing creation.");
             return;
         }
-        //console.log('Item ID obtained/created:', itemId);
-
 
         const quantityPerListing = itemCountPerStack;
         const totalListedPricePerListing = itemPricePerStack;
         const pricePerUnitPerListing = itemPricePerStack / itemCountPerStack;
         const marketFeePerListing = Math.ceil(totalListedPricePerListing * 0.05);
-        //console.log('Listing calculations:', { quantityPerListing, totalListedPricePerListing, pricePerUnitPerListing, marketFeePerListing });
-
 
         let successCount = 0;
         let failedCount = 0;
@@ -185,8 +175,6 @@ export const handleAddListing = async (e) => {
         for (let i = 0; i < itemStacks; i++) {
             totalFees += marketFeePerListing;
         }
-        //console.log('Character gold:', currentGold, 'Total fees for all stacks:', totalFees);
-
 
         if (currentGold < totalFees) {
             await showCustomModal('Validation Error', `Not enough gold! You need ${totalFees.toLocaleString()} gold for fees but only have ${currentGold.toLocaleString()}.`, [{
@@ -197,9 +185,7 @@ export const handleAddListing = async (e) => {
             return;
         }
 
-        //console.log(`Proceeding to insert ${itemStacks} listings.`);
         for (let i = 0; i < itemStacks; i++) {
-            //console.log(`Attempting to insert listing ${i + 1}/${itemStacks}`);
             const { error } = await supabase.from('market_listings').insert({
                 item_id: itemId,
                 character_id: currentCharacterId,
@@ -216,12 +202,10 @@ export const handleAddListing = async (e) => {
                 console.error(`Supabase Insert Error for listing ${i + 1}:`, error);
             } else {
                 successCount++;
-                //console.log(`Listing ${i + 1} successfully inserted.`);
             }
         }
 
         if (successCount > 0) {
-            //console.log(`Successfully added ${successCount} listings. Updating character gold.`);
             const newGold = currentGold - totalFees;
             const { error: updateGoldError } = await supabase
                 .from('characters')
@@ -235,7 +219,6 @@ export const handleAddListing = async (e) => {
                 }]);
                 console.error("Supabase Error: Failed to update character gold.", updateGoldError);
             } else {
-                //console.log(`Character gold updated from ${currentGold} to ${newGold}.`);
                 let successMessage = `Successfully added ${successCount} listing(s)!`;
                 if (failedCount > 0) {
                     successMessage += ` ${failedCount} listing(s) failed.`;
@@ -249,6 +232,8 @@ export const handleAddListing = async (e) => {
                     value: true
                 }]);
             }
+            form.reset();
+            await loadTraderPageData(false);
         } else {
             console.error(`No listings were successfully added. Total failed: ${failedCount}.`);
             await showCustomModal('Error', `Failed to add any listings. Errors: ${errors.join('; ')}`, [{
@@ -256,12 +241,6 @@ export const handleAddListing = async (e) => {
                 value: true
             }]);
         }
-        //console.log('Calling loadActiveListings and loadTraderPageData.');
-        //await loadActiveListings();
-        await loadTraderPageData();
-        console.log('handleAddListing: loadTraderPageData completed. Checking UI update.'); // ADD THIS LOG
-        form.reset();
-        //console.log('Form reset.');
 
     } catch (e) {
         console.error("Unexpected error during handleAddListing:", e);
@@ -273,7 +252,6 @@ export const handleAddListing = async (e) => {
         if (submitButton) {
             submitButton.disabled = false;
             submitButton.textContent = 'Add Listing';
-            //console.log('Submit button re-enabled and text reset.');
         }
     }
 };

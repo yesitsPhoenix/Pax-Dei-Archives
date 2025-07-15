@@ -1,0 +1,164 @@
+[
+  {
+    "region": "USA",
+    "shard": "Apollo",
+    "provinces": {
+      "Ancien": [
+        "Maremna",
+        "Salias",
+        "Libornes",
+        "Tursan",
+        "Astarac",
+        "Armanhac",
+        "Lavedan",
+        "Volvestre",
+        "Tolosa",
+        "Gravas"
+      ],
+      "Kerys": [
+        "Dreger",
+        "Bronyr",
+        "Ewyas",
+        "Vanes",
+        "Tremen",
+        "Aven",
+        "Dolovan",
+        "Retz",
+        "Llydaw",
+        "Pladenn"
+      ],
+      "Inis Gallia": [
+        "Atigny",
+        "Javerdus",
+        "Jura",
+        "Aras",
+        "Langres",
+        "Vitry",
+        "Trecassis",
+        "Morvan",
+        "Nones",
+        "Ardennes"
+      ],
+      "Merrie": [
+        "Yarborn",
+        "Gael",
+        "Ulaid",
+        "Ardbog",
+        "Down",
+        "Caster",
+        "Shire",
+        "Nene",
+        "Wiht",
+        "Bearm"
+      ]
+    }
+  },
+  {
+    "region": "EU",
+    "shard": "Mimir",
+    "provinces": {
+      "Ancien": [
+        "Maremna",
+        "Salias",
+        "Libornes",
+        "Tursan",
+        "Astarac",
+        "Armanhac",
+        "Lavedan",
+        "Volvestre",
+        "Tolosa",
+        "Gravas"
+      ],
+      "Kerys": [
+        "Dreger",
+        "Bronyr",
+        "Ewyas",
+        "Vanes",
+        "Tremen",
+        "Aven",
+        "Dolovan",
+        "Retz",
+        "Llydaw",
+        "Pladenn"
+      ],
+      "Inis Gallia": [
+        "Atigny",
+        "Javerdus",
+        "Jura",
+        "Aras",
+        "Langres",
+        "Vitry",
+        "Trecassis",
+        "Morvan",
+        "Nones",
+        "Ardennes"
+      ],
+      "Merrie": [
+        "Yarborn",
+        "Gael",
+        "Ulaid",
+        "Ardbog",
+        "Down",
+        "Caster",
+        "Shire",
+        "Nene",
+        "Wiht",
+        "Bearm"
+      ]
+    }
+  },
+  {
+    "region": "SEA",
+    "shard": "Nuada",
+    "provinces": {
+      "Ancien": [
+        "Maremna",
+        "Salias",
+        "Libornes",
+        "Tursan",
+        "Astarac",
+        "Armanhac",
+        "Lavedan",
+        "Volvestre",
+        "Tolosa",
+        "Gravas"
+      ],
+      "Kerys": [
+        "Dreger",
+        "Bronyr",
+        "Ewyas",
+        "Vanes",
+        "Tremen",
+        "Aven",
+        "Dolovan",
+        "Retz",
+        "Llydaw",
+        "Pladenn"
+      ],
+      "Inis Gallia": [
+        "Atigny",
+        "Javerdus",
+        "Jura",
+        "Aras",
+        "Langres",
+        "Vitry",
+        "Trecassis",
+        "Morvan",
+        "Nones",
+        "Ardennes"
+      ],
+      "Merrie": [
+        "Yarborn",
+        "Gael",
+        "Ulaid",
+        "Ardbog",
+        "Down",
+        "Caster",
+        "Shire",
+        "Nene",
+        "Wiht",
+        "Bearm"
+      ]
+    }
+  }
+]

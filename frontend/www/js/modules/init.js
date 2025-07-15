@@ -43,6 +43,7 @@ import {
     modalPurchaseItemCategorySelect,
     stallPageMap,
     getActiveStallId,
+    getMarketStallDomElements,
 } from './dom.js';
 import {
     handleAddListing,
@@ -221,54 +222,7 @@ const addListingsEventListeners = () => {
 };
 
 export const loadActiveListings = async (marketStallId = null) => {
-    let targetContainer = listingsBody.parentElement;
-    let targetTable = listingsTable;
-    let actualListingsBody;
-    let targetLoader = loader;
-
-    if (marketStallId) {
-        const stallTabContent = document.getElementById(`listings-for-${marketStallId}`);
-        if (stallTabContent) {
-            targetContainer = stallTabContent;
-            const existingTable = stallTabContent.querySelector('table');
-            if (existingTable) {
-                targetTable = existingTable;
-            } else {
-                targetTable = document.createElement('table');
-                targetTable.classList.add('min-w-full', 'divide-y', 'divide-gray-200');
-                targetTable.innerHTML = `
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Listed By</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                            <th scope="col" class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                    </tbody>
-                `;
-                targetContainer.innerHTML = '';
-                targetContainer.appendChild(targetTable);
-            }
-            actualListingsBody = targetTable.querySelector('tbody');
-            const existingLoader = stallTabContent.querySelector('.loader');
-            if (existingLoader) {
-                targetLoader = existingLoader;
-            } else {
-                targetLoader = document.createElement('div');
-                targetLoader.classList.add('loader', 'text-center', 'py-4', 'hidden');
-                targetLoader.innerHTML = '<div class="spinner"></div>Loading...';
-                targetContainer.prepend(targetLoader);
-            }
-            stallTabContent.querySelector('p')?.remove();
-        }
-    } else {
-        actualListingsBody = listingsBody;
-    }
+    const { targetTable, actualListingsBody, targetLoader } = getMarketStallDomElements(marketStallId);
 
     if (!currentCharacterId) {
         targetLoader.style.display = 'none';
@@ -281,10 +235,10 @@ export const loadActiveListings = async (marketStallId = null) => {
     targetLoader.style.display = 'block';
     targetTable.style.display = 'none';
 
+    // Retrieve the CURRENT page for the given marketStallId
     const currentPage = getCurrentListingsPage(marketStallId);
 
     try {
-        // Fetch the raw response from Supabase
         const response = await supabase.rpc('search_trader_listings', {
             p_character_id: currentCharacterId,
             p_item_name: listingsFilter.itemName || null,
@@ -297,32 +251,21 @@ export const loadActiveListings = async (marketStallId = null) => {
             p_market_stall_id: marketStallId
         });
 
-        // Log the raw response for debugging purposes (you can remove this after it works)
-        //console.log("Supabase RPC Raw Response:", response);
-
-        const { data, error } = response; // Safely destructure data and error from the response
-
-        // Log data and error specifically
-        //console.log("Supabase RPC Data:", data);
-        //console.log("Supabase RPC Error:", error);
+        const { data, error } = response;
 
         if (error) {
-            throw error; // If Supabase reports an error, throw it to the catch block
+            throw error;
         }
 
-        // Validate that data is an array as expected from a TABLE RPC
         if (!Array.isArray(data)) {
-            // This is a crucial check to ensure the data format is as expected
             throw new Error("Unexpected data format from search_trader_listings RPC. Expected an array.");
         }
 
         const listings = data;
-        // 'total_count' is a property on each item in the array, so get it from the first item if available.
         const total_count = listings.length > 0 ? listings[0].total_count : 0;
 
         renderListingsTable(listings, actualListingsBody);
-        renderListingsPagination(total_count, marketStallId);
-
+        renderListingsPagination(total_count, marketStallId); // This function uses getCurrentListingsPage internally
     } catch (e) {
         console.error("Error loading active listings:", e.message);
         if (actualListingsBody) {
@@ -467,24 +410,26 @@ export const setupMarketStallTabs = async () => {
 
                 tabContent.classList.remove('hidden');
 
-                setCurrentListingsPage(1, stall.id);
+                const lastPage = stallPageMap[stall.id] || 1;
+                setCurrentListingsPage(lastPage, stall.id);
                 loadActiveListings(stall.id);
             });
         });
 
         if (firstStallId) {
-            const firstTabButton = marketStallTabsContainer.querySelector(`[data-stall-id="${firstStallId}"]`);
-            if (firstTabButton) {
-                firstTabButton.classList.remove('bg-gray-200', 'text-gray-700');
-                firstTabButton.classList.add('bg-blue-500', 'text-white');
-            }
-            const firstTabContent = document.getElementById(`listings-for-${firstStallId}`);
-            if (firstTabContent) {
-                firstTabContent.classList.remove('hidden');
-            }
-            setCurrentListingsPage(1, firstStallId);
-            loadActiveListings(firstStallId);
-        }
+                    const firstTabButton = marketStallTabsContainer.querySelector(`[data-stall-id="${firstStallId}"]`);
+                    if (firstTabButton) {
+                        firstTabButton.classList.remove('bg-gray-200', 'text-gray-700');
+                        firstTabButton.classList.add('bg-blue-500', 'text-white');
+                    }
+                    const firstTabContent = document.getElementById(`listings-for-${firstStallId}`);
+                    if (firstTabContent) {
+                        firstTabContent.classList.remove('hidden');
+                    }
+                    const lastPage = stallPageMap[firstStallId] || 1;
+                    setCurrentListingsPage(lastPage, firstStallId);
+                    loadActiveListings(firstStallId);
+                }
     } catch (e) {
         console.error("Error setting up market stall tabs:", e.message);
         marketStallTabsContainer.innerHTML = `<p class="text-red-500 text-center py-4">Error loading market stalls: ${e.message}</p>`;

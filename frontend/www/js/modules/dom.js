@@ -155,3 +155,52 @@ export const setOriginalListingPrice = (price) => {
 export const setOriginalListingFee = (fee) => {
     originalListingFee = fee;
 };
+
+export const getMarketStallDomElements = (marketStallId) => {
+    let targetContainer = document.getElementById('listings-body').parentElement;
+    let targetTable = document.getElementById('listings-table');
+    let actualListingsBody = document.getElementById('listings-body');
+    let targetLoader = document.getElementById('loader');
+
+    if (marketStallId) {
+        const stallTabContent = document.getElementById(`listings-for-${marketStallId}`);
+        if (stallTabContent) {
+            targetContainer = stallTabContent;
+            let existingTable = stallTabContent.querySelector('table');
+            if (!existingTable) {
+                existingTable = document.createElement('table');
+                existingTable.classList.add('min-w-full', 'divide-y', 'divide-gray-200');
+                existingTable.innerHTML = `
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Listed By</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th scope="col" class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                    </tbody>
+                `;
+                targetContainer.innerHTML = ''; 
+                targetContainer.appendChild(existingTable);
+            }
+            targetTable = existingTable;
+            actualListingsBody = targetTable.querySelector('tbody');
+
+            let existingLoader = stallTabContent.querySelector('.loader');
+            if (!existingLoader) {
+                existingLoader = document.createElement('div');
+                existingLoader.classList.add('loader', 'text-center', 'py-4', 'hidden');
+                existingLoader.innerHTML = '<div class="spinner"></div>Loading...';
+                targetContainer.prepend(existingLoader);
+            }
+            targetLoader = existingLoader;
+            stallTabContent.querySelector('p')?.remove();
+        }
+    }
+    return { targetContainer, targetTable, actualListingsBody, targetLoader };
+};

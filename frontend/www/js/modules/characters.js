@@ -28,17 +28,14 @@ const closeAddPveTransactionModalBtn = document.getElementById('closeAddPveTrans
 let currentUserId = null;
 export let currentCharacterId = null;
 export let currentCharacterGold = 0;
-// New: Cache for all characters associated with the current user
 let cachedUserCharacters = [];
-// New: Store the currently selected character object
 let _currentCharacter = null;
-// New: Cache for all regions data
 let cachedRegions = null;
 
 export const setCurrentCharacterGold = (gold) => {
     currentCharacterGold = gold;
     if (_currentCharacter) {
-        _currentCharacter.gold = gold; // Update the cached object as well
+        _currentCharacter.gold = gold;
     }
 };
 
