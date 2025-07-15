@@ -77,7 +77,7 @@ const getOrCreateItemId = async (itemName, categoryId) => {
         .insert({
             item_name: itemName,
             category_id: categoryId,
-            character_id: currentCharacterId
+            //character_id: currentCharacterId
         })
         .select('item_id')
         .single();
