@@ -76,16 +76,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         const weaponFilter = document.getElementById('weapon-type-filter');
         const clearFiltersBtn = document.getElementById('clear-filters-btn');
 
-        const applyFilters = () => {
+            const applyFilters = () => {
             const selectedArmor = armorFilter.value;
             const selectedWeapon = weaponFilter.value;
 
             document.querySelectorAll('.ability-card').forEach(card => {
-                const cardArmorType = card.dataset.armorType || '';
-                const cardWeaponType = card.dataset.weaponType || '';
+                const abilityName = card.querySelector('h3').textContent;
+                const abilityData = groupedAbilities[abilityName];
 
-                const matchesArmor = selectedArmor === '' || cardArmorType === selectedArmor;
-                const matchesWeapon = selectedWeapon === '' || cardWeaponType === selectedWeapon;
+                const matchesArmor = selectedArmor === '' || (abilityData.applies_to && Array.from(abilityData.applies_to).includes(selectedArmor));
+                const matchesWeapon = selectedWeapon === '' || (abilityData.applies_to && Array.from(abilityData.applies_to).includes(selectedWeapon));
 
                 if (matchesArmor && matchesWeapon) {
                     card.classList.remove('hidden');
