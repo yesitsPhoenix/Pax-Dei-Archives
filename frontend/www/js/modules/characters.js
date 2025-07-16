@@ -111,7 +111,7 @@ export const insertCharacterModalHtml = () => {
         createCharacterForm.addEventListener('submit', handleCreateCharacter);
     }
 
-    populateRegionDropdowns(); // This will now fetch and cache all regions
+    populateRegionDropdowns();
 };
 
 export const initializeCharacters = async (userId = null, onCharacterSelectedCallback) => {
@@ -148,7 +148,6 @@ export const loadCharacters = async (onCharacterSelectedCallback) => {
     const setGoldBtn = document.getElementById('setGoldBtn');
     const pveBtn = document.getElementById('pveBtn');
 
-    // Fetch characters
     const { data, error } = await supabase
         .from('characters')
         .select('character_id, character_name, gold')
@@ -160,7 +159,7 @@ export const loadCharacters = async (onCharacterSelectedCallback) => {
         return;
     }
 
-    cachedUserCharacters = data || []; // Cache the fetched characters
+    cachedUserCharacters = data || [];
     const characters = cachedUserCharacters;
     characterSelect.innerHTML = '';
 
@@ -171,8 +170,8 @@ export const loadCharacters = async (onCharacterSelectedCallback) => {
         characterSelect.appendChild(option);
         characterSelect.disabled = true;
         currentCharacterId = null;
-        _currentCharacter = null; // Clear cached current character
-        setCurrentCharacterGold(0); // Reset gold
+        _currentCharacter = null; 
+        setCurrentCharacterGold(0);
         if (deleteCharacterBtn) deleteCharacterBtn.style.display = 'none';
         if (setGoldBtn) setGoldBtn.style.display = 'none';
         if (pveBtn) pveBtn.style.display = 'none';
@@ -189,7 +188,6 @@ export const loadCharacters = async (onCharacterSelectedCallback) => {
             characterSelect.appendChild(option);
         });
 
-        // Set current character if not already set or if current one was deleted
         if (!currentCharacterId || !characters.some(char => char.character_id === currentCharacterId)) {
             currentCharacterId = characters[0].character_id;
         }
@@ -208,7 +206,6 @@ const showAddPveTransactionModal = async () => {
     if (addPveTransactionModal) {
         addPveTransactionModal.classList.remove('hidden');
         if (pveAmountInput) {
-            // Use currentCharacterGold directly as it's kept updated
             pveAmountInput.value = currentCharacterGold;
         }
         if (pveTransactionTypeSelect) {
@@ -225,12 +222,11 @@ const hideAddPveTransactionModal = () => {
 
 const handleCharacterSelection = async (event) => {
     currentCharacterId = event.target.value;
-    // Update currentCharacter and gold from cache
     _currentCharacter = cachedUserCharacters.find(char => char.character_id === currentCharacterId);
     if (_currentCharacter) {
         setCurrentCharacterGold(_currentCharacter.gold);
     } else {
-        setCurrentCharacterGold(0); // Should not happen if cachedUserCharacters is correct
+        setCurrentCharacterGold(0); 
     }
     await loadTraderPageData();
 };
@@ -277,7 +273,7 @@ const populateRegionDropdowns = async () => {
 
             const selectedRegionName = newCharacterRegionNameSelect.value;
             if (selectedRegionName) {
-                populateShardDropdowns(selectedRegionName); // No 'await' needed here
+                populateShardDropdowns(selectedRegionName);
             }
         });
     }
@@ -313,7 +309,7 @@ const handleShardChange = async () => {
     const selectedRegionName = newCharacterRegionNameSelect.value;
     const selectedShard = newCharacterShardSelect.value;
     if (selectedRegionName && selectedShard) {
-        populateProvinceDropdowns(selectedRegionName, selectedShard); // No 'await' needed here
+        populateProvinceDropdowns(selectedRegionName, selectedShard);
     }
 };
 
@@ -346,7 +342,7 @@ const handleProvinceChange = async () => {
     const selectedShard = newCharacterShardSelect.value;
     const selectedProvince = newCharacterProvinceSelect.value;
     if (selectedRegionName && selectedShard && selectedProvince) {
-        populateHomeValleyDropdowns(selectedRegionName, selectedShard, selectedProvince); // No 'await' needed here
+        populateHomeValleyDropdowns(selectedRegionName, selectedShard, selectedProvince);
     }
 };
 
@@ -391,7 +387,6 @@ const handleCreateCharacter = async (e) => {
         return;
     }
 
-    // Get region_entry_id from cachedRegions
     const regionEntry = cachedRegions.find(
         r => r.region_name === selectedRegionName &&
              r.shard === selectedShard &&
@@ -410,7 +405,7 @@ const handleCreateCharacter = async (e) => {
     const { data, error } = await supabase
         .from('characters')
         .insert([{ user_id: currentUserId, character_name: characterName, gold: initialGold, region: selectedRegionName, region_entry_id: regionEntryId }])
-        .select('character_id, character_name, gold'); // Select full data for immediate caching
+        .select('character_id, character_name, gold');
 
     if (error) {
         if (error.code === '23505') {
@@ -424,9 +419,9 @@ const handleCreateCharacter = async (e) => {
 
     const newCharacter = data[0];
     currentCharacterId = newCharacter.character_id;
-    _currentCharacter = newCharacter; // Update current character object
-    setCurrentCharacterGold(newCharacter.gold); // Update current character gold
-    cachedUserCharacters.push(newCharacter); // Add new character to cache
+    _currentCharacter = newCharacter;
+    setCurrentCharacterGold(newCharacter.gold);
+    cachedUserCharacters.push(newCharacter);
 
     await createDefaultMarketStall(currentCharacterId, characterName);
 
@@ -445,7 +440,7 @@ const handleCreateCharacter = async (e) => {
     newCharacterProvinceSelect.disabled = true;
     newCharacterHomeValleySelect.disabled = true;
 
-    await loadCharacters(loadTraderPageData); // Reload characters to update dropdown
+    await loadCharacters(loadTraderPageData);
 };
 
 export const handleDeleteCharacter = async (characterIdParam = null) => {
@@ -533,11 +528,10 @@ export const handleDeleteCharacter = async (characterIdParam = null) => {
 
         await showCustomModal('Success', 'Character deleted successfully!', [{ text: 'OK', value: true }]);
 
-        // Remove deleted character from cache
         cachedUserCharacters = cachedUserCharacters.filter(char => char.character_id !== characterId);
-        _currentCharacter = null; // Clear current character if deleted
+        _currentCharacter = null; 
 
-        await loadCharacters(loadTraderPageData); // Reload characters to update dropdown and current selection
+        await loadCharacters(loadTraderPageData);
         if (document.getElementById('listingsContainer')) {
             loadTransactionHistory();
             renderSalesChart();
@@ -568,7 +562,6 @@ const updateCharacterGold = async (newGoldAmount) => {
         return;
     }
 
-    // Update cached gold immediately
     setCurrentCharacterGold(newGoldAmount);
 
     await showCustomModal('Success', `Gold updated to ${newGoldAmount.toLocaleString()}.`, [{ text: 'OK', value: true }]);
@@ -576,69 +569,81 @@ const updateCharacterGold = async (newGoldAmount) => {
 };
 
 const updateCharacterGoldByPveTransaction = async (newTotalGold, description = '') => {
-    if (!currentCharacterId) {
-        await showCustomModal("Error", "No character selected to record PVE gold.", [{ text: 'OK', value: true }]);
-        return;
-    }
-    if (!currentUserId) {
-        await showCustomModal("Error", "User not authenticated. Cannot record PVE transaction.", [{ text: 'OK', value: true }]);
-        console.error("Attempted PVE transaction without authenticated user_id.");
-        return;
-    }
+  if (!currentCharacterId) {
+    await showCustomModal("Error", "No character selected to record PVE gold.", [{ text: 'OK', value: true }]);
+    return;
+  }
+  if (!currentUserId) {
+    await showCustomModal("Error", "User not authenticated. Cannot record PVE transaction.", [{ text: 'OK', value: true }]);
+    console.error("Attempted PVE transaction without authenticated user_id.");
+    return;
+  }
 
-    // Use the cached currentCharacterGold directly
-    const goldChange = newTotalGold - currentCharacterGold;
+  const { data: characterData, error: fetchCharError } = await supabase
+    .from('characters')
+    .select('gold')
+    .eq('character_id', currentCharacterId)
+    .single();
 
-    if (newTotalGold < 0) {
-        await showCustomModal("Validation Error", "PVE transaction would result in negative gold. Please enter a valid non-negative amount.", [{ text: 'OK', value: true }]);
-        return;
-    }
+  if (fetchCharError) {
+    await showCustomModal('Error', `Error fetching current character gold: ${fetchCharError.message}`, [{ text: 'OK', value: true }]);
+    console.error('Error fetching current character gold:', fetchCharError.message);
+    return;
+  }
 
-    if (goldChange === 0) {
-        await showCustomModal('Info', 'Gold amount is unchanged. No PVE transaction recorded.', [{ text: 'OK', value: true }]);
-        return;
-    }
+  const currentCharacterGold = characterData.gold;
 
-    const { error: updateCharError } = await supabase
-        .from('characters')
-        .update({ gold: newTotalGold })
-        .eq('character_id', currentCharacterId)
-        .eq('user_id', currentUserId);
+  const goldChange = newTotalGold - currentCharacterGold;
 
-    if (updateCharError) {
-        await showCustomModal('Error', `Error updating character gold for PVE: ${updateCharError.message}`, [{ text: 'OK', value: true }]);
-        console.error('Error updating character gold for PVE:', updateCharError.message);
-        return;
-    }
+  if (newTotalGold < 0) {
+    await showCustomModal("Validation Error", "PVE transaction would result in negative gold. Please enter a valid non-negative amount.", [{ text: 'OK', value: true }]);
+    return;
+  }
 
-    // Update cached gold immediately
-    setCurrentCharacterGold(newTotalGold);
+  if (goldChange === 0) {
+    await showCustomModal('Info', 'Gold amount is unchanged. No PVE transaction recorded.', [{ text: 'OK', value: true }]);
+    return;
+  }
 
-    const finalDescription = description.trim() !== ''
-        ? description
-        : (goldChange >= 0 ? `PVE Gold Change: +${goldChange.toLocaleString()}` : `PVE Gold Change: ${goldChange.toLocaleString()}`);
+  const { error: updateCharError } = await supabase
+    .from('characters')
+    .update({ gold: newTotalGold })
+    .eq('character_id', currentCharacterId)
+    .eq('user_id', currentUserId);
 
-    const { error: insertPveError } = await supabase
-        .from('pve_transactions')
-        .insert([
-            {
-                character_id: currentCharacterId,
-                gold_amount: goldChange,
-                description: finalDescription,
-                user_id: currentUserId
-            }
-        ]);
+  if (updateCharError) {
+    await showCustomModal('Error', `Error updating character gold for PVE: ${updateCharError.message}`, [{ text: 'OK', value: true }]);
+    console.error('Error updating character gold for PVE:', updateCharError.message);
+    return;
+  }
 
-    if (insertPveError) {
-        console.error('Error recording PVE transaction:', insertPveError.message);
-        await showCustomModal('Error', `Failed to record PVE transaction: ${insertPveError.message}. Gold updated, but transaction history might be incomplete.`, [{ text: 'OK', value: true }]);
-        return;
-    }
+  setCurrentCharacterGold(newTotalGold);
 
-    const message = `Character gold set to ${newTotalGold.toLocaleString()}. Recorded change: ${goldChange >= 0 ? '+' : ''}${goldChange.toLocaleString()} gold. Reason: ${finalDescription}.`;
+  const finalDescription = description.trim() !== ''
+    ? description
+    : (goldChange >= 0 ? `PVE Gold Change: +${goldChange.toLocaleString()}` : `PVE Gold Change: ${goldChange.toLocaleString()}`);
 
-    await showCustomModal('Success', message, [{ text: 'OK', value: true }]);
-    await loadTraderPageData();
+  const { error: insertPveError } = await supabase
+    .from('pve_transactions')
+    .insert([
+      {
+        character_id: currentCharacterId,
+        gold_amount: goldChange,
+        description: finalDescription,
+        user_id: currentUserId
+      }
+    ]);
+
+  if (insertPveError) {
+    console.error('Error recording PVE transaction:', insertPveError.message);
+    await showCustomModal('Error', `Failed to record PVE transaction: ${insertPveError.message}. Gold updated, but transaction history might be incomplete.`, [{ text: 'OK', value: true }]);
+    return;
+  }
+
+  const message = `Character gold set to ${newTotalGold.toLocaleString()}. Recorded change: ${goldChange >= 0 ? '+' : ''}${goldChange.toLocaleString()} gold. Reason: ${finalDescription}.`;
+
+  await showCustomModal('Success', message, [{ text: 'OK', value: true }]);
+  await loadTraderPageData();
 };
 
 
