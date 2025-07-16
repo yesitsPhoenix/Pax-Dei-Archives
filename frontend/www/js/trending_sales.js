@@ -720,30 +720,72 @@ async function loadAllTrendsData() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  //console.log('DOMContentLoaded event fired.');
   const itemFilterSelect = document.getElementById('item-filter-select');
   const regionFilterSelect = document.getElementById('region-filter-select');
+  const traderLoginContainer = document.getElementById('traderLoginContainer');
+  const traderDiscordLoginButton = document.getElementById('traderDiscordLoginButton'); // Get the login button
+  const trendsContent = document.getElementById('trendsContent');
 
-  await populateDropdown('item-filter-select', 'get_all_items_for_dropdown', 'item_id', 'item_name', 'All Items');
+  const { data: { session } } = await supabase.auth.getSession();
 
-  currentSelectedRegion = regionFilterSelect ? regionFilterSelect.value : 'all';
-  currentSelectedItemId = itemFilterSelect ? (itemFilterSelect.value === 'all' || itemFilterSelect.value === '' ? null : parseInt(itemFilterSelect.value, 10)) : null;
+  if (!session) {
+    // User is not logged in
+    if (traderLoginContainer) {
+      traderLoginContainer.style.display = 'block'; // Show the login prompt
+    }
+    if (trendsContent) {
+      trendsContent.style.display = 'none'; // Hide all charts and filters
+    }
 
-  await loadAllTrendsData();
+    // Add event listener for the Discord login button here
+    if (traderDiscordLoginButton) {
+      traderDiscordLoginButton.addEventListener('click', async () => {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'discord',
+          options: {
+            redirectTo: window.location.href, // Redirect back to the current page after login
+            scopes: 'identify'
+          }
+        });
+        if (error) {
+          console.error('Error logging in with Discord:', error.message);
+          const traderLoginError = document.getElementById('traderLoginError');
+          if (traderLoginError) {
+            traderLoginError.textContent = 'Login failed. Please try again.';
+            traderLoginError.style.display = 'block';
+          }
+        }
+      });
+    }
 
-  if (itemFilterSelect) {
-    itemFilterSelect.addEventListener('change', (event) => {
-      currentSelectedItemId = event.target.value === 'all' || event.target.value === '' ? null : parseInt(event.target.value, 10);
-      loadSpecificItemPriceChart(currentSelectedItemId);
-      //console.log('Item filter changed to:', currentSelectedItemId);
-    });
-  }
+  } else {
+    // User is logged in
+    if (traderLoginContainer) {
+      traderLoginContainer.style.display = 'none'; // Hide the login prompt
+    }
+    if (trendsContent) {
+      trendsContent.style.display = 'block'; // Show all charts and filters
+    }
 
-  if (regionFilterSelect) {
-    regionFilterSelect.addEventListener('change', async (event) => {
-      currentSelectedRegion = event.target.value;
-      //console.log('Region filter changed to:', currentSelectedRegion);
-      await loadAllTrendsData();
-    });
+    await populateDropdown('item-filter-select', 'get_all_items_for_dropdown', 'item_id', 'item_name', 'All Items');
+
+    currentSelectedRegion = regionFilterSelect ? regionFilterSelect.value : 'all';
+    currentSelectedItemId = itemFilterSelect ? (itemFilterSelect.value === 'all' || itemFilterSelect.value === '' ? null : parseInt(itemFilterSelect.value, 10)) : null;
+
+    await loadAllTrendsData();
+
+    if (itemFilterSelect) {
+      itemFilterSelect.addEventListener('change', (event) => {
+        currentSelectedItemId = event.target.value === 'all' || event.target.value === '' ? null : parseInt(event.target.value, 10);
+        loadSpecificItemPriceChart(currentSelectedItemId);
+      });
+    }
+
+    if (regionFilterSelect) {
+      regionFilterSelect.addEventListener('change', async (event) => {
+        currentSelectedRegion = event.target.value;
+        await loadAllTrendsData();
+      });
+    }
   }
 });
