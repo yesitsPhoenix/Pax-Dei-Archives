@@ -151,7 +151,6 @@ function renderChart(chartId, labels, datasetsConfig, type = 'line') {
 
 
 async function loadListTrendsData() {
-  //console.log('loadListTrendsData called');
   if (!highestSalesList || !mostSoldQuantityList || !topRevenueItemsList || !salesVolumeByCategoryList) {
     console.warn('One or more list elements not found.');
     return;
@@ -164,7 +163,7 @@ async function loadListTrendsData() {
 
   try {
     const { data, error } = await supabase.rpc('get_all_list_trends_data_by_region', {
-      p_region_filter: currentSelectedRegion
+      p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all'
     });
 
     if (error) {
@@ -266,7 +265,6 @@ async function loadListTrendsData() {
     } else {
       salesVolumeByCategoryList.innerHTML = '<p class="text-white">No sales volume data found yet.</p>';
     }
-    //console.log('List trends data loaded successfully.');
   } catch (err) {
     const errorMessage = `<p class="text-red-400">An error occurred: ${err.message}</p>`;
     highestSalesList.innerHTML = errorMessage;
@@ -278,10 +276,9 @@ async function loadListTrendsData() {
 }
 
 async function loadDailyTotalSalesChart() {
-  //console.log('loadDailyTotalSalesChart called');
   try {
     const { data, error } = await supabase.rpc('get_daily_total_sales', {
-      p_region_filter: currentSelectedRegion
+      p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all'
     });
 
     if (error) {
@@ -328,7 +325,6 @@ async function loadDailyTotalSalesChart() {
       labels,
       datasetsConfig
     );
-    //console.log('Daily Total Sales chart loaded.');
   } catch (err) {
     if (dailySalesChartInstance) dailySalesChartInstance.destroy();
     const ctx = document.getElementById('daily-sales-chart')?.getContext('2d');
@@ -344,10 +340,9 @@ async function loadDailyTotalSalesChart() {
 }
 
 async function loadDailyMarketActivityChart() {
-  //console.log('loadDailyMarketActivityChart called');
   try {
     const { data, error } = await supabase.rpc('get_daily_market_activity_data', {
-      p_region_filter: currentSelectedRegion
+      p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all'
     });
 
     if (error) {
@@ -399,7 +394,6 @@ async function loadDailyMarketActivityChart() {
       sortedLabels,
       datasetsConfig
     );
-    //console.log('Daily Market Activity chart loaded.');
   } catch (err) {
     if (dailyMarketActivityChartInstance) dailyMarketActivityChartInstance.destroy();
     const ctx = document.getElementById('daily-market-activity-chart')?.getContext('2d');
@@ -415,10 +409,9 @@ async function loadDailyMarketActivityChart() {
 }
 
 async function loadDailyAverageItemPriceChart() {
-  //console.log('loadDailyAverageItemPriceChart called');
   try {
     const { data, error } = await supabase.rpc('get_daily_average_sale_price', {
-      p_region_filter: currentSelectedRegion
+      p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all'
     });
 
     if (error) {
@@ -465,7 +458,6 @@ async function loadDailyAverageItemPriceChart() {
       labels,
       datasetsConfig
     );
-    //console.log('Daily Average Item Price chart loaded.');
   } catch (err) {
     if (dailyAvgPriceChartInstance) dailyAvgPriceChartInstance.destroy();
     const ctx = document.getElementById('daily-avg-price-chart')?.getContext('2d');
@@ -483,7 +475,7 @@ async function loadDailyAverageItemPriceChart() {
 async function loadDailyAverageListingTimeframeChart() {
   try {
     const { data, error } = await supabase.rpc('get_average_listing_timeframe', {
-      p_region_filter: currentSelectedRegion
+      p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all'
     });
     if (error) {
       if (dailyAvgListingTimeChartInstance) dailyAvgListingTimeChartInstance.destroy();
@@ -511,15 +503,16 @@ async function loadDailyAverageListingTimeframeChart() {
       console.warn('No data from get_average_listing_timeframe.');
       return;
     }
-    const labels = data.map(row => row.sale_date);
+    // BUG FIX: Changed from row.sale_date to row.listing_date
+    const labels = data.map(row => row.listing_date);
     const avgTimes = data.map(row => row.average_listing_time_days);
     const datasetsConfig = [{
       label: 'Avg. Days on Market',
       data: avgTimes,
-      borderColor: '#4285F4', // A good blue
-      backgroundColor: 'rgba(66, 133, 244, 0.2)', // Transparent blue for the area
+      borderColor: '#4285F4',
+      backgroundColor: 'rgba(66, 133, 244, 0.2)',
       tension: 0.3,
-      fill: true // Keep the area fill
+      fill: true
     }];
     if (dailyAvgListingTimeChartInstance) dailyAvgListingTimeChartInstance.destroy();
     dailyAvgListingTimeChartInstance = renderChart(
@@ -567,7 +560,7 @@ async function loadSpecificItemPriceChart(itemId = null) {
   try {
     const { data, error } = await supabase.rpc('get_item_price_history', {
       p_item_id: itemId,
-      p_region_filter: currentSelectedRegion
+      p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all'
     });
 
     if (error) {
@@ -675,7 +668,6 @@ async function loadSpecificItemPriceChart(itemId = null) {
 
 
 async function populateDropdown(selectElementId, rpcFunctionName, valueColumn, textColumn, defaultOptionText) {
-  //console.log('populateDropdown called for:', selectElementId);
   const selectElement = document.getElementById(selectElementId);
   if (!selectElement) {
     console.warn('Select element not found:', selectElementId);
@@ -701,7 +693,6 @@ async function populateDropdown(selectElementId, rpcFunctionName, valueColumn, t
         option.textContent = row[textColumn];
         selectElement.appendChild(option);
       });
-      //console.log('Dropdown populated:', selectElementId);
     } catch (err) {
       console.error('Unexpected error in populateDropdown:', err);
     }
@@ -709,41 +700,37 @@ async function populateDropdown(selectElementId, rpcFunctionName, valueColumn, t
 }
 
 async function loadAllTrendsData() {
-  //console.log('loadAllTrendsData called');
   await loadListTrendsData();
   await loadDailyTotalSalesChart();
   await loadDailyMarketActivityChart();
   await loadDailyAverageItemPriceChart();
   await loadDailyAverageListingTimeframeChart();
   await loadSpecificItemPriceChart(currentSelectedItemId);
-  //console.log('All trends data loaded.');
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
   const itemFilterSelect = document.getElementById('item-filter-select');
   const regionFilterSelect = document.getElementById('region-filter-select');
   const traderLoginContainer = document.getElementById('traderLoginContainer');
-  const traderDiscordLoginButton = document.getElementById('traderDiscordLoginButton'); // Get the login button
+  const traderDiscordLoginButton = document.getElementById('traderDiscordLoginButton');
   const trendsContent = document.getElementById('trendsContent');
 
   const { data: { session } } = await supabase.auth.getSession();
 
   if (!session) {
-    // User is not logged in
     if (traderLoginContainer) {
-      traderLoginContainer.style.display = 'block'; // Show the login prompt
+      traderLoginContainer.style.display = 'block';
     }
     if (trendsContent) {
-      trendsContent.style.display = 'none'; // Hide all charts and filters
+      trendsContent.style.display = 'none';
     }
 
-    // Add event listener for the Discord login button here
     if (traderDiscordLoginButton) {
       traderDiscordLoginButton.addEventListener('click', async () => {
         const { error } = await supabase.auth.signInWithOAuth({
           provider: 'discord',
           options: {
-            redirectTo: window.location.href, // Redirect back to the current page after login
+            redirectTo: window.location.href,
             scopes: 'identify'
           }
         });
@@ -759,12 +746,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
   } else {
-    // User is logged in
     if (traderLoginContainer) {
-      traderLoginContainer.style.display = 'none'; // Hide the login prompt
+      traderLoginContainer.style.display = 'none';
     }
     if (trendsContent) {
-      trendsContent.style.display = 'block'; // Show all charts and filters
+      trendsContent.style.display = 'block';
     }
 
     await populateDropdown('item-filter-select', 'get_all_items_for_dropdown', 'item_id', 'item_name', 'All Items');
