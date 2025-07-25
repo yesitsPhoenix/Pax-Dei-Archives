@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pax Dei Gearset Tracker</title>
+    <link rel="stylesheet" href="frontend/www/css/gear.css">
+    <link rel="stylesheet" href="frontend/www/css/style.css">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <header class="header-area">
+        <div class="container">
+            <nav class="main-nav">
+                <a href="index.html" class="logo">
+                    <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
+                    <h1>Pax Dei Archives</h1>
+                </a>
+                <a class='menu-trigger'>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </a>
+                <div class="nav-and-search-wrapper">
+                    <ul class="nav">
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="abilities.html">Abilities</a></li>
+                        <li><a href="gems.html">Gems</a></li>
+                        <li><a href="articles.html">Articles</a></li>
+                        <li><a href="news-updates.html">News</a></li>
+                        <li><a href="developer-comments.html">Dev Comments</a></li>
+                        <li><a href="lore.html">Lore</a></li>
+                        <li><a href="ledger.html">Ledger</a></li>
+                        <li><a href="trends.html">Market Trends</a></li>
+                        <li><a href="map.html">Map</a></li>
+                        <li><a href="gearsets.html" class="active">Gearsets</a></li>
+                    </ul>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main class="trader-container">
+        <div class="container">
+            <div id="traderLoginContainer" class="admin-form-container" style="display: none; text-align: center;">
+                <p>Please log in to view your Gear Sets.</p>
+                <button id="traderDiscordLoginButton" class="discord-button" style="margin: 15px auto;">
+                    <i class="fab fa-discord"></i> Login with Discord
+                </button>
+                <p id="traderLoginError" style="color: red; display: none;"></p>
+            </div>
+            <h1 class="dashboard-header">Gearset Tracker</h1>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8">
+
+  <!-- Left column -->
+  <div class="flex flex-col">
+    <div>
+      <label for="character-select" class="block text-gray-300 text-sm font-bold mb-2">Select Character:</label>
+      <select id="character-select" class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-700 text-white leading-tight focus:outline-none focus:shadow-outline mb-4">
+      </select>
+    </div>
+    <button id="showCreateCharacterModalBtn" class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-full transition duration-300 ease-in-out self-start">
+      Create New Character
+    </button>
+  </div>
+  
+
+  <!-- Right column -->
+  <div class="flex flex-col space-y-6">
+
+        <div>
+        <label for="buildNameInput" class="block text-gray-300 text-sm font-bold mb-2">Build Name:</label>
+        <input type="text" id="buildNameInput" placeholder="Enter name for this build"
+            class="shadow appearance-none border rounded-full w-full py-2 px-3 bg-gray-700 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-indigo-500 sm:text-sm">
+        </div>
+        <div class="mb-4">
+        <label for="savedBuildsSelect" class="block text-gray-300 text-sm font-bold mb-2">Load Saved Build:</label>
+        <div class="flex space-x-3">
+            <select id="savedBuildsSelect" class="flex-grow rounded-full bg-gray-700 border border-gray-600 text-white py-2 px-3 text-sm focus:outline-none focus:border-indigo-500">
+            <option value="">Select a saved build</option>
+            </select>
+            <button id="loadBuildBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-full shadow-lg transition duration-300 ease-in-out whitespace-nowrap">
+            Load Build
+            </button>
+        </div>
+        </div>
+        <div class="flex items-center space-x-4">
+        <input
+            type="text"
+            id="shareLinkInput"
+            readonly
+            class="flex-grow bg-gray-700 border border-gray-600 text-gray-200 py-2 px-4 rounded-md text-sm truncate"
+            value="Your shareable link will appear here."/><button
+            id="copyLinkBtn"
+            class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-full shadow-md copy-button">Copy Link</button>
+            <class="w-full max-w-3xl flex justify-center mb-8 mx-auto">
+                <button id="createGearsetBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-full shadow-lg transition duration-300 ease-in-out">
+                Create New Gearset
+            </button>
+        </div>
+       
+
+        <div>
+        <button id="saveBuildBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-full shadow-lg transition duration-300 ease-in-out w-full">
+            Save Current Build
+        </button>
+        </div>
+
+
+    </div>
+</div>
+
+</div>
+
+            <div class="w-full bg-gray-800 rounded-lg shadow-xl p-4 flex justify-center items-center mb-8 relative mx-auto max-w-xl">
+                <img id="loadoutImage" src="frontend/www/assets/loadout.png" alt="Character Loadout Slots" class="w-full h-auto rounded-md object-contain"
+                     onerror="this.onerror=null;this.src='https://placehold.co/400x400/374151/F9FAFB?text=Loadout+Image+Not+Found';">
+
+                <div id="highlight-head" data-tooltip="Head" class="highlight-dot absolute top-[3%] left-[13%] w-6 h-6 rounded-full bg-blue-400 opacity-0  glow-pulse transition-opacity duration-300"></div>
+                <div id="highlight-back" data-tooltip="Back" class="highlight-dot absolute top-[3%] left-[29%] w-6 h-6 rounded-full bg-blue-400 opacity-0  glow-pulse transition-opacity duration-300"></div>
+                <div id="highlight-chest" data-tooltip="Chest Armor" class="highlight-dot absolute top-[18%] left-[13%] w-6 h-6 rounded-full bg-blue-400 opacity-0  glow-pulse transition-opacity duration-300"></div>
+                <div id="highlight-tabard" data-tooltip="Tabard" class="highlight-dot absolute top-[18%] left-[29%] w-6 h-6 rounded-full bg-blue-400 opacity-0  glow-pulse transition-opacity duration-300"></div>
+                <div id="highlight-arms" data-tooltip="Arms" class="highlight-dot absolute top-[18%] left-[44%] w-6 h-6 rounded-full bg-blue-400 opacity-0  glow-pulse transition-opacity duration-300"></div>
+                <div id="highlight-gloves" data-tooltip="Gloves" class="highlight-dot absolute top-[18%] left-[59%] w-6 h-6 rounded-full bg-blue-400 opacity-0  glow-pulse transition-opacity duration-300"></div>
+                <div id="highlight-legs" data-tooltip="Legs" class="highlight-dot absolute top-[34%] left-[13%] w-6 h-6 rounded-full bg-blue-400 opacity-0  glow-pulse transition-opacity duration-300"></div>
+                <div id="highlight-feet" data-tooltip="Feet" class="highlight-dot absolute top-[49%] left-[13%] w-6 h-6 rounded-full bg-blue-400 opacity-0  glow-pulse transition-opacity duration-300"></div>
+
+                <div id="highlight-necklace" data-tooltip="Necklace" class="highlight-dot absolute top-[82%] left-[13%] w-6 h-6 rounded-full bg-blue-400 opacity-0  glow-pulse transition-opacity duration-300"></div>
+                <div id="highlight-earring" data-tooltip="Earring" class="highlight-dot absolute top-[68%] left-[13%] w-6 h-6 rounded-full bg-blue-400 opacity-0  glow-pulse transition-opacity duration-300"></div>
+                <div id="highlight-ring1" data-tooltip="Ring 1" class="highlight-dot absolute top-[68%] left-[29%] w-6 h-6 rounded-full bg-blue-400 opacity-0  glow-pulse transition-opacity duration-300"></div>
+                <div id="highlight-ring2" data-tooltip="Ring 2" class="highlight-dot absolute top-[68%] left-[44%] w-6 h-6 rounded-full bg-blue-400 opacity-0  glow-pulse transition-opacity duration-300"></div>
+                <div id="highlight-ring3" data-tooltip="Ring 3" class="highlight-dot absolute top-[68%] left-[59.5%] w-6 h-6 rounded-full bg-blue-400 opacity-0  glow-pulse transition-opacity duration-300"></div>
+                <div id="highlight-bracelet1" data-tooltip="Bracelet 1" class="highlight-dot absolute top-[82%] left-[29%] w-6 h-6 rounded-full bg-blue-400 opacity-0  glow-pulse transition-opacity duration-300"></div>
+                <div id="highlight-bracelet2" data-tooltip="Bracelet 2" class="highlight-dot absolute top-[82%] left-[44%] w-6 h-6 rounded-full bg-blue-400 opacity-0  glow-pulse transition-opacity duration-300"></div>
+            </div>
+
+            <div class="w-full max-w-3xl mx-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-8">
+                <div id="slot-head" class="gear-slot-area">Head</div>
+                <div id="slot-back" class="gear-slot-area">Back</div>
+                <div id="slot-chest" class="gear-slot-area">Chest</div>
+                <div id="slot-tabard" class="gear-slot-area">Tabard</div>
+                <div id="slot-arms" class="gear-slot-area">Arms</div>
+                <div id="slot-gloves" class="gear-slot-area">Gloves</div>
+                <div id="slot-legs" class="gear-slot-area">Legs</div>
+                <div id="slot-feet" class="gear-slot-area">Feet</div>
+                <div id="slot-earring" class="gear-slot-area">Earring</div>
+                <div id="slot-ring1" class="gear-slot-area">Ring 1</div>
+                <div id="slot-ring2" class="gear-slot-area">Ring 2</div>
+                <div id="slot-ring3" class="gear-slot-area">Ring 3</div>
+                <div id="slot-necklace" class="gear-slot-area">Necklace</div>
+                <div id="slot-bracelet1" class="gear-slot-area">Bracelet 1</div>
+                <div id="slot-bracelet2" class="gear-slot-area">Bracelet 2</div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12">
+                    <p>Copyright © 2025 Pax Dei Archives. All rights reserved.</p>
+                    <a href="admin.html">Admin</a>
+                </div>
+            </div>
+        </div>
+        <div class="corner-credit">
+            <div class="corner-credit-top-row"> <img src="frontend/www/assets/phoenix.png" alt="Phoenix profile image" class="profile-image" />
+                <span class="nav-text-profile">Made by Phoenix ✨</span>
+            </div>
+            <div id="utc-clock-display" class="utc-clock"></div>
+        </div>
+    </footer>
+
+    <div id="floating-avatar-container">
+        <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar js-floating-avatar">
+    </div>
+
+    <div id="auth-modal">
+        <div class="modal-content-wrapper" id="modal-content-wrapper">
+        </div>
+    </div>
+
+    <div
+      id="itemModal"
+      class="fixed inset-0 bg-black text-black bg-opacity-60 hidden z-50 transition-opacity duration-300 opacity-0 flex items-center justify-center"
+    >
+        <div class="bg-white text-black p-6 rounded-lg shadow-2xl w-full max-w-md">
+            <h2 class="text-xl text-black font-bold mb-4">Select Item</h2>
+            <input
+                type="text"
+                id="itemInput"
+                placeholder="Enter item name"
+                class="w-full border border-gray-300 rounded-md px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <div class="flex justify-end space-x-4">
+                <button
+                    id="clearSlotBtn"
+                    class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md relative"
+                    data-tooltip="Clear this slot"
+                >
+                    Clear Slot
+                </button>
+                <button
+                    id="cancelModalBtn"
+                    class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md"
+                >
+                    Cancel
+                </button>
+                <button
+                    id="addItemBtn"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
+                >
+                    Add Item
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmationModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 hidden">
+    <div class="bg-gray-800 rounded-lg shadow-lg max-w-sm w-full p-6">
+        <p id="confirmationMessage" class="text-white text-center mb-6"></p>
+        <div class="flex justify-center space-x-4">
+        <button id="confirmYesBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-full shadow-lg transition duration-300 ease-in-out">Yes</button>
+        <button id="confirmNoBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-full shadow-lg transition duration-300 ease-in-out">No</button>
+        </div>
+    </div>
+    </div>
+
+
+    <div id="createCharacterModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md border border-emerald-400">
+            <h3 class="text-2xl font-bold text-white mb-6 text-center">Create New Character</h3>
+            <form id="create-character-form-modal" class="space-y-4">
+                <div class="form-group">
+                    <label for="newCharacterNameInput" class="block text-sm font-medium text-gray-300">Character Name</label>
+                    <input type="text" id="newCharacterNameInput" name="character-name" placeholder="e.g., MyWarrior" required
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 text-black rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div class="flex justify-end gap-4">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Create Character
+                    </button>
+                    <button type="button" id="closeCreateCharacterModalBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script type="module" src="frontend/www/js/main.js"></script>
+    <!-- <script type="module" src="frontend/www/js/trader.js"></script> -->
+    <script type="module" src="frontend/www/js/popoutAuth.js"></script>
+    <script type="module" src="frontend/www/js/gear.js"></script>
+    
+</body>
+</html>
