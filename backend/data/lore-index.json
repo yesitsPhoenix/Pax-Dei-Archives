@@ -1,0 +1,352 @@
+[
+  {
+    "category": "Ages",
+    "items": [
+      {
+        "slug": "the-age-of-the-ancients-demira",
+        "title": "The Age of the Ancients - Demira",
+        "file": "ages/the-age-of-the-ancients-demira.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "the-age-of-paradise",
+        "title": "The Age of Paradise",
+        "file": "ages/the-age-of-paradise.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "before-paradise",
+        "title": "Before Paradise",
+        "file": "ages/before-paradise.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "the-great-surge",
+        "title": "The Great Surge",
+        "file": "writings/the-great-surge.md",
+        "author": "Thelonius the Scribe",
+        "date": "Unknown",
+        "sources": "",
+        "research": ""
+      },
+      {
+        "slug": "the-age-of-the-ancients-meirothea",
+        "title": "The Age of the Ancients - Meirothea",
+        "file": "ages/the-age-of-the-ancients-meirothea.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "the-elysium-age",
+        "title": "The Elysium Age",
+        "file": "ages/the-elysium-age.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      }
+    ]
+  },
+  {
+    "category": "Divine",
+    "items": [
+      {
+        "slug": "birth-of-the-divine-and-the-elements-of-creation",
+        "title": "Birth of the Divine and the Elements of Creation",
+        "file": "divine/birth-of-the-divine-and-the-elements-of-creation.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      }
+    ]
+  },
+  {
+    "category": "Factions",
+    "items": [
+      {
+        "slug": "cult-of-zeb",
+        "title": "Cult of Zeb",
+        "file": "factions/cult-of-zeb.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      }
+    ]
+  },
+  {
+    "category": "Known Figures",
+    "items": [
+      {
+        "slug": "thelonius-the-scribe",
+        "title": "Thelonius the Scribe",
+        "file": "known-figures/thelonius-the-scribe.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "cultists",
+        "title": "Cultists",
+        "file": "known-figures/cultists.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "merlin-the-bard-of-lyonnesse",
+        "title": "Merlin, The Bard of Lyonnesse",
+        "file": "known-figures/merlin-the-bard-of-lyonnesse.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      }
+    ]
+  },
+  {
+    "category": "Redeemers",
+    "items": [
+      {
+        "slug": "armozel",
+        "title": "5th - Armozel",
+        "file": "redeemers/armozel.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "demira",
+        "title": "3rd - Demira",
+        "file": "redeemers/demira.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "meirothea",
+        "title": "2nd - Meirothea",
+        "file": "redeemers/meirothea.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "protennoia",
+        "title": "1st - Protennoia",
+        "file": "redeemers/protennoia.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "phaionios",
+        "title": "4th - Phaionios",
+        "file": "redeemers/phaionios.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "oroael",
+        "title": "6th - Oroael",
+        "file": "redeemers/oroael.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      }
+    ]
+  },
+  {
+    "category": "World",
+    "items": [
+      {
+        "slug": "of-the-world-itself",
+        "title": "Of the World Itself",
+        "file": "world/of-the-world-itself.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "of-pax-dei",
+        "title": "Of Pax Dei",
+        "file": "world/of-pax-dei.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      }
+    ]
+  },
+  {
+    "category": "Writings",
+    "items": [
+      {
+        "slug": "the-last-words-of-thelonius-the-scribe-part-ii-demira",
+        "title": "Letter: The Last Words of Thelonius the Scribe - Part ii - Demira",
+        "file": "writings/the-last-words-of-thelonius-the-scribe-part-ii-demira.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "the-great-surge",
+        "title": "The Great Surge",
+        "file": "writings/the-great-surge.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "the-nine-creations-before-letter",
+        "title": "Letter: The Nine Creations Before",
+        "file": "writings/the-nine-creations-before-letter.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "the-age-of-paradise-letter",
+        "title": "Letter: The Age of Paradise",
+        "file": "writings/the-age-of-paradise-letter.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "the-last-words-of-thelonius-the-scribe-part-ii-meirothea",
+        "title": "Letter: The Last Words of Thelonius the Scribe - Part ii - Meirothea",
+        "file": "writings/the-last-words-of-thelonius-the-scribe-part-ii-meirothea.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "letter-the-age-of-legends",
+        "title": "Letter: The Age of Legends",
+        "file": "writings/letter-the-age-of-legends.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "the-last-words-of-thelonius-the-scribe-part-ii-elysium",
+        "title": "Letter: The Last Words of Thelonius the Scribe - Part ii - Elysium",
+        "file": "writings/the-last-words-of-thelonius-the-scribe-part-ii-elysium.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "letter-the-dimming-light",
+        "title": "Letter: The Dimming Light",
+        "file": "writings/letter-the-dimming-light.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "the-tower",
+        "title": "The Tower",
+        "file": "writings/the-tower.md",
+        "author": "Gatekeeper Montel",
+        "date": "Unknown, likely during the Elysian period",
+        "sources": "https://playpaxdei.com/en-us/news/diegesis/adversaries-part-1-the-tower",
+        "research": "1. Likely referring to Gluttony / Zeb, one of the 9 Deadly Sins and Princes of hell, and associations to various time periods of Creations.\n2. Reference to Gluttony / Zeb.\n3. Need to determine what the Mire is - presuming this is a specific place, hence the capitalization.\n4. Possibly reference to the Elysian age/aeon?\n5. Need to determine who Duke Lamalon, no other mention at this stage of research. Possibly a lieutenant, demonic being (walks this earth once more), or some other supernatural being.\n6. Need to determine what “the night before the Night Eternal” may be."
+      },
+          {
+      "slug": "old-druid-chant",
+      "title": "Old Druid Chant",
+      "file": "writings/old-druid-chant.md",
+      "author": "Unknown",
+      "date": "Unknown",
+      "sources": null,
+      "research": "1. Mentioned in an illustration within the work “Of the Fay and the Meaning of Birds” by Merlin.\n2. Possible reference(s) to Morgan Le Fay? https://pshares.org/blog/the-literary-history-of-morgan-le-fay/"
+    },
+    {
+      "slug": "well-known-nursery-rhyme",
+      "title": "Well-known nursery rhyme",
+      "file": "writings/well-known-nursery-rhyme.md",
+      "author": "Unknown",
+      "date": "Unknown",
+      "sources": "https://playpaxdei.com/en-us/news/diegesis/of-the-fay-and-the-meaning-of-birds",
+      "research": "1. Mentioned in an illustration within the work “Of the Fay and the Meaning of Birds” by Merlin."
+    },
+    {
+      "slug": "the-cult-of-zeb-study-of-gluttony-corruption",
+      "title": "The Cult of Zeb: A Study of Gluttony and Corruption",
+      "file": "writings/the-cult-of-zeb-study-of-gluttony-corruption.md",
+      "author": "Brother Aldric of Libornes",
+      "date": "Early years of the Age of the Papacy",
+      "sources": "- Compendium of The Cacodemonic\n- ",
+      "research": "1. This appears to be an excerpt from a larger body of work called the *Compendium of The Cacodemonic*\n2. This body of work also references several other works from various authors."
+    },
+    {
+      "slug": "of-the-fay-meaning-of-birds",
+      "title": "Of the Fay and the Meaning of Birds",
+      "file": "writings/of-the-fay-meaning-of-birds.md",
+      "author": "Merlin - The Bard Of Lyonesse",
+      "date": "Unknown",
+      "sources": "- https://playpaxdei.com/en-us/news/diegesis/of-the-fay-and-the-meaning-of-birds",
+      "research": "1. Time period - starting the third aeon\n2. Reference to Envy / Leviathan ending the second aeon\n3. Reference to Envy / Leviathan\n4. Leviathan / Envy, one of the Deadly Sins\n5. At this point the angels are no longer allowed to manifest on the Earth\n6. First mention of birds\n7. Fay are created, also mentioned in The First Words as wardens of the land;"
+    },
+    {
+      "slug": "compendium-of-the-cacodemonic",
+      "title": "Compendium of The Cacodemonic",
+      "file": "writings/compendium-of-the-cacodemonic.md",
+      "author": "Unknown",
+      "date": "Unknown",
+      "sources": "",
+      "research": ""
+    },
+    {
+      "slug": "sages-annals",
+      "title": "Sages's Annals",
+      "file": "writings/sages-annals.md",
+      "author": "Unknown",
+      "date": "Unknown",
+      "sources": "",
+      "research": "1."
+    },
+    {
+      "slug": "echoes-of-cimeron",
+      "title": "Echoes of Cimeron",
+      "file": "writings/echoes-of-cimeron.md",
+      "author": "Unknown",
+      "date": "Unknown",
+      "sources": "",
+      "research": "1. Likely some sort of religious text, unknown faction/association"
+    }
+    ]
+  }
+]
