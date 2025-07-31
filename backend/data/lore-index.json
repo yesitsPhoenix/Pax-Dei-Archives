@@ -1,62 +1,10 @@
 [
   {
     "category": "Ages",
-    "items": [
-      {
-        "slug": "the-age-of-the-ancients-demira",
-        "title": "The Age of the Ancients - Demira",
-        "file": "ages/the-age-of-the-ancients-demira.md",
-        "author": null,
-        "date": null,
-        "sources": null,
-        "research": null
-      },
-      {
-        "slug": "the-age-of-paradise",
-        "title": "The Age of Paradise",
-        "file": "ages/the-age-of-paradise.md",
-        "author": null,
-        "date": null,
-        "sources": null,
-        "research": null
-      },
-      {
-        "slug": "before-paradise",
-        "title": "Before Paradise",
-        "file": "ages/before-paradise.md",
-        "author": null,
-        "date": null,
-        "sources": null,
-        "research": null
-      },
-      {
-        "slug": "the-great-surge",
-        "title": "The Great Surge",
-        "file": "writings/the-great-surge.md",
-        "author": "Thelonius the Scribe",
-        "date": "Unknown",
-        "sources": "",
-        "research": ""
-      },
-      {
-        "slug": "the-age-of-the-ancients-meirothea",
-        "title": "The Age of the Ancients - Meirothea",
-        "file": "ages/the-age-of-the-ancients-meirothea.md",
-        "author": null,
-        "date": null,
-        "sources": null,
-        "research": null
-      },
-      {
-        "slug": "the-elysium-age",
-        "title": "The Elysium Age",
-        "file": "ages/the-elysium-age.md",
-        "author": null,
-        "date": null,
-        "sources": null,
-        "research": null
-      }
-    ]
+    "items": 
+     [
+
+     ]
   },
   {
     "category": "Divine",
@@ -93,8 +41,9 @@
         "slug": "thelonius-the-scribe",
         "title": "Thelonius the Scribe",
         "file": "known-figures/thelonius-the-scribe.md",
-        "author": null,
-        "date": null,
+        "titles": "Last Keeper of Hidden Light",
+        "association": "Scriptorium of Lunthyr",
+        "known_works": "",
         "sources": null,
         "research": null
       },
@@ -204,76 +153,76 @@
     "category": "Writings",
     "items": [
       {
-        "slug": "the-last-words-of-thelonius-the-scribe-part-ii-demira",
-        "title": "Letter: The Last Words of Thelonius the Scribe - Part ii - Demira",
-        "file": "writings/the-last-words-of-thelonius-the-scribe-part-ii-demira.md",
-        "author": null,
-        "date": null,
-        "sources": null,
-        "research": null
+        "slug": "the-age-of-the-ancients-demira",
+        "title": "The Age of the Ancients - Demira",
+        "file": "writings/the-age-of-the-ancients-demira.md",
+       "author": "Thelonius the Scribe",
+        "date": "Winter of the Year 3999 ",
+        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-ii",
+        "research": ""
       },
       {
         "slug": "the-great-surge",
         "title": "The Great Surge",
         "file": "writings/the-great-surge.md",
-        "author": null,
-        "date": null,
-        "sources": null,
-        "research": null
+       "author": "Thelonius the Scribe",
+        "date": "Winter of the Year 3999 ",
+        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-iii",
+        "research": ""
       },
       {
         "slug": "the-nine-creations-before-letter",
-        "title": "Letter: The Nine Creations Before",
+        "title": "The Nine Creations Before",
         "file": "writings/the-nine-creations-before-letter.md",
-        "author": null,
-        "date": null,
-        "sources": null,
-        "research": null
+        "author": "Thelonius the Scribe",
+        "date": "Winter of the Year 3999 ",
+        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-i",
+        "research": ""
       },
       {
         "slug": "the-age-of-paradise-letter",
-        "title": "Letter: The Age of Paradise",
+        "title": "The Age of Paradise",
         "file": "writings/the-age-of-paradise-letter.md",
-        "author": null,
-        "date": null,
-        "sources": null,
-        "research": null
+       "author": "Thelonius the Scribe",
+        "date": "Winter of the Year 3999 ",
+        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-i",
+        "research": ""
       },
       {
-        "slug": "the-last-words-of-thelonius-the-scribe-part-ii-meirothea",
-        "title": "Letter: The Last Words of Thelonius the Scribe - Part ii - Meirothea",
-        "file": "writings/the-last-words-of-thelonius-the-scribe-part-ii-meirothea.md",
-        "author": null,
-        "date": null,
-        "sources": null,
-        "research": null
+        "slug": "the-age-of-the-ancients-meirothea",
+        "title": "The Age of the Ancients - Meirothea",
+        "file": "writings/the-age-of-the-ancients-meirothea.md",
+       "author": "Thelonius the Scribe",
+        "date": "Winter of the Year 3999 ",
+        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-ii",
+        "research": ""
       },
       {
-        "slug": "letter-the-age-of-legends",
-        "title": "Letter: The Age of Legends",
-        "file": "writings/letter-the-age-of-legends.md",
-        "author": null,
-        "date": null,
-        "sources": null,
-        "research": null
+        "slug": "the-age-of-legends-letter",
+        "title": "The Age of Legends",
+        "file": "writings/the-age-of-legends-letter.md",
+       "author": "Thelonius the Scribe",
+        "date": "Winter of the Year 3999 ",
+        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-iii",
+        "research": ""
       },
       {
-        "slug": "the-last-words-of-thelonius-the-scribe-part-ii-elysium",
-        "title": "Letter: The Last Words of Thelonius the Scribe - Part ii - Elysium",
-        "file": "writings/the-last-words-of-thelonius-the-scribe-part-ii-elysium.md",
-        "author": null,
-        "date": null,
-        "sources": null,
-        "research": null
+        "slug": "the-elysium-age-letter",
+        "title": "The Elysium Age",
+        "file": "writings/the-elysium-age-letter.md",
+       "author": "Thelonius the Scribe",
+        "date": "Winter of the Year 3999 ",
+        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-ii",
+        "research": ""
       },
       {
-        "slug": "letter-the-dimming-light",
-        "title": "Letter: The Dimming Light",
-        "file": "writings/letter-the-dimming-light.md",
-        "author": null,
-        "date": null,
-        "sources": null,
-        "research": null
+        "slug": "the-dimming-light",
+        "title": "The Dimming Light",
+        "file": "writings/the-dimming-light.md",
+        "author": "Thelonius the Scribe",
+        "date": "Winter of the Year 3999",
+        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-i",
+        "research": ""
       },
       {
         "slug": "the-tower",
@@ -290,7 +239,7 @@
       "file": "writings/old-druid-chant.md",
       "author": "Unknown",
       "date": "Unknown",
-      "sources": null,
+      "sources": "https://playpaxdei.com/en-us/news/diegesis/of-the-fay-and-the-meaning-of-birds",
       "research": "1. Mentioned in an illustration within the work “Of the Fay and the Meaning of Birds” by Merlin.\n2. Possible reference(s) to Morgan Le Fay? https://pshares.org/blog/the-literary-history-of-morgan-le-fay/"
     },
     {
@@ -346,7 +295,43 @@
       "date": "Unknown",
       "sources": "",
       "research": "1. Likely some sort of religious text, unknown faction/association"
-    }
+    },
+      {
+        "slug": "the-age-of-the-kindgoms-letter",
+        "title": "The Age of the Kindgoms",
+        "file": "writings/the-age-of-the-kindgoms-letter.md",
+       "author": "Thelonius the Scribe",
+        "date": "Winter of the Year 3999 ",
+        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-iv",
+        "research": ""
+      },
+      {
+        "slug": "the-age-of-the-papacy-letter",
+        "title": "The Age of the Papacy",
+        "file": "writings/the-age-of-the-papacy-letter.md",
+       "author": "Thelonius the Scribe",
+        "date": "Winter of the Year 3999 ",
+        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-v",
+        "research": ""
+      },
+      {
+        "slug": "the-great-cataclysm-letter",
+        "title": "The Great Cataclysm",
+        "file": "writings/the-great-cataclysm-letter.md",
+       "author": "Thelonius the Scribe",
+        "date": "Winter of the Year 3999 ",
+        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-vi-end",
+        "research": ""
+      },
+      {
+        "slug": "the-last-word",
+        "title": "The Last Word",
+        "file": "writings/the-last-word.md",
+       "author": "Thelonius the Scribe",
+        "date": "Winter of the Year 3999",
+        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-vi-end",
+        "research": ""
+      }
     ]
   }
 ]

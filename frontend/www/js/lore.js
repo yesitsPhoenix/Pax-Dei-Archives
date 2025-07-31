@@ -380,12 +380,6 @@ async function fetchLoreItems(category = null) {
     return data.flatMap(cat => cat.items);
 }
 
-// Removed parseResearchNotes function
-
-// Removed injectFootnoteAnchorsIntoContent function
-
-// Removed renderResearchFootnotes function
-
 
 async function fetchLoreItemDetail(slug) {
     const data = await fetchAllLoreData();
@@ -538,12 +532,13 @@ $(document).ready(async function() {
             if (loreItem) {
                 const author = loreItem.author || '';
                 const date = loreItem.date || '';
+                const titles = loreItem.titles || '';
+                const association = loreItem.association || '';
+                const known_works = loreItem.known_works || '';
                 const rawContent = loreItem.content || '';
                 const sources = loreItem.sources || '';
                 const rawResearch = loreItem.research || '';
 
-                // Removed calls to parseResearchNotes and injectFootnoteAnchorsIntoContent
-                // Use rawContent directly as processedContent
                 const processedContent = rawContent;
 
                 let sourcesResearchHtml = '';
@@ -557,12 +552,29 @@ $(document).ready(async function() {
                     `;
                 }
 
+                let metaHtml = '';
+                if (author) {
+                    metaHtml += `<p><strong>Author:</strong> ${author}</p>`;
+                }
+                if (titles) {
+                    metaHtml += `<p><strong>Titles:</strong> ${titles}</p>`;
+                }
+                if (association) {
+                    metaHtml += `<p><strong>Association:</strong> ${association}</p>`;
+                }
+                if (date) {
+                    metaHtml += `<p><strong>Date:</strong> ${date}</p>`;
+                }
+                if (known_works) {
+                    metaHtml += `<p><strong>Known Works:</strong> ${known_works}</p>`;
+                }
+
+
                 dynamicLoreMainContent.html(`
                     <div class="lore-item-header">
                         <h4>${loreItem.title}</h4>
                         <div class="lore-meta">
-                            ${author ? `<p><strong>Author:</strong> ${author}</p>` : ''}
-                            ${date ? `<p><strong>Date:</strong> ${date}</p>` : ''}
+                            ${metaHtml}
                         </div>
                     </div>
                     <div class="lore-item-content">
