@@ -1510,7 +1510,7 @@ body.modal-open {
     border: 1px solid #4A5568;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
-
+/* 
 .mb-4 {
     font-size: 1.5rem;
     font-weight: 700;
@@ -1520,7 +1520,7 @@ body.modal-open {
     border-bottom: 2px solid #63B3ED;
     text-transform: uppercase; 
     letter-spacing: 0.05em;
-}
+} */
 
 h4 {
     font-size: 1.5rem;
