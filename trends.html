@@ -69,6 +69,12 @@
                     <option value="SEA">SEA</option>
                 </select>
             </div>
+            <div class="col-span-1">
+                <label for="character-filter-select" class="block text-white text-sm font-bold mb-2">Filter by Character:</label>
+                <select id="character-filter-select" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                    <option value="">All Characters</option>
+                </select>
+            </div>
             <!-- <div class="col-span-1">
                 <label for="shard-filter-select" class="block text-white text-sm font-bold mb-2">Filter by Shard:</label>
                 <select id="shard-filter-select" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
@@ -87,6 +93,11 @@
                     <option value="all">All Home Valleys</option>
                 </select>
             </div> -->
+            <div class="col-span-1 flex items-end">
+                <button id="clear-filters-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-150 ease-in-out">
+                    Clear Filters
+                </button>
+            </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -17,6 +17,8 @@ let currentSelectedRegion = null;
 let specificItemPriceChartUnitInstance = null;
 let specificItemPriceChartStackInstance = null;
 
+let currentSelectedCharacterId = null;
+
 const formatCurrency = (amount) => (amount !== null && amount !== undefined) ? amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : 'N/A';
 const formatDecimal = (amount, decimals = 2) => (amount !== null && amount !== undefined) ? parseFloat(amount).toFixed(decimals) : 'N/A';
 
@@ -278,7 +280,8 @@ async function loadListTrendsData() {
 async function loadDailyTotalSalesChart() {
   try {
     const { data, error } = await supabase.rpc('get_daily_total_sales', {
-      p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all'
+      p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all',
+      p_character_id: currentSelectedCharacterId //
     });
 
     if (error) {
@@ -342,7 +345,8 @@ async function loadDailyTotalSalesChart() {
 async function loadDailyMarketActivityChart() {
   try {
     const { data, error } = await supabase.rpc('get_daily_market_activity_data', {
-      p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all'
+      p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all',
+      p_character_id: currentSelectedCharacterId //
     });
 
     if (error) {
@@ -411,7 +415,8 @@ async function loadDailyMarketActivityChart() {
 async function loadDailyAverageItemPriceChart() {
   try {
     const { data, error } = await supabase.rpc('get_daily_average_sale_price', {
-      p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all'
+      p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all',
+      p_character_id: currentSelectedCharacterId
     });
 
     if (error) {
@@ -472,10 +477,35 @@ async function loadDailyAverageItemPriceChart() {
   }
 }
 
+async function populateCharacterDropdown() {
+  const select = document.getElementById('character-filter-select');
+  if (!select) return;
+
+  select.innerHTML = `<option value="">All Characters</option>`;
+
+  try {
+    const { data, error } = await supabase.rpc('get_user_linked_characters');
+    if (error) {
+      console.error('Error loading characters:', error);
+      return;
+    }
+    data.forEach(char => {
+      const option = document.createElement('option');
+      option.value = char.character_id;
+      option.textContent = char.name;
+      select.appendChild(option);
+    });
+  } catch (err) {
+    console.error('Unexpected error loading characters:', err);
+  }
+}
+
+
 async function loadDailyAverageListingTimeframeChart() {
   try {
     const { data, error } = await supabase.rpc('get_average_listing_timeframe', {
-      p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all'
+      p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all',
+      p_character_id: currentSelectedCharacterId
     });
     if (error) {
       if (dailyAvgListingTimeChartInstance) dailyAvgListingTimeChartInstance.destroy();
@@ -543,7 +573,7 @@ async function loadSpecificItemPriceChart(itemId = null) {
         ctx.textAlign = 'center';
         ctx.fillStyle = '#FFFFFF';
         ctx.font = '16px Arial';
-        ctx.fillText('  Please select an item to view its price trend.', ctx.canvas.width / 2, ctx.canvas.height / 2);
+        ctx.fillText('Please select an item to view its price trend.', ctx.canvas.width / 2, ctx.canvas.height / 2);
       }
     });
     if (specificItemPriceChartUnitInstance) {
@@ -558,10 +588,21 @@ async function loadSpecificItemPriceChart(itemId = null) {
   }
 
   try {
+    //console.log
+    ('Calling get_item_price_history with:', {
+      p_item_id: itemId,
+      p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all',
+      p_character_id: currentSelectedCharacterId
+    });
+
     const { data, error } = await supabase.rpc('get_item_price_history', {
       p_item_id: itemId,
-      p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all'
+      p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all',
+      p_character_id: currentSelectedCharacterId
     });
+
+    // console.log('Response from get_item_price_history - Data:', data);
+    // console.log('Response from get_item_price_history - Error:', error);
 
     if (error) {
       ['specific-item-price-chart-unit', 'specific-item-price-chart-stack'].forEach(id => {
@@ -593,7 +634,7 @@ async function loadSpecificItemPriceChart(itemId = null) {
           ctx.textAlign = 'center';
           ctx.fillStyle = '#B0B0B0';
           ctx.font = '16px Arial';
-          ctx.fillText('  No data has been recorded for this item yet.', ctx.canvas.width / 2, ctx.canvas.height / 2);
+          ctx.fillText('No data has been recorded for this item yet.', ctx.canvas.width / 2, ctx.canvas.height / 2);
         }
       });
       if (specificItemPriceChartUnitInstance) {
@@ -664,9 +705,6 @@ async function loadSpecificItemPriceChart(itemId = null) {
   }
 }
 
-
-
-
 async function populateDropdown(selectElementId, rpcFunctionName, valueColumn, textColumn, defaultOptionText) {
   const selectElement = document.getElementById(selectElementId);
   if (!selectElement) {
@@ -700,6 +738,7 @@ async function populateDropdown(selectElementId, rpcFunctionName, valueColumn, t
 }
 
 async function loadAllTrendsData() {
+
   await loadListTrendsData();
   await loadDailyTotalSalesChart();
   await loadDailyMarketActivityChart();
@@ -707,6 +746,30 @@ async function loadAllTrendsData() {
   await loadDailyAverageListingTimeframeChart();
   await loadSpecificItemPriceChart(currentSelectedItemId);
 }
+
+async function clearFilters() {
+  const itemFilterSelect = document.getElementById('item-filter-select');
+  const regionFilterSelect = document.getElementById('region-filter-select');
+  const characterFilterSelect = document.getElementById('character-filter-select');
+
+  if (itemFilterSelect) {
+    itemFilterSelect.value = '';
+  }
+  if (regionFilterSelect) {
+    regionFilterSelect.value = 'all';
+  }
+  if (characterFilterSelect) {
+    characterFilterSelect.value = '';
+  }
+
+  currentSelectedItemId = null;
+  currentSelectedRegion = 'all';
+  currentSelectedCharacterId = null;
+
+  await loadAllTrendsData();
+}
+
+
 
 document.addEventListener('DOMContentLoaded', async () => {
   const itemFilterSelect = document.getElementById('item-filter-select');
@@ -774,4 +837,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     }
   }
+
+  const characterFilterSelect = document.getElementById('character-filter-select');
+
+  await populateCharacterDropdown();
+
+  if (characterFilterSelect) {
+    characterFilterSelect.addEventListener('change', async (event) => {
+      currentSelectedCharacterId = event.target.value || null;
+      await loadAllTrendsData();
+    });
+  }
+
+  const clearFiltersBtn = document.getElementById('clear-filters-btn');
+
+  if (clearFiltersBtn) {
+    clearFiltersBtn.addEventListener('click', clearFilters);
+  }
 });
+

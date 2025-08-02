@@ -48,9 +48,6 @@ const initCustomModal = () => {
     return { customModalContainer, customModalContentWrapper };
 };
 
-// --- Modified showCustomModal to use a global resolver and initialized elements ---
-// This function is kept largely the same, but it now relies on `window.customModalResolvePromise`
-// and `window.customModalElements` to manage the modal state and elements.
 export const showCustomModal = (title, message, buttons) => {
     return new Promise(resolve => {
         window.customModalResolvePromise = resolve;
