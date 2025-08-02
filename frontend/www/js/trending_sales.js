@@ -503,8 +503,8 @@ async function loadDailyAverageListingTimeframeChart() {
       console.warn('No data from get_average_listing_timeframe.');
       return;
     }
-    // BUG FIX: Changed from row.sale_date to row.listing_date
-    const labels = data.map(row => row.listing_date);
+    
+    const labels = data.map(row => row.sale_date);
     const avgTimes = data.map(row => row.average_listing_time_days);
     const datasetsConfig = [{
       label: 'Avg. Days on Market',
