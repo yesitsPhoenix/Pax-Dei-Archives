@@ -147,7 +147,7 @@ function renderChart(chartId, labels, datasetsConfig, type = 'line') {
   if (chartId === 'specific-item-price-chart-stack') specificItemPriceChartStackInstance = newChart;
   if (chartId === 'daily-avg-price-chart') dailyAvgPriceChartInstance = newChart;
   if (chartId === 'daily-avg-listing-time-chart') dailyAvgListingTimeChartInstance = newChart;
-
+  
   return newChart;
 }
 
@@ -291,7 +291,7 @@ async function loadDailyTotalSalesChart() {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         ctx.textAlign = 'center';
         ctx.fillStyle = '#FF6666';
-        ctx.font = '16px Arial';
+        ctx.font = '14px Arial';
         ctx.fillText(`Error: ${error.message}`, ctx.canvas.width / 2, ctx.canvas.height / 2);
       }
       console.error('Error in get_daily_total_sales:', error);
@@ -305,8 +305,8 @@ async function loadDailyTotalSalesChart() {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         ctx.textAlign = 'center';
         ctx.fillStyle = '#B0B0B0';
-        ctx.font = '16px Arial';
-        ctx.fillText('No data available for this region.', ctx.canvas.width / 2, ctx.canvas.height / 2);
+        ctx.font = '14px Arial';
+        ctx.fillText('No data available based on current filters.', ctx.canvas.width / 2, ctx.canvas.height / 2);
       }
       console.warn('No data from get_daily_total_sales.');
       return;
@@ -335,7 +335,7 @@ async function loadDailyTotalSalesChart() {
       ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
       ctx.textAlign = 'center';
       ctx.fillStyle = '#FF6666';
-      ctx.font = '16px Arial';
+      ctx.font = '14px Arial';
       ctx.fillText(`An unexpected error occurred: ${err.message}`, ctx.canvas.width / 2, ctx.canvas.height / 2);
     }
     console.error('Unexpected error in loadDailyTotalSalesChart:', err);
@@ -346,7 +346,7 @@ async function loadDailyMarketActivityChart() {
   try {
     const { data, error } = await supabase.rpc('get_daily_market_activity_data', {
       p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all',
-      p_character_id: currentSelectedCharacterId //
+      p_character_id: currentSelectedCharacterId
     });
 
     if (error) {
@@ -356,7 +356,7 @@ async function loadDailyMarketActivityChart() {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         ctx.textAlign = 'center';
         ctx.fillStyle = '#FF6666';
-        ctx.font = '16px Arial';
+        ctx.font = '14px Arial';
         ctx.fillText(`Error: ${error.message}`, ctx.canvas.width / 2, ctx.canvas.height / 2);
       }
       console.error('Error in get_daily_market_activity_data:', error);
@@ -365,6 +365,20 @@ async function loadDailyMarketActivityChart() {
 
     const newListingsData = data.new_listings || [];
     const salesCountData = data.sales_count || [];
+
+    if (!data || (newListingsData.length === 0 && salesCountData.length === 0)) {
+      if (dailyMarketActivityChartInstance) dailyMarketActivityChartInstance.destroy();
+      const ctx = document.getElementById('daily-market-activity-chart')?.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#B0B0B0';
+        ctx.font = '14px Arial';
+        ctx.fillText('No data available for daily market activity.', ctx.canvas.width / 2, ctx.canvas.height / 2);
+      }
+      console.warn('No data from get_daily_market_activity_data.');
+      return;
+    }
 
     const allDates = new Set();
     newListingsData.forEach(row => allDates.add(row.date));
@@ -405,7 +419,7 @@ async function loadDailyMarketActivityChart() {
       ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
       ctx.textAlign = 'center';
       ctx.fillStyle = '#FF6666';
-      ctx.font = '16px Arial';
+      ctx.font = '14px Arial'; // Adjusted font size
       ctx.fillText(`An unexpected error occurred: ${err.message}`, ctx.canvas.width / 2, ctx.canvas.height / 2);
     }
     console.error('Unexpected error in loadDailyMarketActivityChart:', err);
@@ -426,7 +440,7 @@ async function loadDailyAverageItemPriceChart() {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         ctx.textAlign = 'center';
         ctx.fillStyle = '#FF6666';
-        ctx.font = '16px Arial';
+        ctx.font = '14px Arial';
         ctx.fillText(`Error: ${error.message}`, ctx.canvas.width / 2, ctx.canvas.height / 2);
       }
       console.error('Error in get_daily_average_sale_price:', error);
@@ -440,8 +454,8 @@ async function loadDailyAverageItemPriceChart() {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         ctx.textAlign = 'center';
         ctx.fillStyle = '#B0B0B0';
-        ctx.font = '16px Arial';
-        ctx.fillText('No data available for average prices in this region.', ctx.canvas.width / 2, ctx.canvas.height / 2);
+        ctx.font = '14px Arial';
+        ctx.fillText('No data available based on current filters.', ctx.canvas.width / 2, ctx.canvas.height / 2);
       }
       console.warn('No data from get_daily_average_sale_price.');
       return;
@@ -470,7 +484,7 @@ async function loadDailyAverageItemPriceChart() {
       ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
       ctx.textAlign = 'center';
       ctx.fillStyle = '#FF6666';
-      ctx.font = '16px Arial';
+      ctx.font = '14px Arial';
       ctx.fillText(`An unexpected error occurred: ${err.message}`, ctx.canvas.width / 2, ctx.canvas.height / 2);
     }
     console.error('Unexpected error in loadDailyAverageItemPriceChart:', err);
@@ -514,7 +528,7 @@ async function loadDailyAverageListingTimeframeChart() {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         ctx.textAlign = 'center';
         ctx.fillStyle = '#FF6666';
-        ctx.font = '16px Arial';
+        ctx.font = '14px Arial';
         ctx.fillText(`Error: ${error.message}`, ctx.canvas.width / 2, ctx.canvas.height / 2);
       }
       console.error('Error in get_average_listing_timeframe:', error);
@@ -527,15 +541,14 @@ async function loadDailyAverageListingTimeframeChart() {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         ctx.textAlign = 'center';
         ctx.fillStyle = '#B0B0B0';
-        ctx.font = '16px Arial';
-        ctx.fillText('No data available for average listing timeframe in this region.', ctx.canvas.width / 2, ctx.canvas.height / 2);
+        ctx.font = '14px Arial';
+        ctx.fillText('No data available based on current filters.', ctx.canvas.width / 2, ctx.canvas.height / 2);
       }
       console.warn('No data from get_average_listing_timeframe.');
       return;
     }
-    
     const labels = data.map(row => row.sale_date);
-    const avgTimes = data.map(row => row.average_listing_time_days);
+    const avgTimes = data.map(row => row.average_time_hours / 24);
     const datasetsConfig = [{
       label: 'Avg. Days on Market',
       data: avgTimes,
@@ -557,7 +570,7 @@ async function loadDailyAverageListingTimeframeChart() {
       ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
       ctx.textAlign = 'center';
       ctx.fillStyle = '#FF6666';
-      ctx.font = '16px Arial';
+      ctx.font = '14px Arial';
       ctx.fillText(`An unexpected error occurred: ${err.message}`, ctx.canvas.width / 2, ctx.canvas.height / 2);
     }
     console.error('Unexpected error in loadDailyAverageListingTimeframeChart:', err);
@@ -572,7 +585,7 @@ async function loadSpecificItemPriceChart(itemId = null) {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         ctx.textAlign = 'center';
         ctx.fillStyle = '#FFFFFF';
-        ctx.font = '16px Arial';
+        ctx.font = '14px Arial';
         ctx.fillText('Please select an item to view its price trend.', ctx.canvas.width / 2, ctx.canvas.height / 2);
       }
     });
@@ -611,7 +624,7 @@ async function loadSpecificItemPriceChart(itemId = null) {
           ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
           ctx.textAlign = 'center';
           ctx.fillStyle = '#FF6666';
-          ctx.font = '16px Arial';
+          ctx.font = '14px Arial';
           ctx.fillText(`Error: ${error.message}`, ctx.canvas.width / 2, ctx.canvas.height / 2);
         }
       });
@@ -633,8 +646,8 @@ async function loadSpecificItemPriceChart(itemId = null) {
           ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
           ctx.textAlign = 'center';
           ctx.fillStyle = '#B0B0B0';
-          ctx.font = '16px Arial';
-          ctx.fillText('No data has been recorded for this item yet.', ctx.canvas.width / 2, ctx.canvas.height / 2);
+          ctx.font = '14px Arial';
+        ctx.fillText('No data available based on current filters.', ctx.canvas.width / 2, ctx.canvas.height / 2);
         }
       });
       if (specificItemPriceChartUnitInstance) {
@@ -690,7 +703,7 @@ async function loadSpecificItemPriceChart(itemId = null) {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         ctx.textAlign = 'center';
         ctx.fillStyle = '#FF6666';
-        ctx.font = '16px Arial';
+        ctx.font = '14px Arial';
         ctx.fillText(`An unexpected error occurred: ${err.message}`, ctx.canvas.width / 2, ctx.canvas.height / 2);
       }
     });
