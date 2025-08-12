@@ -28,28 +28,6 @@ async function checkUserAccess(userId) {
     }
 }
 
-async function handleLoginAndCheckAccess(email, password) {
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password });
-
-    if (authError) {
-        alert(`We're sorry, an error has occurred.`);
-        return;
-    }
-
-    const userId = authData.user.id;
-    if (userId) {
-        const hasAccess = await checkUserAccess(userId);
-
-        if (hasAccess) {
-            console.log('Access granted! User can proceed to the site.');
-        } else {
-            alert('We\'re sorry, an error has occurred.');
-            await supabase.auth.signOut();
-        }
-    } else {
-        console.error('No user data received after login attempt.');
-    }
-}
 
 document.addEventListener('DOMContentLoaded', async () => {
     supabase.auth.onAuthStateChange(async (event, session) => {
