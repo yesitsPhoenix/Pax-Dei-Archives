@@ -15,7 +15,6 @@ async function checkUserAccess(userId) {
             .single();
 
         if (error) {
-            //console.error('Error fetching user access status:', error.message);
             return false;
         }
 
@@ -25,30 +24,25 @@ async function checkUserAccess(userId) {
             return false;
         }
     } catch (err) {
-        //console.error('An unexpected error occurred during access check:', err);
         return false;
     }
 }
 
 async function handleLoginAndCheckAccess(email, password) {
-    //console.log(`Attempting to log in user: ${email}`);
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password });
 
     if (authError) {
-        //console.error('Login failed:', authError.message);
         alert(`We're sorry, an error has occurred.`);
         return;
     }
 
     const userId = authData.user.id;
     if (userId) {
-        //console.log(`User logged in: ${userId}`);
         const hasAccess = await checkUserAccess(userId);
 
         if (hasAccess) {
             console.log('Access granted! User can proceed to the site.');
         } else {
-            //console.log('Access denied! User is not allowed to log in or has been restricted.');
             alert('We\'re sorry, an error has occurred.');
             await supabase.auth.signOut();
         }
@@ -64,14 +58,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             const hasAccess = await checkUserAccess(userId);
 
             if (hasAccess) {
-                // User has access
             } else {
                 alert('We\'re sorry, an error has occurred.');
                 await supabase.auth.signOut();
-                window.location.href = '/'; // Redirect to index page after sign out
+                window.location.href = '/Pax-Dei-Archives'; 
             }
         } else if (event === 'SIGNED_OUT') {
-            //console.log('User signed out.');
         }
     });
 });
