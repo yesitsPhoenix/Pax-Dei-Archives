@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pax Dei Archives - Privacy Policy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script async src="https://paxdei.gaming.tools/embed.js"></script>
+    <link rel="stylesheet" href="frontend/www/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+    <script>
+        window.gtTooltipConfig = {
+            scale: 0.8,
+            delay: 40,
+        };
+    </script>
+    <style>
+        /* Basic styling for the main content area */
+        .privacy-content {
+            max-width: 800px;
+            margin: 4rem auto;
+            padding: 2rem;
+            background-color: #1a202c; /* Tailwind's gray-900 or similar dark background */
+            color: #e2e8f0; /* Tailwind's gray-200 or similar light text */
+            border-radius: 0.75rem; /* rounded-xl */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .privacy-content h1 {
+            font-size: 2.25rem; /* text-4xl */
+            font-weight: bold;
+            margin-bottom: 1.5rem; /* mb-6 */
+            color: #63b3ed; /* Tailwind's blue-400 or similar accent color */
+        }
+        .privacy-content h2 {
+            font-size: 1.5rem; /* text-2xl */
+            font-weight: 600; /* semi-bold */
+            margin-top: 2rem; /* mt-8 */
+            margin-bottom: 1rem; /* mb-4 */
+            color: #90cdf4; /* Tailwind's blue-300 or similar accent color */
+        }
+        .privacy-content p {
+            margin-bottom: 1rem; /* mb-4 */
+            line-height: 1.6;
+        }
+        .privacy-content ul {
+            list-style-type: disc;
+            margin-left: 1.5rem; /* ml-6 */
+            margin-bottom: 1rem; /* mb-4 */
+        }
+        .privacy-content ul li {
+            margin-bottom: 0.5rem; /* mb-2 */
+        }
+        /* Specific styling for the header and footer links to ensure visibility on dark background */
+        .header-area, footer {
+            background-color: #2d3748; /* Darker background for header/footer */
+            color: #cbd5e0; /* Lighter text for header/footer */
+        }
+        .main-nav a, footer a {
+            color: #a0aec0; /* Lighter grey for links */
+        }
+        .main-nav a.active {
+            color: #ffffff; /* White for active link */
+        }
+        .logo h1 {
+            color: #ffffff; /* White for logo text */
+        }
+        .search-input input {
+            background-color: #4a5568; /* Darker input background */
+            color: #e2e8f0; /* Light text for input */
+            border-color: #636b6f; /* Border color */
+        }
+        .search-button {
+            background-color: #63b3ed; /* Blue button */
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body class="bg-gray-800 text-gray-200 min-h-screen flex flex-col">
+    <header class="header-area bg-gray-900 text-white py-4">
+        <div class="container mx-auto px-4">
+            <nav class="main-nav flex items-center justify-between flex-wrap">
+                <a href="index.html" class="logo flex items-center space-x-2">
+                    <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon w-8 h-8 rounded-full">
+                    <h1 class="text-xl font-bold">Pax Dei Archives</h1>
+                </a>
+                <a class='menu-trigger lg:hidden block text-white'>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </a>
+                <div class="nav-and-search-wrapper lg:flex lg:items-center lg:w-auto w-full hidden" id="navigation">
+                    <ul class="nav flex flex-col lg:flex-row lg:space-x-8 mt-4 lg:mt-0">
+                        <li><a href="index.html" class="block py-2 px-4 hover:text-blue-400">Home</a></li>
+                        <li><a href="abilities.html" class="block py-2 px-4 hover:text-blue-400">Abilities</a></li>
+                        <li><a href="gems.html" class="block py-2 px-4 hover:text-blue-400">Gems</a></li>
+                        <li><a href="articles.html" class="block py-2 px-4 hover:text-blue-400">Articles</a></li>
+                        <li><a href="news-updates.html" class="block py-2 px-4 hover:text-blue-400">News</a></li>
+                        <li><a href="developer-comments.html" class="block py-2 px-4 hover:text-blue-400">Dev Comments</a></li>
+                        <li><a href="lore.html" class="block py-2 px-4 hover:text-blue-400">Lore</a></li>
+                        <li><a href="ledger.html" class="block py-2 px-4 hover:text-blue-400">Ledger</a></li>
+                        <li><a href="trends.html" class="block py-2 px-4 hover:text-blue-400">Market Trends</a></li>
+                        <li><a href="map.html" class="block py-2 px-4 hover:text-blue-400">Map</a></li>
+                    </ul>
+                    <div class="search-input mt-4 lg:mt-0 lg:ml-8 relative">
+                        <form id="search" action="#" class="flex">
+                            <input type="text" placeholder="Search the Archives" id='searchText' name="searchKeyword" class="px-3 py-2 rounded-l-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 text-white placeholder-gray-400"/>
+                            <button type="submit" class="search-button bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-r-lg flex items-center justify-center">
+                                <i class="fa fa-search"></i>
+                            </button>
+                        </form>
+                        <div id="searchResultsDropdown" class="search-results-dropdown absolute w-full bg-gray-700 rounded-b-lg shadow-lg hidden">
+                            <!-- Search results will be dynamically inserted here -->
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main class="flex-grow">
+        <div class="privacy-content">
+            <h1>Privacy Policy for Pax Dei Archives</h1>
+            <p>This Privacy Policy describes how Pax Dei Archives ("we", "us", or "our") collects, uses, and discloses your personal information when you use our website and services related to the Pax Dei game.</p>
+
+            <h2>Information We Collect</h2>
+            <p>We are committed to collecting only the information necessary for the functionality of our project. The only personal information we collect from our users is **your username and email address**.</p>
+
+            <h2>How We Use Your Information</h2>
+            <p>The username you provide is used solely for the following purpose:</p>
+            <ul>
+                <li><strong>To associate user data with your Pax Dei characters and trades:</strong> This allows you to update your character(s) on our site with in-game activities (characters, trade listings, etc.) within the Pax Dei Archives project.</li>
+            </ul>
+            <p>We do not use your username for marketing, analytics, or any other purpose beyond this specific association.</p>
+
+            <h2>How We Share Your Information</h2>
+            <p>We **do not share, sell, or rent your username or any associated data** with third parties. Your information is kept private and is only used internally for the stated purpose of linking your Pax Dei data.</p>
+
+            <h2>Data Security</h2>
+            <p>We take reasonable measures to protect the information we collect from unauthorized access, disclosure, alteration, or destruction. While no method of transmission over the Internet or electronic storage is 100% secure, we strive to protect your personal data.</p>
+
+            <h2>Your Rights</h2>
+            <p>As a user, you have the right to:</p>
+            <ul>
+                <li><strong>Access your information:</strong> Request access to the personal information we hold about you.</li>
+                <li><strong>Correct your information:</strong> Ask us to correct any inaccurate or incomplete personal information.</li>
+                <li><strong>Request deletion:</strong> Request the deletion of your personal information. Please note that deleting your username would remove its association with your character/trade data within our archives.</li>
+            </ul>
+            <p>To exercise any of these rights, please contact us using the information provided below.</p>
+
+            <h2>Changes to This Privacy Policy</h2>
+            <p>We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page. We encourage you to review this Privacy Policy periodically for any changes.</p>
+
+            <h2>Contact Us</h2>
+            <p>If you have any questions about this Privacy Policy, please contact us through the Pax Dei Archives project.</p>
+        </div>
+    </main>
+
+    <footer class="bg-gray-900 text-white py-6 mt-auto">
+        <div class="container mx-auto px-4 text-center">
+            <div class="row">
+                <div class="col-lg-12">
+                    <p>Pax Dei Archives is a fan-made site</p>
+                    <p>All intellectual property and assets related to Pax Dei game are reserved by MAINFRAME INDUSTRIES. This site is fan-made and not affiliated with Pax Dei game or MAINFRAME.</p>
+                    <a href="admin.html">Admin</a>
+                    <a href="'privacy.html">Privacy Policy</a>
+                </div>
+            </div>
+        </div>
+
+    </footer>
+
+    <div id="floating-avatar-container" class="fixed bottom-16 right-4 z-50">
+        <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar w-12 h-12 rounded-full cursor-pointer shadow-lg js-floating-avatar">
+    </div>
+
+    <div id="auth-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden z-50">
+        <div class="modal-content-wrapper bg-gray-800 p-6 rounded-lg shadow-xl w-11/12 md:w-1/2 lg:w-1/3">
+            <!-- Modal content will be loaded here -->
+        </div>
+    </div>
+    <div id="ability-popup-overlay" class="popup-overlay fixed inset-0 bg-black bg-opacity-75 hidden z-40"></div>
+
+</body>
+</html>
