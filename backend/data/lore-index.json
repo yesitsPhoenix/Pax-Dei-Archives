@@ -3,7 +3,25 @@
     "category": "Ages",
     "items": 
      [
-
+      {
+        "slug": "before-creation",
+        "title": "Before Creation",
+        "file": "ages/before-creation.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "the-first-creation",
+        "title": "The First Creation",
+        "file": "ages/the-first-creation.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      }
+      
      ]
   },
   {
@@ -71,18 +89,9 @@
     "category": "Redeemers",
     "items": [
       {
-        "slug": "armozel",
-        "title": "5th - Armozel",
-        "file": "redeemers/armozel.md",
-        "author": null,
-        "date": null,
-        "sources": null,
-        "research": null
-      },
-      {
-        "slug": "demira",
-        "title": "3rd - Demira",
-        "file": "redeemers/demira.md",
+        "slug": "protennoia",
+        "title": "1st - Protennoia",
+        "file": "redeemers/protennoia.md",
         "author": null,
         "date": null,
         "sources": null,
@@ -98,9 +107,9 @@
         "research": null
       },
       {
-        "slug": "protennoia",
-        "title": "1st - Protennoia",
-        "file": "redeemers/protennoia.md",
+        "slug": "demira",
+        "title": "3rd - Demira",
+        "file": "redeemers/demira.md",
         "author": null,
         "date": null,
         "sources": null,
@@ -116,6 +125,15 @@
         "research": null
       },
       {
+        "slug": "armozel",
+        "title": "5th - Armozel",
+        "file": "redeemers/armozel.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },      
+      {
         "slug": "oroael",
         "title": "6th - Oroael",
         "file": "redeemers/oroael.md",
@@ -123,7 +141,35 @@
         "date": null,
         "sources": null,
         "research": null
-      }
+      },      
+      {
+        "slug": "Eleleth",
+        "title": "7th - Eleleth",
+        "file": "redeemers/Eleleth.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },      
+      {
+        "slug": "Mellephaneous",
+        "title": "8th - Mellephaneous",
+        "file": "redeemers/Mellephaneous.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },      
+      {
+        "slug": "Loios",
+        "title": "9th - Loios",
+        "file": "redeemers/Loios.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      }      
+     
     ]
   },
   {
