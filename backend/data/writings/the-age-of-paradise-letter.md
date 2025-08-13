@@ -24,7 +24,7 @@ And what we lost.
 
 Before Paradise, before even the first breath of mankind, there were others. Many others.
 
-The word we walk upon is not the first. This is the Tenth Creation, and we are its children, but not the creations firstborn.
+The world we walk upon is not the first. This is the Tenth Creation, and we are its children, but not the creations firstborn.
 
 Nine times before, the Divine shaped the tapestry of existence. Nine times, it unraveled. Each Creation was corrupted by a Deadly Sin, rising from within like rot in the root, and each was answered by a Heavenly Virtue, woven into the next. The First was consumed by Anger, and from its ashes rose the Dark Lord, the Great Deceiver. Another drowned in Envy, where Leviathan coiled through the waters of creation, ever longing. Gluttony bloated a world into silence, and another fell to Levity, laughter twisting it into mockery until even death became a jest.
 
