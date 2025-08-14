@@ -6,43 +6,43 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-async function checkUserAccess(userId) {
-    try {
-        const { data, error } = await supabase
-            .from('users')
-            .select('allow_access')
-            .eq('id', userId)
-            .single();
+// async function checkUserAccess(userId) {
+//     try {
+//         const { data, error } = await supabase
+//             .from('users')
+//             .select('allow_access')
+//             .eq('id', userId)
+//             .single();
 
-        if (error) {
-            return false;
-        }
+//         if (error) {
+//             return false;
+//         }
 
-        if (data && data.allow_access === true) {
-            return true;
-        } else {
-            return false;
-        }
-    } catch (err) {
-        return false;
-    }
-}
+//         if (data && data.allow_access === true) {
+//             return true;
+//         } else {
+//             return false;
+//         }
+//     } catch (err) {
+//         return false;
+//     }
+// }
 
 
-document.addEventListener('DOMContentLoaded', async () => {
-    supabase.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-            const userId = session.user.id;
-            const hasAccess = await checkUserAccess(userId);
+// document.addEventListener('DOMContentLoaded', async () => {
+//     supabase.auth.onAuthStateChange(async (event, session) => {
+//         if (event === 'SIGNED_IN' && session) {
+//             const userId = session.user.id;
+//             const hasAccess = await checkUserAccess(userId);
 
-            if (hasAccess) {
-            } else {
-                alert('We\'re sorry, an error has occurred.');
-                await supabase.auth.signOut();
-                window.location.href = '/Pax-Dei-Archives'; 
-            }
-        } else if (event === 'SIGNED_OUT') {
-        }
-    });
-});
+//             if (hasAccess) {
+//             } else {
+//                 alert('We\'re sorry, an error has occurred.');
+//                 await supabase.auth.signOut();
+//                 window.location.href = '/Pax-Dei-Archives'; 
+//             }
+//         } else if (event === 'SIGNED_OUT') {
+//         }
+//     });
+// });
 
