@@ -198,22 +198,13 @@
   {
     "category": "Writings",
     "items": [
-      {
-        "slug": "the-age-of-the-ancients-demira",
-        "title": "The Age of the Ancients - Demira",
-        "file": "writings/the-age-of-the-ancients-demira.md",
-       "author": "Thelonius the Scribe",
-        "date": "Winter of the Year 3999 ",
-        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-ii",
-        "research": ""
-      },
-      {
-        "slug": "the-great-surge",
-        "title": "The Great Surge",
-        "file": "writings/the-great-surge.md",
-       "author": "Thelonius the Scribe",
-        "date": "Winter of the Year 3999 ",
-        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-iii",
+            {
+        "slug": "the-dimming-light",
+        "title": "The Dimming Light",
+        "file": "writings/the-dimming-light.md",
+        "author": "Thelonius the Scribe",
+        "date": "Winter of the Year 3999",
+        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-i",
         "research": ""
       },
       {
@@ -244,12 +235,12 @@
         "research": ""
       },
       {
-        "slug": "the-age-of-legends-letter",
-        "title": "The Age of Legends",
-        "file": "writings/the-age-of-legends-letter.md",
+        "slug": "the-age-of-the-ancients-demira",
+        "title": "The Age of the Ancients - Demira",
+        "file": "writings/the-age-of-the-ancients-demira.md",
        "author": "Thelonius the Scribe",
         "date": "Winter of the Year 3999 ",
-        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-iii",
+        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-ii",
         "research": ""
       },
       {
@@ -262,12 +253,57 @@
         "research": ""
       },
       {
-        "slug": "the-dimming-light",
-        "title": "The Dimming Light",
-        "file": "writings/the-dimming-light.md",
-        "author": "Thelonius the Scribe",
+        "slug": "the-great-surge",
+        "title": "The Great Surge",
+        "file": "writings/the-great-surge.md",
+       "author": "Thelonius the Scribe",
+        "date": "Winter of the Year 3999 ",
+        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-iii",
+        "research": ""
+      },
+      {
+        "slug": "the-age-of-legends-letter",
+        "title": "The Age of Legends",
+        "file": "writings/the-age-of-legends-letter.md",
+       "author": "Thelonius the Scribe",
+        "date": "Winter of the Year 3999 ",
+        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-iii",
+        "research": ""
+      },
+      {
+        "slug": "the-age-of-the-kindgoms-letter",
+        "title": "The Age of the Kindgoms",
+        "file": "writings/the-age-of-the-kindgoms-letter.md",
+       "author": "Thelonius the Scribe",
+        "date": "Winter of the Year 3999 ",
+        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-iv",
+        "research": ""
+      },
+      {
+        "slug": "the-age-of-the-papacy-letter",
+        "title": "The Age of the Papacy",
+        "file": "writings/the-age-of-the-papacy-letter.md",
+       "author": "Thelonius the Scribe",
+        "date": "Winter of the Year 3999 ",
+        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-v",
+        "research": ""
+      },
+      {
+        "slug": "the-great-cataclysm-letter",
+        "title": "The Great Cataclysm",
+        "file": "writings/the-great-cataclysm-letter.md",
+       "author": "Thelonius the Scribe",
+        "date": "Winter of the Year 3999 ",
+        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-vi-end",
+        "research": ""
+      },
+      {
+        "slug": "the-last-word",
+        "title": "The Last Word",
+        "file": "writings/the-last-word.md",
+       "author": "Thelonius the Scribe",
         "date": "Winter of the Year 3999",
-        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-i",
+        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-vi-end",
         "research": ""
       },
       {
@@ -341,43 +377,7 @@
       "date": "Unknown",
       "sources": "",
       "research": "1. Likely some sort of religious text, unknown faction/association"
-    },
-      {
-        "slug": "the-age-of-the-kindgoms-letter",
-        "title": "The Age of the Kindgoms",
-        "file": "writings/the-age-of-the-kindgoms-letter.md",
-       "author": "Thelonius the Scribe",
-        "date": "Winter of the Year 3999 ",
-        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-iv",
-        "research": ""
-      },
-      {
-        "slug": "the-age-of-the-papacy-letter",
-        "title": "The Age of the Papacy",
-        "file": "writings/the-age-of-the-papacy-letter.md",
-       "author": "Thelonius the Scribe",
-        "date": "Winter of the Year 3999 ",
-        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-v",
-        "research": ""
-      },
-      {
-        "slug": "the-great-cataclysm-letter",
-        "title": "The Great Cataclysm",
-        "file": "writings/the-great-cataclysm-letter.md",
-       "author": "Thelonius the Scribe",
-        "date": "Winter of the Year 3999 ",
-        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-vi-end",
-        "research": ""
-      },
-      {
-        "slug": "the-last-word",
-        "title": "The Last Word",
-        "file": "writings/the-last-word.md",
-       "author": "Thelonius the Scribe",
-        "date": "Winter of the Year 3999",
-        "sources": "https://playpaxdei.com/en-us/news/diegesis/the-last-words-of-thelonius-the-scribe-part-vi-end",
-        "research": ""
-      }
+    }
     ]
   }
 ]
