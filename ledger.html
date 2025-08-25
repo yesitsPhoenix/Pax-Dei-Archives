@@ -67,6 +67,47 @@
   </ul>
 </aside>
 <body>
+    <div id="awayBanner" class="banner-container fixed top-0 left-0 w-full z-1000 p-4">
+        <div class="max-w-4xl mx-auto bg-red-200 bg-opacity-80 text-black p-4 rounded-lg shadow-lg flex items-center justify-between space-x-4">
+            <p class="text-sm sm:text-base font-medium text-center flex-grow">
+                📢 I will be away for a few weeks starting August 25th.<br> Please send me a message on Discord if needed!
+            </p>
+            <button id="closeBanner" class="text-white hover:text-red-200 focus:outline-none focus:ring-2 focus:ring-red-300 rounded-full p-1 transition-colors duration-200">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+        <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const awayBanner = document.getElementById('awayBanner');
+            const closeBanner = document.getElementById('closeBanner');
+
+            setTimeout(() => {
+                awayBanner.classList.add('show');
+            }, 100);
+
+            closeBanner.addEventListener('click', () => {
+                awayBanner.classList.remove('show');
+                setTimeout(() => {
+                    awayBanner.style.display = 'none';
+                }, 500);
+            });
+
+            const updateBodyPadding = () => {
+                if (awayBanner.style.display !== 'none') {
+                    document.body.style.paddingTop = `${awayBanner.offsetHeight}px`;
+                } else {
+                    document.body.style.paddingTop = '0';
+                }
+            };
+
+            updateBodyPadding();
+
+            window.addEventListener('resize', updateBodyPadding);
+        });
+    </script>
     <header class="header-area">
         <div class="container">
             <nav class="main-nav">
