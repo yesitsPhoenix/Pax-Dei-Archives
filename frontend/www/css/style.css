@@ -241,6 +241,7 @@ ul {
 		max-width: 31%;
         box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
         border-radius: 23px;
+		padding-top: 10px;
 	}
 	.col-lg-4 {
 		flex: 0 0 33.333333%;
