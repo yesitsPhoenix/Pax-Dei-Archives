@@ -1674,3 +1674,11 @@ blockquote cite {
   list-style-type: disc;
   padding-left: 1rem;
 }
+
+.banner-container {
+	transition: transform 0.5s ease-out;
+	transform: translateY(-100%);
+}
+.banner-container.show {
+	transform: translateY(0);
+}
