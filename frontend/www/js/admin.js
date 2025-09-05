@@ -709,23 +709,72 @@ function setupTagManagementHandlers() {
     const newTagInput = document.getElementById('newTagInput');
     const addNewTagButton = document.getElementById('addNewTagButton');
     const tagSelect = document.getElementById('tagSelect');
-    const loreCategorySelect = document.getElementById('loreCategory');
+    const formMessage = document.getElementById('formMessage');
 
-    if (addNewTagButton && newTagInput && tagSelect && loreCategorySelect) {
+    if (addNewTagButton && newTagInput && tagSelect) {
         addNewTagButton.addEventListener('click', async () => {
             const newTag = newTagInput.value.trim();
-            await handleAddNewTag(newTag, newTagInput, formMessage, tagSelect, loreCategorySelect, 'Tag');
+            if (newTag) {
+                try {
+                    const { error } = await supabase
+                        .from('tag_list')
+                        .insert([{ tag_name: newTag }]);
+
+                    if (error && error.code !== '23505') {
+                        showFormMessage(formMessage, `Error adding Tag: ` + error.message, 'error');
+                    } else {
+                        if (error && error.code === '23505') {
+                            showFormMessage(formMessage, `Tag '${newTag}' already exists.`, 'warning');
+                        } else {
+                            showFormMessage(formMessage, `Tag '${newTag}' added successfully!`, 'success');
+                            tagListCache.push({ tag_name: newTag });
+                            tagListCache.sort((a, b) => a.tag_name.localeCompare(b.tag_name));
+                        }
+                        newTagInput.value = '';
+                        populateTagSelect(tagSelect);
+                    }
+                } catch (e) {
+                    showFormMessage(formMessage, `An unexpected error occurred while adding Tag.`, 'error');
+                }
+            } else {
+                showFormMessage(formMessage, `Please enter a tag name.`, 'warning');
+            }
         });
     }
-    
+
     const newLoreCategoryInput = document.getElementById('newLoreCategoryInput');
     const addNewLoreCategoryButton = document.getElementById('addNewLoreCategoryButton');
+    const loreCategorySelect = document.getElementById('loreCategory');
     const addLoreItemMessage = document.getElementById('addLoreItemMessage');
 
-    if (addNewLoreCategoryButton && newLoreCategoryInput && loreCategorySelect && tagSelect) {
+    if (addNewLoreCategoryButton && newLoreCategoryInput && loreCategorySelect) {
         addNewLoreCategoryButton.addEventListener('click', async () => {
             const newCategory = newLoreCategoryInput.value.trim();
-            await handleAddNewTag(newCategory, newLoreCategoryInput, addLoreItemMessage, tagSelect, loreCategorySelect, 'Category');
+            if (newCategory) {
+                try {
+                    const { error } = await supabase
+                        .from('tag_list')
+                        .insert([{ tag_name: newCategory }]);
+
+                    if (error && error.code !== '23505') {
+                        showFormMessage(addLoreItemMessage, `Error adding Category: ` + error.message, 'error');
+                    } else {
+                        if (error && error.code === '23505') {
+                            showFormMessage(addLoreItemMessage, `Category '${newCategory}' already exists.`, 'warning');
+                        } else {
+                            showFormMessage(addLoreItemMessage, `Category '${newCategory}' added successfully!`, 'success');
+                            tagListCache.push({ tag_name: newCategory });
+                            tagListCache.sort((a, b) => a.tag_name.localeCompare(b.tag_name));
+                        }
+                        newLoreCategoryInput.value = '';
+                        populateTagSelect(loreCategorySelect);
+                    }
+                } catch (e) {
+                    showFormMessage(addLoreItemMessage, `An unexpected error occurred while adding Category.`, 'error');
+                }
+            } else {
+                showFormMessage(addLoreItemMessage, `Please enter a category name.`, 'warning');
+            }
         });
     }
 }
