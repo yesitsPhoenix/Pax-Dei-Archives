@@ -108,7 +108,6 @@ function renderComments(container, comments) {
                 const day = String(dateObj.getDate()).padStart(2, '0');
                 formattedDateForData = `${year}-${month}-${day}`;
             } catch (e) {
-                // If parsing fails, use original date or empty string
                 formattedDateForData = comment.comment_date || '';
             }
         }
@@ -133,7 +132,7 @@ function renderComments(container, comments) {
                             <span class="comment-author-name" style="color: ${authorColor};">${comment.author || 'Unknown'}</span> -
                             <span class="comment-date">${formattedDate}</span>
                         </h6>
-                        <div class="comment-content-text">${sanitizedHtmlContent}</div>
+                        <div class="comment-content-text text-base">${sanitizedHtmlContent}</div>
                         ${sourceDisplay ? `<span class="comment-source">${sourceDisplay}</span>` : ''}
                     </div>
                 </div>
@@ -142,3 +141,4 @@ function renderComments(container, comments) {
         container.insertAdjacentHTML('beforeend', commentHtml);
     });
 }
+

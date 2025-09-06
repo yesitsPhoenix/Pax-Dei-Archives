@@ -341,7 +341,7 @@ $(document).ready(async function() {
     const currentPage = window.location.pathname.split('/').pop();
 
     if (currentPage === 'index.html' || currentPage === '') {
-        fetchAndRenderDeveloperComments('recent-comments-home', 6);
+        fetchAndRenderDeveloperComments('recent-comments-home', 9);
         fetchAndRenderNewsUpdates('news-updates-home', 3);
     } else if (currentPage === 'developer-comments.html') {
         const devCommentsContainer = $('#dev-comments-container');
@@ -365,7 +365,6 @@ $(document).ready(async function() {
                     localStorage.removeItem(TAG_LIST_CACHE_KEY);
                 }
             }
-
             try {
                 const { data, error } = await supabase
                     .from('tag_list')
@@ -374,7 +373,6 @@ $(document).ready(async function() {
                 if (error) {
                     return;
                 }
-
                 data.sort((a, b) => a.tag_name.localeCompare(b.tag_name));
                 localStorage.setItem(TAG_LIST_CACHE_KEY, JSON.stringify({ data, timestamp: Date.now() }));
                 renderTags(data);
@@ -382,7 +380,6 @@ $(document).ready(async function() {
             } catch (e) {
             }
         }
-
         function renderTags(tags) {
             tags.forEach(tag => {
                 const tagElement = $(`<span class="tag-button">${tag.tag_name}</span>`);

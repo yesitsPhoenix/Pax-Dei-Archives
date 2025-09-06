@@ -5,56 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pax Dei Archives - Developer Comments</title>
     <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="frontend/www/css/popout.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script type="module" src="frontend/www/js/supabaseClient.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.min.js"></script>
 
 </head>
 <body>
-    <!-- <div id="awayBanner" class="banner-container fixed top-0 left-0 w-full z-1000 p-4">
-        <div class="max-w-4xl mx-auto bg-red-200 bg-opacity-80 text-black p-4 rounded-lg shadow-lg flex items-center justify-between space-x-4">
-            <p class="text-sm sm:text-base font-medium text-center flex-grow">
-                📢 I will be away for a few weeks starting August 25th.<br> Please send me a message on Discord if needed!
-            </p>
-            <button id="closeBanner" class="text-white hover:text-red-200 focus:outline-none focus:ring-2 focus:ring-red-300 rounded-full p-1 transition-colors duration-200">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-            </button>
-        </div>
-    </div>
-        <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const awayBanner = document.getElementById('awayBanner');
-            const closeBanner = document.getElementById('closeBanner');
-
-            setTimeout(() => {
-                awayBanner.classList.add('show');
-            }, 100);
-
-            closeBanner.addEventListener('click', () => {
-                awayBanner.classList.remove('show');
-                setTimeout(() => {
-                    awayBanner.style.display = 'none';
-                }, 500);
-            });
-
-            const updateBodyPadding = () => {
-                if (awayBanner.style.display !== 'none') {
-                    document.body.style.paddingTop = `${awayBanner.offsetHeight}px`;
-                } else {
-                    document.body.style.paddingTop = '0';
-                }
-            };
-
-            updateBodyPadding();
-
-            window.addEventListener('resize', updateBodyPadding);
-        });
-    </script> -->
     <header class="header-area">
         <div class="container">
             <nav class="main-nav">
@@ -101,45 +62,47 @@
                             <div class="col-lg-12">
                                 <div class="heading-section">
                                     <h4><em>Recent Developer</em> Comments</h4>
-                                    <p>Use the Tag filters, Author, and/or Date filters below to filter documented comments.</p>
-                                    <p>Click the "View Source" button on the cards to open the source comment in Discord.</p>
+                                    <p>Use the Tag filters, Author, and/or Date filters below to filter documented comments.<br>
+                                    Click the "View Source" button on the cards to open the source comment in Discord.</p>
                                 </div>
                             </div>
                             <div class="col-lg-12">
-                                <div class="filters-section">
-                                    <div class="filter-row"> <div class="filter-group">
+                                <div class="filters-section space-y-4">
+                                    <!-- Tags -->
+                                    <div class="filter-row">
+                                        <div class="filter-group">
                                             <label>Tag(s):</label>
-                                            <div id="filterTagContainer" class="tag-cloud">
-                                            </div>
+                                            <div id="filterTagContainer" class="tag-cloud"></div>
                                         </div>
                                     </div>
-                                    <div class="filter-row"> <div class="filter-group">
+
+                                    <!-- Author & Date -->
+                                    <div class="filter-row flex flex-wrap gap-4 items-end">
+                                        <div class="filter-group flex-1 min-w-[150px]">
                                             <label for="filterAuthor">Author:</label>
-                                            <select id="filterAuthor">
+                                            <select id="filterAuthor" class="w-full">
                                                 <option value="">All Authors</option>
                                             </select>
                                         </div>
-                                        <br>
-                                        <div class="filter-group">
+                                        <div class="filter-group flex-1 min-w-[150px]">
                                             <label for="filterDate">Date:</label>
-                                            <input type="date" id="filterDate">
+                                            <input type="date" id="filterDate" class="w-full">
                                         </div>
                                     </div>
-                                    <div class="filter-buttons">
-                                        <button id="applyFilters">Apply Filters</button>
-                                        <button id="clearFilters">Clear Filters</button>
+
+                                    <!-- Buttons -->
+                                    <div class="filter-buttons flex gap-2">
+                                        <button id="applyFilters" class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">Apply Filters</button>
+                                        <button id="clearFilters" class="px-4 py-2 rounded bg-gray-600 text-white hover:bg-gray-700">Clear Filters</button>
                                     </div>
                                 </div>
                             </div>
+
                             <div class="col-lg-12">
                                 <div id="dev-comments-container" class="row">
                                     <div class="loading-indicator">Loading developer comments...</div>
                                 </div>
-                                <!-- <div class="pagination-controls flex justify-center items-center space-x-4 mb-8">
-                                    <button id="prevPage" class="pagination-button px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed" disabled>Previous</button>
-                                    <div id="pageNumbers" class="page-numbers flex space-x-2"></div>
-                                    <button id="nextPage" class="pagination-button px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100">Next</button>
-                                </div> -->
+
                             </div>
                         </div>
                     </div>
