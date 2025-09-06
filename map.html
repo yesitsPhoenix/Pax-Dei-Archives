@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <base target="_top">
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pax Dei Archives</title>
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
@@ -12,7 +11,6 @@
     <link href="frontend/www/css/map_styles.css" rel="stylesheet">
     <link href="frontend/www/css/style.css" rel="stylesheet">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-
     <style>
         .leaflet-container {
             background: none !important;
@@ -27,11 +25,7 @@
                     <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
                     <h1>Pax Dei Archives</h1>
                 </a>
-                <a class='menu-trigger'>
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </a>
+
                 <div class="nav-and-search-wrapper">
                     <ul class="nav">
                         <li><a href="index.html">Home</a></li>
@@ -54,19 +48,6 @@
     <main>
         <div id="map-container">
             <div id="map" style="width: 100%; height: 100vh;"></div>
-
-            <!-- <div id="info-box" class="info-box">
-                <div id="text-info-box" class="text-info-box">
-                    Left-click to add temporary markers<br>
-                    Ctrl+Left-click to remove them<br><br>
-                    For questions or feedback,<br>
-                    visit us on Discord!<br>
-                    <a href="#" target="_blank">
-                        <img src='frontend/www/assets/discord.png' style="width: 40px; height: 40px;" alt="Discord Icon">
-                    </a>
-                </div>
-            </div> -->
-
             <div id="mouse-coordinates" class="mouse-coordinates">
                 <span class="dynamic-coordinates"></span>
             </div>
