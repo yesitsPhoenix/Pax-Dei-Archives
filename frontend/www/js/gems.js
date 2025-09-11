@@ -1,12 +1,11 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const gemsListContainer = document.getElementById('gems-list');
     const filtersContainer = document.getElementById('gem-filters');
-    const gemPopupOverlay = document.getElementById('gem-popup-overlay'); // Corrected ID to match HTML
+    const gemPopupOverlay = document.getElementById('gem-popup-overlay');
 
     const GITHUB_PAGES_BASE_URL = "https://yesitsphoenix.github.io/Pax-Dei-Archives";
 
     if (!gemsListContainer || !filtersContainer || !gemPopupOverlay) {
-        // Updated error message to reflect the correct ID being searched
         console.error('Required containers (gems-list, gem-filters, or gem-popup-overlay) not found!');
         return;
     }
@@ -14,7 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let allGems = [];
     const groupedGems = {};
     const allSources = new Set();
-    let activeFilters = new Set(); // Added to track active source filters
+    let activeFilters = new Set();
 
     try {
         const response = await fetch('backend/data/gems.json');
@@ -84,20 +83,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
-    // Initial render of filters
     renderFilters();
 
     const applyFilters = () => {
         document.querySelectorAll('.gem-card').forEach(card => {
             const cardSources = card.dataset.sources ? card.dataset.sources.split(',') : [];
             
-            // If no filters are active, show all cards
             if (activeFilters.size === 0) {
                 card.classList.remove('hidden');
                 return;
             }
 
-            // AND logic: Check if ALL active filters are present in the card's sources
             const matchesFilter = [...activeFilters].every(filterSource => cardSources.includes(filterSource));
 
             if (matchesFilter) {

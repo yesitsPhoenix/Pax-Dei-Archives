@@ -164,7 +164,8 @@
     "name": "Quicksilver",
     "found_in": [
       "Limestone",
-      "Granite"
+      "Granite",
+      "Iron"
     ],
     "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_rawmineral_quicksilver.webp",
     "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_mineral_quicksilver"
