@@ -57,6 +57,7 @@ export async function isLoggedIn() {
   return !!session;
 }
 
+
 export async function logout() {
   await supabase.auth.signOut();
 }
@@ -156,3 +157,4 @@ export async function updateDungeonRun(runId, updatedData) {
     }
     return data ? data[0] : null;
 }
+

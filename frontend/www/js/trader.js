@@ -179,7 +179,7 @@ const checkUser = async () => {
 
 // --- Refactored: fetchAllItemsForDropdown ---
 // Dedicated function for fetching item data.
-async function fetchAllItemsForDropdown() {
+export async function fetchAllItemsForDropdown() {
     const { data, error } = await supabase.rpc('get_all_items_for_dropdown');
     if (error) {
         console.error('Error fetching items for dropdowns:', error);
@@ -489,7 +489,7 @@ function createAutocompleteHandlers(inputElement, suggestionsContainerElement, d
 
 // --- Modified: setupCustomAutocomplete ---
 // This function now uses the `createAutocompleteHandlers` to attach listeners.
-function setupCustomAutocomplete(inputElement, suggestionsContainerElement, dataArray, selectionCallback) {
+export function setupCustomAutocomplete(inputElement, suggestionsContainerElement, dataArray, selectionCallback) {
     const handlers = createAutocompleteHandlers(inputElement, suggestionsContainerElement, dataArray, selectionCallback);
 
     inputElement.addEventListener('input', handlers.handleInput);

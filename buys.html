@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pax Dei Archives - Buy Orders</title>
+    <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="frontend/www/css/trader.css">
+    <link rel="stylesheet" href="frontend/www/css/buys_sidebar.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+    <script type="module" src="frontend/www/js/supabaseClient.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+        <script> window.gtTooltipConfig = {
+        scale: 0.8,
+        delay: 30,
+        };
+    </script>
+    <script async src="https://paxdei.gaming.tools/embed.js"></script>
+
+</head>
+<body class="bg-gray-900 text-gray-200">
+    <header class="header-area">
+        <div class="container">
+            <nav class="main-nav">
+                <a href="index.html" class="logo">
+                    <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
+                    <h1>Pax Dei Archives</h1>
+                </a>
+                <a class='menu-trigger'>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </a>
+                <div class="nav-and-search-wrapper">
+                    <ul class="nav">
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="abilities.html">Abilities</a></li>
+                        <li><a href="gems.html">Gems</a></li>
+                        <li><a href="developer-comments.html">Dev Comments</a></li>
+                        <li><a href="lore.html">Lore</a></li>
+                        <li><a href="ledger.html">Ledger</a></li>
+                        <li><a href="trends.html">Market Trends</a></li>
+                        <li><a href="map.html">Map</a></li>
+                        <li><a href="buys.html" class="active">Buy Orders</a></li>
+                    </ul>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+<aside id="sidebar" class="w-64 bg-[#1c1c1c] border-r-4 border-amber-300 shadow-lg transition-all duration-300 hover:bg-slate-700 px-3 py-4 cursor-pointer fixed h-v50vh z-50 top-[220px] collapsed">
+    <ul class="space-y-2 font-medium relative">
+        <li class="group">
+            <a href="#" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900" id="addBuyOrderSidebarBtn">
+                <i class="fas fa-plus-square w-5 h-5 text-gray-400 transition duration-75"></i>
+                <span class="ml-3">Add New Buy Order</span>
+            </a>
+        </li>
+        <li class="group">
+            <a href="#active-listings-header" id="active-listings-btn" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                <i class="fas fa-list-alt w-5 h-5 text-gray-400 transition duration-75"></i>
+                <span class="ml-3 sidebar-text">Active Listings</span>
+            </a>
+        </li>
+        <li class="group">
+            <a href="#reserved-listings-header" id="reserved-listings-btn" class="relative flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                <i class="fas fa-file-invoice w-5 h-5 text-gray-400 transition duration-75"></i>
+                <span class="ml-3 sidebar-text">Reserved</span>
+                </a>
+        </li>
+        <li class="group">
+            <a href="#waiting-for-fulfillment-header" id="waiting-listings-btn" class="relative flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                <i class="fas fa-bookmark w-5 h-5 text-gray-400 transition duration-75"></i>
+                <span class="ml-3 sidebar-text">Waiting for Fulfillment</span>
+                <span id="reserved-notification" class="absolute -top-1 left-9 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full transition-all duration-300">
+                    0
+                </span>
+            </a>
+        </li>
+    </ul>
+</aside>
+
+<main class="trader-container">
+    <div class="container">
+        <div id="buyOrdersContent" class="hidden">
+            <h1 class="dashboard-header">Buy Orders</h1>
+            <section class="filters my-8">
+                <div class="flex flex-wrap items-center gap-4 mb-6">
+                    <div class="flex-1 min-w-[200px]">
+                        <label for="filter-buy-item-name" class="block text-gray-400 text-sm font-bold mb-1">Filter by Item Name:</label>
+                        <input type="text" id="filter-buy-item-name" placeholder="Enter item name" class="p-2 border rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
+                    </div>
+                    <div class="flex-1 min-w-[150px]">
+                        <label for="filter-buy-category" class="block text-gray-400 text-sm font-bold mb-1">Filter by Category:</label>
+                        <select id="filter-buy-category" class="p-2 border rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
+                            <option value="">All Categories</option>
+                        </select>
+                    </div>
+                    <div class="flex-1 min-w-[150px]">
+                        <label for="filter-buy-status" class="block text-gray-400 text-sm font-bold mb-1">Filter by Status:</label>
+                        <select id="filter-buy-status" class="p-2 border rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
+                            <option value="active">Active</option>
+                            <option value="reserved">Reserved</option>
+                            <option value="fulfilled">Fulfilled</option>
+                            <option value="cancelled">Cancelled</option>
+                            <option value="all">All Orders</option>
+                            <option value="my_listings">My Listings</option>
+
+                        </select>
+                    </div>
+                    <div class="flex-1 min-w-[150px]">
+                        <label for="sort-by-buy" class="block text-gray-400 text-sm font-bold mb-1">Sort By:</label>
+                        <select id="sort-by-buy" class="p-2 border rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
+                            <option value="listing_date">Listed On</option>
+                            <option value="item_name">Item Name</option>
+                            <option value="quantity_wanted">Quantity</option>
+                            <option value="price_per_unit">Price Per Unit</option>
+                            <option value="total_price">Total Value</option>
+                        </select>
+                    </div>
+                    <div class="flex-1 min-w-[150px]">
+                        <label for="sort-direction-buy" class="block text-gray-400 text-sm font-bold mb-1">Sort Direction:</label>
+                        <select id="sort-direction-buy" class="p-2 border rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
+                            <option value="desc">Descending</option>
+                            <option value="asc">Ascending</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+            <h2 id="active-listings-header" class="dashboard-header mt-8">Listings</h2>
+
+            <section id="buy-orders-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div id="loader" class="text-center col-span-full">Loading buy orders...</div>
+            </section>
+
+        </div>
+        <h2 id="reserved-listings-header" class="dashboard-header mt-8">My Reserved Listings</h2>
+        <section id="reserved-orders-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <p class="text-center col-span-full">You have not reserved any listings yet.</p>
+        </section>
+
+        <h2 id="waiting-for-fulfillment-header" class="dashboard-header mt-8">Waiting for Fulfillment</h2>
+        <section id="waiting-orders-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <p class="text-center col-span-full">Orders waiting for fulfillment.</p>
+        </section>
+    </div>
+</main>
+
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12">
+                    <p>Pax Dei Archives is a fan-made site and not affiliated with Pax Dei or MAINFRAME.</p>
+                    <p>All intellectual property and assets related to Pax Dei game are reserved by MAINFRAME INDUSTRIES.</p>
+                    <a href="admin.html">Admin</a>
+                    <a href="privacy.html">Privacy Policy</a>
+                </div>
+            </div>
+        </div>
+        <div class="corner-credit">
+            <div class="corner-credit-top-row">
+                <img src="frontend/www/assets/phoenix.png" alt="Phoenix profile image" class="profile-image" />
+                <span class="nav-text-profile">Made by Phoenix ✨</span>
+            </div>
+            <div id="utc-clock-display" class="utc-clock"></div>
+        </div>
+    </footer>
+
+    <div id="addBuyOrderModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md border border-emerald-400">
+            <h3 class="text-2xl font-bold text-white mb-6 text-center">Add New Buy Order</h3>
+            <form id="add-buy-order-form-modal" class="space-y-4">
+                <div class="form-group">
+                    <label for="modal-buy-item-name" class="block text-sm font-medium text-gray-300">Item Name</label>
+                    <input type="text" id="modal-buy-item-name" name="item-name" placeholder="e.g., Iron Ingot" required
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div class="form-group">
+                    <label for="modal-buy-item-category" class="block text-sm font-medium text-gray-300">Item Category</label>
+                    <select id="modal-buy-item-category" name="item-category" class="w-full p-2 border rounded-lg bg-gray-700 text-white" required>
+                        <option value="">Select a category</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="modal-buy-quantity" class="block text-sm font-medium text-gray-300">Number of Stacks Needed</label>
+                    <input type="number" id="modal-buy-quantity" name="item-quantity" placeholder="e.g., 5" required
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div class="form-group">
+                    <label for="modal-buy-price-per-stack" class="block text-sm font-medium text-gray-300">Price per Stack</label>
+                    <input type="number" step="0.01" id="modal-buy-price-per-stack" name="item-price-per-stack" placeholder="e.g., 5" required
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div class="form-group">
+                    <label for="modal-buy-location" class="block text-sm font-medium text-gray-300">Delivery Location</label>
+                    <input type="text" id="modal-buy-location" name="buy-location" placeholder="e.g., Merrie" required
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+                <div class="flex justify-end gap-4">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Add Buy Order
+                    </button>
+                    <button type="button" id="closeAddBuyOrderModalBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                        Close
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script type="module" src="frontend/www/js/buys.js"></script>
+    <script type="module" src="frontend/www/js/popoutAuth.js"></script>
+    <script type="module" src="frontend/www/js/main.js"></script>
+
+    <div id="floating-avatar-container">
+    <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar js-floating-avatar">
+        </div>
+        <div id="auth-modal">
+    <div class="modal-content-wrapper" id="modal-content-wrapper">
+    </div>
+</div>
+</body>
+</html>
