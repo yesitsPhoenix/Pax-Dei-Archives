@@ -126,8 +126,8 @@ async function initMap() {
 
         var imageOverlay = L.imageOverlay(
             "frontend/www/assets/combined_dark1.jpg", [
-                [680, -520],
-                [-680, 520],
+                [680, -500],
+                [-680, 500],
             ]
         ).addTo(map);
         imageOverlay.getElement().classList.add('image-overlay');
