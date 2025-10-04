@@ -31,4 +31,4 @@ The world braced for calamity.
 
 And it came.
 
- — Thelonius the Scribe
+— [Thelonius the Scribe](lore.html?category=Known%20Figures&item=thelonius-the-scribe)

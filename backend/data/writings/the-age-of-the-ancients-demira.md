@@ -30,4 +30,4 @@ She left the Moon. She left Stories and Songs. And through them, we remember her
 
 By every winter fire, in every sacred song, her presence lingers. The Moon still watches. And beneath its glow, we are not haunted by the darkness, but reminded of the one who first taught us how to walk through it.
 
- — Thelonius the Scribe
+— [Thelonius the Scribe](lore.html?category=Known%20Figures&item=thelonius-the-scribe)

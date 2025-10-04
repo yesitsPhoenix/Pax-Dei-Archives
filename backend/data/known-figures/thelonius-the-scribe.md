@@ -3,19 +3,18 @@ A most humble master scribe, well-known for a series of letters providing crucia
 <br>
 
 **Known Works:**
-- The Dimming Light
-- The Nine Creations Before
-- The Age of Paradise
-- The Age of the Ancients - Meirothea
-- The Age of the Ancients - Demira
-- The Elysium Age
-- The Great Surge
-- The Age of Legends
-- The Age of the Kingdoms
-- The Age of the Papacy
-- The Great Cataclysm
-- The Last Word
-
+- [The Dimming Light](lore.html?category=Writings&item=the-dimming-light)
+- [The Nine Creations Before](lore.html?category=Writings&item=the-nine-creations-before-letter)
+- [The Age of Paradise](lore.html?category=Writings&item=the-age-of-paradise-letter)
+- [The Age of the Ancients - Meirothea](lore.html?category=Writings&item=the-age-of-the-ancients-meirothea)
+- [The Age of the Ancients - Demira](lore.html?category=Writings&item=the-age-of-the-ancients-demira)
+- [The Elysium Age](lore.html?category=Writings&item=the-elysium-age-letter)
+- [The Great Surge](lore.html?category=Writings&item=the-great-surge)
+- [The Age of Legends](lore.html?category=Writings&item=the-age-of-legends-letter)
+- [The Age of the Kingdoms](lore.html?category=Writings&item=the-age-of-the-kindgoms-letter)
+- [The Age of the Papacy](lore.html?category=Writings&item=the-age-of-the-papacy-letter)
+- [The Great Cataclysm](lore.html?category=Writings&item=the-great-cataclysm-letter)
+- [The Last Word](lore.html?category=Writings&item=the-last-word)
 
 <br>
 

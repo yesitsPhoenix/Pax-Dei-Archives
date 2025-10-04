@@ -62,4 +62,4 @@ Not through fire. Not in rebellion.
 
 But in silence the wind no longer carried.
 
- — Thelonius the Scribe
+— [Thelonius the Scribe](lore.html?category=Known%20Figures&item=thelonius-the-scribe)

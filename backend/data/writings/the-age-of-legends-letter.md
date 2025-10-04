@@ -28,4 +28,4 @@ The Age of Legends did not end with silence. It ended with **seeds** planted and
 
 And it is said, if you listen to the wind at dawn, when the mist is thick and the world is still recovering from the chill of night, you may yet hear the stories of that time, whispered by ghosts, sung by monks and remembered by the souls of the past.
 
- — Thelonius the Scribe
+— [Thelonius the Scribe](lore.html?category=Known%20Figures&item=thelonius-the-scribe)

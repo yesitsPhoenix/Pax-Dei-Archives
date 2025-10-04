@@ -35,4 +35,4 @@ Her shrines remain, not in the high cities, but along forgotten paths, carved in
 Not for her light,
 But for her strength.
 
- — Thelonius the Scribe
+— [Thelonius the Scribe](lore.html?category=Known%20Figures&item=thelonius-the-scribe)

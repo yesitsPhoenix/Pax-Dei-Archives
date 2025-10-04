@@ -12,4 +12,4 @@ Where sin takes hold in the world, it digs downward, clawing through the ruins o
 
 To fall into one of these depths is not merely to descend. It is to tumble through sins of history.
 
- — Thelonius the Scribe
+— [Thelonius the Scribe](lore.html?category=Known%20Figures&item=thelonius-the-scribe)

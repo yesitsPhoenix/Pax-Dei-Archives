@@ -58,8 +58,8 @@ where the dead still dream.
 And I go to rest among them.
 
 
- — Thelonius the Scribe
+— [Thelonius the Scribe](lore.html?category=Known%20Figures&item=thelonius-the-scribe)
 
-Last Keeper of Hidden Light
+*Last Keeper of Hidden Light*
 
-Scriptorium of Lunthyr, Year 3999
+*Scriptorium of Lunthyr, Year 3999*

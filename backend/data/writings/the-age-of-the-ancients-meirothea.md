@@ -32,4 +32,4 @@ Her body, untouched by decay, was seen floating above **Axis Mundi**, and dissol
 
 To this day, when the **Autumn rains** fall cold and sudden, the old say it is **Demira weeping**, not for those she saved, but for those she could not.
 
- — Thelonius the Scribe
+— [Thelonius the Scribe](lore.html?category=Known%20Figures&item=thelonius-the-scribe)

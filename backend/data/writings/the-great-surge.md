@@ -42,3 +42,5 @@ seeking hidden glory and forbidden treasures.
 None returned.
 
 Armozel, once the craftsman of salvation, vanished into shadow, his fate a solemn echo of the very sins he once stood against.
+
+— [Thelonius the Scribe](lore.html?category=Known%20Figures&item=thelonius-the-scribe)

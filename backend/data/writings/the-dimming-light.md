@@ -10,7 +10,7 @@ And as it turned to leave, it paused, the light from its form casting no shadow.
 
 And so I write, not for myself, but for them, for you, Scion. May these pages be the lantern that enlightens your path.
 
- — Thelonius the Scribe
+— [Thelonius the Scribe](lore.html?category=Known%20Figures&item=thelonius-the-scribe)
 
 Last Keeper of Hidden Light
 From the Scriptorium of Lunthyr, veiled in fog and silence, where the dead still dream

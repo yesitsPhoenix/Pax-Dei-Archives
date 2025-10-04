@@ -63,4 +63,4 @@ Thus ends my telling. I let the wind bear what remains and the light find what m
 
 And if the Divine listens, I beg them to not yet close the book.
 
- — Thelonius the Scribe
+— [Thelonius the Scribe](lore.html?category=Known%20Figures&item=thelonius-the-scribe)
