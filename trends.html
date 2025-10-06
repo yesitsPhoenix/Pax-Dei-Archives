@@ -47,7 +47,7 @@
         </div>
     </header>
 
-<main class="trader-container">
+<!-- <main class="trader-container">
     <div class="container">
         <div id="traderLoginContainer" class="admin-form-container" style="display: none; text-align: center;">
             <p>Please log in to view Market Trends.</p>
@@ -75,7 +75,7 @@
                     <option value="">All Characters</option>
                 </select>
             </div>
-            <!-- <div class="col-span-1">
+            <div class="col-span-1">
                 <label for="shard-filter-select" class="block text-white text-sm font-bold mb-2">Filter by Shard:</label>
                 <select id="shard-filter-select" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
                     <option value="all">All Shards</option>
@@ -92,7 +92,7 @@
                 <select id="home-valley-filter-select" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
                     <option value="all">All Home Valleys</option>
                 </select>
-            </div> -->
+            </div>
             <div class="col-span-1 flex items-end">
                 <button id="clear-filters-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-150 ease-in-out">
                     Clear Filters
@@ -214,7 +214,24 @@
     <div id="auth-modal">
         <div class="modal-content-wrapper" id="modal-content-wrapper">
         </div>
+    </div> -->
+
+<main class="flex flex-col items-center justify-center min-h-[70vh] text-center bg-gray-900 text-white px-6 py-12">
+  <div class="max-w-2xl bg-gray-800 border border-amber-400 rounded-2xl shadow-lg p-10">
+    <i class="fa-solid fa-wrench text-5xl text-amber-400 mb-6"></i>
+    <h1 class="text-3xl font-bold mb-4">Scheduled Maintenance in Progress</h1>
+    <p class="text-gray-300 mb-6">
+      The <strong>Ledger</strong> and <strong>Market Trends</strong> features are unavailable due to Pax Dei transitioning from Early Access into 1.0 Launch.
+    </p>
+    <div class="flex justify-center">
+      <div class="animate-spin rounded-full h-10 w-10 border-t-4 border-b-4 border-amber-400"></div>
     </div>
+    <p class="text-gray-400 mt-6 text-sm">
+      Thank you for your patience and support — <strong>Pax Dei Archives</strong>
+    </p>
+  </div>
+</main>
+
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <!-- <script type="module" src="frontend/www/js/trader.js"></script> -->
     <script type="module" src="frontend/www/js/main.js"></script>
