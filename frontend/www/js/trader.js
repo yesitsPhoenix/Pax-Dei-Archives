@@ -14,16 +14,15 @@ import {
     modalItemNameInput,
     modalItemCategorySelect,
     modalItemNameSuggestions,
-    modalMarketStallLocationSelect
+    modalMarketStallLocationSelect,
+    getActiveStallId
 } from './modules/dom.js';
 
 let currentUser = null;
 let allCharacterActivityData = [];
 let allItems = [];
 
-// Refactored Modal Management
-// --- New Function: initCustomModal ---
-// Initializes the custom modal container once.
+
 const initCustomModal = () => {
     const modalHtml = `
         <div id="customModalContainer" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden" style="z-index: 10000;">
@@ -105,8 +104,7 @@ const showCreateCharacterModalBtn = document.getElementById('showCreateCharacter
 const traderDiscordLoginButton = document.getElementById('traderDiscordLoginButton');
 const traderLoginError = document.getElementById('traderLoginError');
 
-// --- Refactored: fetchCharacterActivity
-// This function is now solely responsible for fetching character activity.
+
 async function fetchCharacterActivity(characterId) {
     if (!characterId) return [];
 
@@ -121,8 +119,7 @@ async function fetchCharacterActivity(characterId) {
     return data;
 }
 
-// --- New Function: processCharacterActivityData ---
-// Processes the raw data fetched by `fetchCharacterActivity` into a usable format.
+
 const processCharacterActivityData = (rawData) => {
     if (!rawData) return [];
     const { sales, purchases, cancellations, listing_fees, pve_transactions } = rawData;
@@ -137,8 +134,7 @@ const processCharacterActivityData = (rawData) => {
     return allTransactions;
 };
 
-// --- Refactored: handleUserAuthentication ---
-// Handles the display logic for login/dashboard based on user status.
+
 const handleUserAuthentication = (user) => {
     const traderLoginContainer = document.getElementById('traderLoginContainer');
     const traderDashboardAndForms = document.getElementById('traderDashboardAndForms');
@@ -161,8 +157,7 @@ const handleUserAuthentication = (user) => {
     }
 };
 
-// --- Modified: checkUser ---
-// Orchestrates user authentication checks and subsequent initializations.
+
 const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     handleUserAuthentication(user);
@@ -177,8 +172,6 @@ const checkUser = async () => {
     }
 };
 
-// --- Refactored: fetchAllItemsForDropdown ---
-// Dedicated function for fetching item data.
 export async function fetchAllItemsForDropdown() {
     const { data, error } = await supabase.rpc('get_all_items_for_dropdown');
     if (error) {
@@ -189,8 +182,7 @@ export async function fetchAllItemsForDropdown() {
     return data;
 }
 
-// --- Modified: populateItemData ---
-// Uses the dedicated fetch function and handles the assignment.
+
 async function populateItemData() {
     try {
         allItems = await fetchAllItemsForDropdown();
@@ -200,8 +192,7 @@ async function populateItemData() {
     }
 }
 
-// --- Refactored: updateAllCharts ---
-// This function remains largely the same, but its dependency on `allCharacterActivityData` is clear.
+
 const updateAllCharts = (timeframe) => {
     if (allCharacterActivityData) {
         renderSalesChart(allCharacterActivityData, timeframe);
@@ -212,8 +203,7 @@ const updateAllCharts = (timeframe) => {
     }
 };
 
-// --- New Function: clearTraderPageUI ---
-// Clears relevant UI elements when no user/character is selected.
+
 const clearTraderPageUI = () => {
     renderDashboard({}, null);
     loadTransactionHistory([]);
@@ -225,13 +215,58 @@ const clearTraderPageUI = () => {
     }
 };
 
-// --- Modified: loadTraderPageData ---
-// Orchestrates the loading of all data and UI rendering for the trader page.
+
+// export const loadTraderPageData = async (reloadActiveListings = true) => {
+//     if (!currentUser || !currentUser.id || !currentCharacterId) {
+//         clearTraderPageUI();
+//         if (reloadActiveListings) {
+//             await loadActiveListings();
+//         }
+//         updateAllCharts('daily');
+//         return;
+//     }
+
+//     try {
+//         clearMarketStallsCache();
+//         const [
+//             dashboardStatsResult,
+//             currentCharacterData,
+//             rawActivityData
+//         ] = await Promise.all([
+//             supabase.rpc('get_character_dashboard_stats', { p_character_id: currentCharacterId }),
+//             getCurrentCharacter(true),
+//             fetchCharacterActivity(currentCharacterId)
+//         ]);
+
+//         if (dashboardStatsResult.error) {
+//             throw dashboardStatsResult.error;
+//         }
+
+//         allCharacterActivityData = processCharacterActivityData(rawActivityData);
+
+//         renderDashboard(dashboardStatsResult.data ? dashboardStatsResult.data[0] : {}, currentCharacterData);
+//         if (reloadActiveListings) {
+//             await loadActiveListings();
+//         }
+//         loadTransactionHistory(allCharacterActivityData);
+//         updateAllCharts('daily');
+//         if (modalMarketStallLocationSelect) {
+//             await populateMarketStallDropdown(modalMarketStallLocationSelect);
+//         }
+//         await setupMarketStallTabs();
+
+//     } catch (error) {
+//         console.error('Error loading trader page data:', error.message);
+//         await showCustomModal('Error', 'Failed to load trader data: ' + error.message, [{ text: 'OK', value: true }]);
+//     }
+// };
+
 export const loadTraderPageData = async (reloadActiveListings = true) => {
     if (!currentUser || !currentUser.id || !currentCharacterId) {
         clearTraderPageUI();
         if (reloadActiveListings) {
-            await loadActiveListings();
+            const activeStallId = getActiveStallId();
+            await loadActiveListings(activeStallId);
         }
         updateAllCharts('daily');
         return;
@@ -257,7 +292,8 @@ export const loadTraderPageData = async (reloadActiveListings = true) => {
 
         renderDashboard(dashboardStatsResult.data ? dashboardStatsResult.data[0] : {}, currentCharacterData);
         if (reloadActiveListings) {
-            await loadActiveListings();
+            const activeStallId = getActiveStallId();
+            await loadActiveListings(activeStallId);
         }
         loadTransactionHistory(allCharacterActivityData);
         updateAllCharts('daily');
@@ -272,8 +308,7 @@ export const loadTraderPageData = async (reloadActiveListings = true) => {
     }
 };
 
-// --- New Function: handleDiscordLogin ---
-// Encapsulates the Discord login logic.
+
 const handleDiscordLogin = async () => {
     let currentPath = window.location.pathname;
 
@@ -300,16 +335,14 @@ const handleDiscordLogin = async () => {
     }
 };
 
-// --- New Function: setupChartTimeframeListeners ---
-// Sets up event listeners for chart timeframe buttons.
+
 const setupChartTimeframeListeners = () => {
     document.getElementById('viewDaily')?.addEventListener('click', () => updateAllCharts('daily'));
     document.getElementById('viewWeekly')?.addEventListener('click', () => updateAllCharts('weekly'));
     document.getElementById('viewMonthly')?.addEventListener('click', () => updateAllCharts('monthly'));
 };
 
-// --- New Function: setupAddListingModalListeners ---
-// Sets up event listeners for the Add Listing modal.
+
 const setupAddListingModalListeners = () => {
     if (showAddListingModalBtn) {
         showAddListingModalBtn.addEventListener('click', () => {
@@ -339,8 +372,7 @@ const setupAddListingModalListeners = () => {
     }
 };
 
-// --- Modified: addPageEventListeners ---
-// Orchestrates the attachment of all page-level event listeners.
+
 const addPageEventListeners = () => {
     if (showCreateCharacterModalBtn) {
         showCreateCharacterModalBtn.addEventListener('click', () => {
@@ -356,12 +388,9 @@ const addPageEventListeners = () => {
     setupChartTimeframeListeners();
     setupAddListingModalListeners();
 
-    // Autocomplete setup is now handled by initializeAutocomplete
 };
 
-// Refactored Autocomplete
-// --- New Function: createAutocompleteHandlers ---
-// Factory function to create common autocomplete handlers.
+
 function createAutocompleteHandlers(inputElement, suggestionsContainerElement, dataArray, selectionCallback) {
     let currentFocus = -1;
     let filteredData = [];
@@ -455,13 +484,13 @@ function createAutocompleteHandlers(inputElement, suggestionsContainerElement, d
         },
         handleKeydown: function(e) {
             let x = suggestionsContainerElement.getElementsByClassName('autocomplete-suggestion-item');
-            if (e.keyCode == 40) { // Down arrow
+            if (e.keyCode == 40) {
                 currentFocus++;
                 addActive(x);
-            } else if (e.keyCode == 38) { // Up arrow
+            } else if (e.keyCode == 38) {
                 currentFocus--;
                 addActive(x);
-            } else if (e.keyCode == 13) { // Enter key
+            } else if (e.keyCode == 13) {
                 e.preventDefault();
                 if (currentFocus > -1 && x[currentFocus]) {
                     x[currentFocus].click();
@@ -469,7 +498,7 @@ function createAutocompleteHandlers(inputElement, suggestionsContainerElement, d
                     selectionCallback(filteredData[0]);
                     hideSuggestions();
                 }
-            } else if (e.keyCode == 27) { // Escape key
+            } else if (e.keyCode == 27) {
                 hideSuggestions();
             }
         },
@@ -487,8 +516,7 @@ function createAutocompleteHandlers(inputElement, suggestionsContainerElement, d
     };
 }
 
-// --- Modified: setupCustomAutocomplete ---
-// This function now uses the `createAutocompleteHandlers` to attach listeners.
+
 export function setupCustomAutocomplete(inputElement, suggestionsContainerElement, dataArray, selectionCallback) {
     const handlers = createAutocompleteHandlers(inputElement, suggestionsContainerElement, dataArray, selectionCallback);
 
@@ -498,13 +526,11 @@ export function setupCustomAutocomplete(inputElement, suggestionsContainerElemen
 
     document.addEventListener('click', function(e) {
         if (!inputElement.contains(e.target) && !suggestionsContainerElement.contains(e.target)) {
-            handlers.handleBlur(); // Use blur handler to hide and potentially select
+            handlers.handleBlur(); 
         }
     });
 }
 
-// --- Modified: initializeAutocomplete ---
-// Centralized setup for all autocomplete instances.
 function initializeAutocomplete(allItems) {
     const setupInputAutocomplete = (inputNameId, suggestionsId, categorySelectId) => {
         const inputElement = document.getElementById(inputNameId);
@@ -537,7 +563,6 @@ function initializeAutocomplete(allItems) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Initialize custom modal elements early
     window.customModalElements = initCustomModal();
 
     await checkUser();
