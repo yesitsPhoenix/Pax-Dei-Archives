@@ -869,3 +869,212 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
+// ===========================
+// Timeframe Filter Integration (FULL MULTI-CHART AGGREGATION)
+// ===========================
+
+import { startOfWeek, startOfMonth } from "https://cdn.jsdelivr.net/npm/date-fns@2.30.0/+esm";
+
+let currentTimeframe = 'daily';
+
+function updateTimeUnit(chart, unit) {
+  if (chart?.options?.scales?.x?.time) {
+    chart.options.scales.x.time.unit = unit;
+    chart.update();
+  }
+}
+
+function groupByPeriod(data, dateField, valueField, period = 'week', mode = 'sum') {
+  const grouped = {};
+  data.forEach(row => {
+    const date = new Date(row[dateField]);
+    const key =
+      period === 'week' ? startOfWeek(date, { weekStartsOn: 1 }) : startOfMonth(date);
+    const k = key.toISOString();
+
+    if (!grouped[k]) grouped[k] = [];
+    grouped[k].push(Number(row[valueField] || 0));
+  });
+
+  return Object.entries(grouped).map(([date, arr]) => ({
+    date,
+    value:
+      mode === 'average'
+        ? arr.reduce((a, b) => a + b, 0) / arr.length
+        : arr.reduce((a, b) => a + b, 0)
+  }));
+}
+
+async function loadAllTrendsDataByTimeframe() {
+  if (currentTimeframe === 'daily') {
+    await loadAllTrendsData();
+    return;
+  }
+
+  const period = currentTimeframe === 'weekly' ? 'week' : 'month';
+  const capitalized = currentTimeframe.charAt(0).toUpperCase() + currentTimeframe.slice(1);
+  const unit = currentTimeframe === 'weekly' ? 'week' : 'month';
+
+  try {
+    // === 1. Total Sales ===
+    const { data: salesData } = await supabase.rpc('get_daily_total_sales', {
+      p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all',
+      p_character_id: currentSelectedCharacterId
+    });
+
+    if (salesData?.length) {
+      const groupedSales = groupByPeriod(salesData, 'sale_date', 'total_gold_sold', period, 'sum');
+      const labels = groupedSales.map(d => d.date);
+      const totals = groupedSales.map(d => d.value);
+      const config = [
+        {
+          label: `${capitalized} Total Sales (Gold)`,
+          data: totals,
+          borderColor: 'rgb(75, 192, 192)',
+          backgroundColor: 'rgba(75, 192, 192, 0.2)'
+        }
+      ];
+      if (dailySalesChartInstance) dailySalesChartInstance.destroy();
+      dailySalesChartInstance = renderChart('daily-sales-chart', labels, config);
+      updateTimeUnit(dailySalesChartInstance, unit);
+    }
+
+    // === 2. Average Price ===
+    const { data: avgPriceData } = await supabase.rpc('get_daily_average_sale_price', {
+      p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all',
+      p_character_id: currentSelectedCharacterId
+    });
+
+    if (avgPriceData?.length) {
+      const groupedPrices = groupByPeriod(avgPriceData, 'sale_date', 'average_price', period, 'average');
+      const labels = groupedPrices.map(d => d.date);
+      const prices = groupedPrices.map(d => d.value);
+      const config = [
+        {
+          label: `${capitalized} Avg Sale Price`,
+          data: prices,
+          borderColor: 'rgb(255, 99, 132)',
+          backgroundColor: 'rgba(255, 99, 132, 0.2)'
+        }
+      ];
+      if (dailyAvgPriceChartInstance) dailyAvgPriceChartInstance.destroy();
+      dailyAvgPriceChartInstance = renderChart('daily-avg-price-chart', labels, config);
+      updateTimeUnit(dailyAvgPriceChartInstance, unit);
+    }
+
+    // === 3. Market Activity ===
+    const { data: marketData } = await supabase.rpc('get_daily_market_activity_data', {
+      p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all',
+      p_character_id: currentSelectedCharacterId
+    });
+
+    if (marketData?.new_listings?.length || marketData?.sales_count?.length) {
+      const listings = groupByPeriod(marketData.new_listings || [], 'date', 'count', period, 'sum');
+      const sales = groupByPeriod(marketData.sales_count || [], 'date', 'count', period, 'sum');
+
+      const labels = Array.from(
+        new Set([...listings.map(l => l.date), ...sales.map(s => s.date)])
+      ).sort();
+
+      const listingsMap = new Map(listings.map(x => [x.date, x.value]));
+      const salesMap = new Map(sales.map(x => [x.date, x.value]));
+
+      const listingsData = labels.map(date => listingsMap.get(date) || 0);
+      const salesDataArr = labels.map(date => salesMap.get(date) || 0);
+
+      const capitalized = currentTimeframe.charAt(0).toUpperCase() + currentTimeframe.slice(1);
+      const config = [
+        {
+          label: `${capitalized} Listings`,
+          data: listingsData,
+          borderColor: 'rgb(255, 159, 64)',
+          backgroundColor: 'rgba(255, 159, 64, 0.2)'
+        },
+        {
+          label: `${capitalized} Sales`,
+          data: salesDataArr,
+          borderColor: 'rgb(75, 192, 192)',
+          backgroundColor: 'rgba(75, 192, 192, 0.2)'
+        }
+
+      ];
+      if (dailyMarketActivityChartInstance) dailyMarketActivityChartInstance.destroy();
+      dailyMarketActivityChartInstance = renderChart('daily-market-activity-chart', labels, config);
+      updateTimeUnit(dailyMarketActivityChartInstance, unit);
+    }
+
+    // === 4. Listing Duration ===
+    const { data: listingData } = await supabase.rpc('get_average_listing_timeframe', {
+      p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all',
+      p_character_id: currentSelectedCharacterId
+    });
+
+    if (listingData?.length) {
+      const groupedListings = groupByPeriod(listingData, 'sale_date', 'average_time_hours', period, 'average');
+      const labels = groupedListings.map(d => d.date);
+      const avgDays = groupedListings.map(d => d.value / 24);
+      const config = [
+        {
+          label: `${capitalized} Avg Days on Market`,
+          data: avgDays,
+          borderColor: '#4285F4',
+          backgroundColor: 'rgba(66,133,244,0.2)'
+        }
+      ];
+      if (dailyAvgListingTimeChartInstance) dailyAvgListingTimeChartInstance.destroy();
+      dailyAvgListingTimeChartInstance = renderChart('daily-avg-listing-time-chart', labels, config);
+      updateTimeUnit(dailyAvgListingTimeChartInstance, unit);
+    }
+
+  } catch (err) {
+    console.error("Error loading aggregated timeframe data:", err);
+  }
+}
+
+// ===========================
+// Timeframe Button Listeners + Center Alignment
+// ===========================
+document.addEventListener('DOMContentLoaded', () => {
+  const dailyBtn = document.getElementById('viewDaily');
+  const weeklyBtn = document.getElementById('viewWeekly');
+  const monthlyBtn = document.getElementById('viewMonthly');
+  const buttons = [dailyBtn, weeklyBtn, monthlyBtn];
+
+  function setActiveButton(activeBtn) {
+    buttons.forEach(btn => {
+      if (!btn) return;
+      btn.classList.remove('bg-blue-700', 'scale-105');
+      btn.classList.add('bg-blue-500');
+    });
+    if (activeBtn) {
+      activeBtn.classList.add('bg-blue-700', 'scale-105');
+    }
+  }
+
+  async function refreshChartsFor(timeframe, btn) {
+    currentTimeframe = timeframe;
+    setActiveButton(btn);
+    await loadAllTrendsDataByTimeframe();
+  }
+
+  if (dailyBtn) dailyBtn.addEventListener('click', () => refreshChartsFor('daily', dailyBtn));
+  if (weeklyBtn) weeklyBtn.addEventListener('click', () => refreshChartsFor('weekly', weeklyBtn));
+  if (monthlyBtn) monthlyBtn.addEventListener('click', () => refreshChartsFor('monthly', monthlyBtn));
+
+  // Default selection
+  setActiveButton(dailyBtn);
+
+  // Enforce centering of buttons
+  const buttonContainer = dailyBtn?.parentElement;
+  if (buttonContainer) {
+    buttonContainer.classList.add(
+      'flex',
+      'justify-center',
+      'items-center',
+      'w-full',
+      'text-center',
+      'gap-4',
+      'my-8'
+    );
+  }
+});
