@@ -116,7 +116,7 @@ export const handleAddListing = async (e) => {
         }
 
         const itemName = form.querySelector('[name="item-name"]').value.trim();
-        const itemCategory = parseInt(form.querySelector('[name="item-category"]').value, 10);
+        // const itemCategory = parseInt(form.querySelector('[name="item-category"]').value, 10);
         const itemStacks = parseInt(form.querySelector('[name="item-stacks"]').value, 10);
         const itemCountPerStack = parseInt(form.querySelector('[name="item-count-per-stack"]').value, 10);
         const itemPricePerStack = parseFloat(form.querySelector('[name="item-price-per-stack"]').value);
@@ -131,16 +131,16 @@ export const handleAddListing = async (e) => {
             return;
         }
 
-        if (isNaN(itemCategory) || itemCategory <= 0) {
-            await showCustomModal('Validation Error', 'Please select a valid item category.', [{
-                text: 'OK',
-                value: true
-            }]);
-            console.error("Validation Error: Invalid item category. Aborting.", { itemCategory });
-            return;
-        }
+        // if (isNaN(itemCategory) || itemCategory <= 0) {
+        //     await showCustomModal('Validation Error', 'Please select a valid item category.', [{
+        //         text: 'OK',
+        //         value: true
+        //     }]);
+        //     console.error("Validation Error: Invalid item category. Aborting.", { itemCategory });
+        //     return;
+        // }
 
-        const itemId = await getOrCreateItemId(itemName, itemCategory);
+        const itemId = await getOrCreateItemId(itemName);
         if (!itemId) {
             console.error("Error: Could not get or create item ID. Aborting listing creation.");
             return;

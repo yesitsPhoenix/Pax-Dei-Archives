@@ -7,10 +7,10 @@ import {
 } from '../trader.js';
 import {
     currentCharacterId,
-    setCurrentCharacterGold // Import this function
+    setCurrentCharacterGold
 } from './characters.js';
 
-const getOrCreateItemId = async (itemName, categoryId) => {
+const getOrCreateItemId = async (itemName) => {
     if (!currentCharacterId) {
         console.error('[getOrCreateItemId] No character selected.');
         await showCustomModal('Error', 'No character selected. Cannot create or retrieve item.', [{
@@ -87,7 +87,7 @@ export const handleRecordPurchase = async (e) => {
     }
 
     const itemName = document.getElementById('modal-purchase-item-name').value;
-    const categoryId = document.getElementById('purchase-item-category').value;
+    // const categoryId = document.getElementById('purchase-item-category').value;
     const numStacks = parseInt(document.getElementById('modal-purchase-item-stacks').value, 10) || 1;
     const countPerStack = parseInt(document.getElementById('modal-purchase-item-count-per-stack').value, 10);
     const pricePerStack = parseFloat(document.getElementById('modal-purchase-item-price-per-stack').value);
@@ -95,7 +95,7 @@ export const handleRecordPurchase = async (e) => {
     const notes = '';
 
 
-    if (!itemName || !categoryId || isNaN(numStacks) || isNaN(countPerStack) || isNaN(pricePerStack)) {
+    if (!itemName || isNaN(numStacks) || isNaN(countPerStack) || isNaN(pricePerStack)) {
         console.error('[handleRecordPurchase] Validation failed: Missing or invalid required fields.');
         await showCustomModal('Error', 'Please fill in all required fields: Item Name, Category, Stacks, Count per Stack, and Price per Stack.', [{
             text: 'OK',
@@ -108,22 +108,22 @@ export const handleRecordPurchase = async (e) => {
         return;
     }
 
-    const integerCategoryId = parseInt(categoryId, 10);
-    if (isNaN(integerCategoryId)) {
-        console.error('[handleRecordPurchase] Validation failed: Invalid category ID.');
-        await showCustomModal('Error', 'Invalid category selected. Please ensure a valid category is chosen.', [{
-            text: 'OK',
-            value: true
-        }]);
-        if (submitButton) {
-            submitButton.disabled = false;
-            submitButton.textContent = 'Record Purchase';
-        }
-        return;
-    }
+    // const integerCategoryId = parseInt(categoryId, 10);
+    // if (isNaN(integerCategoryId)) {
+    //     console.error('[handleRecordPurchase] Validation failed: Invalid category ID.');
+    //     await showCustomModal('Error', 'Invalid category selected. Please ensure a valid category is chosen.', [{
+    //         text: 'OK',
+    //         value: true
+    //     }]);
+    //     if (submitButton) {
+    //         submitButton.disabled = false;
+    //         submitButton.textContent = 'Record Purchase';
+    //     }
+    //     return;
+    // }
 
     try {
-        const itemId = await getOrCreateItemId(itemName, integerCategoryId);
+        const itemId = await getOrCreateItemId(itemName);
         if (!itemId) {
             console.warn('[handleRecordPurchase] Item ID could not be obtained. Aborting purchase record.');
             if (submitButton) {
@@ -215,7 +215,7 @@ export const handleRecordPurchase = async (e) => {
                     value: true
                 }]);
                 e.target.reset();
-                setCurrentCharacterGold(newGold); // ADDED THIS LINE
+                setCurrentCharacterGold(newGold);
                 await loadTraderPageData(false);
             }
         } else {
