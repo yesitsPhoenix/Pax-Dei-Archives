@@ -49,7 +49,7 @@ const getOrCreateItemId = async (itemName) => {
         .from('items')
         .insert([{
             item_name: itemName,
-            category_id: categoryId,
+            // category_id: categoryId,
         }])
         .select('item_id')
         .single();
