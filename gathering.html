@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pax Dei Archives - Gathering Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="frontend/www/css/articles.css">
+    <link rel="stylesheet" href="frontend/www/css/dungeon.css">
+    <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/swiper@7/swiper-bundle.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+    <script> window.gtTooltipConfig = {
+        scale: 0.8,
+        delay: 40,
+        };
+    </script>
+    <script async src="https://paxdei.gaming.tools/embed.js"></script>
+</head>
+<body>
+    <header class="header-area">
+        <div class="container">
+            <nav class="main-nav">
+                <a href="index.html" class="logo">
+                    <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
+                    <h1>Pax Dei Archives</h1>
+                </a>
+                <a class='menu-trigger'>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </a>
+                <div class="nav-and-search-wrapper">
+                    <ul class="nav">
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="abilities.html">Abilities</a></li>
+                        <li><a href="gathering.html" class="active">Gathering Tracker</a></li>
+                        <li><a href="gems.html">Gems</a></li>
+                        <li><a href="grace.html">Grace Calculator</a></li>
+                        <li><a href="developer-comments.html">Dev Comments</a></li>
+                        <!-- <li><a href="loot.html">Loot Tracker</a></li> -->
+                        <li><a href="lore.html">Lore</a></li>
+                        <li><a href="ledger.html">Ledger</a></li>
+                        <li><a href="trends.html">Market Trends</a></li>
+                        <li><a href="map.html">Map</a></li>
+                    </ul>
+                    <div class="search-input">
+                        <form id="search" action="#">
+                            <input type="text" placeholder="Search the Archives" id='searchText' name="searchKeyword" />
+                            <button type="submit" class="search-button"><i class="fa fa-search"></i></button>
+                        </form>
+                        <div id="searchResultsDropdown" class="search-results-dropdown">
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+    <div class="container mt-8 mb-8">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="page-content">
+                    <div class="bg-[#1A202C] p-6 sm:p-8 md:p-10 rounded-lg shadow-xl w-full max-w-4xl mx-auto border border-gray-700">
+                        <h1 class="text-3xl sm:text-4xl font-bold text-center mb-6 text-white-400">Gathering Tracker</h1>
+                        <h3 >Track your gathering rates for any farmed or mined item! Start a new run below to begin your stopwatch.
+                            <br.>Share the run link with your party, or save it for historical purposes.
+                        </h3><br>
+                        
+                        <div class="mb-8 p-4 bg-gray-700 rounded-lg">
+                            <h2 class="text-2xl font-semibold mb-4 text-white">Start a New Run</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="shareCodeDisplay" class="block text-gray-300 text-sm font-bold mb-2">Create a new Code to start a new run:</label>
+                                    <input type="text" id="shareCodeDisplay" readonly placeholder="Click 'New Code' to generate" class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight mb-2 cursor-text select-all">
+                                    <div class="flex gap-2">
+                                        <button id="newCodeBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-150 ease-in-out w-full">New Code</button>
+                                        <button id="copyCodeBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-150 ease-in-out w-full">Copy Code</button>
+                                    </div>
+                                    <p class="text-gray-400 text-xs mt-1">Select the New Code button to generate a new code.<br>Then, copy and share this code with others.</p>
+                                </div>
+                                <div>
+                                    <label for="loadCodeInput" class="block text-gray-300 text-sm font-bold mb-2">Enter a Shared Run Code from another player:</label>
+                                    <input type="text" id="loadCodeInput" placeholder="Enter share code" class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 mb-2">
+                                    <div class="flex gap-2">
+                                        <button id="loadRunBtn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-150 ease-in-out w-full">Load Run</button>
+                                        <button id="shareRunBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-150 ease-in-out w-full">Share Run</button>
+                                    </div>
+                                    <p class="text-gray-400 text-xs mt-1">Enter a shared code to load an existing run.</p>
+                                </div>
+                            </div>
+                            <div id="feedbackMessage" class="text-center text-sm mt-4">
+                            </div>
+                        </div>
+
+                        <div class="mb-8 p-4 bg-gray-700 rounded-lg">
+                            <h2 class="text-2xl font-semibold mb-4 text-white">Run Setup & Item Selection</h2>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label for="runName" class="block text-gray-300 text-sm font-bold mb-2">Run Name (Optional):</label>
+                                    <input type="text" id="runName" placeholder="e.g., Iron Run, Sapwood Farm" class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                                </div>
+                                <div class="relative">
+                                    <label for="farmItemName" class="block text-gray-300 text-sm font-bold mb-2">Item to Farm/Gather:</label>
+                                    <input type="text" id="farmItemName" placeholder="e.g., Copper Ore, Pure Iron Ore" class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                                    <div id="itemSearchResults" class="absolute z-10 w-full bg-gray-700 border border-gray-500 rounded-b-md shadow-lg max-h-60 overflow-y-auto hidden top-full left-0 mt-1">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-8 p-4 bg-gray-700 rounded-lg">
+                            <h2 class="text-2xl font-semibold mb-4 text-white">Stopwatch & Tracking</h2>
+                            
+                            <div class="text-center mb-6">
+                                <span class="text-6xl font-mono font-bold text-yellow-400" id="stopwatchDisplay">00:00:00</span>
+                            </div>
+
+                            <div class="flex justify-center gap-4 mb-4">
+                                <button id="startRunBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-75">
+                                    <i class="fa fa-play mr-2"></i> Start Run
+                                </button>
+                                <button id="pauseRunBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75" disabled>
+                                    <i class="fa fa-pause mr-2"></i> Pause
+                                </button>
+                                <button id="stopRunBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-75" disabled>
+                                    <i class="fa fa-stop mr-2"></i> Stop & Finalize
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="finalizeRunModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+                            <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-96 border border-gray-700">
+                                <h3 class="text-xl font-semibold text-white mb-4">Finalize Run</h3>
+                                <p class="text-gray-300 mb-4">Total Time: <span id="finalTimeDisplay" class="font-bold text-yellow-400"></span></p>
+                                
+                                <label for="gatheredAmountInput" class="block text-gray-300 text-sm font-bold mb-2">Quantity of <span id="finalItemNameDisplay" class="text-yellow-400"></span> Gathered:</label>
+                                <input type="number" id="gatheredAmountInput" min="0" placeholder="Enter amount gathered" class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 mb-4">
+
+                                <div class="flex justify-end gap-3">
+                                    <button id="saveRunBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150 ease-in-out">
+                                        <i class="fa fa-save mr-2"></i> Save Run
+                                    </button>
+                                    <button id="cancelFinalizeBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150 ease-in-out">
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <div class="p-4 bg-gray-700 rounded-lg">
+                            <h2 class="text-2xl font-semibold mb-4 text-white">Run History</h2>
+                            <div id="runHistoryTableContainer" class="max-h-96 overflow-y-auto bg-gray-600 p-3 rounded-lg border border-gray-500">
+                                <table class="min-w-full divide-y divide-gray-500">
+                                    <thead>
+                                        <tr>
+                                            <th class="px-3 py-2 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">Item</th>
+                                            <th class="px-3 py-2 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">Time</th>
+                                            <th class="px-3 py-2 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">Amount</th>
+                                            <th class="px-3 py-2 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">Rate/hr</th>
+                                            <th class="px-3 py-2 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="runHistoryBody" class="bg-gray-800 divide-y divide-gray-700 text-white"">
+                                        <tr>
+                                            <td colspan="5" class="px-3 py-2 whitespace-nowrap text-sm text-gray-400 text-center">No runs saved yet.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="flex justify-center mt-6">
+                                <button id="closeRunBtn" class="bg-red-700 hover:bg-red-800 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-75">
+                                    <i class="fa fa-door-closed mr-2"></i> Close Entire Run
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+        <div id="customItemModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-96 border border-gray-700">
+            <h3 class="text-xl font-semibold text-white mb-4">Enter Custom Item</h3>
+            <input id="customItemInput" type="text" placeholder="Item name" class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 mb-4">
+            <div class="flex justify-end gap-3">
+                <button id="customItemSaveBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Save</button>
+                <button id="customItemCancelBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="reservePlayerModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-gray-800 p-6 rounded-lg shadow-xl w-96 border border-gray-700">
+            </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12">
+                    <p>Pax Dei Archives is a fan-made site and not affiliated with Pax Dei or MAINFRAME.</p>
+                    <p>All intellectual property and assets related to Pax Dei game are reserved by MAINFRAME INDUSTRIES.</p>
+                    <a href="admin.html">Admin</a>
+                    <a href="privacy.html">Privacy Policy</a>
+                </div>
+            </div>
+        </div>
+        <div class="corner-credit">
+            <div class="corner-credit-top-row"> <img src="frontend/www/assets/phoenix.png" alt="Phoenix profile image" class="profile-image" />
+                <span class="nav-text-profile">Made by Phoenix ✨</span>
+            </div>
+            <div id="utc-clock-display" class="utc-clock"></div>
+        </div>
+    </footer>
+    <div id="floating-avatar-container">
+        <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar js-floating-avatar">
+    </div>
+
+    <div id="auth-modal">
+        <div class="modal-content-wrapper" id="modal-content-wrapper">
+        </div>
+    </div>
+    <div id="ability-popup-overlay" class="popup-overlay"></div>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script type="module" src="frontend/www/js/supabaseClient.js"></script>
+    <script type="module" src="frontend/www/js/utils.js"></script>
+    <script type="module" src="frontend/www/js/main.js"></script>
+    <script type="module" src="frontend/www/js/farming.js"></script>
+    <script type="module" src="frontend/www/js/popoutAuth.js"></script>    
+</body>
+</html>
