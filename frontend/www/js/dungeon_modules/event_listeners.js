@@ -1,4 +1,5 @@
 import { state, markChanges } from './state.js';
+import { confirmReservations } from './loot_logic.js';
 import { hideReserveModal, updatePartyMembersList, updateCurrentLootList, updateReservePlayerSelection, updateConfirmButtonState, updateDistributionResults, showFeedback } from './ui_updates.js';
 
 export function setupEventListeners({
@@ -6,7 +7,7 @@ export function setupEventListeners({
     addGold, setGold, distributeGold, distributeLoot, handleReserveLoot,
     confirmReservations, resetDungeonRunAndSaveNew, loadDungeonRunFromShareCode,
     generateShareCode, saveDungeonRun, loadDungeonRun, listSavedDungeonRuns, deleteDungeonRun,
-    fetchAllItemsForDropdown
+    fetchAllItemsForDropdown, handleShareRun, 
 }) {
     if (document.getElementById('dungeonName')) {
         if (state.dungeonNameInput) {
@@ -160,8 +161,8 @@ export function setupEventListeners({
         }
 
         if (state.newCodeBtn) {
-            state.newCodeBtn.addEventListener('click', generateShareCode);
-        }
+        state.newCodeBtn.addEventListener('click', resetDungeonRunAndSaveNew);
+    }
 
         if (state.copyCodeBtn) {
             state.copyCodeBtn.addEventListener('click', () => {
@@ -194,7 +195,22 @@ export function setupEventListeners({
 
         if (state.confirmAllReservesBtn) {
             state.confirmAllReservesBtn.addEventListener('click', () => {
-                confirmReservations();
+                const playerQuantityInputs = state.reservePlayerSelectionDiv.querySelectorAll('.player-reserve-quantity');
+                const newPlayerReservations = [];
+                
+                playerQuantityInputs.forEach(input => {
+                    const quantity = parseInt(input.value);
+                    const playerName = input.dataset.playerName;
+
+                    if (!isNaN(quantity) && quantity > 0 && playerName) {
+                        newPlayerReservations.push({ 
+                            playerName: playerName, 
+                            quantityToReserve: quantity 
+                        });
+                    }
+                });
+
+                confirmReservations(newPlayerReservations); 
                 markChanges();
             });
         }
@@ -217,6 +233,10 @@ export function setupEventListeners({
         state.saveRunBtn = document.getElementById('saveRunBtn');
         if (state.saveRunBtn) {
             state.saveRunBtn.addEventListener('click', saveDungeonRun);
+        }
+        
+        if (state.shareRunBtn) {
+        state.shareRunBtn.addEventListener('click', handleShareRun);
         }
 
         const savedRunsList = document.getElementById('savedRunsList');

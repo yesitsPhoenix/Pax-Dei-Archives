@@ -6,6 +6,7 @@ export function initializeUI() {
     state.currentLootList = document.getElementById('currentLootList');
     state.totalGoldDisplay = document.getElementById('totalGoldDisplay');
     state.distributionResults = document.getElementById('distributionResults');
+    state.shareRunBtn = document.getElementById('shareRunBtn');
     state.feedbackMessage = document.getElementById('feedbackMessage');
     state.memberCount = document.getElementById('memberCount');
 
@@ -42,7 +43,7 @@ export function initializeUI() {
 }
 
 export function showFeedback(message, type) {
-    state.feedbackMessage.textContent = message;
+    state.feedbackMessage.innerHTML = message;
     state.feedbackMessage.className = 'text-center text-sm mt-2';
     if (type === 'success') {
         state.feedbackMessage.classList.add('text-green-400');
@@ -52,7 +53,7 @@ export function showFeedback(message, type) {
         state.feedbackMessage.classList.add('text-blue-400');
     }
     setTimeout(() => {
-        state.feedbackMessage.textContent = '';
+        state.feedbackMessage.innerHTML = '';
         state.feedbackMessage.className = 'text-center text-sm mt-2';
     }, 5000);
 }
@@ -106,7 +107,7 @@ export function refreshPaxDeiTooltips() {
 
 export function waitForGtTooltipAndRefresh() {
     let attempts = 0;
-    const maxAttempts = 50; // Increased from 20 to 50 (5 seconds total wait)
+    const maxAttempts = 50;
     const intervalTime = 100; 
 
     const intervalId = setInterval(() => {
@@ -169,6 +170,8 @@ export function updateDistributionResults() {
     const logHtml = [];
 
     const reservedPlayers = Object.keys(state.reservedItems);
+    
+    // --- RESERVED ITEMS SECTION (Always show if present) ---
     if (reservedPlayers.length > 0) {
         logHtml.push(`<p class="py-1 border-b border-gray-500 text-purple-400 font-bold">--- Reserved Items ---</p>`);
         for (const member of state.partyMembers) {
@@ -191,7 +194,8 @@ export function updateDistributionResults() {
         }
         return item.quantity > totalReserved;
     });
-
+    
+    // --- REMAINING UNRESERVED LOOT SECTION ---
     if (nonReservedLoot.length > 0) {
         logHtml.push(`<p class="py-1 border-b border-gray-500 text-yellow-400 font-bold mt-2">--- Remaining Unreserved Loot ---</p>`);
         nonReservedLoot.forEach(item => {
@@ -205,15 +209,23 @@ export function updateDistributionResults() {
             }
             const remainingQty = item.quantity - totalReserved;
             if (remainingQty > 0) {
-                    logHtml.push(`<p class="py-1 border-b border-gray-500 text-gray-200">"${item.name}" (x${remainingQty})</p>`);
+                        logHtml.push(`<p class="py-1 border-b border-gray-500 text-gray-200">"${item.name}" (x${remainingQty})</p>`);
             }
         });
     } else if (state.lootItems.length > 0 && nonReservedLoot.length === 0) {
-        logHtml.push(`<p class="py-1 border-b border-gray-500 text-green-400 font-bold mt-2">All current loot is reserved!</p>`);
+        // All loot is either fully reserved or fully distributed/gone
+        if (reservedPlayers.length > 0) {
+             // Show all loot is reserved, if there were reservations
+             logHtml.push(`<p class="py-1 border-b border-gray-500 text-green-400 font-bold mt-2">All current loot is reserved!</p>`);
+        } else {
+             // If there's loot but no nonReservedLoot and no reservations, something is already distributed/gone
+             logHtml.push(`<p class="py-1 border-b border-gray-500 text-gray-400 italic mt-2">No unreserved loot remaining.</p>`);
+        }
     } else {
         logHtml.push(`<p class="py-1 border-b border-gray-500 text-gray-400 italic mt-2">No loot items to track.</p>`);
     }
 
+    // --- GOLD SECTION ---
     logHtml.push(`<p class="py-1 border-b border-gray-500 text-yellow-400 font-bold mt-2">--- Current Gold ---</p>`);
     logHtml.push(`<p class="py-1 border-b border-gray-500 text-gray-200">Total: <span class="text-yellow-400">${state.totalGold.toLocaleString()}</span></p>`);
 
@@ -221,11 +233,8 @@ export function updateDistributionResults() {
         logHtml.push(`<p class="py-1 border-b border-gray-500 text-gray-200"><strong>${member.name}:</strong> <span class="text-yellow-400">${(member.goldShare || 0).toLocaleString()}</span> gold</p>`);
     });
 
-    logHtml.forEach(html => {
-        const p = document.createElement('p');
-        p.innerHTML = html;
-        state.distributionResults.appendChild(p);
-    });
+    state.distributionResults.innerHTML = logHtml.join('');
+    
     if (document.getElementById('dungeonName')) {
         markChanges();
     }

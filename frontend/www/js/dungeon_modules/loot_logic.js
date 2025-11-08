@@ -253,7 +253,18 @@ export function handleReserveLoot(itemName, itemSlug, itemQuantity) {
 }
 
 export function confirmReservations(newPlayerReservations) {
-    // Collect all current reservations for the item being modified
+    // 1. Normalize item structure to prevent deep nesting in Supabase
+    if (state.currentItemToReserve && typeof state.currentItemToReserve.name === 'object' && state.currentItemToReserve.name !== null) {
+        state.currentItemToReserve = {
+            name: state.currentItemToReserve.name.name,
+            slug: state.currentItemToReserve.name.slug || state.currentItemToReserve.slug || '',
+            quantity: state.currentItemToReserve.name.quantity
+        };
+    } else if (!state.currentItemToReserve || !state.currentItemToReserve.name) {
+         showFeedback("No item is currently set for reservation. Please try again.", "error");
+         return;
+    }
+
     const currentReservationsForThisItem = {};
     for (const player in state.reservedItems) {
         const reservation = (state.reservedItems[player] || []).find(res => 
@@ -264,16 +275,13 @@ export function confirmReservations(newPlayerReservations) {
         }
     }
 
-    // Calculate total reserved quantity for this item *before* changes from the modal
     const currentTotalReservedForItemBeforeChanges = Object.values(currentReservationsForThisItem).reduce((sum, q) => sum + q, 0);
 
-    // Update state.reservedItems based on newPlayerReservations
-    // First, remove existing reservations for the current item across all players
+
     for (const player in state.reservedItems) {
         state.reservedItems[player] = (state.reservedItems[player] || []).filter(res => 
             !(res.item.name === state.currentItemToReserve.name && res.item.slug === state.currentItemToReserve.slug)
         );
-        // Clean up empty player arrays
         if (state.reservedItems[player].length === 0) {
             delete state.reservedItems[player];
         }
@@ -281,7 +289,7 @@ export function confirmReservations(newPlayerReservations) {
 
     let totalQuantityRequestedAcrossPlayersInModal = 0;
     newPlayerReservations.forEach(({ playerName, quantityToReserve }) => {
-        if (quantityToReserve > 0) {
+        if (quantityToReserve > 0 && playerName) {
             totalQuantityRequestedAcrossPlayersInModal += quantityToReserve;
             if (!state.reservedItems[playerName]) {
                 state.reservedItems[playerName] = [];
@@ -304,7 +312,6 @@ export function confirmReservations(newPlayerReservations) {
             state.lootItems.splice(originalItemIndex, 1);
         }
     } else {
-        // This case should ideally only happen if netChangeFromLoot is negative (i.e., items were unreserved and returned to loot)
         if (netChangeFromLoot < 0) {
             state.lootItems.push({
                 name: state.currentItemToReserve.name,
@@ -322,7 +329,6 @@ export function confirmReservations(newPlayerReservations) {
 }
 
 export function resetDungeonRunAndSaveNew() {
-    // Reset all relevant state variables to their initial empty values
     state.dungeonNameInput.value = '';
     state.partyMembers = [];
     state.lootItems = [];
@@ -330,7 +336,6 @@ export function resetDungeonRunAndSaveNew() {
     state.nextLootRecipientIndex = 0;
     state.reservedItems = {};
 
-    // Clear any active share code
     state.currentShareableCode = '';
     if (state.shareCodeDisplay) {
         state.shareCodeDisplay.value = '';
@@ -338,7 +343,6 @@ export function resetDungeonRunAndSaveNew() {
         if (state.copyCodeBtn) state.copyCodeBtn.classList.add('hidden');
     }
     
-    // Clear UI elements
     updatePartyMembersList();
     updateCurrentLootList();
     updateDistributionResults();
@@ -347,9 +351,7 @@ export function resetDungeonRunAndSaveNew() {
     if (state.lootItemNameInput) state.lootItemNameInput.value = '';
     if (state.lootItemQuantityInput) state.lootItemQuantityInput.value = '1';
 
-    // Mark changes as saved because it's a new, clean run, effectively 'saved' in its initial state
     markChanges(true); 
 
-    // Provide feedback
     showFeedback("Started a new dungeon run!", 'info');
 }

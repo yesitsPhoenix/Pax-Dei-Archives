@@ -2,7 +2,7 @@ import { supabase } from './supabaseClient.js';
 import { state, markChanges } from './dungeon_modules/state.js';
 import { initializeUI, showFeedback, updatePartyMembersList, updateCurrentLootList, updateDistributionResults, updateReservePlayerSelection, updateConfirmButtonState } from './dungeon_modules/ui_updates.js';
 import { setupEventListeners } from './dungeon_modules/event_listeners.js';
-import { generateShareCode, loadDungeonRunFromShareCode, saveDungeonRun, loadDungeonRun, listSavedDungeonRuns, deleteDungeonRun, fetchAllItemsForDropdown } from './dungeon_modules/data_management.js';
+import { generateShareCode, loadDungeonRunFromShareCode, saveDungeonRun, loadDungeonRun, listSavedDungeonRuns, deleteDungeonRun, fetchAllItemsForDropdown, checkRateLimitAndRecordAttempt } from './dungeon_modules/data_management.js';
 import { addPartyMember, removePartyMember, addLootItem, removeLootItem, addGold, setGold, distributeLoot, distributeGold, handleReserveLoot, confirmReservations } from './dungeon_modules/loot_logic.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -12,6 +12,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeUI();
 
     async function resetDungeonRunAndSaveNew() {
+        if (!checkRateLimitAndRecordAttempt()) {
+            return;
+        }
         state.dungeonNameInput.value = '';
         state.partyMembers = [];
         state.lootItems = [];
@@ -23,7 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         state.setGoldAmountInput.value = '';
         state.lootItemNameInput.value = '';
         state.lootItemQuantityInput.value = '1';
-
+        state.currentShareableCode = ''; 
         for (const player in state.reservedItems) {
             delete state.reservedItems[player];
         }
@@ -34,7 +37,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateDistributionResults();
 
         await generateShareCode();
-        saveDungeonRun();
     }
 
     setupEventListeners({
@@ -44,7 +46,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         showFeedback, markChanges, generateShareCode, saveDungeonRun, loadDungeonRun,
         listSavedDungeonRuns, deleteDungeonRun, fetchAllItemsForDropdown,
         updatePartyMembersList, updateCurrentLootList, updateDistributionResults,
-        updateReservePlayerSelection, updateConfirmButtonState
+        updateReservePlayerSelection, updateConfirmButtonState, handleShareRun
     });
 
     const urlHash = window.location.hash;
@@ -83,4 +85,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     state.autoSaveInterval = setInterval(() => {
         if (state.hasUnsavedChanges) saveDungeonRun();
     }, 60 * 1000);
+
+    function handleShareRun() {
+        if (!state.currentShareableCode) {
+            showFeedback("Please generate a share code first by clicking 'New Code' or 'Save'.", "info");
+            return;
+        }
+
+        const viewUrl = `view_loot.html#code-${state.currentShareableCode}`;
+        
+        window.open(viewUrl, '_blank');
+        
+        showFeedback("View-only link opened in a new tab.", "success");
+    }
 });

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pax Dei Archives - Grace Calculator</title>
+    <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="frontend/www/css/trader.css">
+    <link rel="stylesheet" href="frontend/www/css/sidebar.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #1c1c1c;
+            color: #e2e8f0;
+            font-family: sans-serif;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            background: #2d3748;
+        }
+        input[type=range]::-moz-range-track {
+            background: #2d3748;
+        }
+    </style>
+</head>
+<body>
+    <header class="header-area">
+        <div class="container">
+            <nav class="main-nav">
+                <a href="index.html" class="logo">
+                    <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
+                    <h1>Pax Dei Archives</h1>
+                </a>
+                <a class='menu-trigger'>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </a>
+                <div class="nav-and-search-wrapper">
+                    <ul class="nav">
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="abilities.html">Abilities</a></li>
+                        <li><a href="gems.html">Gems</a></li>
+                        <li><a href="developer-comments.html">Dev Comments</a></li>
+                        <li><a href="lore.html">Lore</a></li>
+                        <li><a href="ledger.html">Ledger</a></li>
+                        <li><a href="trends.html">Market Trends</a></li>
+                        <li><a href="map.html">Map</a></li>
+                        <li><a href="grace_calculator.html" class="active">Grace Calculator</a></li>
+                    </ul>
+                </div>
+            </nav>
+        </div>
+    </header>
+    <main class="trader-container">
+        <div class="container">
+            <h1 class="dashboard-header">Grace Calculator</h1>
+            <p class="text-gray-400 text-center">Estimate the Grace required to purchase a Grace Plot (400 Grace) based on your current resources and projected activity.</p>
+
+            <div class="max-w-4xl mx-auto bg-gray-800 p-6 sm:p-8 rounded-lg shadow-2xl border border-gray-700 my-8">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="space-y-6">
+                        <div class="bg-gray-700 p-4 rounded-lg shadow-md w-full"> 
+                            <h3>Grace Goal</h3> <p class="text-amber-300 font-extrabold text-4xl">400 
+                                <i class="fa-solid fa-gem"></i></p> </div>
+                        
+                        <div class="flex flex-col">
+                            <label for="playerType" class="text-lg font-semibold mb-2 text-gray-300">Player Type</label>
+                            <div id="playerType" class="flex p-1 bg-gray-700 rounded-lg">
+                                <button id="nonSubBtn" class="flex-1 py-2 rounded-lg transition-colors duration-200 text-gray-300 font-medium hover:bg-gray-600" onclick="setPlayerType('non-sub')">Non-Sub</button>
+                                <button id="subBtn" class="flex-1 py-2 rounded-lg transition-colors duration-200 bg-indigo-500 text-white font-medium" onclick="setPlayerType('sub')">Premium Sub</button>
+                            </div>
+                        </div>
+                        
+
+                        <div>
+                            <label for="loginsSlider" class="text-lg font-semibold flex justify-between mb-2 text-gray-300">
+                                Expected Logins per Month (1-28):
+                                <span id="loginsValue" class="text-yellow-300 font-bold">16</span>
+                            </label>
+                            <input type="range" id="loginsSlider" min="1" max="28" value="16" step="1" 
+                                class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg accent-indigo-500"
+                                oninput="updateLoginsValue(this.value)" onchange="calculateGrace()">
+                        </div>
+
+                        <div>
+                            <label for="existingGrace" class="text-lg font-semibold mb-2 text-gray-300">Existing Grace Amount</label>
+                            <input type="number" id="existingGrace" value="0" min="0" step="1" inputmode="numeric"
+                                class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-white"
+                                oninput="calculateGrace()">
+                        </div>
+
+                        <div>
+                            <label for="existingGold" class="text-lg font-semibold mb-2 text-gray-300">Existing Gold Amount</label>
+                            <input type="number" id="existingGold" value="0" min="0" step="1" inputmode="numeric"
+                                class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-white"
+                                oninput="calculateGrace()">
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-700 p-6 rounded-lg shadow-inner flex flex-col justify-between">
+                        <h2 class="text-2xl font-bold mb-4 text-center text-yellow-300">Plot Acquisition Status</h2>
+                        
+                        <div class="space-y-4">
+                            <p class="text-lg font-semibold">Grace Deficit to reach 400:</p>
+                            <p id="graceNeeded" class="text-5xl font-extrabold text-center text-red-400 p-3 bg-gray-800 rounded-md">400</p>
+                            
+                            <p class="text-lg border-t pt-4 border-gray-600">Expected Grace Earned this month (from logins):</p>
+                            <p id="expectedGrace" class="text-4xl font-extrabold text-center text-green-400 p-3 bg-gray-800 rounded-md">240</p>
+
+                            <p id="graceRemainingLabel" class="text-lg border-t pt-4 border-gray-600">Grace Remaining after expected logins:</p>
+                            <p id="graceRemainingAfterLogin" class="text-4xl font-extrabold text-center text-indigo-400 p-3 bg-gray-800 rounded-md">384</p>
+                        </div>
+
+                        <div class="mt-6 p-4 bg-gray-800 rounded-md border-t border-gray-600">
+                            <p id="purchaseRecommendation" class="text-lg font-semibold text-center text-yellow-300">
+                                Enter values to calculate Grace needs.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-8 border-t pt-6 border-gray-700">
+                    <h3 class="text-xl font-bold mb-4 text-gray-300">Minimum Grace Purchase Breakdown (to reach 400 Grace)</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-700 rounded-lg">
+                            <thead class="bg-gray-700">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Login Day</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Gold Cost Per</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Quantity</th>
+                                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Grace Tier</th>
+                                </tr>
+                            </thead>
+                            <tbody id="breakdownTableBody" class="bg-gray-800 divide-y divide-gray-700">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- <div class="mt-8 border-t pt-6 border-gray-700">
+                    <h3 class="text-xl font-bold mb-4 text-gray-300">Grace Purchase Scenarios (Required Gold to reach 400)</h3>
+                    <p class="text-sm text-gray-400 mb-4">Shows the Gold cost required to purchase the remaining Grace if you only had this many logins.</p>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-700 rounded-lg">
+                            <thead class="bg-gray-700">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Logins Completed</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Grace Earned</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Grace Still Needed</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Total Gold Cost (Best Efficiency)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="scenarioTableBody" class="bg-gray-800 divide-y divide-gray-700">
+                                </tbody>
+                        </table>
+                    </div>
+                </div> -->
+
+            </div>
+        </div>
+    </main>
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12">
+                    <p>Pax Dei Archives is a fan-made site and not affiliated with Pax Dei or MAINFRAME.</p>
+                    <p>All intellectual property and assets related to Pax Dei game are reserved by MAINFRAME INDUSTRIES.</p>
+                    <a href="admin.html">Admin</a>
+                    <a href="privacy.html">Privacy Policy</a>
+                </div>
+            </div>
+        </div>
+        <div class="corner-credit">
+            <div class="corner-credit-top-row"> <img src="frontend/www/assets/phoenix.png" alt="Phoenix profile image" class="profile-image" />
+                <span class="nav-text-profile">Made by Phoenix ✨</span>
+            </div>
+            <div id="utc-clock-display" class="utc-clock"></div>
+        </div>
+    </footer>
+    <script type="module" src="frontend/www/js/grace.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</body>
+</html>
