@@ -13,7 +13,7 @@ function generateUniqueCode() {
 
 function formatTime(ms) {
     const totalSeconds = Math.floor(ms / 1000);
-    const hours = Math.floor(totalSeconds / 3600);
+    const hours = Math.floor((totalSeconds % 3600) / 60);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
 
@@ -127,6 +127,32 @@ let elapsedTime = 0;
 let isRunning = false;
 let currentRunCode = '';
 
+
+// NEW: Apply read-only mode to disable all interactive elements
+if (isReadOnly) {
+    // Disable primary action buttons
+    newCodeBtn.disabled = true;
+    loadRunBtn.disabled = true;
+    startRunBtn.disabled = true;
+    pauseRunBtn.disabled = true;
+    stopRunBtn.disabled = true;
+    // Disable inputs
+    loadCodeInput.disabled = true;
+    runNameInput.disabled = true;
+    farmCategoryInput.disabled = true;
+    farmItemNameInput.disabled = true;
+    toolNameInput.disabled = true;
+    // Visually/functionally disable the Miracle toggle
+    if (gatheringMiracleToggle) {
+        gatheringMiracleToggle.classList.add('pointer-events-none', 'opacity-50');
+    }
+    
+    // Set a visible feedback message
+    if (feedbackMessage) {
+        feedbackMessage.textContent = 'This run is in View-Only Mode.';
+        feedbackMessage.className = 'text-center text-sm mt-4 text-indigo-400';
+    }
+}
 
 
 function setGatheringMiracle(status) {
@@ -351,7 +377,7 @@ loadRunBtn.addEventListener('click', () => {
 
 shareRunBtn.addEventListener('click', () => {
     if (currentRunCode) {
-        const url = `${window.location.origin}${window.location.pathname}?code=${currentRunCode}`;
+        const url = `${window.location.origin}${window.location.pathname}?code=${currentRunCode}&mode=view`;
         copyToClipboard(url);
         feedbackMessage.textContent = 'Run link copied to clipboard!';
         feedbackMessage.className = 'text-center text-sm mt-4 text-green-400';
