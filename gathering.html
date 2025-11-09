@@ -6,9 +6,6 @@
     <title>Pax Dei Archives - Gathering Tracker</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="frontend/www/css/style.css">
-    <link rel="stylesheet" href="frontend/www/css/articles.css">
-    <link rel="stylesheet" href="frontend/www/css/dungeon.css">
-    <link rel="stylesheet" href="frontend/www/css/style.css">
     <link rel="stylesheet" href="https://unpkg.com/swiper@7/swiper-bundle.min.css"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
@@ -18,6 +15,12 @@
         };
     </script>
     <script async src="https://paxdei.gaming.tools/embed.js"></script>
+    <style>
+        .page-content{
+            padding: 0px !important
+        }
+
+    </style>
 </head>
 <body>
     <header class="header-area">
@@ -40,13 +43,11 @@
                         <li><a href="gems.html">Gems</a></li>
                         <li><a href="grace.html">Grace Calculator</a></li>
                         <li><a href="developer-comments.html">Dev Comments</a></li>
-                        <!-- <li><a href="loot.html">Loot Tracker</a></li> -->
                         <li><a href="lore.html">Lore</a></li>
                         <li><a href="ledger.html">Ledger</a></li>
                         <li><a href="trends.html">Market Trends</a></li>
                         <li><a href="map.html">Map</a></li>
                     </ul>
-
                 </div>
             </nav>
         </div>
@@ -55,7 +56,7 @@
         <div class="row">
             <div class="col-lg-12">
                 <div class="page-content">
-                    <div class="p-6 sm:p-8 md:p-10 rounded-lg w-full max-w-4xl mx-auto ">
+                    <div class="p-6 sm:p-8 md:p-10 rounded-lg w-full max-w-5xl mx-auto ">
                         <h1 class="text-3xl sm:text-4xl font-bold text-center mb-6 text-white-400">Gathering Tracker</h1>
                         <h3 >Track your gathering rates for any farmed or mined item! Start a new run below to begin your stopwatch.
                             <br.>Share the run link with your party, or save it for historical purposes.
@@ -88,23 +89,43 @@
                         </div>
 
                         <div class="mb-8 p-4 bg-gray-700 rounded-lg">
-                            <h2 class="text-2xl font-semibold mb-4 text-white">Run Setup & Item Selection</h2>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <label for="runName" class="block text-gray-300 text-sm font-bold mb-2">Run Name (Optional):</label>
-                                    <input type="text" id="runName" placeholder="e.g., Iron Run, Sapwood Farm" class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+
+                            <h2 class="text-2xl font-semibold mb-4 text-white">Run Setup</h2>
+
+                            <div class="mb-4">
+                                <label for="runName" class="block text-gray-300 text-sm font-bold mb-2">Run Name:</label>
+                                <input type="text" id="runName" placeholder="e.g., Iron Run, Sapwood Farm" 
+                                    class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div class="relative">
+                                    <label for="farmCategoryInput" class="block text-gray-300 text-sm font-bold mb-2">Category:</label>
+                                    <input type="text" id="farmCategoryInput" placeholder="e.g. Mining" 
+                                        class="shadow appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                                    <div id="categorySearchResults" class="absolute z-10 w-full bg-gray-800 border border-gray-600 rounded-b-md shadow-lg max-h-60 overflow-y-auto hidden top-full left-0 mt-1"></div>
                                 </div>
+
                                 <div class="relative">
                                     <label for="farmItemName" class="block text-gray-300 text-sm font-bold mb-2">Item to Farm/Gather:</label>
-                                    <input type="text" id="farmItemName" placeholder="e.g., Copper Ore, Pure Iron Ore" class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
-                                    <div id="itemSearchResults" class="absolute z-10 w-full bg-gray-700 border border-gray-500 rounded-b-md shadow-lg max-h-60 overflow-y-auto hidden top-full left-0 mt-1">
-                                    </div>
+                                    <input type="text" id="farmItemName" placeholder="e.g., Copper Ore" 
+                                        class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                                    <div id="itemSearchResults" class="absolute z-10 w-full bg-gray-700 border border-gray-500 rounded-b-md shadow-lg max-h-60 overflow-y-auto hidden top-full left-0 mt-1"></div>
+                                </div>
+
+                                <div class="relative">
+                                    <label for="toolName" class="block text-gray-300 text-sm font-bold mb-2">Tool Used:</label>
+                                    <input type="text" id="toolName" placeholder="e.g., Iron Pickaxe" 
+                                        class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                                    <div id="toolSearchResults" class="absolute z-10 w-full bg-gray-700 border border-gray-500 rounded-b-md shadow-lg max-h-60 overflow-y-auto hidden top-full left-0 mt-1"></div>
                                 </div>
                             </div>
+
                         </div>
 
+
                         <div class="mb-8 p-4 bg-gray-700 rounded-lg">
-                            <h2 class="text-2xl font-semibold mb-4 text-white">Stopwatch & Tracking</h2>
+                            <h2 class="text-2xl font-semibold mb-4 text-white">Stopwatch</h2>
                             
                             <div class="text-center mb-6">
                                 <span class="text-6xl font-mono font-bold text-yellow-400" id="stopwatchDisplay">00:00:00</span>
@@ -150,6 +171,8 @@
                                     <thead>
                                         <tr>
                                             <th class="px-3 py-2 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">Item</th>
+                                            <th class="px-3 py-2 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">Category</th>
+                                            <th class="px-3 py-2 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">Tool</th>
                                             <th class="px-3 py-2 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">Time</th>
                                             <th class="px-3 py-2 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">Amount</th>
                                             <th class="px-3 py-2 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">Rate/hr</th>
@@ -158,7 +181,7 @@
                                     </thead>
                                     <tbody id="runHistoryBody" class="bg-gray-800 divide-y divide-gray-700 text-white"">
                                         <tr>
-                                            <td colspan="5" class="px-3 py-2 whitespace-nowrap text-sm text-gray-400 text-center">No runs saved yet.</td>
+                                            <td colspan="6" class="px-3 py-2 whitespace-nowrap text-sm text-gray-400 text-center">No runs saved yet.</td>
                                         </tr>
                                     </tbody>
                                 </table>
