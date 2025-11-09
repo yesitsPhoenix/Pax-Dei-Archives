@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient.js';
 import { FARMING_CATEGORIES, GATHERING_TOOLS } from './gatheringConstants.js';
+import { loadRunCharts } from './run_charts.js';
 
 const formatTime = (totalMilliseconds) => {
     const totalSeconds = Math.floor(totalMilliseconds / 1000);
@@ -268,12 +269,12 @@ const renderPagination = (total, page) => {
     const button = (text, disabled, handler, extraClass = '') => {
         const btn = document.createElement('button');
         btn.textContent = text;
-        btn.type = 'button'; // important: prevents form submission / page reload
+        btn.type = 'button'; 
         btn.className = `px-3 py-1 rounded-md bg-gray-700 hover:bg-gray-600 ${extraClass}`;
         btn.disabled = disabled;
         if (disabled) btn.classList.add('opacity-50', 'cursor-not-allowed');
         if (!disabled) btn.addEventListener('click', (e) => {
-            e.preventDefault(); // prevents default just in case
+            e.preventDefault(); 
             handler();
         });
         return btn;
@@ -312,9 +313,20 @@ const renderPagination = (total, page) => {
 };
 
 
+const getChartFilters = () => {
+    // This collects the active filter criteria to pass to the charts.
+    // Note: loadRunCharts expects exact matches, unlike the table's .ilike query.
+    return {
+        category: filterCategory.value.trim(),
+        item: filterItemName.value.trim(),
+        tool_used: filterToolName.value.trim(),
+    };
+};
 
 const handleApplyFilters = () => {
+    const filters = getChartFilters();
     fetchDataAndRender();
+    loadRunCharts(filters); // ⬅️ Call chart refresh
 };
 
 const handleClearFilters = () => {
@@ -322,7 +334,9 @@ const handleClearFilters = () => {
     filterCategory.value = '';
     filterToolName.value = '';
     filterMiracleStatus.value = '';
+    
     fetchDataAndRender();
+    loadRunCharts({}); // ⬅️ Call chart refresh with empty filters
 };
 
 filterCategory.addEventListener('input', filterCategoryResults);
@@ -365,4 +379,7 @@ filterToolName.addEventListener('keypress', (e) => {
     }
 });
 
-document.addEventListener('DOMContentLoaded', () => fetchDataAndRender(1));
+document.addEventListener('DOMContentLoaded', () => {
+    fetchDataAndRender(1);
+    loadRunCharts({});
+});

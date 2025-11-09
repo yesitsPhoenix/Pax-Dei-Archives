@@ -101,6 +101,35 @@
                                 </button>
                             </div>
                         </div>
+                        <div class="mb-8 p-4 bg-gray-800 rounded-lg">
+                            <h2 class="text-2xl font-semibold mb-4 text-white">Run Analysis Charts</h2>
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                <div>
+                                    <h3 class="text-xl font-medium mb-4 text-white">Rate/hr Distribution</h3>
+                                    <div class="p-4 bg-gray-700 rounded-lg h-80">
+                                        <canvas id="rateHrDistributionChart"></canvas>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-medium mb-4 text-white">Category Popularity</h3>
+                                    <div class="p-4 bg-gray-700 rounded-lg h-80">
+                                        <canvas id="popularityChart"></canvas>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-medium mb-4 text-white">Tool Effectiveness Comparison</h3>
+                                    <div class="p-4 bg-gray-700 rounded-lg h-80">
+                                        <canvas id="toolEffectivenessChart"></canvas>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-medium mb-4 text-white">Miracle Impact Analysis</h3>
+                                    <div class="p-4 bg-gray-700 rounded-lg h-80">
+                                        <canvas id="miracleImpactChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
                         <div class="p-4 bg-gray-800 rounded-lg">
                             <h2 class="text-2xl font-semibold mb-4 text-white">Filtered Run Results</h2>
@@ -128,7 +157,6 @@
                             </div>
                         </div>
                         <div id="paginationContainer" class="flex justify-center items-center space-x-2 mt-4 text-white"></div>
-
                     </div>
                 </div>
             </div>
@@ -183,6 +211,8 @@
         </div>
     </div>
     <div id="ability-popup-overlay" class="popup-overlay"></div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module" src="frontend/www/js/run_charts.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script type="module" src="frontend/www/js/supabaseClient.js"></script>
     <script type="module" src="frontend/www/js/utils.js"></script>
