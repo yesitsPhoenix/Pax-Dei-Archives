@@ -128,26 +128,21 @@ let isRunning = false;
 let currentRunCode = '';
 
 
-// NEW: Apply read-only mode to disable all interactive elements
 if (isReadOnly) {
-    // Disable primary action buttons
     newCodeBtn.disabled = true;
     loadRunBtn.disabled = true;
     startRunBtn.disabled = true;
     pauseRunBtn.disabled = true;
     stopRunBtn.disabled = true;
-    // Disable inputs
     loadCodeInput.disabled = true;
     runNameInput.disabled = true;
     farmCategoryInput.disabled = true;
     farmItemNameInput.disabled = true;
     toolNameInput.disabled = true;
-    // Visually/functionally disable the Miracle toggle
     if (gatheringMiracleToggle) {
         gatheringMiracleToggle.classList.add('pointer-events-none', 'opacity-50');
     }
     
-    // Set a visible feedback message
     if (feedbackMessage) {
         feedbackMessage.textContent = 'This run is in View-Only Mode.';
         feedbackMessage.className = 'text-center text-sm mt-4 text-indigo-400';
