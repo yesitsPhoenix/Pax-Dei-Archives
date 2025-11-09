@@ -55,7 +55,8 @@ function appendRunRow(run) {
     row.insertCell().textContent = date;
 }
 
-
+const urlParams = new URLSearchParams(window.location.search);
+const isReadOnly = urlParams.get('mode') === 'view';
 const shareCodeDisplay = document.getElementById('shareCodeDisplay');
 const newCodeBtn = document.getElementById('newCodeBtn');
 const copyCodeBtn = document.getElementById('copyCodeBtn');
@@ -450,6 +451,7 @@ saveRunBtn.addEventListener('click', async () => {
     const runData = {
         run_code: currentRunCode,
         run_name: currentRun.name,
+        category: farmCategoryInput.value.trim(),
         item: currentRun.item,
         tool_used: toolNameInput.value.trim(),
         time_ms: elapsedTime,
@@ -487,8 +489,7 @@ customItemCancelBtn.addEventListener('click', closeCustomItemModal);
 
 
 function filterCategoryResults(event) {
-    // Only use the current input value for filtering if the user is actively typing ('input' event).
-    // If it's a 'focus' event, treat the query as empty to show all categories (like a dropdown).
+
     const isTyping = event && event.type === 'input';
     const query = isTyping ? farmCategoryInput.value.toLowerCase() : '';
 
@@ -508,7 +509,6 @@ function filterCategoryResults(event) {
                 farmCategoryInput.value = category;
                 categorySearchResults.classList.add('hidden');
                 
-                // Clear dependent fields when category changes to force new selection
                 farmItemNameInput.value = '';
                 toolNameInput.value = '';
 
@@ -612,6 +612,20 @@ document.addEventListener('click', (e) => {
     }
 });
 
+closeRunBtn.addEventListener('click', () => {
+    if (isReadOnly) return;
+    document.getElementById('closeRunModal').classList.remove('hidden');
+});
+
+document.getElementById('cancelCloseRun').addEventListener('click', () => {
+    document.getElementById('closeRunModal').classList.add('hidden');
+});
+
+document.getElementById('confirmCloseRun').addEventListener('click', () => {
+    resetFullRunState();
+    window.location.href = 'gathering.html';
+});
+
 
 document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -621,4 +635,5 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         resetFullRunState();
     }
+
 });
