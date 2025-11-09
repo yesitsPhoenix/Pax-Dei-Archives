@@ -62,7 +62,7 @@
                             <br.>Share the run link with your party, or save it for historical purposes.
                         </h3><br>
                         
-                        <div class="mb-8 p-4 bg-gray-700 rounded-lg">
+                        <div class="mb-8 p-4 bg-gray-800 rounded-lg">
                             <h2 class="text-2xl font-semibold mb-4 text-white">Start a New Run</h2>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
@@ -88,15 +88,41 @@
                             </div>
                         </div>
 
-                        <div class="mb-8 p-4 bg-gray-700 rounded-lg">
+                        <div class="mb-8 p-4 bg-gray-800 rounded-lg">
 
                             <h2 class="text-2xl font-semibold mb-4 text-white">Run Setup</h2>
 
-                            <div class="mb-4">
-                                <label for="runName" class="block text-gray-300 text-sm font-bold mb-2">Run Name:</label>
-                                <input type="text" id="runName" placeholder="e.g., Iron Run, Sapwood Farm" 
-                                    class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                                <div>
+                                    <label for="runName" class="block text-gray-300 text-sm font-bold mb-2">Run Name:</label>
+                                    <input type="text" id="runName" placeholder="e.g., Iron Run, Sapwood Farm" 
+                                        class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                                </div>
+                                
+                                <div>
+                                    <label for="gatheringMiracleToggle" class="block text-gray-300 text-sm font-bold mb-2">Gathering Miracle Active?</label>
+                                    <div id="gatheringMiracleToggle" class="flex p-1 bg-gray-700 rounded-lg border border-gray-600 shadow-inner">
+                                        <button
+                                            type="button"
+                                            data-status="not_active"
+                                            class="flex-1 py-2 rounded-lg transition-colors duration-200 bg-indigo-500 text-white font-medium"
+                                            onclick="setGatheringMiracle('not_active')"
+                                        >
+                                            Not Active
+                                        </button>
+                                        <button
+                                            type="button"
+                                            data-status="active"
+                                            class="flex-1 py-2 rounded-lg transition-colors duration-200 text-gray-300 font-medium hover:bg-gray-600"
+                                            onclick="setGatheringMiracle('active')"
+                                        >
+                                            Active
+                                        </button>
+                                    </div>
+                                    <input type="hidden" id="gatheringMiracleStatus" value="not_active">
+                                </div>
                             </div>
+
 
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <div class="relative">
@@ -110,21 +136,21 @@
                                     <label for="farmItemName" class="block text-gray-300 text-sm font-bold mb-2">Item to Farm/Gather:</label>
                                     <input type="text" id="farmItemName" placeholder="e.g., Copper Ore" 
                                         class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
-                                    <div id="itemSearchResults" class="absolute z-10 w-full bg-gray-700 border border-gray-500 rounded-b-md shadow-lg max-h-60 overflow-y-auto hidden top-full left-0 mt-1"></div>
+                                    <div id="itemSearchResults" class="absolute z-10 w-full bg-gray-800 border border-gray-500 rounded-b-md shadow-lg max-h-60 overflow-y-auto hidden top-full left-0 mt-1"></div>
                                 </div>
 
                                 <div class="relative">
                                     <label for="toolName" class="block text-gray-300 text-sm font-bold mb-2">Tool Used:</label>
                                     <input type="text" id="toolName" placeholder="e.g., Iron Pickaxe" 
                                         class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
-                                    <div id="toolSearchResults" class="absolute z-10 w-full bg-gray-700 border border-gray-500 rounded-b-md shadow-lg max-h-60 overflow-y-auto hidden top-full left-0 mt-1"></div>
+                                    <div id="toolSearchResults" class="absolute z-10 w-full bg-gray-800 border border-gray-500 rounded-b-md shadow-lg max-h-60 overflow-y-auto hidden top-full left-0 mt-1"></div>
                                 </div>
                             </div>
 
                         </div>
 
 
-                        <div class="mb-8 p-4 bg-gray-700 rounded-lg">
+                        <div class="mb-8 p-4 bg-gray-800 rounded-lg">
                             <h2 class="text-2xl font-semibold mb-4 text-white">Stopwatch</h2>
                             
                             <div class="text-center mb-6">
@@ -164,24 +190,25 @@
                         </div>
 
 
-                        <div class="p-4 bg-gray-700 rounded-lg">
+                        <div class="p-4 bg-gray-800 rounded-lg">
                             <h2 class="text-2xl font-semibold mb-4 text-white">Run History</h2>
                             <div id="runHistoryTableContainer" class="max-h-96 overflow-y-auto bg-gray-600 p-3 rounded-lg border border-gray-500">
                                 <table class="min-w-full divide-y divide-gray-500">
                                     <thead>
                                         <tr>
-                                            <th class="px-3 py-2 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">Item</th>
-                                            <th class="px-3 py-2 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">Category</th>
-                                            <th class="px-3 py-2 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">Tool</th>
-                                            <th class="px-3 py-2 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">Time</th>
-                                            <th class="px-3 py-2 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">Amount</th>
-                                            <th class="px-3 py-2 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">Rate/hr</th>
-                                            <th class="px-3 py-2 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">Date</th>
+                                            <th class="px-3 py-2 text-center text-sm font-medium text-gray-300 uppercase tracking-wider">Item</th>
+                                            <th class="px-3 py-2 text-center text-sm font-medium text-gray-300 uppercase tracking-wider">Category</th>
+                                            <th class="px-3 py-2 text-center text-sm font-medium text-gray-300 uppercase tracking-wider">Tool</th>
+                                            <th class="px-3 py-2 text-center text-sm font-medium text-gray-300 uppercase tracking-wider">Time</th>
+                                            <th class="px-3 py-2 text-center text-sm font-medium text-gray-300 uppercase tracking-wider">Amount</th>
+                                            <th class="px-3 py-2 text-center text-sm font-medium text-gray-300 uppercase tracking-wider">Rate/hr</th>
+                                            <th class="px-3 py-2 text-center text-sm font-medium text-gray-300 uppercase tracking-wider">Date</th>
+                                            <th class="px-3 py-2 text-center text-sm font-medium text-gray-300 uppercase tracking-wider">Active Miracle?</th>
                                         </tr>
                                     </thead>
                                     <tbody id="runHistoryBody" class="bg-gray-800 divide-y divide-gray-700 text-white"">
                                         <tr>
-                                            <td colspan="7" class="px-3 py-2 whitespace-nowrap text-sm text-gray-400 text-center">No runs saved yet.</td>
+                                            <td colspan="8" class="px-3 py-2 whitespace-nowrap text-sm text-gray-400 text-center">No runs saved yet.</td>
                                         </tr>
                                     </tbody>
                                 </table>

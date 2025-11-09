@@ -45,14 +45,41 @@ function appendRunRow(run) {
 
     const ratePerHour = (run.amount / (run.time_ms / 3600000)).toFixed(2);
     const date = run.created_at ? new Date(run.created_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short' }) : '';
+    const miracleStatus = run.miracle_active ? 'Yes' : 'No';
 
-    row.insertCell().textContent = run.item;
-    row.insertCell().textContent = run.category;
-    row.insertCell().textContent = run.tool_used || '';
-    row.insertCell().textContent = formatTime(run.time_ms);
-    row.insertCell().textContent = run.amount;
-    row.insertCell().textContent = ratePerHour;
-    row.insertCell().textContent = date;
+    const cellClass = 'px-3 py-2 whitespace-nowrap text-sm text-gray-200 text-center';
+
+    const itemCell = row.insertCell();
+    itemCell.textContent = run.item;
+    itemCell.className = cellClass;
+    
+    const categoryCell = row.insertCell();
+    categoryCell.textContent = run.category;
+    categoryCell.className = cellClass;
+    
+    const toolCell = row.insertCell();
+    toolCell.textContent = run.tool_used || '';
+    toolCell.className = cellClass;
+    
+    const timeCell = row.insertCell();
+    timeCell.textContent = formatTime(run.time_ms);
+    timeCell.className = cellClass;
+    
+    const amountCell = row.insertCell();
+    amountCell.textContent = run.amount;
+    amountCell.className = cellClass;
+    
+    const rateCell = row.insertCell();
+    rateCell.textContent = ratePerHour;
+    rateCell.className = cellClass;
+    
+    const dateCell = row.insertCell();
+    dateCell.textContent = date;
+    dateCell.className = cellClass;
+    
+    const miracleCell = row.insertCell();
+    miracleCell.textContent = miracleStatus;
+    miracleCell.className = cellClass;
 }
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -82,6 +109,9 @@ const gatheredAmountInput = document.getElementById('gatheredAmountInput');
 const saveRunBtn = document.getElementById('saveRunBtn');
 const cancelFinalizeBtn = document.getElementById('cancelFinalizeBtn');
 const runHistoryBody = document.getElementById('runHistoryBody');
+const gatheringMiracleToggle = document.getElementById('gatheringMiracleToggle');
+const gatheringMiracleStatusInput = document.getElementById('gatheringMiracleStatus');
+
 
 const customItemModal = document.getElementById('customItemModal');
 const customItemInput = document.getElementById('customItemInput');
@@ -121,7 +151,8 @@ const FARMING_CATEGORIES = {
     'Foraging': [
         'Cotton',
         'Flax',
-        'White Grapes'
+        'White Grapes',
+        'Other'
     ],
     'Other': [
         'Other'
@@ -179,6 +210,20 @@ const GATHERING_TOOLS = {
     ]
 };
 
+function setGatheringMiracle(status) {
+    gatheringMiracleStatusInput.value = status;
+    const buttons = gatheringMiracleToggle.querySelectorAll('button');
+    buttons.forEach(button => {
+        if (button.getAttribute('data-status') === status) {
+            button.classList.add('bg-indigo-500', 'text-white');
+            button.classList.remove('text-gray-300', 'hover:bg-gray-600');
+        } else {
+            button.classList.remove('bg-indigo-500', 'text-white');
+            button.classList.add('text-gray-300', 'hover:bg-gray-600');
+        }
+    });
+}
+
 function updateStopwatchDisplay() {
     stopwatchDisplay.textContent = formatTime(elapsedTime);
 }
@@ -198,6 +243,7 @@ function startStopwatch() {
     farmCategoryInput.disabled = true;
     farmItemNameInput.disabled = true;
     toolNameInput.disabled = true;
+    gatheringMiracleToggle.classList.add('pointer-events-none', 'opacity-50');
     feedbackMessage.textContent = `Run active, tracking ${currentRun.item}...`;
     feedbackMessage.className = 'text-center text-sm mt-4 text-green-400';
 }
@@ -241,6 +287,7 @@ function resetStopwatch() {
     farmCategoryInput.disabled = false; 
     farmItemNameInput.disabled = false; 
     toolNameInput.disabled = false;
+    gatheringMiracleToggle.classList.remove('pointer-events-none', 'opacity-50');
 }
 
 function resetFullRunState() {
@@ -252,9 +299,10 @@ function resetFullRunState() {
     farmCategoryInput.value = '';
     farmItemNameInput.value = '';
     toolNameInput.value = '';
+    setGatheringMiracle('not_active');
     feedbackMessage.textContent = '';
     if (runHistoryBody) {
-        runHistoryBody.innerHTML = `<tr><td colspan="7" class="px-3 py-2 whitespace-nowrap text-sm text-gray-400 text-center">No runs saved yet.</td></tr>`;
+        runHistoryBody.innerHTML = `<tr><td colspan="8" class="px-3 py-2 whitespace-nowrap text-sm text-gray-400 text-center">No runs saved yet.</td></tr>`;
     }
 }
 
@@ -341,13 +389,13 @@ async function loadRunHistory() {
     if (error) {
         if (error.code !== '42P01') {
             console.error('Error loading history:', error);
-            tbody.innerHTML = `<tr><td colspan="7" class="px-3 py-2 whitespace-nowrap text-sm text-red-400 text-center">Error loading history.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" class="px-3 py-2 whitespace-nowrap text-sm text-red-400 text-center">Error loading history.</td></tr>`;
         }
         return;
     }
 
     if (!currentRunCode || !runs || runs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="px-3 py-2 whitespace-nowrap text-sm text-gray-400 text-center">No runs saved yet.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="px-3 py-2 whitespace-nowrap text-sm text-gray-400 text-center">No runs saved yet.</td></tr>`;
         return;
     }
 
@@ -452,6 +500,8 @@ saveRunBtn.addEventListener('click', async () => {
         return;
     }
 
+    const miracleStatus = gatheringMiracleStatusInput.value === 'active';
+
     const runData = {
         run_code: currentRunCode,
         run_name: currentRun.name,
@@ -460,6 +510,7 @@ saveRunBtn.addEventListener('click', async () => {
         tool_used: toolNameInput.value.trim(),
         time_ms: elapsedTime,
         amount: amount,
+        miracle_active: miracleStatus,
     };
 
     const insertedRow = await saveRunToDB(runData);
@@ -634,10 +685,12 @@ document.getElementById('confirmCloseRun').addEventListener('click', () => {
 document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
+    setGatheringMiracle(gatheringMiracleStatusInput.value);
     if (code) {
         loadRun(code.toUpperCase());
     } else {
         resetFullRunState();
     }
-
 });
+
+window.setGatheringMiracle = setGatheringMiracle;
