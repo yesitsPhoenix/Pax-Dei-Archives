@@ -40,7 +40,7 @@ function appendRunRow(run) {
     const tbody = ensureRunHistoryBody();
     if (!tbody) return;
 
-    const row = tbody.insertRow(0); // put newest on top
+    const row = tbody.insertRow(0);
     row.className = 'hover:bg-gray-500 transition duration-150';
 
     const ratePerHour = (run.amount / (run.time_ms / 3600000)).toFixed(2);
@@ -75,6 +75,7 @@ const gatheredAmountInput = document.getElementById('gatheredAmountInput');
 const saveRunBtn = document.getElementById('saveRunBtn');
 const cancelFinalizeBtn = document.getElementById('cancelFinalizeBtn');
 const runHistoryBody = document.getElementById('runHistoryBody');
+const closeRunBtn = document.getElementById('closeRunBtn');
 
 const customItemModal = document.getElementById('customItemModal');
 const customItemInput = document.getElementById('customItemInput');
@@ -89,15 +90,22 @@ let elapsedTime = 0;
 let isRunning = false;
 let currentRunCode = '';
 
+const urlParams = new URLSearchParams(window.location.search);
+const isReadOnly = urlParams.get('mode') === 'view';
+
+
+
 const farmingItems = [
     'Aurum Ore', 
     'Copper Ore', 
     'Cotton', 
     'Flax', 
     'Gneiss', 
+    'Granite',
     'Heartwood',
     'Impure Iron Ore', 
     'Iron Ore', 
+    'Limestone',
     'Pure Iron Ore',
     'Rough Animal Hide', 
     'Sapwood', 
@@ -107,13 +115,12 @@ const farmingItems = [
     'Other'
 ];
 
-
 function updateStopwatchDisplay() {
     stopwatchDisplay.textContent = formatTime(elapsedTime);
 }
 
 function startStopwatch() {
-    if (isRunning) return;
+    if (isRunning || isReadOnly) return;
     isRunning = true;
     startTime = Date.now() - elapsedTime;
     intervalId = setInterval(() => {
@@ -130,7 +137,7 @@ function startStopwatch() {
 }
 
 function pauseStopwatch() {
-    if (!isRunning) return;
+    if (!isRunning || isReadOnly) return;
     clearInterval(intervalId);
     isRunning = false;
     startRunBtn.textContent = 'Continue Run';
@@ -141,6 +148,7 @@ function pauseStopwatch() {
 }
 
 function stopStopwatch() {
+    if (isReadOnly) return;
     clearInterval(intervalId);
     isRunning = false;
     
@@ -161,11 +169,11 @@ function resetStopwatch() {
     isRunning = false;
     updateStopwatchDisplay();
     startRunBtn.textContent = 'Start Run';
-    startRunBtn.disabled = false;
+    startRunBtn.disabled = isReadOnly;
     pauseRunBtn.disabled = true;
     stopRunBtn.disabled = true;
-    runNameInput.disabled = false; 
-    farmItemNameInput.disabled = false; 
+    runNameInput.disabled = isReadOnly; 
+    farmItemNameInput.disabled = isReadOnly; 
 }
 
 function resetFullRunState() {
@@ -176,7 +184,9 @@ function resetFullRunState() {
     runNameInput.value = '';
     farmItemNameInput.value = '';
     feedbackMessage.textContent = '';
-    runHistoryBody.innerHTML = `<tr><td colspan="5" class="px-3 py-2 whitespace-nowrap text-sm text-gray-400 text-center">No runs saved yet.</td></tr>`;
+    if (runHistoryBody) {
+        runHistoryBody.innerHTML = `<tr><td colspan="5" class="px-3 py-2 whitespace-nowrap text-sm text-gray-400 text-center">No runs saved yet.</td></tr>`;
+    }
 }
 
 function loadRun(code) {
@@ -190,13 +200,20 @@ function loadRun(code) {
         history: []
     };
 
-    feedbackMessage.textContent = `Run ${currentRunCode} loaded.`;
-    feedbackMessage.className = 'text-center text-sm mt-4 text-green-400';
+    if (isReadOnly) {
+        feedbackMessage.textContent = `Viewing run ${currentRunCode}. (Read-Only)`;
+        feedbackMessage.className = 'text-center text-sm mt-4 text-yellow-400';
+    } else {
+        feedbackMessage.textContent = `Run ${currentRunCode} loaded.`;
+        feedbackMessage.className = 'text-center text-sm mt-4 text-green-400';
+    }
     
     loadRunHistory();
 }
 
 async function saveRunToDB(runData) {
+    if (isReadOnly) return null;
+    
     const { data, error } = await supabase
         .from('farming_runs')
         .insert([runData])
@@ -257,6 +274,37 @@ async function loadRunHistory() {
 }
 
 
+function applyReadOnlyMode() {
+    if (!isReadOnly) return;
+
+    runNameInput.disabled = true;
+    farmItemNameInput.disabled = true;
+    loadCodeInput.disabled = true;
+
+    newCodeBtn.disabled = true;
+    loadRunBtn.disabled = true;
+    startRunBtn.disabled = true;
+    pauseRunBtn.disabled = true;
+    stopRunBtn.disabled = true;
+    
+    if (closeRunBtn) {
+        closeRunBtn.disabled = true;
+    }
+    
+    newCodeBtn.classList.add('hidden');
+    loadRunBtn.classList.add('hidden');
+    startRunBtn.classList.add('hidden');
+    pauseRunBtn.classList.add('hidden');
+    stopRunBtn.classList.add('hidden');
+
+    if (closeRunBtn) {
+        closeRunBtn.classList.add('hidden');
+    }
+
+    farmItemNameInput.removeEventListener('input', filterItemSearchResults);
+    farmItemNameInput.removeEventListener('focus', filterItemSearchResults);
+}
+
 
 newCodeBtn.addEventListener('click', () => {
     const newCode = generateUniqueCode();
@@ -287,9 +335,9 @@ loadRunBtn.addEventListener('click', () => {
 
 shareRunBtn.addEventListener('click', () => {
     if (currentRunCode) {
-        const url = `${window.location.origin}${window.location.pathname}?code=${currentRunCode}`;
+        const url = `${window.location.origin}${window.location.pathname}?code=${currentRunCode}&mode=view`;
         copyToClipboard(url);
-        feedbackMessage.textContent = 'Run link copied to clipboard!';
+        feedbackMessage.textContent = 'Read-only share link copied!';
         feedbackMessage.className = 'text-center text-sm mt-4 text-green-400';
         setTimeout(() => feedbackMessage.textContent = '', 2000);
     } else {
@@ -299,6 +347,7 @@ shareRunBtn.addEventListener('click', () => {
 });
 
 startRunBtn.addEventListener('click', () => {
+    if (isReadOnly) return;
     if (!currentRunCode) {
         feedbackMessage.textContent = 'Please generate a New Code or Load a Run first.';
         feedbackMessage.className = 'text-center text-sm mt-4 text-red-400';
@@ -325,6 +374,8 @@ cancelFinalizeBtn.addEventListener('click', () => {
 
 
 saveRunBtn.addEventListener('click', async () => {
+    if (isReadOnly) return;
+    
     const amount = parseInt(gatheredAmountInput.value, 10);
     if (isNaN(amount) || amount < 0) {
         alert('Please enter a valid amount gathered (0 or greater).');
@@ -354,8 +405,19 @@ saveRunBtn.addEventListener('click', async () => {
     finalizeRunModal.classList.add('hidden');
 });
 
+if (closeRunBtn) {
+    closeRunBtn.addEventListener('click', () => {
+        if (isReadOnly) return;
+        if (confirm('Are you sure you want to close this run and clear the code?')) {
+            resetFullRunState();
+            window.location.href = window.location.pathname;
+        }
+    });
+}
+
 
 function openCustomItemModal() {
+    if (isReadOnly) return;
     customItemInput.value = '';
     customItemModal.classList.remove('hidden');
     customItemInput.focus();
@@ -376,6 +438,8 @@ customItemSaveBtn.addEventListener('click', () => {
 customItemCancelBtn.addEventListener('click', closeCustomItemModal);
 
 function filterItemSearchResults() {
+    if (isReadOnly) return;
+    
     const query = farmItemNameInput.value.toLowerCase();
     itemSearchResults.innerHTML = '';
 
@@ -415,11 +479,12 @@ document.addEventListener('click', (e) => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-    const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
     if (code) {
         loadRun(code.toUpperCase());
     } else {
         resetFullRunState();
     }
+    
+    applyReadOnlyMode();
 });
