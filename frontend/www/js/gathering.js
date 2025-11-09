@@ -323,27 +323,30 @@ async function loadRunHistory() {
 
     tbody.innerHTML = '';
 
-    if (!currentRunCode) {
-        tbody.innerHTML = `<tr><td colspan="6" class="px-3 py-2 whitespace-nowrap text-sm text-gray-400 text-center">No runs saved yet.</td></tr>`;
-        return;
-    }
+    let runs = [];
+    let error = null;
 
-    const { data: runs, error } = await supabase
-        .from('farming_runs')
-        .select('*')
-        .eq('run_code', currentRunCode)
-        .order('created_at', { ascending: false });
+    if (currentRunCode) {
+        const result = await supabase
+            .from('farming_runs')
+            .select('*')
+            .eq('run_code', currentRunCode)
+            .order('created_at', { ascending: false });
+
+        runs = result.data;
+        error = result.error;
+    }
 
     if (error) {
         if (error.code !== '42P01') {
             console.error('Error loading history:', error);
-            tbody.innerHTML = `<tr><td colspan="6" class="px-3 py-2 whitespace-nowrap text-sm text-red-400 text-center">Error loading history.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" class="px-3 py-2 whitespace-nowrap text-sm text-red-400 text-center">Error loading history.</td></tr>`;
         }
         return;
     }
 
-    if (!runs || runs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="px-3 py-2 whitespace-nowrap text-sm text-gray-400 text-center">No runs saved yet.</td></tr>`;
+    if (!currentRunCode || !runs || runs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="px-3 py-2 whitespace-nowrap text-sm text-gray-400 text-center">No runs saved yet.</td></tr>`;
         return;
     }
 
