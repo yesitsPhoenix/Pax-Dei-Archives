@@ -108,7 +108,8 @@ const FARMING_CATEGORIES = {
         'Limestone',
         'Pure Iron Ore',
         'Silver Ore', 
-        'Tin Ore'
+        'Tin Ore',
+        'Sand'
     ],
     'Woodcutting': [
         'Heartwood',
@@ -253,7 +254,7 @@ function resetFullRunState() {
     toolNameInput.value = '';
     feedbackMessage.textContent = '';
     if (runHistoryBody) {
-        runHistoryBody.innerHTML = `<tr><td colspan="6" class="px-3 py-2 whitespace-nowrap text-sm text-gray-400 text-center">No runs saved yet.</td></tr>`;
+        runHistoryBody.innerHTML = `<tr><td colspan="7" class="px-3 py-2 whitespace-nowrap text-sm text-gray-400 text-center">No runs saved yet.</td></tr>`;
     }
 }
 
