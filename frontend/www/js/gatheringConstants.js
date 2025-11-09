@@ -17,12 +17,18 @@ export const FARMING_CATEGORIES = {
         'Sapwood'
     ],
     'Skinning': [
-        'Rough Animal Hide'
+        'Rough Animal Hide',
+        'Large Rough Animal Hide',
+        'Wool Fiber'
     ],
     'Foraging': [
+        'Ambergrasp',
+        'Canonite',
         'Cotton',
         'Flax',
-        'White Grapes',
+        'Flax Seeds',
+        'Garlic',
+        'White Grapes',        
         'Other'
     ],
     'Other': [
@@ -74,7 +80,8 @@ export const GATHERING_TOOLS = {
         'Tempered Iron Skinning Knife',
         'Tempered Steel Skinning Knife',
         'Tempered Wrought Iron Skinning Knife',
-        'Wrought Iron Skinning Knife'
+        'Wrought Iron Skinning Knife',
+        'Hand'
     ],
     'Foraging': [
         'Hand'
