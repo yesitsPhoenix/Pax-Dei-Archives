@@ -31,6 +31,15 @@ const applyFiltersBtn = document.getElementById('applyFiltersBtn');
 const clearFiltersBtn = document.getElementById('clearFiltersBtn');
 const runResultsBody = document.getElementById('runResultsBody');
 
+const paginationContainer = document.getElementById('paginationContainer') || (() => {
+    const div = document.createElement('div');
+    div.id = 'paginationContainer';
+    div.className = 'flex justify-center items-center space-x-2 mt-4 text-white';
+    runResultsBody.parentElement.parentElement.appendChild(div);
+    return div;
+})();
+
+
 const categorySearchResults = document.getElementById('categorySearchResults');
 const itemSearchResults = document.getElementById('itemSearchResults');
 const toolSearchResults = document.getElementById('toolSearchResults');
@@ -175,43 +184,49 @@ if (customItemCancelBtn) {
 }
 
 
-const fetchDataAndRender = async () => {
+let currentPage = 1;
+const rowsPerPage = 25;
+let totalRuns = 0;
+let allRuns = [];
+
+const fetchDataAndRender = async (page = 1) => {
+    currentPage = page;
+
     let query = supabase
         .from('farming_runs') 
-        .select('*')
-        .order('created_at', { ascending: false }); 
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false });
 
     const itemName = filterItemName.value.trim();
     const category = filterCategory.value.trim();
     const toolName = filterToolName.value.trim();
     const miracleStatus = filterMiracleStatus.value;
 
-    if (category) {
-        query = query.ilike('category', `%${category}%`);
-    }
-    if (itemName) {
-        query = query.ilike('item', `%${itemName}%`); 
-    }
-    if (toolName) {
-        query = query.ilike('tool_used', `%${toolName}%`);
-    }
-    if (miracleStatus) {
-        const isActive = miracleStatus === 'active';
-        query = query.eq('miracle_active', isActive);
-    }
+    if (category) query = query.ilike('category', `%${category}%`);
+    if (itemName) query = query.ilike('item', `%${itemName}%`);
+    if (toolName) query = query.ilike('tool_used', `%${toolName}%`);
+    if (miracleStatus) query = query.eq('miracle_active', miracleStatus === 'active');
 
-    runResultsBody.innerHTML = '<tr><td colspan="9" class="px-3 py-4 whitespace-nowrap text-sm text-yellow-400 text-center">Fetching runs...</td></tr>';
+    runResultsBody.innerHTML = '<tr><td colspan="9" class="px-3 py-4 text-yellow-400 text-center">Fetching runs...</td></tr>';
 
-    const { data: runs, error } = await query;
+    const start = (page - 1) * rowsPerPage;
+    const end = start + rowsPerPage - 1;
+
+    const { data: runs, count, error } = await query.range(start, end);
 
     if (error) {
         console.error('Error fetching runs:', error.message);
-        runResultsBody.innerHTML = `<tr><td colspan="9" class="px-3 py-4 whitespace-nowrap text-sm text-red-400 text-center">Error loading runs: ${error.message}. (Check Supabase RLS/Auth)</td></tr>`;
+        runResultsBody.innerHTML = `<tr><td colspan="9" class="px-3 py-4 text-red-400 text-center">Error loading runs: ${error.message}</td></tr>`;
         return;
     }
 
-    renderRunTable(runs);
+    totalRuns = count || 0;
+    allRuns = runs || [];
+
+    renderRunTable(allRuns);
+    renderPagination(totalRuns, page);
 };
+
 
 const renderRunTable = (runs) => {
     if (runs.length === 0) {
@@ -243,6 +258,60 @@ const renderRunTable = (runs) => {
         runResultsBody.appendChild(row);
     });
 };
+
+const renderPagination = (total, page) => {
+    paginationContainer.innerHTML = '';
+    if (total <= rowsPerPage) return;
+
+    const totalPages = Math.ceil(total / rowsPerPage);
+
+    const button = (text, disabled, handler, extraClass = '') => {
+        const btn = document.createElement('button');
+        btn.textContent = text;
+        btn.type = 'button'; // important: prevents form submission / page reload
+        btn.className = `px-3 py-1 rounded-md bg-gray-700 hover:bg-gray-600 ${extraClass}`;
+        btn.disabled = disabled;
+        if (disabled) btn.classList.add('opacity-50', 'cursor-not-allowed');
+        if (!disabled) btn.addEventListener('click', (e) => {
+            e.preventDefault(); // prevents default just in case
+            handler();
+        });
+        return btn;
+    };
+
+    paginationContainer.appendChild(button('«', page === 1, () => fetchDataAndRender(page - 1)));
+
+    const start = Math.max(1, page - 2);
+    const end = Math.min(totalPages, page + 2);
+
+    if (start > 1) paginationContainer.appendChild(button('1', false, () => fetchDataAndRender(1)));
+    if (start > 2) {
+        const dots = document.createElement('span');
+        dots.textContent = '...';
+        paginationContainer.appendChild(dots);
+    }
+
+    for (let i = start; i <= end; i++) {
+        const isActive = i === page;
+        paginationContainer.appendChild(button(
+            i,
+            isActive,
+            () => fetchDataAndRender(i),
+            isActive ? 'bg-yellow-500 text-black' : ''
+        ));
+    }
+
+    if (end < totalPages - 1) {
+        const dots = document.createElement('span');
+        dots.textContent = '...';
+        paginationContainer.appendChild(dots);
+    }
+    if (end < totalPages) paginationContainer.appendChild(button(totalPages, false, () => fetchDataAndRender(totalPages)));
+
+    paginationContainer.appendChild(button('»', page === totalPages, () => fetchDataAndRender(page + 1)));
+};
+
+
 
 const handleApplyFilters = () => {
     fetchDataAndRender();
@@ -296,4 +365,4 @@ filterToolName.addEventListener('keypress', (e) => {
     }
 });
 
-document.addEventListener('DOMContentLoaded', fetchDataAndRender);
+document.addEventListener('DOMContentLoaded', () => fetchDataAndRender(1));
