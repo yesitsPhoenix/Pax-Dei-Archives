@@ -113,6 +113,9 @@ const runHistoryBody = document.getElementById('runHistoryBody');
 const gatheringMiracleToggle = document.getElementById('gatheringMiracleToggle');
 const gatheringMiracleStatusInput = document.getElementById('gatheringMiracleStatus');
 
+const runSetupSection = document.getElementById('runSetupSection');
+const stopwatchSection = document.getElementById('stopwatchSection');
+const closeRunBtn = document.getElementById('closeRunBtn');
 
 const customItemModal = document.getElementById('customItemModal');
 const customItemInput = document.getElementById('customItemInput');
@@ -621,10 +624,20 @@ document.getElementById('confirmCloseRun').addEventListener('click', () => {
     window.location.href = 'gathering.html';
 });
 
+function toggleRunUI(visible) {
+    if (runSetupSection) runSetupSection.classList.toggle('hidden', !visible);
+    if (stopwatchSection) stopwatchSection.classList.toggle('hidden', !visible);
+    if (closeRunBtn) closeRunBtn.classList.toggle('hidden', !visible);
+}
+
 
 document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
+    setGatheringMiracle(gatheringMiracleStatusInput.value);
+    const showUI = !!code && !isReadOnly;
+    toggleRunUI(showUI);
+
     setGatheringMiracle(gatheringMiracleStatusInput.value);
     if (code) {
         loadRun(code.toUpperCase());
