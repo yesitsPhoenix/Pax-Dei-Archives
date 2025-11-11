@@ -188,21 +188,22 @@ async function performSearch(searchTerm) {
 
                 let displayedContent = item.content;
                 if ((item.type === 'Lore Post' || item.type === 'Ability') && typeof marked !== 'undefined') {
+                    const contentString = item.content ?? ''; 
                     const snippetLength = 200;
-                    let snippet = item.content.substring(0, snippetLength);
-                    if (item.content.length > snippetLength) {
+                    let snippet = contentString.substring(0, snippetLength);
+                    if (contentString.length > snippetLength) {
                         snippet += '...';
                     }
                     displayedContent = marked.parse(snippet);
                 } else if (item.type === 'News Update' || item.type === 'Article') {
+                    const contentString = item.content ?? '';
                     const snippetLength = 200;
-                    let snippet = item.content.substring(0, snippetLength);
-                    if (item.content.length > snippetLength) {
+                    let snippet = contentString.substring(0, snippetLength);
+                    if (contentString.length > snippetLength) {
                         snippet += '...';
                     }
                     displayedContent = snippet;
                 }
-
                 const titleDisplay = item.title ? item.title : '';
                 const authorPrefix = item.type === 'Developer Comment' && item.author ? item.author + ' - ' : '';
                 const dateSuffix = formattedDateForDisplay ? `<span class="date">${formattedDateForDisplay}</span>` : '';
