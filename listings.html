@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pax Dei Archives - Active Market Listings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/swiper@7/swiper-bundle.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+    <script> window.gtTooltipConfig = {
+        scale: 0.8,
+        delay: 40,
+        };
+    </script>
+    <script async src="https://paxdei.gaming.tools/embed.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <style>
+        .page-content{
+            padding: 0px !important
+        }
+        .sortable-header {
+            cursor: pointer;
+            transition: color 0.1s;
+        }
+        .sortable-header:hover {
+            color: #6366f1;
+        }
+        .header-area .nav li a{
+        font-size: 13px !important;
+        }
+    </style>
+</head>
+<body>
+    <header class="header-area">
+        <div class="container">
+            <nav class="main-nav">
+                <a href="index.html" class="logo">
+                    <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
+                    <h1>Pax Dei Archives</h1>
+                </a>
+                <a class='menu-trigger'>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </a>
+                <div class="nav-and-search-wrapper">
+                    <ul class="nav">
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="abilities.html">Abilities</a></li>
+                        <li><a href="gathering.html">Gathering Tracker</a></li>
+                        <li><a href="runs.html">Run History</a></li>
+                        <li><a href="gems.html">Gems</a></li>
+                        <li><a href="grace.html">Grace Calculator</a></li>
+                        <li><a href="developer-comments.html">Dev Comments</a></li>
+                        <li><a href="lore.html">Lore</a></li>
+                        <li><a href="ledger.html">Ledger</a></li>
+                        <li><a href="trends.html">Market Trends</a></li>
+                        <li><a href="listings.html" class="active">Active Listings</a></li>
+                        <li><a href="map.html">Map</a></li>
+                    </ul>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container mt-8 mb-8">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="page-content">
+                    <div class="p-6 sm:p-8 md:p-10 rounded-lg w-full max-w-7xl mx-auto ">
+                        <h1 class="text-3xl sm:text-4xl font-bold text-center mb-6 text-white-400">Active Market Listings</h1>
+                        <h3 class="text-center">View and filter active market listings from all users.</h3>
+                        <br>
+
+                        <div class="mb-8 p-4 bg-gray-800 rounded-lg">
+                            <div class="flex items-center justify-between mb-4">
+                                <h2 class="text-2xl font-semibold text-white">Filter Listings</h2>
+                               <button id="importDataBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg float-right">
+                                <i class="fa fa-upload mr-2"></i> Import Data
+                                </button>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                <div class="relative">
+                                    <label for="filterRegion" class="block text-gray-300 text-sm font-bold mb-2">Region:</label>
+                                    <select id="filterRegion" class="shadow appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                                        <option value="">All Regions</option>
+                                    </select>
+                                </div>
+                                <div class="relative">
+                                    <label for="filterProvince" class="block text-gray-300 text-sm font-bold mb-2">Province:</label>
+                                    <select id="filterProvince" class="shadow appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                                        <option value="">All Provinces</option>
+                                    </select>
+                                </div>
+                                <div class="relative">
+                                    <label for="filterHomeValley" class="block text-gray-300 text-sm font-bold mb-2">Home Valley:</label>
+                                    <select id="filterHomeValley" class="shadow appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                                        <option value="">All Valleys</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="relative">
+                                    <label for="filterCategory" class="block text-gray-300 text-sm font-bold mb-2">Category:</label>
+                                    <select id="filterCategory" class="shadow appearance-none border border-gray-600 rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                                        <option value="">Loading categories...</option>
+                                    </select>
+                                </div>
+                                <div class="relative">
+                                    <label for="filterItemName" class="block text-gray-300 text-sm font-bold mb-2">Item:</label>
+                                    <select id="filterItemName" class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                                        <option value="">Loading items...</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end gap-2 mt-4">
+                                <button id="applyFiltersBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-150 ease-in-out">
+                                    <i class="fa fa-filter mr-2"></i> Apply Filters
+                                </button>
+                                <button id="clearFiltersBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-150 ease-in-out">
+                                    Clear Filters
+                                </button>
+                            </div>
+                        </div>
+
+
+                        <div class="p-4 bg-gray-800 rounded-lg">
+                            <h2 class="text-2xl font-semibold mb-4 text-white">Active Listings</h2>
+                            <div id="listingResultsTableContainer" class="bg-gray-600 p-3 rounded-lg border border-gray-500">
+                                <table class="min-w-full divide-y divide-gray-500">
+                                    <thead>
+                                        <tr>
+                                            <th class="sticky top-0 bg-gray-600 px-3 py-2 text-left text-sm font-medium text-gray-300 uppercase tracking-wider sortable-header" data-sort-key="item_name">Item Name <i class="fas fa-sort"></i></th>
+                                            <th class="sticky top-0 bg-gray-600 px-3 py-2 text-center text-sm font-medium text-gray-300 uppercase tracking-wider sortable-header" data-sort-key="category_name">Category <i class="fas fa-sort"></i></th>
+                                            <th class="sticky top-0 bg-gray-600 px-3 py-2 text-center text-sm font-medium text-gray-300 uppercase tracking-wider sortable-header" data-sort-key="quantity_listed">Quantity <i class="fas fa-sort"></i></th>
+                                            <th class="sticky top-0 bg-gray-600 px-3 py-2 text-center text-sm font-medium text-gray-300 uppercase tracking-wider sortable-header" data-sort-key="listed_price_per_unit">Price/Unit <i class="fas fa-sort"></i></th>
+                                            <th class="sticky top-0 bg-gray-600 px-3 py-2 text-center text-sm font-medium text-gray-300 uppercase tracking-wider sortable-header" data-sort-key="total_listed_price">Total Price <i class="fas fa-sort"></i></th>
+                                            <th class="sticky top-0 bg-gray-600 px-3 py-2 text-center text-sm font-medium text-gray-300 uppercase tracking-wider sortable-header" data-sort-key="listing_date" data-default-sort="desc">Date Listed <i class="fas fa-sort-down"></i></th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody id="listingResultsBody" class="bg-gray-800 divide-y divide-gray-700 text-white">
+                                        <tr>
+                                            <td colspan="6" class="px-3 py-4 whitespace-nowrap text-sm text-gray-400 text-center">Loading or No active listings found. Apply filters to search.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div id="paginationContainer" class="flex justify-center items-center space-x-2 mt-4 text-white"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="importDataModal" class="fixed inset-0 z-40 hidden flex items-center justify-center bg-black/50 overflow-auto">
+        <div class="bg-gray-800 rounded-lg w-full max-w-lg p-6 m-4">
+            <h2 class="text-2xl font-semibold mb-4 text-white">Import Market Listings</h2>
+
+            <div id="noCharactersWarning" class="text-red-400 mb-4 hidden">
+            You don't have any characters. <a href="/ledger.html" class="text-blue-400 underline">Create a new character first</a>.
+            </div>
+
+            <div class="mb-4">
+            <label for="selectCharacter" class="block text-gray-300 mb-2">Select Your Character:</label>
+            <select id="selectCharacter" class="w-full rounded-lg p-2 bg-gray-700 text-white">
+                <option value="">Loading characters...</option>
+            </select>
+            </div>
+            
+            <div class="mb-4">
+            <label for="selectStall" class="block text-gray-300 mb-2">Select Market Stall:</label>
+            <select id="selectStall" class="w-full rounded-lg p-2 bg-gray-700 text-white" disabled>
+                <option value="">Select a character first</option>
+            </select>
+            </div>
+
+            <div class="mb-4">
+            <label for="importFile" class="block text-gray-300 mb-2">Select JSON File:</label>
+            <input type="file" id="importFile" accept=".json" class="w-full text-white"/>
+            </div>
+
+            <div class="flex justify-end gap-2 mt-4">
+            <button id="importCancelBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">
+                Cancel
+            </button>
+            <button id="importSubmitBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg">
+                Import
+            </button>
+            </div>
+        </div>
+        </div>
+
+
+        <div id="confirmationModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-[60] flex items-center justify-center">
+            <div class="bg-gray-800 border border-gray-700 rounded-lg shadow-xl p-6 w-full max-w-sm">
+                <h3 class="text-xl font-semibold text-white mb-4">Import Complete</h3>
+                <p id="confirmationMessageText" class="text-gray-300 mb-6 text-sm"></p>
+                <div class="flex justify-end">
+                    <button id="confirmationOkBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition duration-150 shadow-md">
+                        Ok
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12">
+                    <p>Pax Dei Archives is a fan-made site and not affiliated with Pax Dei or MAINFRAME.</p>
+                    <p>All intellectual property and assets related to Pax Dei game are reserved by MAINFRAME INDUSTRIES.</p>
+                    <a href="admin.html">Admin</a>
+                    <a href="privacy.html">Privacy Policy</a>
+                </div>
+            </div>
+        </div>
+        <div class="corner-credit">
+            <div class="corner-credit-top-row"> <img src="frontend/www/assets/phoenix.png" alt="Phoenix profile image" class="profile-image" />
+                <span class="nav-text-profile">Made by Phoenix ✨</span>
+            </div>
+            <div id="utc-clock-display" class="utc-clock"></div>
+        </div>
+    </footer>
+    <div id="floating-avatar-container">
+        <img id="floating-avatar" src="data:image/gif;base64,R_auto," alt="User Avatar" class="floating-avatar js-floating-avatar">
+    </div>
+
+    <div id="auth-modal">
+        <div class="modal-content-wrapper" id="modal-content-wrapper">
+        </div>
+    </div>
+    <div id="ability-popup-overlay" class="popup-overlay"></div>
+    
+    <script type="module" src="frontend/www/js/supabaseClient.js"></script>
+    <script type="module" src="frontend/www/js/utils.js"></script>
+    <script type="module" src="frontend/www/js/main.js"></script>
+    <script type="module" src="frontend/www/js/market_listings.js"></script>
+    <script type="module" src="frontend/www/js/import_data.js"></script>
+    <script type="module" src="frontend/www/js/popoutAuth.js"></script>
+</body>
+</html>

@@ -363,84 +363,93 @@ const populateHomeValleyDropdowns = (regionName, shard, province) => {
 };
 
 const handleCreateCharacter = async (e) => {
-    e.preventDefault();
-    const characterName = newCharacterNameInput.value.trim();
-    const initialGold = parseInt(newCharacterGoldInput.value, 10);
-    const selectedRegionName = newCharacterRegionNameSelect.value;
-    const selectedShard = newCharacterShardSelect.value;
-    const selectedProvince = newCharacterProvinceSelect.value;
-    const selectedHomeValley = newCharacterHomeValleySelect.value;
+  e.preventDefault();
+  const characterName = newCharacterNameInput.value.trim();
+  const initialGold = parseInt(newCharacterGoldInput.value, 10);
+  const selectedRegionName = newCharacterRegionNameSelect.value;
+  const selectedShard = newCharacterShardSelect.value;
+  const selectedProvince = newCharacterProvinceSelect.value;
+  const selectedHomeValley = newCharacterHomeValleySelect.value;
 
 
-    if (!characterName) {
-        await showCustomModal('Validation Error', 'Character name cannot be empty.', [{ text: 'OK', value: true }]);
-        return;
+  if (!characterName) {
+    await showCustomModal('Validation Error', 'Character name cannot be empty.', [{ text: 'OK', value: true }]);
+    return;
+  }
+
+  if (isNaN(initialGold) || initialGold < 0) {
+    await showCustomModal('Validation Error', 'Starting gold must be a non-negative number.', [{ text: 'OK', value: true }]);
+    return;
+  }
+
+  if (!selectedRegionName || !selectedShard || !selectedProvince || !selectedHomeValley) {
+    await showCustomModal('Validation Error', 'Please select a Region Name, Shard, Province, and Home Valley.', [{ text: 'OK', value: true }]);
+    return;
+  }
+
+  const regionEntry = cachedRegions.find(
+    r => r.region_name === selectedRegionName &&
+         r.shard === selectedShard &&
+         r.province === selectedProvince &&
+         r.home_valley === selectedHomeValley
+  );
+
+  if (!regionEntry) {
+    console.error('Error: Selected region combination not found in cache.');
+    await showCustomModal('Error', 'Failed to find the selected region combination. Please ensure all fields are correctly selected.', [{ text: 'OK', value: true }]);
+    return;
+  }
+  const regionEntryId = regionEntry.id;
+
+
+  const { data, error } = await supabase
+    .from('characters')
+    .insert([{ 
+        user_id: currentUserId, 
+        character_name: characterName, 
+        gold: initialGold, 
+        region: selectedRegionName, 
+        shard: selectedShard, 
+        province: selectedProvince, 
+        home_valley: selectedHomeValley, 
+        region_entry_id: regionEntryId 
+    }])
+    .select('character_id, character_name, gold');
+
+  if (error) {
+    if (error.code === '23505') {
+      await showCustomModal('Error', `A character with the name "${characterName}" already exists for your account.`, [{ text: 'OK', value: true }]);
+    } else {
+      await showCustomModal('Error', 'Error creating character: ' + error.message, [{ text: 'OK', value: true }]);
     }
+    console.error('Error creating character:', error.message);
+    return;
+  }
 
-    if (isNaN(initialGold) || initialGold < 0) {
-        await showCustomModal('Validation Error', 'Starting gold must be a non-negative number.', [{ text: 'OK', value: true }]);
-        return;
-    }
+  const newCharacter = data[0];
+  currentCharacterId = newCharacter.character_id;
+  _currentCharacter = newCharacter;
+  setCurrentCharacterGold(newCharacter.gold);
+  cachedUserCharacters.push(newCharacter);
 
-    if (!selectedRegionName || !selectedShard || !selectedProvince || !selectedHomeValley) {
-        await showCustomModal('Validation Error', 'Please select a Region Name, Shard, Province, and Home Valley.', [{ text: 'OK', value: true }]);
-        return;
-    }
+  await createDefaultMarketStall(currentCharacterId, characterName);
 
-    const regionEntry = cachedRegions.find(
-        r => r.region_name === selectedRegionName &&
-             r.shard === selectedShard &&
-             r.province === selectedProvince &&
-             r.home_valley === selectedHomeValley
-    );
+  await showCustomModal('Success', `Character "${characterName}" created successfully with ${initialGold.toLocaleString()} gold in ${selectedRegionName} (${selectedShard}, ${selectedProvince}, ${selectedHomeValley})!`, [{ text: 'OK', value: true }]);
+  if (createCharacterModal) {
+    createCharacterModal.classList.add('hidden');
+  }
+  newCharacterNameInput.value = '';
+  newCharacterGoldInput.value = '0';
+  newCharacterRegionNameSelect.value = '';
+  newCharacterShardSelect.innerHTML = '<option value="" disabled selected>Select Shard</option>';
+  newCharacterProvinceSelect.innerHTML = '<option value="" disabled selected>Select Province</option>';
+  newCharacterHomeValleySelect.innerHTML = '<option value="" disabled selected>Select Home Valley</option>';
 
-    if (!regionEntry) {
-        console.error('Error: Selected region combination not found in cache.');
-        await showCustomModal('Error', 'Failed to find the selected region combination. Please ensure all fields are correctly selected.', [{ text: 'OK', value: true }]);
-        return;
-    }
-    const regionEntryId = regionEntry.id;
+  newCharacterShardSelect.disabled = true;
+  newCharacterProvinceSelect.disabled = true;
+  newCharacterHomeValleySelect.disabled = true;
 
-
-    const { data, error } = await supabase
-        .from('characters')
-        .insert([{ user_id: currentUserId, character_name: characterName, gold: initialGold, region: selectedRegionName, region_entry_id: regionEntryId }])
-        .select('character_id, character_name, gold');
-
-    if (error) {
-        if (error.code === '23505') {
-            await showCustomModal('Error', `A character with the name "${characterName}" already exists for your account.`, [{ text: 'OK', value: true }]);
-        } else {
-            await showCustomModal('Error', 'Error creating character: ' + error.message, [{ text: 'OK', value: true }]);
-        }
-        console.error('Error creating character:', error.message);
-        return;
-    }
-
-    const newCharacter = data[0];
-    currentCharacterId = newCharacter.character_id;
-    _currentCharacter = newCharacter;
-    setCurrentCharacterGold(newCharacter.gold);
-    cachedUserCharacters.push(newCharacter);
-
-    await createDefaultMarketStall(currentCharacterId, characterName);
-
-    await showCustomModal('Success', `Character "${characterName}" created successfully with ${initialGold.toLocaleString()} gold in ${selectedRegionName} (${selectedShard}, ${selectedProvince}, ${selectedHomeValley})!`, [{ text: 'OK', value: true }]);
-    if (createCharacterModal) {
-        createCharacterModal.classList.add('hidden');
-    }
-    newCharacterNameInput.value = '';
-    newCharacterGoldInput.value = '0';
-    newCharacterRegionNameSelect.value = '';
-    newCharacterShardSelect.innerHTML = '<option value="" disabled selected>Select Shard</option>';
-    newCharacterProvinceSelect.innerHTML = '<option value="" disabled selected>Select Province</option>';
-    newCharacterHomeValleySelect.innerHTML = '<option value="" disabled selected>Select Home Valley</option>';
-
-    newCharacterShardSelect.disabled = true;
-    newCharacterProvinceSelect.disabled = true;
-    newCharacterHomeValleySelect.disabled = true;
-
-    await loadCharacters(loadTraderPageData);
+  await loadCharacters(loadTraderPageData);
 };
 
 export const handleDeleteCharacter = async (characterIdParam = null) => {
