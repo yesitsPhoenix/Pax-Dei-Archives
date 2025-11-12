@@ -51,7 +51,6 @@ const getOrCreateItemId = async (itemName, categoryId) => {
         .from('items')
         .select('item_id')
         .eq('item_name', itemName)
-        //.eq('character_id', currentCharacterId)
         .limit(1);
 
     if (selectError) {
@@ -77,7 +76,6 @@ const getOrCreateItemId = async (itemName, categoryId) => {
         .insert({
             item_name: itemName,
             category_id: categoryId,
-            //character_id: currentCharacterId
         })
         .select('item_id')
         .single();
@@ -131,15 +129,7 @@ export const handleAddListing = async (e) => {
             return;
         }
 
-        // if (isNaN(itemCategory) || itemCategory <= 0) {
-        //     await showCustomModal('Validation Error', 'Please select a valid item category.', [{
-        //         text: 'OK',
-        //         value: true
-        //     }]);
-        //     console.error("Validation Error: Invalid item category. Aborting.", { itemCategory });
-        //     return;
-        // }
-
+ 
         const itemId = await getOrCreateItemId(itemName);
         if (!itemId) {
             console.error("Error: Could not get or create item ID. Aborting listing creation.");
@@ -256,141 +246,7 @@ export const handleAddListing = async (e) => {
     }
 };
 
-// export const handleMarkAsSold = async (listingId) => {
-//     //console.log('handleMarkAsSold called for listing ID:', listingId);
-//     const confirmation = await showCustomModal('Confirm Sale', 'Are you sure you want to mark this listing as sold? This action cannot be undone.', [{
-//         text: 'Yes',
-//         value: true,
-//         class: 'bg-green-500 hover:bg-green-700'
-//     }, {
-//         text: 'No',
-//         value: false,
-//         class: 'bg-gray-500 hover:bg-gray-700'
-//     }]);
 
-//     if (!confirmation) {
-//         //console.log('Mark as sold cancelled by user.');
-//         return;
-//     }
-//     //console.log('Confirmation received for marking as sold.');
-
-//     try {
-//         const {
-//             data: listing,
-//             error: fetchError
-//         } = await supabase
-//             .from('market_listings')
-//             .select('listing_id, quantity_listed, total_listed_price, listed_price_per_unit, character_id')
-//             .eq('listing_id', listingId)
-//             .single();
-
-//         if (fetchError || !listing) {
-//             console.error('handleMarkAsSold: Error fetching listing for sale record:', fetchError);
-//             await showCustomModal('Error', 'Could not retrieve listing details to record sale.', [{
-//                 text: 'OK',
-//                 value: true
-//             }]);
-//             return;
-//         }
-//         //console.log('Listing fetched for marking as sold:', listing);
-
-
-//         const {
-//             error: updateError
-//         } = await supabase
-//             .from('market_listings')
-//             .update({
-//                 is_fully_sold: true,
-//                 is_cancelled: false
-//             })
-//             .eq('listing_id', listingId)
-//             .eq('character_id', currentCharacterId);
-
-//         if (updateError) {
-//             console.error('handleMarkAsSold: Failed to mark listing as sold:', updateError);
-//             await showCustomModal('Error', 'Failed to mark listing as sold: ' + updateError.message, [{
-//                 text: 'OK',
-//                 value: true
-//             }]);
-//             return;
-//         }
-//         //console.log('Listing successfully marked as sold in DB.');
-
-
-//         const {
-//             error: insertSaleError
-//         } = await supabase
-//             .from('sales')
-//             .insert({
-//                 listing_id: listing.listing_id,
-//                 quantity_sold: listing.quantity_listed,
-//                 sale_price_per_unit: listing.listed_price_per_unit,
-//                 total_sale_price: listing.total_listed_price,
-//                 character_id: listing.character_id
-//             });
-
-//         if (insertSaleError) {
-//             console.error('handleMarkAsSold: Error inserting sales record:', insertSaleError.message);
-//             await showCustomModal('Error', 'Listing marked as sold, but failed to record sale history: ' + insertSaleError.message, [{
-//                 text: 'OK',
-//                 value: true
-//             }]);
-//         } else {
-//             //console.log('Sales record inserted successfully. Fetching character gold.');
-//             const {
-//                 data: characterData,
-//                 error: fetchGoldError
-//             } = await supabase
-//                 .from('characters')
-//                 .select('gold')
-//                 .eq('character_id', currentCharacterId)
-//                 .single();
-
-//             if (fetchGoldError) {
-//                 console.error('handleMarkAsSold: Error fetching character gold for sale receipt:', fetchGoldError.message);
-//                 await showCustomModal('Warning', 'Listing marked as sold, but failed to update character gold. Please manually adjust gold if needed.', [{
-//                     text: 'OK',
-//                     value: true
-//                 }]);
-//             } else {
-//                 const newGold = (characterData.gold || 0) + listing.total_listed_price;
-//                 //console.log(`Updating character gold from ${characterData.gold} to ${newGold}.`);
-//                 const {
-//                     error: updateGoldError
-//                 } = await supabase
-//                     .from('characters')
-//                     .update({
-//                         gold: newGold
-//                     })
-//                     .eq('character_id', currentCharacterId);
-
-//                 if (updateGoldError) {
-//                     await showCustomModal('Error', 'Listing marked as sold, but failed to update character gold: ' + updateGoldError.message, [{
-//                         text: 'OK',
-//                         value: true
-//                     }]);
-//                     console.error('handleMarkAsSold: Error updating character gold:', updateGoldError.message);
-//                 } else {
-//                     await showCustomModal('Success', 'Listing marked as sold and gold updated!', [{
-//                         text: 'OK',
-//                         value: true
-//                     }]);
-//                     //console.log('Character gold updated successfully. Loading trader page data.');
-//                     await loadTraderPageData();
-//                 }
-//             }
-//         }
-//     } catch (e) {
-//         console.error('handleMarkAsSold: An unexpected error occurred while marking the listing as sold.', e);
-//         await showCustomModal('Error', 'An unexpected error occurred while marking the listing as sold.', [{
-//             text: 'OK',
-//             value: true
-//         }]);
-//     } finally {
-//         //console.log('handleMarkAsSold finished. Calling loadActiveListings.');
-//         loadActiveListings();
-//     }
-// };
 
 export const handleMarkAsSold = async (listingId) => {
     const confirmation = await showCustomModal('Confirm Sale', 'Are you sure you want to mark this listing as sold? This action cannot be undone.', [{
@@ -518,84 +374,6 @@ export const handleMarkAsSold = async (listingId) => {
 };
 
 
-// export const handleCancelListing = async (listingId) => {
-//     //console.log('handleCancelListing called for listing ID:', listingId);
-//     const confirmation = await showCustomModal('Confirm Cancel', 'Are you sure you want to cancel this listing? This action cannot be undone.', [{
-//         text: 'Yes',
-//         value: true,
-//         class: 'bg-red-500 hover:bg-red-700'
-//     }, {
-//         text: 'No',
-//         value: false,
-//         class: 'bg-gray-500 hover:bg-gray-700'
-//     }]);
-
-//     if (!confirmation) {
-//         //console.log('Cancellation cancelled by user.');
-//         return;
-//     }
-//     //console.log('Confirmation received for cancellation.');
-
-//     try {
-//         const {
-//             data: listing,
-//             error: fetchError
-//         } = await supabase
-//             .from('market_listings')
-//             .select('listing_id, market_fee')
-//             .eq('listing_id', listingId)
-//             .single();
-
-//         if (fetchError || !listing) {
-//             console.error('handleCancelListing: Error fetching listing for cancellation:', fetchError);
-//             await showCustomModal('Error', 'Could not retrieve listing details for cancellation.', [{
-//                 text: 'OK',
-//                 value: true
-//             }]);
-//             return;
-//         }
-//         //console.log('Listing fetched for cancellation:', listing);
-
-
-//         const {
-//             error: updateError
-//         } = await supabase
-//             .from('market_listings')
-//             .update({
-//                 is_cancelled: true,
-//                 is_fully_sold: false
-//             })
-//             .eq('listing_id', listingId)
-//             .eq('character_id', currentCharacterId);
-
-//         if (updateError) {
-//             console.error('handleCancelListing: Failed to cancel listing:', updateError);
-//             await showCustomModal('Error', 'Failed to cancel listing: ' + updateError.message, [{
-//                 text: 'OK',
-//                 value: true
-//             }]);
-//             return;
-//         }
-//         //console.log('Listing successfully marked as cancelled in DB.');
-
-
-//         await showCustomModal('Success', 'Listing canceled successfully!', [{
-//             text: 'OK',
-//             value: true
-//         }]);
-//         //console.log('Calling loadTraderPageData after cancellation.');
-//         await loadTraderPageData();
-//     } catch (e) {
-//         console.error('handleCancelListing: An unexpected error occurred while canceling the listing.', e);
-//         await showCustomModal('Error', 'An unexpected error occurred while canceling the listing.', [{
-//             text: 'OK',
-//             value: true
-//         }]);
-//     } finally {
-//         //console.log('handleCancelListing finished. Calling loadActiveListings.');
-//         loadActiveListings();
-//     }
-// };
 
 export const handleCancelListing = async (listingId) => {
     const confirmation = await showCustomModal('Confirm Cancel', 'Are you sure you want to cancel this listing? This action cannot be undone.', [{

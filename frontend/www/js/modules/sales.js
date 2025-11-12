@@ -46,6 +46,211 @@ export const initializeSales = () => {
     if (transactionSortDirection) {
         transactionSortDirection.addEventListener('change', applyTransactionFilters);
     }
+    
+    setupDeleteListeners();
+};
+
+const handleDeleteTransaction = async (id, type) => {
+    const confirmed = await showCustomModal(
+        'Confirm Deletion',
+        `Are you sure you want to permanently delete this ${type} transaction? This action cannot be undone.`,
+        [{ text: 'Cancel', value: false }, { text: 'Delete', value: true, style: 'red' }]
+    );
+
+    if (!confirmed) return;
+
+    let tableName;
+    let idColumn;
+    let processedId = id; 
+
+    switch (type) {
+        case 'Sale':
+            tableName = 'sales';
+            idColumn = 'sale_id';
+            processedId = parseInt(id, 10);
+            break;
+        case 'Purchase':
+            tableName = 'purchases';
+            idColumn = 'purchase_id';
+            break;
+        case 'PVE Gold':
+            tableName = 'pve_transactions';
+            idColumn = 'transaction_id';
+            break;
+        case 'Cancellation':
+        case 'Listing Fee':
+            tableName = 'market_listings';
+            idColumn = 'listing_id';
+            processedId = parseInt(id, 10);
+            break;
+        default:
+            console.error('Unknown transaction type for deletion:', type);
+            await showCustomModal('Error', 'Cannot delete unknown transaction type.', [{ text: 'OK', value: true }]);
+            return;
+    }
+
+    if (!processedId) {
+        console.error('Invalid ID for deletion after processing:', id, type);
+        await showCustomModal('Error', 'Failed to delete: Invalid ID.', [{ text: 'OK', value: true }]);
+        return;
+    }
+
+    try {
+        
+        const transaction = fullTransactionHistory.find(t => t.id.toString() === id);
+        
+        let goldChange = 0;
+        let listingId = null;
+        let quantitySold = 0;
+
+        if (transaction) {
+            const amount = parseFloat(transaction.total_amount) || 0;
+            const feeAmount = parseFloat(transaction.fee) || 0;
+            
+            if (type === 'Sale') {
+                listingId = transaction.listing_id;
+                quantitySold = parseFloat(transaction.quantity || 0);
+            }
+
+            switch (type) {
+                case 'Purchase':
+                    goldChange = amount;
+                    break;
+                case 'PVE Gold':
+                    goldChange = -amount;
+                    break;
+                case 'Sale':
+                    goldChange = -(amount - feeAmount);
+                    break;
+                
+            }
+        } else {
+             console.warn('Transaction details not found in local history for ID:', id, 'Gold and listing reversal skipped.');
+        }
+
+        
+        // 1. Gold Reversal
+        if (goldChange !== 0 && currentCharacterId) {
+            
+            const { data: charData, error: fetchError } = await supabase
+                .from('characters')
+                .select('gold')
+                .eq('character_id', currentCharacterId)
+                .single();
+
+            if (fetchError || !charData) {
+                console.error('Failed to fetch character gold for reversal:', fetchError?.message || 'No character data found.');
+            } else {
+                const currentGold = parseFloat(charData.gold) || 0;
+                const newGold = Math.max(0, currentGold + goldChange);
+                
+                // CRITICAL FIX: Round the final gold value before updating the bigint column
+                const roundedNewGold = Math.round(newGold);
+
+                const { error: updateError } = await supabase
+                    .from('characters')
+                    .update({ gold: roundedNewGold }) // Use the rounded value here
+                    .eq('character_id', currentCharacterId);
+
+                if (updateError) {
+                    console.error('Failed to update character gold during reversal:', updateError.message);
+                }
+            }
+        }
+        
+        // 2. Market Listing Reversion (Only for successful Sale deletion)
+        
+        if (type === 'Sale') {
+            
+            if (!listingId || quantitySold <= 0) {
+                 console.warn(`Sale deletion attempted, but missing required listing data (Listing ID: ${listingId}, Quantity Sold: ${quantitySold}). Skipping market listing reversal.`);
+            } else {
+                
+                
+                const { data: listingData, error: fetchListingError } = await supabase
+                    .from('market_listings')
+                    .select('quantity_listed')
+                    .eq('listing_id', listingId)
+                    .single();
+
+                if (fetchListingError || !listingData) {
+                    console.warn('Failed to fetch market listing for reversal. Only proceeding with sale record deletion.', fetchListingError?.message);
+                } else {
+                    const currentQuantity = parseFloat(listingData.quantity_listed) || 0;
+                    const newQuantity = currentQuantity + quantitySold; 
+                    
+                    const { error: updateListingError } = await supabase
+                        .from('market_listings')
+                        .update({ 
+                            quantity_listed: newQuantity,
+                            is_fully_sold: false,
+                            is_cancelled: false 
+                        }) 
+                        .eq('listing_id', listingId);
+
+                    if (updateListingError) {
+                        console.error('Failed to revert market listing quantity/status:', updateListingError.message);
+                    }
+                }
+            }
+        }
+        
+        // 3. Delete transaction record (for all types)
+        const deleteResult = await supabase
+            .from(tableName)
+            .delete()
+            .eq(idColumn, processedId);
+
+
+        const { error, data, count } = deleteResult;
+        
+        
+        if (error) {
+            
+            if (error.code && error.code.startsWith('4')) {
+                console.warn('DELETE operation failed (likely RLS):', error.message);
+                await showCustomModal('RLS Error', `Failed to delete transaction: Permission denied. Check database security rules.`, [{ text: 'OK', value: true }]);
+            }
+            throw new Error(error.message);
+        }
+        
+        
+        
+        document.body.dispatchEvent(new CustomEvent('statsNeedRefresh'));
+        
+        
+        fullTransactionHistory = fullTransactionHistory.filter(t => t.id.toString() !== id);
+        applyTransactionFilters();
+
+        await showCustomModal('Success', `${type} transaction deleted successfully.`, [{ text: 'OK', value: true }]);
+
+    } catch (err) {
+        console.error('Error deleting transaction:', err.message);
+        
+        if (!(err.message.includes('Permission denied') || err.message.includes('RLS'))) {
+             await showCustomModal('Error', `Failed to delete transaction: ${err.message}`, [{ text: 'OK', value: true }]);
+        }
+    }
+};
+
+
+
+const setupDeleteListeners = () => {
+    if (salesBody) {
+        salesBody.addEventListener('click', (event) => {
+            const button = event.target.closest('.delete-transaction-btn');
+            if (button) {
+                const id = button.dataset.transactionId;
+                const type = button.dataset.transactionType;
+
+                if (id && type) {
+                    handleDeleteTransaction(id, type);
+                } else {
+                    console.error('Delete button missing transaction ID or Type. Check data mapping.');
+                }
+            }
+        });
+    }
 };
 
 export const loadTransactionHistory = (transactions) => {
@@ -66,7 +271,7 @@ export const loadTransactionHistory = (transactions) => {
     if (!currentCharacterId) {
         if (salesLoader) salesLoader.style.display = 'none';
         if (salesTable) salesTable.style.display = 'table';
-        if (salesBody) salesBody.innerHTML = '<tr><td colspan="9" class="text-center py-4">Please select a character or create one to view transaction history.</td></tr>'; // Updated colspan
+        if (salesBody) salesBody.innerHTML = '<tr><td colspan="10" class="text-center py-4">Please select a character or create one to view transaction history.</td></tr>';
         return;
     }
     if (salesLoader) salesLoader.style.display = 'block';
@@ -177,7 +382,7 @@ const renderTransactionTable = (transactions) => {
     if (!salesBody) return;
     salesBody.innerHTML = '';
     if (!transactions || transactions.length === 0) {
-        if (salesBody) salesBody.innerHTML = '<tr><td colspan="9" class="text-center py-4">No transactions recorded yet.</td></tr>';
+        if (salesBody) salesBody.innerHTML = '<tr><td colspan="10" class="text-center py-4">No transactions recorded yet.</td></tr>';
         return;
     }
     transactions.forEach(transaction => {
@@ -185,7 +390,7 @@ const renderTransactionTable = (transactions) => {
         row.className = 'border-b border-gray-200 hover:bg-gray-100';
         const itemNameDisplay = transaction.type === 'PVE Gold' ? transaction.item_name : (transaction.item_name || 'N/A');
         const quantityDisplay = transaction.type === 'PVE Gold' ? 'N/A' : (transaction.quantity?.toLocaleString() || 'N/A');
-        const pricePerUnitDisplay = (parseFloat(transaction.price_per_unit || transaction.total_amount) || 0).toFixed(2);
+        const pricePerUnitDisplay = (parseFloat(transaction.price_per_unit) || 0).toFixed(2);
         const totalAmountDisplay = (parseFloat(transaction.total_amount) || 0).toFixed(2);
         const utcDateOnlyDisplay = transaction.date ? new Date(transaction.date).toISOString().substring(0, 10) : 'N/A';
         row.innerHTML = `
@@ -193,10 +398,20 @@ const renderTransactionTable = (transactions) => {
             <td class="py-3 px-6 text-left">${utcDateOnlyDisplay}</td>
             <td class="py-3 px-6 text-left whitespace-nowrap">${itemNameDisplay}</td>
             <td class="py-3 px-6 text-left">${transaction.category_name || 'N/A'}</td>
-            <td class="py-3 px-6 text-left whitespace-nowrap">${transaction.market_stall_name || 'N/A'}</td> <td class="py-3 px-6 text-right">${quantityDisplay}</td>
+            <td class="py-3 px-6 text-left whitespace-nowrap">${transaction.market_stall_name || 'N/A'}</td> 
+            <td class="py-3 px-6 text-right">${quantityDisplay}</td>
             <td class="py-3 px-6 text-right">${pricePerUnitDisplay}</td>
             <td class="py-3 px-6 text-right">${totalAmountDisplay}</td>
             <td class="py-3 px-6 text-right">${(parseFloat(transaction.fee) || 0).toFixed(2)}</td>
+            <td class="py-2 px-3 text-center">
+                <button 
+                    class="delete-transaction-btn bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-2 text-xs rounded-full transition duration-150"
+                    data-transaction-id="${transaction.id || ''}"
+                    data-transaction-type="${transaction.type || ''}"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                </button>
+            </td>
         `;
         salesBody.appendChild(row);
     });
@@ -290,7 +505,7 @@ export const handleDownloadCsv = async () => {
             const category = `"${transaction.category_name || 'N/A'}"`;
             const marketStall = `"${(transaction.market_stall_name || '').replace(/"/g, '""')}"`;
             const quantity = transaction.type === 'PVE Gold' ? '' : (transaction.quantity?.toLocaleString() || '');
-            const pricePerUnit = (parseFloat(transaction.price_per_unit || transaction.total_amount) || 0).toFixed(2);
+            const pricePerUnit = (parseFloat(transaction.price_per_unit) || 0).toFixed(2);
             const totalAmount = (parseFloat(transaction.total_amount) || 0).toFixed(2);
             const fee = (parseFloat(transaction.fee) || 0).toFixed(2);
             csvRows.push([transaction.type, date, itemName, category, marketStall, quantity, pricePerUnit, totalAmount, fee].join(','));

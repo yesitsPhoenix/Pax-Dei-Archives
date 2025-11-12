@@ -1,7 +1,7 @@
 // characters.js
 import { supabase } from '../supabaseClient.js';
 import { showCustomModal, loadTraderPageData } from '../trader.js';
-import { loadTransactionHistory } from './sales.js';
+import { loadTransactionHistory, } from './sales.js';
 import { renderSalesChart } from './salesChart.js';
 import { createDefaultMarketStall } from './actions.js';
 
@@ -38,6 +38,14 @@ export const setCurrentCharacterGold = (gold) => {
         _currentCharacter.gold = gold;
     }
 };
+
+
+export const loadCurrentCharacterData = () => {
+    if (currentCharacterId) {
+        loadTraderPageData(currentCharacterId);
+    }
+};
+
 
 export const insertCharacterModalHtml = () => {
     const createCharacterModalHtml = `
@@ -115,6 +123,7 @@ export const insertCharacterModalHtml = () => {
 };
 
 export const initializeCharacters = async (userId = null, onCharacterSelectedCallback) => {
+    document.body.addEventListener('statsNeedRefresh', loadCurrentCharacterData);
     if (!userId) {
         const session = await supabase.auth.getSession();
         userId = session?.data?.session?.user?.id;

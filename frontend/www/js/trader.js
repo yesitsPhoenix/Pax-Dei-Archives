@@ -216,51 +216,6 @@ const clearTraderPageUI = () => {
 };
 
 
-// export const loadTraderPageData = async (reloadActiveListings = true) => {
-//     if (!currentUser || !currentUser.id || !currentCharacterId) {
-//         clearTraderPageUI();
-//         if (reloadActiveListings) {
-//             await loadActiveListings();
-//         }
-//         updateAllCharts('daily');
-//         return;
-//     }
-
-//     try {
-//         clearMarketStallsCache();
-//         const [
-//             dashboardStatsResult,
-//             currentCharacterData,
-//             rawActivityData
-//         ] = await Promise.all([
-//             supabase.rpc('get_character_dashboard_stats', { p_character_id: currentCharacterId }),
-//             getCurrentCharacter(true),
-//             fetchCharacterActivity(currentCharacterId)
-//         ]);
-
-//         if (dashboardStatsResult.error) {
-//             throw dashboardStatsResult.error;
-//         }
-
-//         allCharacterActivityData = processCharacterActivityData(rawActivityData);
-
-//         renderDashboard(dashboardStatsResult.data ? dashboardStatsResult.data[0] : {}, currentCharacterData);
-//         if (reloadActiveListings) {
-//             await loadActiveListings();
-//         }
-//         loadTransactionHistory(allCharacterActivityData);
-//         updateAllCharts('daily');
-//         if (modalMarketStallLocationSelect) {
-//             await populateMarketStallDropdown(modalMarketStallLocationSelect);
-//         }
-//         await setupMarketStallTabs();
-
-//     } catch (error) {
-//         console.error('Error loading trader page data:', error.message);
-//         await showCustomModal('Error', 'Failed to load trader data: ' + error.message, [{ text: 'OK', value: true }]);
-//     }
-// };
-
 export const loadTraderPageData = async (reloadActiveListings = true) => {
     if (!currentUser || !currentUser.id || !currentCharacterId) {
         clearTraderPageUI();
