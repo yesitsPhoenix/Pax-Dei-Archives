@@ -194,10 +194,14 @@ export const fetchActiveListings = async (page, filters = {}) => {
     try {
         const MAX_FETCH = 5000;
 
-        let { data: allRows, error } = await supabase
+        let query = supabase
             .from('market_listings')
             .select(selectClause)
+            .eq('is_fully_sold', false)
+            .eq('is_cancelled', false)
             .limit(MAX_FETCH);
+
+        let { data: allRows, error } = await query;
 
         if (error) {
             listingResultsBody.innerHTML = `<tr><td colspan="6" class="text-red-400 text-center py-4">Error: ${error.message}</td></tr>`;
