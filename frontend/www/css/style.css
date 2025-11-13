@@ -1480,13 +1480,13 @@ body.modal-open {
 }
 
 .profile-details {
-    width: 50vw;
+    width: auto;
     margin-left: auto;
     margin-right: auto;
 }
 
 #characters-list {
-    width: 50vw;
+    width: auto;
     margin-left: auto;
     margin-right: auto;
 }
