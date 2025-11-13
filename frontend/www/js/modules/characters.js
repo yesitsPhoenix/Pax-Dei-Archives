@@ -531,13 +531,28 @@ export const handleDeleteCharacter = async (characterIdParam = null) => {
             }
         }
 
-        const { error } = await supabase
+        const { error: deleteError } = await supabase
             .from('characters')
             .delete()
             .eq('character_id', characterId)
             .eq('user_id', currentUserId);
 
-        if (error) throw error;
+        if (deleteError) {
+                    
+            if (deleteError.message.includes('violates foreign key constraint "fk_market_stalls_character"')) {
+                const userFriendlyMessage = `
+                    <strong>Deletion Failed: Active Market Stall Found</strong>
+                    <br><br>
+                    To delete this character, you must first cancel all active listings and delete their associated market stall(s).
+                    <br><br>
+                    Please navigate to the <a href="ledger.html" class="text-blue-500 hover:text-blue-700 font-bold">Ledger</a> to remove the dependency.
+                `;
+                await showCustomModal("Deletion Restricted", userFriendlyMessage, [{ text: 'OK', value: true }]);
+            } else {
+                throw deleteError;
+            }
+            return;
+        }
 
         const card = document.getElementById(`character-card-${characterId}`);
         if (card?.parentElement) {
