@@ -56,6 +56,8 @@ export const modalPurchaseItemStacksInput = document.getElementById('modal-purch
 export const modalPurchaseItemCountPerStackInput = document.getElementById('modal-purchase-item-count-per-stack');
 export const modalPurchaseItemPricePerStackInput = document.getElementById('modal-purchase-item-price-per-stack');
 
+export const newMarketStallProvinceSelect = document.getElementById('newMarketStallProvinceSelect');
+export const newMarketStallHomeValleySelect = document.getElementById('newMarketStallHomeValleySelect');
 
 export const LISTINGS_PER_PAGE = 15;
 export let currentListingsPage = 1;

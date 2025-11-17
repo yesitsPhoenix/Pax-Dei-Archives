@@ -110,6 +110,8 @@ const gatheredAmountInput = document.getElementById('gatheredAmountInput');
 const saveRunBtn = document.getElementById('saveRunBtn');
 const cancelFinalizeBtn = document.getElementById('cancelFinalizeBtn');
 const runHistoryBody = document.getElementById('runHistoryBody');
+
+// FIX: Corrected element IDs
 const gatheringMiracleToggle = document.getElementById('gatheringMiracleToggle');
 const gatheringMiracleStatusInput = document.getElementById('gatheringMiracleStatus');
 
@@ -152,19 +154,23 @@ if (isReadOnly) {
     }
 }
 
-
+// FIX: Define the function globally so the HTML buttons can call it
 function setGatheringMiracle(status) {
-    gatheringMiracleStatusInput.value = status;
-    const buttons = gatheringMiracleToggle.querySelectorAll('button');
-    buttons.forEach(button => {
-        if (button.getAttribute('data-status') === status) {
-            button.classList.add('bg-indigo-500', 'text-white');
-            button.classList.remove('text-gray-300', 'hover:bg-gray-600');
-        } else {
-            button.classList.remove('bg-indigo-500', 'text-white');
-            button.classList.add('text-gray-300', 'hover:bg-gray-600');
-        }
-    });
+    if (gatheringMiracleStatusInput) {
+        gatheringMiracleStatusInput.value = status;
+    }
+    if (gatheringMiracleToggle) {
+        const buttons = gatheringMiracleToggle.querySelectorAll('button');
+        buttons.forEach(button => {
+            if (button.getAttribute('data-status') === status) {
+                button.classList.add('bg-indigo-500', 'text-white');
+                button.classList.remove('text-gray-300', 'hover:bg-gray-600');
+            } else {
+                button.classList.remove('bg-indigo-500', 'text-white');
+                button.classList.add('text-gray-300', 'hover:bg-gray-600');
+            }
+        });
+    }
 }
 
 function updateStopwatchDisplay() {
@@ -186,7 +192,9 @@ function startStopwatch() {
     farmCategoryInput.disabled = true;
     farmItemNameInput.disabled = true;
     toolNameInput.disabled = true;
-    gatheringMiracleToggle.classList.add('pointer-events-none', 'opacity-50');
+    if (gatheringMiracleToggle) {
+        gatheringMiracleToggle.classList.add('pointer-events-none', 'opacity-50');
+    }
     feedbackMessage.textContent = `Run active, tracking ${currentRun.item}...`;
     feedbackMessage.className = 'text-center text-sm mt-4 text-green-400';
 }
@@ -219,6 +227,7 @@ function stopStopwatch() {
 }
 
 function resetStopwatch() {
+    clearInterval(intervalId);
     elapsedTime = 0;
     isRunning = false;
     updateStopwatchDisplay();
@@ -230,7 +239,9 @@ function resetStopwatch() {
     farmCategoryInput.disabled = false; 
     farmItemNameInput.disabled = false; 
     toolNameInput.disabled = false;
-    gatheringMiracleToggle.classList.remove('pointer-events-none', 'opacity-50');
+    if (gatheringMiracleToggle) {
+        gatheringMiracleToggle.classList.remove('pointer-events-none', 'opacity-50');
+    }
 }
 
 function resetFullRunState() {
@@ -242,7 +253,8 @@ function resetFullRunState() {
     farmCategoryInput.value = '';
     farmItemNameInput.value = '';
     toolNameInput.value = '';
-    setGatheringMiracle('not_active');
+    // Use 'no' status string to match HTML
+    setGatheringMiracle('no');
     feedbackMessage.textContent = '';
     if (runHistoryBody) {
         runHistoryBody.innerHTML = `<tr><td colspan="8" class="px-3 py-2 whitespace-nowrap text-sm text-gray-400 text-center">No runs saved yet.</td></tr>`;
@@ -443,7 +455,8 @@ saveRunBtn.addEventListener('click', async () => {
         return;
     }
 
-    const miracleStatus = gatheringMiracleStatusInput.value === 'active';
+    // Check for 'yes' status string
+    const miracleStatus = gatheringMiracleStatusInput.value === 'yes';
 
     const runData = {
         run_code: currentRunCode,
@@ -634,11 +647,15 @@ function toggleRunUI(visible) {
 document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
-    setGatheringMiracle(gatheringMiracleStatusInput.value);
+    
+    // Initial UI state setup for the toggle buttons (now guaranteed to exist)
+    if (gatheringMiracleStatusInput) {
+        setGatheringMiracle(gatheringMiracleStatusInput.value);
+    }
+    
     const showUI = !!code && !isReadOnly;
     toggleRunUI(showUI);
 
-    setGatheringMiracle(gatheringMiracleStatusInput.value);
     if (code) {
         loadRun(code.toUpperCase());
     } else {

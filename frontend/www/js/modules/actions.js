@@ -13,7 +13,8 @@ import {
     populateMarketStallDropdown,
     setupMarketStallTabs,
     getUserMarketStallLocations,
-    clearMarketStallsCache
+    clearMarketStallsCache,
+    populateStallRegions
 } from './init.js';
 import {
     getEditListingModalElements,
@@ -32,6 +33,9 @@ import {
     modalMarketStallLocationSelect
 } from './dom.js';
 import { loadTransactionHistory } from './sales.js';
+
+
+
 
 const getOrCreateItemId = async (itemName, categoryId) => {
     //console.log('getOrCreateItemId called with:', { itemName, categoryId });
@@ -711,32 +715,83 @@ export const handleEditListingSave = async (e) => {
 };
 
 
-export const showManageMarketStallsModal = async () => {
-    //console.log('showManageMarketStallsModal called.');
-    if (!manageMarketStallsModal) {
-        console.error('showManageMarketStallsModal: manageMarketStallsModal element not found.');
-        return;
-    }
+// export const showManageMarketStallsModal = async () => {
+//     //console.log('showManageMarketStallsModal called.');
+//     if (!manageMarketStallsModal) {
+//         console.error('showManageMarketStallsModal: manageMarketStallsModal element not found.');
+//         return;
+//     }
 
+//     if (!currentCharacterId) {
+//         await showCustomModal('Error', 'Please select a character first to manage market stalls.', [{
+//             text: 'OK',
+//             value: true
+//         }]);
+//         console.error('showManageMarketStallsModal: No character selected. Aborting.');
+//         return;
+//     }
+//     //console.log('Character ID present. Preparing manage market stalls modal.');
+
+//     createStallError.classList.add('hidden');
+//     deleteStallError.classList.add('hidden');
+//     newMarketStallNameInput.value = '';
+//     //console.log('Cleared previous errors and input for new stall.');
+
+//     await renderMarketStallsInModal();
+//     manageMarketStallsModal.classList.remove('hidden');
+//     //console.log('Manage Market Stalls modal displayed.');
+// };
+
+
+export const loadMarketStallsList = async () => {
     if (!currentCharacterId) {
-        await showCustomModal('Error', 'Please select a character first to manage market stalls.', [{
-            text: 'OK',
-            value: true
-        }]);
-        console.error('showManageMarketStallsModal: No character selected. Aborting.');
+        marketStallsList.innerHTML = '<p class="text-red-500">No character selected.</p>';
         return;
     }
-    //console.log('Character ID present. Preparing manage market stalls modal.');
+    
+    marketStallsList.innerHTML = '<p class="text-gray-600">Loading stalls...</p>';
+    
+    try {
+        const stalls = await getUserMarketStallLocations(currentCharacterId);
 
+        if (stalls.length === 0) {
+            marketStallsList.innerHTML = '<p class="text-gray-600">You have no market stalls. Create one above.</p>';
+            return;
+        }
+
+        marketStallsList.innerHTML = stalls.map(stall => `
+            <div class="flex justify-between items-center p-3 border rounded-md bg-gray-50">
+                <span class="font-medium text-gray-800">${stall.stall_name}</span>
+                <button type="button" data-stall-id="${stall.id}" class="delete-stall-btn text-red-500 hover:text-red-700 font-semibold text-sm">Delete</button>
+            </div>
+        `).join('');
+
+        document.querySelectorAll('.delete-stall-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const stallId = e.currentTarget.getAttribute('data-stall-id');
+                handleDeleteMarketStall(stallId);
+            });
+        });
+
+    } catch (e) {
+        console.error('Error loading market stalls list:', e);
+        marketStallsList.innerHTML = `<p class="text-red-500">Error loading stalls: ${e.message}</p>`;
+    }
+};
+
+
+export const showManageMarketStallsModal = async () => {
     createStallError.classList.add('hidden');
     deleteStallError.classList.add('hidden');
     newMarketStallNameInput.value = '';
-    //console.log('Cleared previous errors and input for new stall.');
 
-    await renderMarketStallsInModal();
+    await populateStallRegions();
+
+    await loadMarketStallsList();
+    document.body.classList.add('overflow-hidden');
     manageMarketStallsModal.classList.remove('hidden');
-    //console.log('Manage Market Stalls modal displayed.');
 };
+
 
 export const handleEditMarketStallName = async (stallId, newStallName, editInput, saveButton, cancelButton, stallNameSpan, editButton, deleteButton) => {
     //console.log('handleEditMarketStallName called for stall ID:', stallId, 'New name:', newStallName);
@@ -922,8 +977,6 @@ const renderMarketStallsInModal = async () => {
 };
 
 
-
-
 export const createDefaultMarketStall = async (characterId, characterName) => {
     //console.log('createDefaultMarketStall called for character:', { characterId, characterName });
     if (!characterId) {
@@ -947,7 +1000,8 @@ export const createDefaultMarketStall = async (characterId, characterName) => {
             .from('market_stalls')
             .insert({
                 stall_name: defaultStallName,
-                character_id: characterId
+                character_id: characterId,
+                is_default_stall: true
             })
             .select('id')
             .single();
@@ -965,6 +1019,9 @@ export const createDefaultMarketStall = async (characterId, characterName) => {
 };
 
 
+const newMarketStallProvinceSelect = document.getElementById('newMarketStallProvinceSelect');
+const newMarketStallHomeValleySelect = document.getElementById('newMarketStallHomeValleySelect');
+
 export const handleAddMarketStall = async (e) => {
   e.preventDefault();
   createStallError.classList.add('hidden');
@@ -976,8 +1033,23 @@ export const handleAddMarketStall = async (e) => {
   }
 
   const newStallName = newMarketStallNameInput.value.trim();
+  const newStallProvince = newMarketStallProvinceSelect.value;
+  const newStallHomeValley = newMarketStallHomeValleySelect.value;
+
   if (!newStallName) {
     createStallError.textContent = 'Market Stall Name cannot be empty.';
+    createStallError.classList.remove('hidden');
+    return;
+  }
+
+  if (!newStallProvince) {
+    createStallError.textContent = 'Province cannot be empty.';
+    createStallError.classList.remove('hidden');
+    return;
+  }
+
+  if (!newStallHomeValley) {
+    createStallError.textContent = 'Home Valley cannot be empty.';
     createStallError.classList.remove('hidden');
     return;
   }
@@ -990,7 +1062,11 @@ export const handleAddMarketStall = async (e) => {
       .from('market_stalls')
       .insert({
         stall_name: newStallName,
-        character_id: currentCharacterId
+        character_id: currentCharacterId,
+        province: newStallProvince,
+        home_valley: newStallHomeValley,
+        is_default_stall: false,
+        created_at: new Date().toISOString(),
       });
 
     if (error) throw error;
@@ -998,6 +1074,9 @@ export const handleAddMarketStall = async (e) => {
     clearMarketStallsCache();
     await showCustomModal('Success', 'Market Stall created successfully!', [{ text: 'OK', value: true }]);
     newMarketStallNameInput.value = '';
+    // Clear selections by resetting dropdowns (optional, depending on desired behavior)
+    newMarketStallProvinceSelect.value = '';
+    newMarketStallHomeValleySelect.value = '';
     await renderMarketStallsInModal();
 
     if (modalMarketStallLocationSelect) {

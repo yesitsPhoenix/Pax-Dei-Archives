@@ -7,6 +7,7 @@
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
     <meta content="width=device-width, initial-scale=1" name="viewport">
     <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link href="frontend/www/css/coord_styles.css" rel="stylesheet">
     <link href="frontend/www/css/map_styles.css" rel="stylesheet">
     <link href="frontend/www/css/style.css" rel="stylesheet">
@@ -18,34 +19,87 @@
     </style>
 </head>
 <body>
-    <header class="header-area">
-        <div class="container">
-            <nav class="main-nav">
-                <a href="index.html" class="logo">
-                    <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
-                    <h1>Pax Dei Archives</h1>
-                </a>
-
-                <div class="nav-and-search-wrapper">
-                    <ul class="nav">
-                        <li><a href="index.html">Home</a></li>
-                        <li><a href="abilities.html">Abilities</a></li>
-                        <li><a href="gathering.html">Gathering Tracker</a></li>
-                        <li><a href="gems.html">Gems</a></li>
-                        <li><a href="grace.html">Grace Calculator</a></li>
-                        <!-- <li><a href="articles.html">Articles</a></li> -->
-                        <!-- <li><a href="news-updates.html">News</a></li> -->
-                        <li><a href="developer-comments.html">Dev Comments</a></li>
-                        <li><a href="lore.html">Lore</a></li>
-                        <li><a href="ledger.html">Ledger</a></li>
-                        <li><a href="trends.html">Market Trends</a></li>
-                        <li><a href="map.html" class="active">Map</a></li>
-                    </ul>
-                    
-                </div>
-            </nav>
-        </div>
-    </header>
+<header class="header-area">
+    <div class="container">
+        <nav class="main-nav">
+            <a href="index.html" class="logo">
+                <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
+                <h1>Pax Dei Archives</h1>
+            </a>
+            <a class="menu-trigger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </a>
+            <div class="nav-and-search-wrapper">
+                <ul class="nav">
+                    <li>
+                        <a href="index.html">
+                            <i class="fas fa-home mr-1"></i> Home
+                        </a>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#">
+                            <i class="fas fa-calculator mr-1"></i> Calculators 
+                            <i class="fas fa-caret-down ml-1"></i>
+                        </a>
+                        <div class="dropdown-content">
+                            <ul>
+                                <li><a href="grace.html"><i class="fas fa-hands-praying mr-1"></i> Grace Calculator</a></li>
+                                <li><a href="gathering.html"><i class="fas fa-leaf mr-1"></i> Gathering Tracker</a></li>
+                                <li><a href="runs.html"><i class="fas fa-route mr-1"></i> Run History</a></li>
+                                <!-- <li><a href="loot.html"><i class="fas fa-box mr-1"></i> Loot Tracker</a></li> -->
+                                <!-- <li><a href="view_loot.html"><i class="fas fa-inbox mr-1"></i> View Loot</a></li> -->
+                                <li><a href="crafting.html"><i class="fas fa-hammer mr-1"></i> Crafting Rate Calculator</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#">
+                            <i class="fas fa-store mr-1"></i> Markets 
+                            <i class="fas fa-caret-down ml-1"></i>
+                        </a>
+                        <div class="dropdown-content">
+                            <ul>
+                                <li><a href="ledger.html"><i class="fas fa-book mr-1"></i> Ledger</a></li>
+                                <li><a href="trends.html"><i class="fas fa-chart-line mr-1"></i> Market Trends</a></li>
+                                <li><a href="listings.html"><i class="fas fa-tags mr-1"></i> Listings</a></li>
+                                <li><a href="profile.html"><i class="fas fa-user mr-1"></i> Profile</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li>
+                        <a href="developer-comments.html">
+                            <i class="fas fa-code mr-1"></i> Dev Comments
+                        </a>
+                    </li>
+                    <li>
+                        <a href="lore.html">
+                            <i class="fas fa-book-open mr-1"></i> Lore
+                        </a>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#">
+                            <i class="fas fa-boxes-stacked mr-1"></i> Resources
+                            <i class="fas fa-caret-down ml-1"></i>
+                        </a>
+                        <div class="dropdown-content">
+                            <ul>
+                                <li><a href="abilities.html"><i class="fas fa-wand-magic-sparkles mr-1"></i> Abilities</a></li>
+                                <li><a href="gems.html"><i class="fas fa-gem mr-1"></i> Gems</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li>
+                        <a href="map.html" class="active">
+                            <i class="fas fa-map mr-1"></i> Map
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+    </div>
+</header>
 
     <main>
         <div id="map-container">

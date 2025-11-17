@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pax Dei Archives - Crafting Success Rate</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="frontend/www/css/trader.css">
+    <link rel="stylesheet" href="frontend/www/css/sidebar.css">
+    <link rel="stylesheet" href="https://unpkg.com/swiper@7/swiper-bundle.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+    <script> window.gtTooltipConfig = {
+        scale: 0.8,
+        delay: 40,
+        };
+    </script>
+    <script async src="https://paxdei.gaming.tools/embed.js"></script>
+    <style>
+        .page-content{
+            padding: 0px !important
+        }
+    </style>
+</head>
+<body>
+<header class="header-area">
+    <div class="container">
+        <nav class="main-nav">
+            <a href="index.html" class="logo">
+                <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
+                <h1>Pax Dei Archives</h1>
+            </a>
+            <a class="menu-trigger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </a>
+            <div class="nav-and-search-wrapper">
+                <ul class="nav">
+                    <li>
+                        <a href="index.html">
+                            <i class="fas fa-home mr-1"></i> Home
+                        </a>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="active">
+                            <i class="fas fa-calculator mr-1"></i> Calculators 
+                            <i class="fas fa-caret-down ml-1"></i>
+                        </a>
+                        <div class="dropdown-content">
+                            <ul>
+                                <li><a href="grace.html"><i class="fas fa-hands-praying mr-1"></i> Grace Calculator</a></li>
+                                <li><a href="gathering.html"><i class="fas fa-leaf mr-1"></i> Gathering Tracker</a></li>
+                                <li><a href="runs.html"><i class="fas fa-route mr-1"></i> Run History</a></li>
+                                <!-- <li><a href="loot.html"><i class="fas fa-box mr-1"></i> Loot Tracker</a></li> -->
+                                <!-- <li><a href="view_loot.html"><i class="fas fa-inbox mr-1"></i> View Loot</a></li> -->
+                                <li><a href="crafting.html" class="active"><i class="fas fa-hammer mr-1"></i> Crafting Rate Calculator</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#">
+                            <i class="fas fa-store mr-1"></i> Markets 
+                            <i class="fas fa-caret-down ml-1"></i>
+                        </a>
+                        <div class="dropdown-content">
+                            <ul>
+                                <li><a href="ledger.html"><i class="fas fa-book mr-1"></i> Ledger</a></li>
+                                <li><a href="trends.html"><i class="fas fa-chart-line mr-1"></i> Market Trends</a></li>
+                                <li><a href="listings.html"><i class="fas fa-tags mr-1"></i> Listings</a></li>
+                                <li><a href="profile.html"><i class="fas fa-user mr-1"></i> Profile</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li>
+                        <a href="developer-comments.html">
+                            <i class="fas fa-code mr-1"></i> Dev Comments
+                        </a>
+                    </li>
+                    <li>
+                        <a href="lore.html">
+                            <i class="fas fa-book-open mr-1"></i> Lore
+                        </a>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#">
+                            <i class="fas fa-boxes-stacked mr-1"></i> Resources
+                            <i class="fas fa-caret-down ml-1"></i>
+                        </a>
+                        <div class="dropdown-content">
+                            <ul>
+                                <li><a href="abilities.html"><i class="fas fa-wand-magic-sparkles mr-1"></i> Abilities</a></li>
+                                <li><a href="gems.html"><i class="fas fa-gem mr-1"></i> Gems</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li>
+                        <a href="map.html">
+                            <i class="fas fa-map mr-1"></i> Map
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+    </div>
+</header>
+    <main class="trader-container">
+        <div class="container">
+                <div class="page-content max-w-5xl mx-auto p-6 sm:p-8 md:p-10 rounded-lg w-full">
+                        <h1 class="text-xl font-semibold mt-6 mb-3 text-white text-center">Crafting Success Rate Tracker</h1>
+                        <h3 class="text-gray-400 text-center">Track your real-world success rate for crafting.</h3><br>
+                        
+                        <div id="craftingSetupSection" class="mb-8 p-6 bg-gray-800 rounded-lg shadow-xl border border-gray-700">
+                            <h2 class="text-2xl font-semibold mb-4 text-white">Crafting Parameters</h2>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                <div>
+                                    <label for="craftingItemSelect" class="block text-gray-300 text-sm font-bold mb-2">Item Being Crafted:</label>
+                                    <select id="craftingItemSelect" 
+                                        class="shadow border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                                        <option value="">-- Select Crafting Item --</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="expectedDifficultySelect" class="block text-gray-300 text-sm font-bold mb-2">Expected Difficulty:</label>
+                                    <select id="expectedDifficultySelect" 
+                                        class="shadow border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500">
+                                        <option value="Mastered">Mastered</option>
+                                        <option value="Trivial">Trivial</option>
+                                        <option value="Very Easy">Very Easy</option>
+                                        <option value="Easy">Easy</option>
+                                        <option value="Moderate" selected>Moderate</option>
+                                        <option value="Hard">Hard</option>
+                                        <option value="Very Hard">Very Hard</option>
+                                        <option value="Impossible">Impossible</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                <div>
+                                    <label for="skillLevelInput" class="block text-gray-300 text-sm font-bold mb-2">Your Skill Level (1-40):</label>
+                                    <input type="number" id="skillLevelInput" value="1" min="1" max="40" 
+                                        class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 text-center">
+                                </div>
+                                <div>
+                                    <label for="itemDifficultyInput" class="block text-gray-300 text-sm font-bold mb-2">Item Difficulty (1-41):</label>
+                                    <input type="number" id="itemDifficultyInput" value="1" min="1" max="41" 
+                                        class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 text-center">
+                                </div>
+                                <div>
+                                    <label for="miracleToggle" class="block text-gray-300 text-sm font-bold mb-2">Miracle Active:</label>
+                                    <div id="miracleToggle" class="flex p-1 bg-gray-700 rounded-lg border border-gray-600 shadow-inner">
+                                        <button
+                                            type="button"
+                                            data-status="no"
+                                            id="miracleToggleNo"
+                                            class="flex-1 py-2 rounded-lg transition-colors duration-200 bg-indigo-500 text-white font-medium"
+                                        >
+                                            No
+                                        </button>
+                                        <button
+                                            type="button"
+                                            data-status="yes"
+                                            id="miracleToggleYes"
+                                            class="flex-1 py-2 rounded-lg transition-colors duration-200 text-gray-300 font-medium hover:bg-gray-600"
+                                        >
+                                            Yes
+                                        </button>
+                                    </div>
+                                    <input type="hidden" id="miracleStatus" value="no">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label for="totalAttemptsInput" class="block text-gray-300 text-sm font-bold mb-2">Number of Attempts Planned (Optional):</label>
+                                <input type="number" id="totalAttemptsInput" value="50" min="1" 
+                                    class="shadow appearance-none border rounded-lg w-full py-2 px-3 bg-gray-600 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 text-center">
+                            </div>
+
+                        </div>
+                        
+                        <div id="trackingCounters" class="mb-8 p-6 bg-gray-800 rounded-lg shadow-xl border border-gray-700">
+                            <h2 class="text-2xl font-semibold mb-4 text-white">Tracking & Results</h2>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+                                <div class="p-4 bg-gray-700 rounded-lg shadow-inner">
+                                    <label class="block text-gray-300 text-sm font-bold mb-2 text-center">Successes</label>
+                                    <div class="flex items-center justify-center space-x-3">
+                                        <button id="successMinusBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-2xl transition duration-150 ease-in-out">-</button>
+                                        <input type="number" id="successCountInput" value="0" min="0" 
+                                            class="text-5xl font-mono font-bold text-green-400 w-24 text-center bg-transparent border-none focus:ring-0 appearance-none" 
+                                            style="-moz-appearance: textfield; appearance: textfield; padding: 0; outline: none;"/>
+                                        <button id="successPlusBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg text-2xl transition duration-150 ease-in-out">+</button>
+                                    </div>
+                                </div>
+                                <div class="p-4 bg-gray-700 rounded-lg shadow-inner">
+                                    <label class="block text-gray-300 text-sm font-bold mb-2 text-center">Failures</label>
+                                    <div class="flex items-center justify-center space-x-3">
+                                        <button id="failureMinusBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-2xl transition duration-150 ease-in-out">-</button>
+                                        <input type="number" id="failureCountInput" value="0" min="0" 
+                                            class="text-5xl font-mono font-bold text-red-400 w-24 text-center bg-transparent border-none focus:ring-0 appearance-none" 
+                                            style="-moz-appearance: textfield; appearance: textfield; padding: 0; outline: none;"/>
+                                        <button id="failurePlusBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg text-2xl transition duration-150 ease-in-out">+</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="p-4 bg-gray-700 rounded-lg shadow-inner text-center">
+                                <h3 class="text-xl font-semibold text-gray-300 mb-2">Total Attempts Made</h3>
+                                <span id="totalAttemptsMadeDisplay" class="text-4xl font-mono font-bold text-yellow-400">0</span>
+                            </div>
+
+                        </div>
+
+                        <div id="resultsSection" class="mb-8 p-6 bg-gray-800 rounded-lg shadow-xl border border-emerald-500">
+                            <h2 class="text-2xl font-semibold mb-4 text-white text-center">Crafting Success Rate</h2>
+                            <p class="text-center text-4xl font-extrabold text-emerald-400">
+                                <span id="successRateDisplay">0.00</span>%
+                            </p>
+                        </div>
+                        <div class="flex justify-center">
+                            <button id="resetTrackerBtn" class="bg-red-700 hover:bg-red-800 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-75 ">
+                                <i class="fa fa-undo mr-2"></i> Reset Tracker
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12">
+                    <p>Pax Dei Archives is a fan-made site and not affiliated with Pax Dei or MAINFRAME.</p>
+                    <p>All intellectual property and assets related to Pax Dei game are reserved by MAINFRAME INDUSTRIES.</p>
+                    <a href="admin.html">Admin</a>
+                    <a href="privacy.html">Privacy Policy</a>
+                </div>
+            </div>
+        </div>
+        <div class="corner-credit">
+            <div class="corner-credit-top-row"> <img src="frontend/www/assets/phoenix.png" alt="Phoenix profile image" class="profile-image" />
+                <span class="nav-text-profile">Made by Phoenix ✨</span>
+            </div>
+            <div id="utc-clock-display" class="utc-clock"></div>
+        </div>
+    </footer>
+    <div id="floating-avatar-container">
+        <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar js-floating-avatar">
+    </div>
+
+    <div id="auth-modal">
+        <div class="modal-content-wrapper" id="modal-content-wrapper">
+        </div>
+    </div>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script type="module" src="frontend/www/js/supabaseClient.js"></script>
+    <script type="module" src="frontend/www/js/utils.js"></script>
+    <script type="module" src="frontend/www/js/main.js"></script>
+    <script type="module" src="frontend/www/js/crafting.js"></script>
+    <script type="module" src="frontend/www/js/popoutAuth.js"></script> 
+</body>
+</html>

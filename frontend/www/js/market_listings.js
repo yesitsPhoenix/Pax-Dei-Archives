@@ -2,36 +2,54 @@ import { supabase } from './supabaseClient.js';
 import { openImportModal } from './import_data.js';
 import { isLoggedIn, logout, getUserProfile } from './utils.js';
 
+const showAccessDeniedModal = () => {
+    const modal = document.getElementById('accessDeniedModal');
+    const countdownElement = document.getElementById('redirectCountdown');
+    let countdown = 5;
+
+    modal.classList.remove('hidden');
+
+    countdownElement.textContent = `Redirecting to Market Trends in ${countdown} seconds...`;
+
+    const interval = setInterval(() => {
+        countdown -= 1;
+        countdownElement.textContent = `Redirecting to Market Trends in ${countdown} seconds...`;
+        if (countdown <= 0) {
+            clearInterval(interval);
+            window.location.href = 'trends.html';
+        }
+    }, 1000);
+};
+
 const checkAdminAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {
-        window.location.href = 'index.html';
+        showAccessDeniedModal();
         return false;
     }
 
     const userId = session.user.id;
     
-    const { data: adminUser, error } = await supabase
-        .from('admin_users')
-        .select('user_id')
+    const { data: permissions, error } = await supabase
+        .from('listings_permissions')
+        .select('permitted')
         .eq('user_id', userId)
+        .eq('permitted', true) 
         .single();
 
     if (error && error.code !== 'PGRST116') {
-        window.location.href = 'index.html';
+        showAccessDeniedModal();
         return false;
     }
 
-    if (!adminUser) {
-        window.location.href = 'index.html';
+    if (!permissions) {
+        showAccessDeniedModal();
         return false;
     }
     
     return true;
 };
-
-document.getElementById('importDataBtn').addEventListener('click', openImportModal);
 
 const listingResultsBody = document.getElementById('listingResultsBody');
 const applyFiltersBtn = document.getElementById('applyFiltersBtn');
@@ -42,11 +60,16 @@ const filterHomeValleyInput = document.getElementById('filterHomeValley');
 const filterCategoryInput = document.getElementById('filterCategory');
 const filterItemNameInput = document.getElementById('filterItemName');
 const paginationContainer = document.getElementById('paginationContainer');
+const totalListingsCount = document.getElementById('totalListingsCount');
+const lowestPriceUnit = document.getElementById('lowestPriceUnit');
+const highestPriceUnit = document.getElementById('highestPriceUnit');
+const lowestTotalPrice = document.getElementById('lowestTotalPrice');
+const highestTotalPrice = document.getElementById('highestTotalPrice');
 
 let currentSortColumn = 'item_name';
 let currentSortDirection = 'asc';
 export let currentPage = 1;
-const listingsPerPage = 15;
+const listingsPerPage = 20;
 
 export const getCurrentFilters = () => ({
     region: filterRegionInput.value.trim(),
@@ -64,7 +87,7 @@ export const populateFilters = async () => {
         return option;
     };
     filterRegionInput.innerHTML = '<option value="">All Regions</option>';
-    ['EU', 'NA', 'SAE'].forEach(r => filterRegionInput.appendChild(createOption(r, r)));
+    ['EU', 'NA', 'SEA'].forEach(r => filterRegionInput.appendChild(createOption(r, r)));
     filterProvinceInput.innerHTML = '<option value="">All Provinces</option>';
     ['Kerys', 'Ancien', 'Merrie', 'Inis Gallia'].forEach(p => filterProvinceInput.appendChild(createOption(p, p)));
     filterHomeValleyInput.innerHTML = '<option value="">All Valleys</option>';
@@ -115,9 +138,17 @@ export const sortListings = (listings, column, direction) => {
                 valA = Number(a.total_listed_price || 0);
                 valB = Number(b.total_listed_price || 0);
                 break;
+            case 'home_valley':
+                valA = a.market_stalls?.home_valley?.toLowerCase() || '';
+                valB = b.market_stalls?.home_valley?.toLowerCase() || '';
+                break;
             case 'listing_date':
                 valA = a.listing_date ? new Date(a.listing_date).getTime() : 0;
                 valB = b.listing_date ? new Date(b.listing_date).getTime() : 0;
+                break;
+            case 'listing_id':
+                valA = Number(a.listing_id || 0);
+                valB = Number(b.listing_id || 0);
                 break;
             default:
                 valA = '';
@@ -129,9 +160,45 @@ export const sortListings = (listings, column, direction) => {
     });
 };
 
+const renderMarketSummary = (listings) => {
+    totalListingsCount.textContent = listings.length;
+
+    const activeListings = listings.filter(l => !(l.is_fully_sold || l.is_cancelled));
+    
+    // Price/Unit calculations
+    const activeUnitPrices = activeListings
+        .map(l => parseFloat(l.listed_price_per_unit))
+        .filter(price => !isNaN(price));
+
+    if (activeUnitPrices.length > 0) {
+        const minUnitPrice = Math.min(...activeUnitPrices).toFixed(2);
+        const maxUnitPrice = Math.max(...activeUnitPrices).toFixed(2);
+        lowestPriceUnit.textContent = `${minUnitPrice}`;
+        highestPriceUnit.textContent = `${maxUnitPrice}`;
+    } else {
+        lowestPriceUnit.textContent = 'N/A';
+        highestPriceUnit.textContent = 'N/A';
+    }
+
+    // Total Price (Price/Stack) calculations
+    const activeTotalPrices = activeListings
+        .map(l => parseFloat(l.total_listed_price))
+        .filter(price => !isNaN(price));
+
+    if (activeTotalPrices.length > 0) {
+        const minTotalPrice = Math.min(...activeTotalPrices).toFixed(2);
+        const maxTotalPrice = Math.max(...activeTotalPrices).toFixed(2);
+        lowestTotalPrice.textContent = `${minTotalPrice}`;
+        highestTotalPrice.textContent = `${maxTotalPrice}`;
+    } else {
+        lowestTotalPrice.textContent = 'N/A';
+        highestTotalPrice.textContent = 'N/A';
+    }
+};
+
 export const renderListings = (listings) => {
     if (!listings?.length) {
-        listingResultsBody.innerHTML = '<tr><td colspan="6" class="px-3 py-4 whitespace-nowrap text-sm text-gray-400 text-center">No active listings found for the current filters.</td></tr>';
+        listingResultsBody.innerHTML = '<tr><td colspan="8" class="px-3 py-4 whitespace-nowrap text-sm text-gray-400 text-center">No active listings found for the current filters.</td></tr>';
         return;
     }
     listingResultsBody.innerHTML = listings.map(listing => {
@@ -139,18 +206,26 @@ export const renderListings = (listings) => {
         const categoryName = listing.items?.item_categories?.category_name || 'N/A';
         const isResolved = listing.is_fully_sold && listing.is_cancelled;
         const pricePerUnit = isResolved ? 'N/A' : parseFloat(listing.listed_price_per_unit).toFixed(2);
-        const totalPrice = isResolved ? 'N/A' : listing.total_listed_price;
+        const totalPrice = isResolved ? 'N/A' : parseFloat(listing.total_listed_price).toFixed(2);
         const quantity = listing.quantity_listed;
         const dateListed = formatDate(listing.listing_date);
+        const homeValley = listing.market_stalls?.home_valley || 'N/A';
+        const regionProvince = (listing.market_stalls?.region && listing.market_stalls?.province) 
+                                ? `${listing.market_stalls.region}/${listing.market_stalls.province}` : 'N/A';
+        const listingId = listing.listing_id;
         const rowClass = isResolved ? 'hover:bg-gray-700/50 bg-yellow-900/10' : 'hover:bg-gray-700';
+
         return `
             <tr class="${rowClass}">
-                <td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-white">${itemName}</td>
+                <td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-white">
+                    ${itemName}
+                </td>
                 <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-300 text-center">${categoryName}</td>
                 <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-300 text-center">${quantity}</td>
                 <td class="px-3 py-2 whitespace-nowrap text-sm text-green-400 text-center">${pricePerUnit}</td>
                 <td class="px-3 py-2 whitespace-nowrap text-sm text-green-400 text-center">${totalPrice}</td>
                 <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-300 text-center">${dateListed}</td>
+                <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-300 text-center hidden">${listingId}</td>
             </tr>`;
     }).join('');
 };
@@ -204,7 +279,8 @@ export const fetchActiveListings = async (page, filters = {}) => {
         let { data: allRows, error } = await query;
 
         if (error) {
-            listingResultsBody.innerHTML = `<tr><td colspan="6" class="text-red-400 text-center py-4">Error: ${error.message}</td></tr>`;
+            listingResultsBody.innerHTML = `<tr><td colspan="8" class="text-red-400 text-center py-4">Error: ${error.message}</td></tr>`;
+            renderMarketSummary([]);
             return;
         }
 
@@ -217,6 +293,10 @@ export const fetchActiveListings = async (page, filters = {}) => {
         if (filters.homeValley) filtered = filtered.filter(l => l.market_stalls?.home_valley === filters.homeValley);
         if (filters.itemName) filtered = filtered.filter(l => l.item_id === parseInt(filters.itemName));
         if (filters.category) filtered = filtered.filter(l => l.items?.category_id === parseInt(filters.category));
+        
+        // Render the summary statistics for ALL filtered listings (before pagination)
+        renderMarketSummary(filtered);
+
 
         const alphabeticallySorted = filtered.sort((a, b) =>
             (a.items?.item_name?.toLowerCase() || '').localeCompare(b.items?.item_name?.toLowerCase() || '')
@@ -230,7 +310,8 @@ export const fetchActiveListings = async (page, filters = {}) => {
         renderPagination(finalSorted.length, page);
     } catch (err) {
         console.error('fetchActiveListings error:', err);
-        listingResultsBody.innerHTML = `<tr><td colspan="6" class="text-red-400 text-center py-4">Error loading listings.</td></tr>`;
+        listingResultsBody.innerHTML = `<tr><td colspan="8" class="text-red-400 text-center py-4">Error loading listings.</td></tr>`;
+        renderMarketSummary([]);
     } finally {
         listingResultsBody.style.opacity = '1';
         listingResultsBody.style.pointerEvents = 'auto';

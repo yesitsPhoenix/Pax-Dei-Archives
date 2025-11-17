@@ -30,7 +30,7 @@ export let currentCharacterId = null;
 export let currentCharacterGold = 0;
 let cachedUserCharacters = [];
 let _currentCharacter = null;
-let cachedRegions = null;
+export let cachedRegions = null;
 
 export const setCurrentCharacterGold = (gold) => {
     currentCharacterGold = gold;
@@ -240,7 +240,7 @@ const handleCharacterSelection = async (event) => {
     await loadTraderPageData();
 };
 
-const populateRegionDropdowns = async () => {
+export const populateRegionDropdowns = async () => {
     if (cachedRegions === null) {
         const { data, error } = await supabase
             .from('regions')

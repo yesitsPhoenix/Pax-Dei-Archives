@@ -30,42 +30,94 @@
     </style>
 </head>
 <body>
-    <header class="header-area">
-        <div class="container">
-            <nav class="main-nav">
-                <a href="index.html" class="logo">
-                    <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
-                    <h1>Pax Dei Archives</h1>
-                </a>
-                <a class='menu-trigger'>
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </a>
-                <div class="nav-and-search-wrapper">
-                    <ul class="nav">
-                        <li><a href="index.html">Home</a></li>
-                        <li><a href="abilities.html">Abilities</a></li>
-                        <li><a href="gathering.html">Gathering Tracker</a></li>
-                        <li><a href="gems.html">Gems</a></li>
-                        <li><a href="grace.html" class="active">Grace Calculator</a></li>
-                        <li><a href="developer-comments.html">Dev Comments</a></li>
-                        <li><a href="lore.html">Lore</a></li>
-                        <li><a href="ledger.html">Ledger</a></li>
-                        <li><a href="trends.html">Market Trends</a></li>
-                        <li><a href="map.html">Map</a></li>
-
-                    </ul>
-                </div>
-            </nav>
-        </div>
-    </header>
+<header class="header-area">
+    <div class="container">
+        <nav class="main-nav">
+            <a href="index.html" class="logo">
+                <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
+                <h1>Pax Dei Archives</h1>
+            </a>
+            <a class="menu-trigger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </a>
+            <div class="nav-and-search-wrapper">
+                <ul class="nav">
+                    <li>
+                        <a href="index.html">
+                            <i class="fas fa-home mr-1"></i> Home
+                        </a>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="active">
+                            <i class="fas fa-calculator mr-1"></i> Calculators 
+                            <i class="fas fa-caret-down ml-1"></i>
+                        </a>
+                        <div class="dropdown-content">
+                            <ul>
+                                <li><a href="grace.html" class="active"><i class="fas fa-hands-praying mr-1"></i> Grace Calculator</a></li>
+                                <li><a href="gathering.html"><i class="fas fa-leaf mr-1"></i> Gathering Tracker</a></li>
+                                <li><a href="runs.html"><i class="fas fa-route mr-1"></i> Run History</a></li>
+                                <!-- <li><a href="loot.html"><i class="fas fa-box mr-1"></i> Loot Tracker</a></li> -->
+                                <!-- <li><a href="view_loot.html"><i class="fas fa-inbox mr-1"></i> View Loot</a></li> -->
+                                <li><a href="crafting.html"><i class="fas fa-hammer mr-1"></i> Crafting Rate Calculator</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#">
+                            <i class="fas fa-store mr-1"></i> Markets 
+                            <i class="fas fa-caret-down ml-1"></i>
+                        </a>
+                        <div class="dropdown-content">
+                            <ul>
+                                <li><a href="ledger.html"><i class="fas fa-book mr-1"></i> Ledger</a></li>
+                                <li><a href="trends.html"><i class="fas fa-chart-line mr-1"></i> Market Trends</a></li>
+                                <li><a href="listings.html"><i class="fas fa-tags mr-1"></i> Listings</a></li>
+                                <li><a href="profile.html"><i class="fas fa-user mr-1"></i> Profile</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li>
+                        <a href="developer-comments.html">
+                            <i class="fas fa-code mr-1"></i> Dev Comments
+                        </a>
+                    </li>
+                    <li>
+                        <a href="lore.html">
+                            <i class="fas fa-book-open mr-1"></i> Lore
+                        </a>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#">
+                            <i class="fas fa-boxes-stacked mr-1"></i> Resources
+                            <i class="fas fa-caret-down ml-1"></i>
+                        </a>
+                        <div class="dropdown-content">
+                            <ul>
+                                <li><a href="abilities.html"><i class="fas fa-wand-magic-sparkles mr-1"></i> Abilities</a></li>
+                                <li><a href="gems.html"><i class="fas fa-gem mr-1"></i> Gems</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li>
+                        <a href="map.html">
+                            <i class="fas fa-map mr-1"></i> Map
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+    </div>
+</header>
     <main class="trader-container">
         <div class="container">
-            <h1 class="dashboard-header">Grace Calculator</h1>
+                <div class="page-content max-w-5xl mx-auto p-6 sm:p-8 md:p-10 rounded-lg w-full">
+                        <h1 class="text-xl font-semibold mt-6 mb-3 text-white text-center">Grace Calculator</h1>
             <p class="text-gray-400 text-center">Estimate the Grace required to purchase a Grace Plot (400 Grace) based on your current resources and projected activity.</p>
 
-            <div class="max-w-4xl mx-auto bg-gray-800 p-6 sm:p-8 rounded-lg shadow-2xl border border-gray-700 my-8">
+            <div class="max-w-5xl mx-auto bg-gray-800 p-6 sm:p-8 rounded-lg shadow-2xl border border-gray-700 my-8">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <div class="space-y-6">
                         <div class="bg-gray-700 p-4 rounded-lg shadow-md w-full"> 
@@ -146,25 +198,6 @@
                     </div>
                 </div>
 
-                <!-- <div class="mt-8 border-t pt-6 border-gray-700">
-                    <h3 class="text-xl font-bold mb-4 text-gray-300">Grace Purchase Scenarios (Required Gold to reach 400)</h3>
-                    <p class="text-sm text-gray-400 mb-4">Shows the Gold cost required to purchase the remaining Grace if you only had this many logins.</p>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-700 rounded-lg">
-                            <thead class="bg-gray-700">
-                                <tr>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Logins Completed</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Grace Earned</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Grace Still Needed</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Total Gold Cost (Best Efficiency)</th>
-                                </tr>
-                            </thead>
-                            <tbody id="scenarioTableBody" class="bg-gray-800 divide-y divide-gray-700">
-                                </tbody>
-                        </table>
-                    </div>
-                </div> -->
-
             </div>
         </div>
     </main>
@@ -186,7 +219,20 @@
             <div id="utc-clock-display" class="utc-clock"></div>
         </div>
     </footer>
+    <div id="floating-avatar-container">
+        <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar js-floating-avatar">
+    </div>
+
+    <div id="auth-modal">
+        <div class="modal-content-wrapper" id="modal-content-wrapper">
+        </div>
+    </div>
+    </footer>
+    <script type="module" src="frontend/www/js/supabaseClient.js"></script>
+    <script type="module" src="frontend/www/js/utils.js"></script>
+    <script type="module" src="frontend/www/js/main.js"></script>
     <script type="module" src="frontend/www/js/grace.js"></script>
+    <script type="module" src="frontend/www/js/popoutAuth.js"></script>   
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 </body>
 </html>

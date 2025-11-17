@@ -19,52 +19,92 @@
     </script>
 </head>
 <body>
-    <header class="header-area">
-        <div class="container">
-            <nav class="main-nav">
-                <a href="index.html" class="logo">
-                    <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
-                    <h1>Pax Dei Archives</h1>
-                </a>
-                <a class='menu-trigger'>
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </a>
-                <div class="nav-and-search-wrapper">
-                    <ul class="nav">
-                        <li><a href="index.html">Home</a></li>
-                        <li><a href="abilities.html" class="active">Abilities</a></li>
-                        <li><a href="gathering.html">Gathering Tracker</a></li>
-                        <li><a href="gems.html">Gems</a></li>
-                        <li><a href="grace.html">Grace Calculator</a></li>
-                        <!-- <li><a href="articles.html">Articles</a></li> -->
-                        <!-- <li><a href="news-updates.html">News</a></li> -->
-                        <li><a href="developer-comments.html">Dev Comments</a></li>
-                        <li><a href="lore.html">Lore</a></li>
-                        <li><a href="ledger.html">Ledger</a></li>
-                        <li><a href="trends.html">Market Trends</a></li>
-                        <li><a href="map.html">Map</a></li>
-
-                    </ul>
-                    <div class="search-input">
-                        <form id="search" action="#">
-                            <input type="text" placeholder="Search the Archives" id='searchText' name="searchKeyword" />
-                            <button type="submit" class="search-button"><i class="fa fa-search"></i></button>
-                        </form>
-                        <div id="searchResultsDropdown" class="search-results-dropdown">
+<header class="header-area">
+    <div class="container">
+        <nav class="main-nav">
+            <a href="index.html" class="logo">
+                <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
+                <h1>Pax Dei Archives</h1>
+            </a>
+            <a class="menu-trigger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </a>
+            <div class="nav-and-search-wrapper">
+                <ul class="nav">
+                    <li>
+                        <a href="index.html">
+                            <i class="fas fa-home mr-1"></i> Home
+                        </a>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#">
+                            <i class="fas fa-calculator mr-1"></i> Calculators 
+                            <i class="fas fa-caret-down ml-1"></i>
+                        </a>
+                        <div class="dropdown-content">
+                            <ul>
+                                <li><a href="grace.html"><i class="fas fa-hands-praying mr-1"></i> Grace Calculator</a></li>
+                                <li><a href="gathering.html"><i class="fas fa-leaf mr-1"></i> Gathering Tracker</a></li>
+                                <li><a href="runs.html"><i class="fas fa-route mr-1"></i> Run History</a></li>
+                                <!-- <li><a href="loot.html"><i class="fas fa-box mr-1"></i> Loot Tracker</a></li> -->
+                                <!-- <li><a href="view_loot.html"><i class="fas fa-inbox mr-1"></i> View Loot</a></li> -->
+                                <li><a href="crafting.html"><i class="fas fa-hammer mr-1"></i> Crafting Rate Calculator</a></li>
+                            </ul>
                         </div>
-                    </div>
-                </div>
-            </nav>
-        </div>
-    </header>
-    <div class="container mt-8 mb-8">
-        <div class="row">
-            <div class="col-lg-12">
-                <div class="page-content">
+                    </li>
+                    <li class="dropdown">
+                        <a href="#">
+                            <i class="fas fa-store mr-1"></i> Markets 
+                            <i class="fas fa-caret-down ml-1"></i>
+                        </a>
+                        <div class="dropdown-content">
+                            <ul>
+                                <li><a href="ledger.html"><i class="fas fa-book mr-1"></i> Ledger</a></li>
+                                <li><a href="trends.html"><i class="fas fa-chart-line mr-1"></i> Market Trends</a></li>
+                                <li><a href="listings.html"><i class="fas fa-tags mr-1"></i> Listings</a></li>
+                                <li><a href="profile.html"><i class="fas fa-user mr-1"></i> Profile</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li>
+                        <a href="developer-comments.html">
+                            <i class="fas fa-code mr-1"></i> Dev Comments
+                        </a>
+                    </li>
+                    <li>
+                        <a href="lore.html">
+                            <i class="fas fa-book-open mr-1"></i> Lore
+                        </a>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="active">
+                            <i class="fas fa-boxes-stacked mr-1"></i> Resources
+                            <i class="fas fa-caret-down ml-1"></i>
+                        </a>
+                        <div class="dropdown-content">
+                            <ul>
+                                <li><a href="abilities.html" class="active"><i class="fas fa-wand-magic-sparkles mr-1"></i> Abilities</a></li>
+                                <li><a href="gems.html"><i class="fas fa-gem mr-1"></i> Gems</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li>
+                        <a href="map.html">
+                            <i class="fas fa-map mr-1"></i> Map
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+    </div>
+</header>
+    <main class="trader-container">
+        <div class="container">
+                <div class="page-content max-w-7xl mx-auto p-6 sm:p-8 md:p-10 rounded-lg w-full">
                     <div class="p-6 sm:p-8 md:p-10 rounded-lg shadow-xl w-full max-w-10xl mx-auto">
-                        <h1 class="text-3xl sm:text-4xl font-bold text-center mb-6 text-white-400">Unique Armor & Weapon Abilities</h1>
+                        <h1 class="text-2xl sm:text-2xl font-bold text-center mb-6 text-white-400">Unique Armor & Weapon Abilities</h1>
                         <div id="ability-filters" class="mb-8"></div>
                         <div id="abilities-list" class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-6"></div>
                     </div>

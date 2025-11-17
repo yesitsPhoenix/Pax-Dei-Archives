@@ -69,37 +69,87 @@
   </ul>
 </aside>
 <body>
-    <header class="header-area">
-        <div class="container">
-            <nav class="main-nav">
-                <a href="index.html" class="logo">
-                    <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
-                    <h1>Pax Dei Archives</h1>
-                </a>
-                <a class='menu-trigger'>
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </a>
-                <div class="nav-and-search-wrapper">
-                    <ul class="nav">
-                        <li><a href="index.html">Home</a></li>
-                        <li><a href="abilities.html">Abilities</a></li>
-                        <li><a href="gathering.html">Gathering Tracker</a></li>
-                        <li><a href="gems.html">Gems</a></li>
-                        <li><a href="grace.html">Grace Calculator</a></li>
-                        <!-- <li><a href="articles.html">Articles</a></li> -->
-                        <!-- <li><a href="news-updates.html">News</a></li> -->
-                        <li><a href="developer-comments.html">Dev Comments</a></li>
-                        <li><a href="lore.html">Lore</a></li>
-                        <li><a href="ledger.html" class="active">Ledger</a></li>
-                        <li><a href="trends.html">Market Trends</a></li>
-                        <li><a href="map.html">Map</a></li>
-                    </ul>
-                </div>
-            </nav>
-        </div>
-    </header>
+<header class="header-area">
+    <div class="container">
+        <nav class="main-nav">
+            <a href="index.html" class="logo">
+                <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
+                <h1>Pax Dei Archives</h1>
+            </a>
+            <a class="menu-trigger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </a>
+            <div class="nav-and-search-wrapper">
+                <ul class="nav">
+                    <li>
+                        <a href="index.html">
+                            <i class="fas fa-home mr-1"></i> Home
+                        </a>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#">
+                            <i class="fas fa-calculator mr-1"></i> Calculators 
+                            <i class="fas fa-caret-down ml-1"></i>
+                        </a>
+                        <div class="dropdown-content">
+                            <ul>
+                                <li><a href="grace.html"><i class="fas fa-hands-praying mr-1"></i> Grace Calculator</a></li>
+                                <li><a href="gathering.html"><i class="fas fa-leaf mr-1"></i> Gathering Tracker</a></li>
+                                <li><a href="runs.html"><i class="fas fa-route mr-1"></i> Run History</a></li>
+                                <!-- <li><a href="loot.html"><i class="fas fa-box mr-1"></i> Loot Tracker</a></li> -->
+                                <!-- <li><a href="view_loot.html"><i class="fas fa-inbox mr-1"></i> View Loot</a></li> -->
+                                <li><a href="crafting.html"><i class="fas fa-hammer mr-1"></i> Crafting Rate Calculator</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="active">
+                            <i class="fas fa-store mr-1"></i> Markets 
+                            <i class="fas fa-caret-down ml-1"></i>
+                        </a>
+                        <div class="dropdown-content">
+                            <ul>
+                                <li><a href="ledger.html" class="active"><i class="fas fa-book mr-1"></i> Ledger</a></li>
+                                <li><a href="trends.html"><i class="fas fa-chart-line mr-1"></i> Market Trends</a></li>
+                                <li><a href="listings.html"><i class="fas fa-tags mr-1"></i> Listings</a></li>
+                                <li><a href="profile.html"><i class="fas fa-user mr-1"></i> Profile</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li>
+                        <a href="developer-comments.html">
+                            <i class="fas fa-code mr-1"></i> Dev Comments
+                        </a>
+                    </li>
+                    <li>
+                        <a href="lore.html">
+                            <i class="fas fa-book-open mr-1"></i> Lore
+                        </a>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#">
+                            <i class="fas fa-boxes-stacked mr-1"></i> Resources
+                            <i class="fas fa-caret-down ml-1"></i>
+                        </a>
+                        <div class="dropdown-content">
+                            <ul>
+                                <li><a href="abilities.html"><i class="fas fa-wand-magic-sparkles mr-1"></i> Abilities</a></li>
+                                <li><a href="gems.html"><i class="fas fa-gem mr-1"></i> Gems</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li>
+                        <a href="map.html">
+                            <i class="fas fa-map mr-1"></i> Map
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+    </div>
+</header>
     <main class="trader-container">
         <div class="container">
             <div id="traderLoginContainer" class="admin-form-container" style="display: none; text-align: center;">
@@ -109,7 +159,7 @@
                 </button>
                 <p id="traderLoginError" style="color: red; display: none;"></p>
             </div>
-        <h1 class="dashboard-header">Ledger</h1>
+        <h1 class="text-xl font-semibold mt-6 mb-3 text-white text-center">Ledger</h1>
             <div class="mb-4">
                 <label for="character-select" class="block text-gray-700 text-sm font-bold mb-2">Select Character:</label>
                 <select id="character-select" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
@@ -342,7 +392,7 @@
 <div id="manageMarketStallsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center hidden" style="z-index: 1;">
     <div class="bg-white p-8 rounded-lg shadow-xl max-w-2xl w-full relative">
         <h2 class="text-2xl font-bold mb-4 text-gray-800">Manage Market Stalls</h2>
-        
+
         <div class="mb-6">
             <h3 class="text-xl font-semibold mb-3 text-gray-800">Your Current Stalls:</h3>
             <em>Sorted alphabetically</em>
@@ -351,7 +401,6 @@
             </div>
             <p id="deleteStallError" class="text-red-500 text-sm mt-2 hidden"></p>
         </div>
-
         <hr class="my-6 border-gray-300">
 
         <h3 class="text-xl font-semibold mb-3 text-gray-800">Create New Market Stall:</h3>
@@ -359,9 +408,26 @@
             <div>
                 <label for="new-market-stall-name" class="block text-sm font-medium text-gray-700">Market Stall Name:</label>
                 <input type="text" id="new-market-stall-name" name="market-stall-name" required
-                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                       placeholder="e.g., My Trading Post">
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        placeholder="e.g., My Trading Post">
             </div>
+
+            <div>
+                <label for="newMarketStallProvinceSelect" class="block text-sm font-medium text-gray-700">Province:</label>
+                <select id="newMarketStallProvinceSelect" name="province" required
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <option value="" selected>Select a Province</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="newMarketStallHomeValleySelect" class="block text-sm font-medium text-gray-700">Home Valley:</label>
+                <select id="newMarketStallHomeValleySelect" name="home-valley" required
+                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <option value="" disabled selected>Select a Home Valley</option>
+                </select>
+            </div>
+
             <button type="submit" id="addMarketStallBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                 Create Market Stall
             </button>

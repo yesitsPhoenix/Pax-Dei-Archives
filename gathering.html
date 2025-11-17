@@ -19,48 +19,98 @@
         .page-content{
             padding: 0px !important
         }
-
+        .h1 {
+                margin-top: 0 !important;
+;
+        }
     </style>
 </head>
 <body>
-    <header class="header-area">
+<header class="header-area">
+    <div class="container">
+        <nav class="main-nav">
+            <a href="index.html" class="logo">
+                <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
+                <h1>Pax Dei Archives</h1>
+            </a>
+            <a class="menu-trigger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </a>
+            <div class="nav-and-search-wrapper">
+                <ul class="nav">
+                    <li>
+                        <a href="index.html">
+                            <i class="fas fa-home mr-1"></i> Home
+                        </a>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="active">
+                            <i class="fas fa-calculator mr-1"></i> Calculators 
+                            <i class="fas fa-caret-down ml-1"></i>
+                        </a>
+                        <div class="dropdown-content">
+                            <ul>
+                                <li><a href="grace.html"><i class="fas fa-hands-praying mr-1"></i> Grace Calculator</a></li>
+                                <li><a href="gathering.html" class="active"><i class="fas fa-leaf mr-1"></i> Gathering Tracker</a></li>
+                                <li><a href="runs.html"><i class="fas fa-route mr-1"></i> Run History</a></li>
+                                <li><a href="crafting.html"><i class="fas fa-hammer mr-1"></i> Crafting Rate Calculator</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#">
+                            <i class="fas fa-store mr-1"></i> Markets 
+                            <i class="fas fa-caret-down ml-1"></i>
+                        </a>
+                        <div class="dropdown-content">
+                            <ul>
+                                <li><a href="ledger.html"><i class="fas fa-book mr-1"></i> Ledger</a></li>
+                                <li><a href="trends.html"><i class="fas fa-chart-line mr-1"></i> Market Trends</a></li>
+                                <li><a href="listings.html"><i class="fas fa-tags mr-1"></i> Listings</a></li>
+                                <li><a href="profile.html"><i class="fas fa-user mr-1"></i> Profile</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li>
+                        <a href="developer-comments.html">
+                            <i class="fas fa-code mr-1"></i> Dev Comments
+                        </a>
+                    </li>
+                    <li>
+                        <a href="lore.html">
+                            <i class="fas fa-book-open mr-1"></i> Lore
+                        </a>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#">
+                            <i class="fas fa-boxes-stacked mr-1"></i> Resources
+                            <i class="fas fa-caret-down ml-1"></i>
+                        </a>
+                        <div class="dropdown-content">
+                            <ul>
+                                <li><a href="abilities.html"><i class="fas fa-wand-magic-sparkles mr-1"></i> Abilities</a></li>
+                                <li><a href="gems.html"><i class="fas fa-gem mr-1"></i> Gems</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li>
+                        <a href="map.html">
+                            <i class="fas fa-map mr-1"></i> Map
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+    </div>
+</header>
+    <main class="trader-container">
         <div class="container">
-            <nav class="main-nav">
-                <a href="index.html" class="logo">
-                    <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
-                    <h1>Pax Dei Archives</h1>
-                </a>
-                <a class='menu-trigger'>
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </a>
-                <div class="nav-and-search-wrapper">
-                    <ul class="nav">
-                        <li><a href="index.html">Home</a></li>
-                        <li><a href="abilities.html">Abilities</a></li>
-                        <li><a href="gathering.html" class="active">Gathering Tracker</a></li>
-                        <li><a href="gems.html">Gems</a></li>
-                        <li><a href="grace.html">Grace Calculator</a></li>
-                        <li><a href="developer-comments.html">Dev Comments</a></li>
-                        <li><a href="lore.html">Lore</a></li>
-                        <li><a href="ledger.html">Ledger</a></li>
-                        <li><a href="trends.html">Market Trends</a></li>
-                        <li><a href="map.html">Map</a></li>
-                    </ul>
-                </div>
-            </nav>
-        </div>
-    </header>
-    <div class="container mt-8 mb-8">
-        <div class="row">
-            <div class="col-lg-12">
-                <div class="page-content">
-                    <div class="p-6 sm:p-8 md:p-10 rounded-lg w-full max-w-5xl mx-auto ">
-                        <h1 class="text-3xl sm:text-4xl font-bold text-center mb-6 text-white-400">Gathering Tracker</h1>
-                        <h3 >Track your gathering rates for any farmed or mined item! Start a new run below to begin your stopwatch.
-                            <br.>Share the run link with your party, or save it for historical purposes.
-                        </h3><br>
+                <div class="page-content max-w-5xl mx-auto p-6 sm:p-8 md:p-10 rounded-lg w-full">
+                        <h1 class="text-xl font-semibold mt-6 mb-3 text-white text-center">Gathering Tracker</h1>
+                        <p class="text-gray-400 text-center" >Track your gathering rates for any farmed or mined item! Start a new run below to begin your stopwatch.
+                            <br.>Share the run link with your party, or save it for historical purposes.</br.></p>
                         
                         <div class="mb-8 p-4 bg-gray-800 rounded-lg">
                             <h2 class="text-2xl font-semibold mb-4 text-white">Start a New Run</h2>
@@ -100,29 +150,30 @@
                                 </div>
                                 
                                 <div>
-                                    <label for="gatheringMiracleToggle" class="block text-gray-300 text-sm font-bold mb-2">Gathering Miracle Active?</label>
+                                    <label class="block text-gray-300 text-sm font-bold mb-2">Active Miracle?</label>
                                     <div id="gatheringMiracleToggle" class="flex p-1 bg-gray-700 rounded-lg border border-gray-600 shadow-inner">
                                         <button
                                             type="button"
-                                            data-status="not_active"
+                                            data-status="no"
+                                            id="miracleToggleNo"
                                             class="flex-1 py-2 rounded-lg transition-colors duration-200 bg-indigo-500 text-white font-medium"
-                                            onclick="setGatheringMiracle('not_active')"
+                                            onclick="setGatheringMiracle('no')"
                                         >
-                                            Not Active
+                                            No
                                         </button>
                                         <button
                                             type="button"
-                                            data-status="active"
+                                            data-status="yes"
+                                            id="miracleToggleYes"
                                             class="flex-1 py-2 rounded-lg transition-colors duration-200 text-gray-300 font-medium hover:bg-gray-600"
-                                            onclick="setGatheringMiracle('active')"
+                                            onclick="setGatheringMiracle('yes')"
                                         >
-                                            Active
+                                            Yes
                                         </button>
                                     </div>
-                                    <input type="hidden" id="gatheringMiracleStatus" value="not_active">
+                                    <input type="hidden" id="gatheringMiracleStatus" value="no"> 
                                 </div>
                             </div>
-
 
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <div class="relative">
@@ -148,7 +199,6 @@
                             </div>
 
                         </div>
-
 
                         <div id="stopwatchSection" class="mb-8 p-4 bg-gray-800 rounded-lg">
                             <h2 class="text-2xl font-semibold mb-4 text-white">Stopwatch</h2>
@@ -188,7 +238,6 @@
                                 </div>
                             </div>
                         </div>
-
 
                         <div class="p-4 bg-gray-800 rounded-lg">
                             <h2 class="text-2xl font-semibold mb-4 text-white">Run History</h2>

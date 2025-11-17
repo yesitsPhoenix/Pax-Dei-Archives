@@ -16,54 +16,92 @@
     </script>
     <script async src="https://paxdei.gaming.tools/embed.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    <style>
-        .page-content{
-            padding: 0px !important
-        }
-        .sortable-header {
-            cursor: pointer;
-            transition: color 0.1s;
-        }
-        .sortable-header:hover {
-            color: #6366f1;
-        }
-        .header-area .nav li a{
-        font-size: 13px !important;
-        }
-    </style>
+<style>
+
+</style>
 </head>
 <body>
-    <header class="header-area">
-        <div class="container">
-            <nav class="main-nav">
-                <a href="index.html" class="logo">
-                    <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
-                    <h1>Pax Dei Archives</h1>
-                </a>
-                <a class='menu-trigger'>
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </a>
-                <div class="nav-and-search-wrapper">
-                    <ul class="nav">
-                        <li><a href="index.html">Home</a></li>
-                        <li><a href="abilities.html">Abilities</a></li>
-                        <li><a href="gathering.html">Gathering Tracker</a></li>
-                        <li><a href="runs.html">Run History</a></li>
-                        <li><a href="gems.html">Gems</a></li>
-                        <li><a href="grace.html">Grace Calculator</a></li>
-                        <li><a href="developer-comments.html">Dev Comments</a></li>
-                        <li><a href="lore.html">Lore</a></li>
-                        <li><a href="ledger.html">Ledger</a></li>
-                        <li><a href="trends.html">Market Trends</a></li>
-                        <li><a href="listings.html" class="active">Active Listings</a></li>
-                        <li><a href="map.html">Map</a></li>
-                    </ul>
-                </div>
-            </nav>
-        </div>
-    </header>
+<header class="header-area">
+    <div class="container">
+        <nav class="main-nav">
+            <a href="index.html" class="logo">
+                <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
+                <h1>Pax Dei Archives</h1>
+            </a>
+            <a class="menu-trigger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </a>
+            <div class="nav-and-search-wrapper">
+                <ul class="nav">
+                    <li>
+                        <a href="index.html">
+                            <i class="fas fa-home mr-1"></i> Home
+                        </a>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#">
+                            <i class="fas fa-calculator mr-1"></i> Calculators 
+                            <i class="fas fa-caret-down ml-1"></i>
+                        </a>
+                        <div class="dropdown-content">
+                            <ul>
+                                <li><a href="grace.html"><i class="fas fa-hands-praying mr-1"></i> Grace Calculator</a></li>
+                                <li><a href="gathering.html"><i class="fas fa-leaf mr-1"></i> Gathering Tracker</a></li>
+                                <li><a href="runs.html"><i class="fas fa-route mr-1"></i> Run History</a></li>
+                                <!-- <li><a href="loot.html"><i class="fas fa-box mr-1"></i> Loot Tracker</a></li> -->
+                                <!-- <li><a href="view_loot.html"><i class="fas fa-inbox mr-1"></i> View Loot</a></li> -->
+                                <li><a href="crafting.html"><i class="fas fa-hammer mr-1"></i> Crafting Rate Calculator</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="active">
+                            <i class="fas fa-store mr-1"></i> Markets 
+                            <i class="fas fa-caret-down ml-1"></i>
+                        </a>
+                        <div class="dropdown-content">
+                            <ul>
+                                <li><a href="ledger.html"><i class="fas fa-book mr-1"></i> Ledger</a></li>
+                                <li><a href="trends.html"><i class="fas fa-chart-line mr-1"></i> Market Trends</a></li>
+                                <li><a href="listings.html" class="active"><i class="fas fa-tags mr-1"></i> Listings</a></li>
+                                <li><a href="profile.html"><i class="fas fa-user mr-1"></i> Profile</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li>
+                        <a href="developer-comments.html">
+                            <i class="fas fa-code mr-1"></i> Dev Comments
+                        </a>
+                    </li>
+                    <li>
+                        <a href="lore.html">
+                            <i class="fas fa-book-open mr-1"></i> Lore
+                        </a>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#">
+                            <i class="fas fa-boxes-stacked mr-1"></i> Resources
+                            <i class="fas fa-caret-down ml-1"></i>
+                        </a>
+                        <div class="dropdown-content">
+                            <ul>
+                                <li><a href="abilities.html"><i class="fas fa-wand-magic-sparkles mr-1"></i> Abilities</a></li>
+                                <li><a href="gems.html"><i class="fas fa-gem mr-1"></i> Gems</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li>
+                        <a href="map.html">
+                            <i class="fas fa-map mr-1"></i> Map
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+    </div>
+</header>
 
     <div class="container mt-8 mb-8">
         <div class="row">
@@ -73,7 +111,29 @@
                         <h1 class="text-3xl sm:text-4xl font-bold text-center mb-6 text-white-400">Active Market Listings</h1>
                         <h3 class="text-center">View and filter active market listings from all users.</h3>
                         <br>
-
+                        
+                        <div id="marketSummaryCharts" class="mb-8 p-4 bg-gray-800 rounded-lg grid grid-cols-1 md:grid-cols-5 gap-4">
+                            <div class="p-4 bg-gray-700 rounded-lg text-center">
+                                <h4 class="text-xl font-semibold text-white mb-2">Total Active Listings</h4>
+                                <p id="totalListingsCount" class="text-3xl font-bold text-indigo-400">0</p>
+                            </div>
+                            <div class="p-4 bg-gray-700 rounded-lg text-center">
+                                <h4 class="text-xl font-semibold text-white mb-2">Lowest Price/Unit</h4>
+                                <p id="lowestPriceUnit" class="text-3xl font-bold text-green-400">N/A</p>
+                            </div>
+                            <div class="p-4 bg-gray-700 rounded-lg text-center">
+                                <h4 class="text-xl font-semibold text-white mb-2">Highest Price/Unit</h4>
+                                <p id="highestPriceUnit" class="text-3xl font-bold text-red-400">N/A</p>
+                            </div>
+                            <div class="p-4 bg-gray-700 rounded-lg text-center">
+                                <h4 class="text-xl font-semibold text-white mb-2">Lowest Total Price</h4>
+                                <p id="lowestTotalPrice" class="text-3xl font-bold text-green-400">N/A</p>
+                            </div>
+                            <div class="p-4 bg-gray-700 rounded-lg text-center">
+                                <h4 class="text-xl font-semibold text-white mb-2">Highest Total Price</h4>
+                                <p id="highestTotalPrice" class="text-3xl font-bold text-red-400">N/A</p>
+                            </div>
+                        </div>
                         <div class="mb-8 p-4 bg-gray-800 rounded-lg">
                             <div class="flex items-center justify-between mb-4">
                                 <h2 class="text-2xl font-semibold text-white">Filter Listings</h2>
@@ -127,26 +187,25 @@
                                 </button>
                             </div>
                         </div>
-
-
                         <div class="p-4 bg-gray-800 rounded-lg">
                             <h2 class="text-2xl font-semibold mb-4 text-white">Active Listings</h2>
-                            <div id="listingResultsTableContainer" class="bg-gray-600 p-3 rounded-lg border border-gray-500">
+                            <div id="listingResultsTableContainer" class="bg-gray-600 p-3 rounded-lg border border-gray-500 overflow-x-auto">
                                 <table class="min-w-full divide-y divide-gray-500">
                                     <thead>
                                         <tr>
                                             <th class="sticky top-0 bg-gray-600 px-3 py-2 text-left text-sm font-medium text-gray-300 uppercase tracking-wider sortable-header" data-sort-key="item_name">Item Name <i class="fas fa-sort"></i></th>
                                             <th class="sticky top-0 bg-gray-600 px-3 py-2 text-center text-sm font-medium text-gray-300 uppercase tracking-wider sortable-header" data-sort-key="category_name">Category <i class="fas fa-sort"></i></th>
-                                            <th class="sticky top-0 bg-gray-600 px-3 py-2 text-center text-sm font-medium text-gray-300 uppercase tracking-wider sortable-header" data-sort-key="quantity_listed">Quantity <i class="fas fa-sort"></i></th>
+                                            <th class="sticky top-0 bg-gray-600 px-3 py-2 text-center text-sm font-medium text-gray-300 uppercase tracking-wider sortable-header" data-sort-key="quantity_listed">Stack Size <i class="fas fa-sort"></i></th>
                                             <th class="sticky top-0 bg-gray-600 px-3 py-2 text-center text-sm font-medium text-gray-300 uppercase tracking-wider sortable-header" data-sort-key="listed_price_per_unit">Price/Unit <i class="fas fa-sort"></i></th>
                                             <th class="sticky top-0 bg-gray-600 px-3 py-2 text-center text-sm font-medium text-gray-300 uppercase tracking-wider sortable-header" data-sort-key="total_listed_price">Total Price <i class="fas fa-sort"></i></th>
                                             <th class="sticky top-0 bg-gray-600 px-3 py-2 text-center text-sm font-medium text-gray-300 uppercase tracking-wider sortable-header" data-sort-key="listing_date" data-default-sort="desc">Date Listed <i class="fas fa-sort-down"></i></th>
+                                            <th class="sticky top-0 bg-gray-600 px-3 py-2 text-center text-sm font-medium text-gray-300 uppercase tracking-wider hidden" data-sort-key="listing_id">ID <i class="fas fa-sort"></i></th>
                                         </tr>
                                     </thead>
 
                                     <tbody id="listingResultsBody" class="bg-gray-800 divide-y divide-gray-700 text-white">
                                         <tr>
-                                            <td colspan="6" class="px-3 py-4 whitespace-nowrap text-sm text-gray-400 text-center">Loading or No active listings found. Apply filters to search.</td>
+                                            <td colspan="8" class="px-3 py-4 whitespace-nowrap text-sm text-gray-400 text-center">Loading or No active listings found. Apply filters to search.</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -229,7 +288,15 @@
         </div>
     </footer>
     <div id="floating-avatar-container">
-        <img id="floating-avatar" src="data:image/gif;base64,R_auto," alt="User Avatar" class="floating-avatar js-floating-avatar">
+        <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar js-floating-avatar">
+    </div>
+
+    <div id="accessDeniedModal" class="hidden fixed inset-0 z-[50] flex items-center justify-center bg-black/75">
+        <div class="bg-gray-800 border border-gray-700 rounded-lg shadow-xl p-6 w-full max-w-sm text-center">
+            <h3 class="text-2xl font-bold text-yellow-400 mb-4">Access Denied</h3>
+            <p class="text-gray-300 mb-6 text-lg">You do not currently have access to this data.</p>
+            <p id="redirectCountdown" class="text-sm text-gray-400">Redirecting to Market Trends in 5 seconds...</p>
+        </div>
     </div>
 
     <div id="auth-modal">
