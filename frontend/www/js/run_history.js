@@ -247,8 +247,8 @@ const renderRunTable = (runs) => {
         row.className = 'hover:bg-gray-700 transition duration-150 ease-in-out';
         row.innerHTML = `
             <td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-white">${run.run_name || 'N/A'}</td>
-            <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-white">${run.item}</td>
             <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-white">${run.category}</td>
+            <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-white">${run.item}</td>
             <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-white">${run.tool_used}</td>
             <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-yellow-400 font-mono">${timeFormatted}</td>
             <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-green-400 font-bold">${run.amount.toLocaleString()}</td>
