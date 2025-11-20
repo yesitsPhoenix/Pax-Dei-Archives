@@ -22,13 +22,12 @@ export const FARMING_CATEGORIES = {
         'Wool Fiber'
     ],
     'Foraging': [
-        'Ambergrasp',
-        'Canonite',
+        'Ambergrasp/Canonite',
         'Cotton',
         'Flax',
         'Flax Seeds',
         'Garlic',
-        'White Grapes',        
+        'White Grapes',
         'Other'
     ],
     'Other': [
