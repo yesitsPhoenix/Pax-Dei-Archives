@@ -9,6 +9,61 @@ const NOTIFICATIONS_PER_PAGE = 8;
 
 import { supabase } from './supabaseClient.js';
 
+
+async function fetchPveGoldEarned() {
+    const element = document.getElementById('pveGoldEarned');
+    if (!element) return;
+
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            element.textContent = "-";
+            return;
+        }
+
+        const { data, error } = await supabase
+            .from('pve_transactions')
+            .select('gold_amount')
+            .eq('user_id', user.id);
+
+        if (error) throw error;
+
+        const totalGold = data.reduce((sum, transaction) => sum + transaction.gold_amount, 0);
+
+        element.textContent = formatNumberWithCommas(totalGold);
+    } catch (error) {
+        console.error("Error fetching PVE Gold Earned:", error);
+        element.textContent = "Error";
+    }
+}
+
+async function fetchFeesPaid() {
+    const element = document.getElementById('feesPaid');
+    if (!element) return;
+
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            element.textContent = "-";
+            return;
+        }
+
+        const { data, error } = await supabase
+            .from('market_listings')
+            .select('market_fee')
+            .eq('user_id', user.id);
+            
+        if (error) throw error;
+
+        const totalFees = data.reduce((sum, listing) => sum + listing.market_fee, 0);
+
+        element.textContent = formatNumberWithCommas(totalFees);
+    } catch (error) {
+        console.error("Error fetching Fees Paid:", error);
+        element.textContent = "Error";
+    }
+}
+
 function formatNumberWithCommas(number, precision = null) {
     if (typeof number !== 'number') return number;
     
@@ -512,6 +567,7 @@ async function fetchAndPopulateNotifications(itemIdToNameMap, characterId = '') 
     }
 }
 
+
 function handlePagination(direction) {
     const totalPages = Math.ceil(allNotifications.length / NOTIFICATIONS_PER_PAGE);
     
@@ -556,6 +612,8 @@ function setupPaginationListeners() {
 
 async function initDashboard() {
     initSidebar();
+    fetchPveGoldEarned();
+    fetchFeesPaid();
     
     const characters = await fetchUserCharacters();
     populateCharacterFilter(characters);
@@ -564,6 +622,7 @@ async function initDashboard() {
     handleFilterChange();
     
     setupPaginationListeners();
+    
 }
 
 document.addEventListener('DOMContentLoaded', initDashboard);

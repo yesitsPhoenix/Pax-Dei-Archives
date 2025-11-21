@@ -296,62 +296,6 @@ function populateBreakdownTable(breakdown) {
     tbody.appendChild(trTotal);
 }
 
-// function populateScenarioTable(maxLogins) {
-//     const tbody = document.getElementById('scenarioTableBody');
-//     tbody.innerHTML = '';
-//     const gracePerLogin = isSubscribed ? GRACE_PER_LOGIN_SUB : GRACE_PER_LOGIN_NON_SUB;
-//     const existingGrace = parseInt(document.getElementById('existingGrace').value, 10) || 0;
-//     const scenarioLogins = Array.from({length: maxLogins}, (_, i) => i + 1).reverse();
-    
-//     scenarioLogins.forEach(logins => {
-//         const graceFromLogins = (logins * gracePerLogin);
-//         const earnedGrace = graceFromLogins + existingGrace;
-        
-//         const rawGraceRemaining = PLOT_GRACE_COST - earnedGrace;
-
-//         const deficitToCover = Math.max(0, rawGraceRemaining);
-//         const totalGoldCost = calculateGoldCostIgnoringLogins(deficitToCover);
-
-//         const tr = document.createElement('tr');
-//         tr.className = 'hover:bg-gray-700 transition-colors duration-150';
-        
-//         let tdLogins = document.createElement('td');
-//         tdLogins.className = 'px-6 py-4 whitespace-nowrap font-medium text-white';
-//         tdLogins.textContent = logins.toLocaleString();
-//         tr.appendChild(tdLogins);
-        
-//         let tdEarned = document.createElement('td');
-//         tdEarned.className = 'px-6 py-4 whitespace-nowrap text-green-400';
-//         tdEarned.textContent = graceFromLogins.toLocaleString();
-//         tr.appendChild(tdEarned);
-        
-//         let tdNeeded = document.createElement('td');
-//         tdNeeded.className = 'px-6 py-4 whitespace-nowrap';
-        
-//         if (rawGraceRemaining > 0) {
-//             tdNeeded.classList.add('text-red-400');
-//             tdNeeded.textContent = rawGraceRemaining.toLocaleString();
-//         } else {
-//             const pureSurplus = Math.abs(rawGraceRemaining);
-//             tdNeeded.classList.add('text-green-300');
-//             tdNeeded.textContent = `0${pureSurplus > 0 ? ' (Surplus: ' + pureSurplus.toLocaleString() + ')' : ''}`;
-//         }
-//         tr.appendChild(tdNeeded);
-        
-//         let tdGoldCost = document.createElement('td');
-//         tdGoldCost.className = 'px-6 py-4 whitespace-nowrap font-bold';
-//         if (totalGoldCost > 0) {
-//             tdGoldCost.classList.add('text-yellow-400');
-//             tdGoldCost.textContent = totalGoldCost.toLocaleString();
-//         } else {
-//             tdGoldCost.classList.add('text-green-300');
-//             tdGoldCost.textContent = '0';
-//         }
-//         tr.appendChild(tdGoldCost);
-//         tbody.appendChild(tr);
-//     });
-// }
-
 function calculateGrace() {
     const logins = parseInt(document.getElementById('loginsSlider').value, 10);
     const existingGrace = parseInt(document.getElementById('existingGrace').value, 10) || 0;

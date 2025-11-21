@@ -158,3 +158,40 @@ export async function updateDungeonRun(runId, updatedData) {
     return data ? data[0] : null;
 }
 
+export const updateUtcClock = (element) => {
+    if (!element) return;
+    const now = new Date();
+    const month = now.getUTCMonth();
+    const day = now.getUTCDate();
+    const hours = now.getUTCHours().toString().padStart(2, '0');
+    const minutes = now.getUTCMinutes().toString().padStart(2, '0');
+    const monthNames = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ];
+    element.textContent = `${monthNames[month]} ${day}, ${hours}:${minutes} UTC`;
+};
+
+    const utcClockDisplay = document.getElementById('utc-clock-display');
+        if (utcClockDisplay) {
+            updateUtcClock(utcClockDisplay);
+            setInterval(() => updateUtcClock(utcClockDisplay), 1000);
+        }
+        
+        $('.menu-trigger').on('click', function() {
+            $(this).toggleClass('active');
+            $('.header-area .nav').toggleClass('active');
+        });
+    
+        $('a[href*="#"]:not([href="#"])').on('click', function() {
+            if (location.pathname.replace(/^\//, '') == this.pathname.replace(/^\//, '') && location.hostname == this.hostname) {
+                var target = $(this.hash);
+                target = target.length ? target : $('[name=' + this.hash.slice(1) + ']');
+                if (target.length) {
+                    $('html, body').animate({
+                        scrollTop: target.offset().top - 80
+                    }, 1000);
+                    return false;
+                }
+            }
+        });
