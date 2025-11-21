@@ -5,7 +5,7 @@ const DAYS_CRITICAL = 45;
 
 let allNotifications = [];
 let currentPage = 1;
-const NOTIFICATIONS_PER_PAGE = 9;
+const NOTIFICATIONS_PER_PAGE = 8;
 
 import { supabase } from './supabaseClient.js';
 
@@ -307,7 +307,7 @@ async function fetchAndPopulateRecentTransactions(itemIdToNameMap, characterId =
             `) 
             .eq('user_id', user.id)
             .order('sale_date', { ascending: false })
-            .limit(10);
+            .limit(9);
             
         if (characterId !== '') {
             recentSalesQuery = recentSalesQuery.eq('character_id', characterId);
