@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pax Dei Archives - Dashboard</title>
+    <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="frontend/www/css/trader.css">
+    <link rel="stylesheet" href="frontend/www/css/sidebar.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.gtTooltipConfig = {
+        scale: 0.8,
+        delay: 30,
+        };
+    </script>
+    <script async src="https://paxdei.gaming.tools/embed.js"></script>
+    <style>
+        .dashboard-grid {
+            display: grid;
+            gap: 24px;
+            grid-template-columns: 1fr;
+        }
+        .main-metrics-grid {
+            display: grid;
+            gap: 24px;
+            grid-template-columns: repeat(1, 1fr);
+        }
+        @media (min-width: 768px) {
+            .main-metrics-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        .dashboard-cards {
+            display: block;
+            width: 100%;
+            overflow-wrap: break-word;
+            word-break: break-word;
+            box-sizing: border-box;
+        }
+        #sidebar.collapsed .sidebar-notification {
+            display: inline-flex !important;
+        }
+    </style>
+</head>
+
+<body>
+<header class="header-area">
+    <div class="container">
+        <nav class="main-nav">
+            <a href="index.html" class="logo">
+                <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
+                <h1>Pax Dei Archives</h1>
+            </a>
+            <a class="menu-trigger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </a>
+            <div class="nav-and-search-wrapper">
+                <ul class="nav">
+                    <li>
+                        <a href="index.html">
+                            <i class="fas fa-home mr-1"></i> Home
+                        </a>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#">
+                            <i class="fas fa-calculator mr-1"></i> Calculators 
+                            <i class="fas fa-caret-down ml-1"></i>
+                        </a>
+                        <div class="dropdown-content">
+                            <ul>
+                                <li><a href="grace.html"><i class="fas fa-hands-praying mr-1"></i> Grace Calculator</a></li>
+                                <li><a href="gathering.html"><i class="fas fa-leaf mr-1"></i> Gathering Tracker</a></li>
+                                <li><a href="runs.html"><i class="fas fa-route mr-1"></i> Run History</a></li>
+                                <li><a href="crafting.html"><i class="fas fa-hammer mr-1"></i> Crafting Rate Calculator</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="active">
+                            <i class="fas fa-store mr-1"></i> Markets 
+                            <i class="fas fa-caret-down ml-1"></i>
+                        </a>
+                        <div class="dropdown-content">
+                            <ul>
+                                <li><a href="dashboard.html" class="active"><i class="fas fa-tachometer-alt mr-1"></i> Dashboard</a></li>
+                                <li><a href="ledger.html"><i class="fas fa-book mr-1"></i> Ledger</a></li>
+                                <li><a href="trends.html"><i class="fas fa-chart-line mr-1"></i> Market Trends</a></li>
+                                <li><a href="listings.html"><i class="fas fa-tags mr-1"></i> Listings</a></li>
+                                <li><a href="profile.html"><i class="fas fa-user mr-1"></i> Profile</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li>
+                        <a href="developer-comments.html">
+                            <i class="fas fa-code mr-1"></i> Dev Comments
+                        </a>
+                    </li>
+                    <li>
+                        <a href="lore.html">
+                            <i class="fas fa-book-open mr-1"></i> Lore
+                        </a>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#">
+                            <i class="fas fa-boxes-stacked mr-1"></i> Resources
+                            <i class="fas fa-caret-down ml-1"></i>
+                        </a>
+                        <div class="dropdown-content">
+                            <ul>
+                                <li><a href="abilities.html"><i class="fas fa-wand-magic-sparkles mr-1"></i> Abilities</a></li>
+                                <li><a href="gems.html"><i class="fas fa-gem mr-1"></i> Gems</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li>
+                        <a href="map.html">
+                            <i class="fas fa-map mr-1"></i> Map
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+    </div>
+</header>
+
+<aside id="sidebar" class="w-64 bg-[#1c1c1c] border-r-4 border-amber-300 shadow-lg transition-all duration-300 hover:bg-slate-700 px-3 py-4 cursor-pointer fixed h-[50vh] z-50 top-[220px] collapsed">
+    <ul class="space-y-2 font-medium">
+        <li>
+            <a href="ledger.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                <i class="fas fa-book w-5 h-5 text-gray-400 transition duration-75"></i>
+                <span class="ml-3">View Ledger</span>
+            </a>
+        </li>
+        <li>
+            <a href="trends.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                <i class="fas fa-chart-line w-5 h-5 text-gray-400 transition duration-75"></i>
+                <span class="ml-3">View Market Trends</span>
+            </a>
+        </li>
+        <li>
+            <a href="listings.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                <i class="fas fa-tags w-5 h-5 text-gray-400 transition duration-75"></i>
+                <span class="ml-3">View All Listings</span>
+            </a>
+        </li>
+        <li>
+            <a href="#notificationsList" class="relative flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                <i class="fas fa-bell w-5 h-5 text-gray-400 transition duration-75"></i>
+                <span class="ml-3">Listing Alerts</span>
+                <span id="sidebarAlertBadge"
+                class="sidebar-notification hidden absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full">
+                </span>
+
+            </a>
+        </li>
+    </ul>
+</aside>
+<main class="trader-container">
+        <div class="container">
+            <div id="traderLoginContainer" class="admin-form-container" style="display: none; text-align: center;">
+                <p>Please log in to view your Market Dashboard.</p>
+                <button id="traderDiscordLoginButton" class="discord-button" style="margin: 15px auto;">
+                    <i class="fab fa-discord"></i> Login with Discord
+                </button>
+                <p id="traderLoginError" style="color: red; display: none;"></p>
+            </div>
+
+            <div id="dashboardContent" class="page-content max-w-7xl mx-auto p-6 sm:p-8 md:p-10 rounded-lg w-full">
+                <h1 class="text-xl font-semibold mt-6 mb-3 text-white text-center">Market Dashboard</h1>
+                <div class="dashboard-grid">
+                <div class="col-span-1">
+                    <label for="character-filter-select" class="block text-white text-sm font-bold mb-2">Select Character:</label>
+                    <select id="character-filter-select" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                        <option value="">All Characters</option>
+                        </select>
+                </div>
+                    <div class="main-metrics-grid mb-6">
+                        
+                        <div class="dashboard-cards bg-gray-800 rounded-lg p-5 shadow-lg">
+                            <h3 class="text-base font-semibold text-amber-300 mb-1 flex items-center">
+                                <i class="fas fa-sack-dollar mr-2"></i> Active Holdings
+                            </h3>
+                            <p class="text-2xl font-bold text-white mb-1" id="activeHoldings">-</p>
+                            <p class="text-sm text-gray-400">Current Gold Holdings</p>
+                        </div>
+
+                        <div class="dashboard-cards bg-gray-800 rounded-lg p-5 shadow-lg">
+                            <h3 class="text-base font-semibold text-amber-300 mb-1 flex items-center">
+                                <i class="fas fa-tags mr-2"></i> Active Listings
+                            </h3>
+                            <p class="text-2xl font-bold text-white mb-1" id="activeListingsCount">-</p>
+                            <p class="text-gray-400 text-sm">Items currently listed</p>
+                            <a href="ledger.html" class="text-sm text-amber-400 hover:text-amber-500 mt-1 inline-block">
+                                View Details <i class="fas fa-arrow-right ml-1 text-xs"></i>
+                            </a>
+                        </div>
+
+                        <div class="dashboard-cards bg-gray-800 rounded-lg p-5 shadow-lg">
+                            <h3 class="text-base font-semibold text-amber-300 mb-1 flex items-center">
+                                <i class="fas fa-coins mr-2"></i> Weekly Sales (7d)
+                            </h3>
+                            <p class="text-2xl font-bold text-white mb-1" id="netProfit">-</p>
+                            <p class="text-sm text-gray-500 flex items-center" id="netProfitChange"></p>
+                            <a href="ledger.html" class="text-sm text-amber-400 hover:text-amber-500 mt-1 inline-block">
+                                View Ledger <i class="fas fa-arrow-right ml-1 text-xs"></i>
+                            </a>
+                        </div>
+
+                        <div class="dashboard-cards bg-gray-800 rounded-lg p-5 shadow-lg">
+                            <h3 class="text-base font-semibold text-amber-300 mb-1 flex items-center">
+                                <i class="fas fa-chart-line mr-2"></i> Gold Earned (24h)
+                            </h3>
+                            <p class="text-2xl font-bold text-white mb-1" id="marketVolume">-</p>
+                            <p class="text-sm text-gray-500 flex items-center" id="marketVolumeChange"></p>
+                            <a href="trends.html" class="text-sm text-amber-400 hover:text-amber-500 mt-1 inline-block">
+                                Analyze Trends <i class="fas fa-arrow-right ml-1 text-xs"></i>
+                            </a>
+                        </div>
+
+                        <div class="dashboard-cards bg-gray-800 rounded-lg p-5 shadow-lg">
+                            <h3 class="text-base font-semibold text-amber-300 mb-1 flex items-center">
+                                <i class="fas fa-trophy mr-2"></i> Most Profitable Item
+                            </h3>
+                            <p class="text-2xl font-bold text-white mb-1" id="mostProfitableItem">-</p>
+                            <p class="text-sm text-green-500" id="mostProfitableItemValue"></p>
+                        </div>
+
+                        <div class="dashboard-cards bg-gray-800 rounded-lg p-5 shadow-lg">
+                            <h3 class="text-base font-semibold text-amber-300 mb-1 flex items-center">
+                                <i class="fas fa-fire mr-2"></i> Most Sold Item
+                            </h3>
+                            <p class="text-2xl font-bold text-white mb-1" id="mostSoldItem">-</p>
+                            <p class="text-sm text-gray-400" id="mostSoldItemCount"></p>
+                        </div>
+                    </div>
+
+                    
+
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-gray-800 rounded-lg p-6 shadow-lg recent-transactions-card flex flex-col">
+                            <h2 class="text-2xl font-bold mb-4 text-white flex items-center">
+                                <i class="fas fa-receipt mr-2 text-amber-300"></i> Recent Sales
+                            </h2>
+                            <div class="overflow-x-auto overflow-y-auto h-[450px]"> 
+                                <table class="min-w-full">
+                                    <thead>
+                                        <tr class="text-left text-sm font-medium text-gray-400 uppercase tracking-wider border-b border-gray-700 sticky top-0 bg-gray-800">
+                                            <th class="py-3 px-2">Item</th>
+                                            <th class="py-3 px-2 text-right">Qty</th>
+                                            <th class="py-3 px-2 text-right">Price/Unit</th>
+                                            <th class="py-3 px-2 text-right">Price/Stack</th>
+                                            <th class="py-3 px-2 text-right">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recentTransactionsBody" class="text-sm text-white divide-y divide-gray-700">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-800 rounded-lg p-6 shadow-lg flex flex-col">
+                            <h2 class="text-2xl font-bold mb-4 text-white flex items-center">
+                                <i class="fas fa-bell mr-2 text-red-500"></i> Listing Alerts
+                            </h2>
+                            <div class="overflow-y-auto h-[400px]" id="notificationListWrapper">
+                                <ul class="space-y-3" id="notificationsList">
+                                </ul>
+                            </div>
+                            <div id="notificationPagination" class="flex justify-between items-center mt-4 pt-4 border-t border-gray-700">
+                                <button id="prevPageBtn" class="px-3 py-1 text-sm text-gray-300 bg-gray-700 rounded hover:bg-gray-600 disabled:opacity-50">Previous</button>
+                                <span id="pageInfo" class="text-sm text-gray-400">Page 1 of 1</span>
+                                <button id="nextPageBtn" class="px-3 py-1 text-sm text-gray-300 bg-gray-700 rounded hover:bg-gray-600 disabled:opacity-50">Next</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12">
+                    <p>Pax Dei Archives is a fan-made site and not affiliated with Pax Dei or MAINFRAME.</p>
+                    <p>All intellectual property and assets related to Pax Dei game are reserved by MAINFRAME INDUSTRIES.</p>
+                    <a href="admin.html">Admin</a>
+                    <a href="privacy.html">Privacy Policy</a>
+                </div>
+            </div>
+        </div>
+        <div class="corner-credit">
+            <div class="corner-credit-top-row"> <img src="frontend/www/assets/phoenix.png" alt="Phoenix profile image" class="profile-image" />
+                <span class="nav-text-profile">Made by Phoenix ✨</span>
+            </div>
+            <div id="utc-clock-display" class="utc-clock"></div>
+        </div>
+    </footer>
+    <div id="floating-avatar-container">
+        <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar js-floating-avatar">
+    </div>
+
+    <div id="auth-modal">
+        <div class="modal-content-wrapper" id="modal-content-wrapper">
+        </div>
+    </div>
+    </footer>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script type="module" src="frontend/www/js/supabaseClient.js"></script>
+    <script type="module" src="frontend/www/js/main.js"></script>
+    <script type="module" src="frontend/www/js/grace.js"></script>
+    <script type="module" src="frontend/www/js/popoutAuth.js"></script> 
+    <script type="module" src="frontend/www/js/dashboard.js"></script> 
+</body>
+</html>
