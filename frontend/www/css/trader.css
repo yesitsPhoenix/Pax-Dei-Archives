@@ -22,7 +22,7 @@
 }
 
 .dashboard-card {
-    background-color: #232323;
+    background-color: #1F2937;
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
@@ -83,11 +83,19 @@
 .active-listings,
 .chart-section,
 .sales-history {
-    background-color: #2a2a2a;
+    background-color: #1F2937;
     padding: 30px;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     margin-bottom: 40px;
+}
+
+.sales-chart-section{
+    background-color: #1F2937;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    
 }
 
 .chart-section {
