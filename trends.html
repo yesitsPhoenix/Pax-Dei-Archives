@@ -214,33 +214,34 @@
                     </button>
                 </div>
 
-            <div class="col-span-full">
-                <h2 class="text-lg font-semibold mb-2 text-white">Specific Item Price Trends</h2>
-
-                <label for="item-filter-select" class="block text-white text-sm font-bold mb-2">
-                    Specific Item Filter:
-                </label>
-                <select id="item-filter-select" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                    <option value="all">All Items</option>
-                </select>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                    <section class="mb-4 p-3 bg-gray-800 rounded-md shadow-md">
-                    <h3 class="text-white text-sm mb-1">Avg Price per Unit</h3>
-                    <div class="relative h-48">
-                        <canvas id="specific-item-price-chart-unit"></canvas>
+                <div class="col-span-full">
+                    <h2 class="text-lg font-semibold mb-2 text-white">Specific Item Price Trends</h2>
+                    <label for="item-filter-select" class="block text-white text-sm font-bold mb-2"> Specific Item Filter: </label>
+                    <select id="item-filter-select" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                        <option value="all">All Items</option>
+                    </select>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <section class="mb-4 p-3 bg-gray-800 rounded-md shadow-md">
+                            <h3 class="text-white text-sm mb-1">Avg Price per Unit</h3>
+                            <div class="relative h-48">
+                                <canvas id="specific-item-price-chart-unit"></canvas>
+                            </div>
+                        </section>
+                        <section class="mb-4 p-3 bg-gray-800 rounded-md shadow-md">
+                            <h3 class="text-white text-sm mb-1">Avg Stack Size</h3>
+                            <div class="relative h-48">
+                                <canvas id="specific-item-price-chart-stack"></canvas>
+                            </div>
+                        </section>
                     </div>
-                    </section>
-
-                    <section class="mb-4 p-3 bg-gray-800 rounded-md shadow-md">
-                    <h3 class="text-white text-sm mb-1">Avg Stack Size Sold</h3>
-                    <div class="relative h-48">
-                        <canvas id="specific-item-price-chart-stack"></canvas>
-                    </div>
+                    <section class="mb-4 p-3 bg-gray-800 rounded-md shadow-md mt-4">
+                        <h3 class="text-white text-lg font-semibold mb-2">Price Range and Sale Price Trend (Per Unit)</h3>
+                        <div class="relative h-96">
+                            <canvas id="specific-item-listing-vs-sale-chart"></canvas>
+                        </div>
                     </section>
                 </div>
-                </div>
-            </div>
+                            
 
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">

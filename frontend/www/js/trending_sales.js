@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient.js';
+import { startOfWeek, startOfMonth } from "https://cdn.jsdelivr.net/npm/date-fns@2.30.0/+esm";
 
 const highestSalesList = document.getElementById('highest-sales-list');
 const mostSoldQuantityList = document.getElementById('most-sold-quantity-list');
@@ -16,6 +17,7 @@ let currentSelectedRegion = null;
 
 let specificItemPriceChartUnitInstance = null;
 let specificItemPriceChartStackInstance = null;
+let specificItemListingVsSaleChartInstance = null;
 
 let currentSelectedCharacterId = null;
 
@@ -71,6 +73,13 @@ function renderChart(chartId, labels, datasetsConfig, type = 'line') {
       return `${context.dataset.label}: ${formatCurrency(value)} Gold`;
     };
     yAxisTitleText = 'Total Gold';
+  } else if (chartId === 'specific-item-listing-vs-sale-chart') {
+    yAxisCallback = function(value) { return formatCurrency(value); };
+    tooltipLabelCallback = function(context) {
+      let value = context.parsed.y;
+      return `${context.dataset.label}: ${formatCurrency(value)} Gold`;
+    };
+    yAxisTitleText = 'Price (Gold per Stack)';
   }
 
   const chartConfig = {
@@ -137,6 +146,9 @@ function renderChart(chartId, labels, datasetsConfig, type = 'line') {
   } else if (chartId === 'daily-avg-listing-time-chart' && dailyAvgListingTimeChartInstance) {
     dailyAvgListingTimeChartInstance.destroy();
     dailyAvgListingTimeChartInstance = null;
+  } else if (chartId === 'specific-item-listing-vs-sale-chart' && specificItemListingVsSaleChartInstance) {
+    specificItemListingVsSaleChartInstance.destroy();
+    specificItemListingVsSaleChartInstance = null;
   }
 
   const newChart = new Chart(ctx, chartConfig);
@@ -147,6 +159,7 @@ function renderChart(chartId, labels, datasetsConfig, type = 'line') {
   if (chartId === 'specific-item-price-chart-stack') specificItemPriceChartStackInstance = newChart;
   if (chartId === 'daily-avg-price-chart') dailyAvgPriceChartInstance = newChart;
   if (chartId === 'daily-avg-listing-time-chart') dailyAvgListingTimeChartInstance = newChart;
+  if (chartId === 'specific-item-listing-vs-sale-chart') specificItemListingVsSaleChartInstance = newChart;
   
   return newChart;
 }
@@ -281,7 +294,7 @@ async function loadDailyTotalSalesChart() {
   try {
     const { data, error } = await supabase.rpc('get_daily_total_sales', {
       p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all',
-      p_character_id: currentSelectedCharacterId //
+      p_character_id: currentSelectedCharacterId 
     });
 
     if (error) {
@@ -419,7 +432,7 @@ async function loadDailyMarketActivityChart() {
       ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
       ctx.textAlign = 'center';
       ctx.fillStyle = '#FF6666';
-      ctx.font = '14px Arial'; // Adjusted font size
+      ctx.font = '14px Arial';
       ctx.fillText(`An unexpected error occurred: ${err.message}`, ctx.canvas.width / 2, ctx.canvas.height / 2);
     }
     console.error('Unexpected error in loadDailyMarketActivityChart:', err);
@@ -601,21 +614,11 @@ async function loadSpecificItemPriceChart(itemId = null) {
   }
 
   try {
-    //console.log
-    ('Calling get_item_price_history with:', {
-      p_item_id: itemId,
-      p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all',
-      p_character_id: currentSelectedCharacterId
-    });
-
     const { data, error } = await supabase.rpc('get_item_price_history', {
       p_item_id: itemId,
       p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all',
       p_character_id: currentSelectedCharacterId
     });
-
-    // console.log('Response from get_item_price_history - Data:', data);
-    // console.log('Response from get_item_price_history - Error:', error);
 
     if (error) {
       ['specific-item-price-chart-unit', 'specific-item-price-chart-stack'].forEach(id => {
@@ -718,6 +721,149 @@ async function loadSpecificItemPriceChart(itemId = null) {
   }
 }
 
+async function loadSpecificItemListingVsSaleChart(itemId) {
+    const chartId = 'specific-item-listing-vs-sale-chart';
+    if (!itemId || itemId === 'all') {
+        const ctx = document.getElementById(chartId)?.getContext('2d');
+        if (ctx) {
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '14px Arial';
+            ctx.fillText('Please select an item to view its price trend.', ctx.canvas.width / 2, ctx.canvas.height / 2);
+        }
+        if (specificItemListingVsSaleChartInstance) {
+            specificItemListingVsSaleChartInstance.destroy();
+            specificItemListingVsSaleChartInstance = null;
+        }
+        return;
+    }
+
+    try {
+        let listingsQuery = supabase
+            .from('market_listings')
+            .select(`
+                listing_date,
+                total_listed_price,
+                market_stalls!inner ( region )
+            `)
+            .eq('item_id', itemId);
+
+        if (currentSelectedRegion && currentSelectedRegion !== 'all') {
+            listingsQuery = listingsQuery.eq('market_stalls.region', currentSelectedRegion);
+        }
+        if (currentSelectedCharacterId) {
+            listingsQuery = listingsQuery.eq('character_id', currentSelectedCharacterId);
+        }
+
+        const { data: listingsData, error: listingsError } = await listingsQuery;
+
+        if (listingsError) throw listingsError;
+
+        let salesQuery = supabase
+            .from('sales')
+            .select(`
+                sale_date,
+                total_sale_price,
+                market_listings!inner (
+                    item_id,
+                    character_id,
+                    market_stalls!inner ( region )
+                )
+            `)
+            .eq('market_listings.item_id', itemId);
+
+        if (currentSelectedRegion && currentSelectedRegion !== 'all') {
+            salesQuery = salesQuery.eq('market_listings.market_stalls.region', currentSelectedRegion);
+        }
+        if (currentSelectedCharacterId) {
+            salesQuery = salesQuery.eq('market_listings.character_id', currentSelectedCharacterId);
+        }
+
+        const { data: salesData, error: salesError } = await salesQuery;
+
+        if (salesError) throw salesError;
+
+        if ((!listingsData || listingsData.length === 0) && (!salesData || salesData.length === 0)) {
+            const ctx = document.getElementById(chartId)?.getContext('2d');
+            if (ctx) {
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#B0B0B0';
+                ctx.font = '14px Arial';
+                ctx.fillText('No listing or sales data available.', ctx.canvas.width / 2, ctx.canvas.height / 2);
+            }
+            if (specificItemListingVsSaleChartInstance) {
+                specificItemListingVsSaleChartInstance.destroy();
+                specificItemListingVsSaleChartInstance = null;
+            }
+            return;
+        }
+
+        const aggregatedData = {};
+
+        listingsData.forEach(item => {
+            const date = new Date(item.listing_date).toISOString().split('T')[0];
+            if (!aggregatedData[date]) aggregatedData[date] = { listingSum: 0, listingCount: 0, saleSum: 0, saleCount: 0 };
+            aggregatedData[date].listingSum += item.total_listed_price;
+            aggregatedData[date].listingCount++;
+        });
+
+        salesData.forEach(item => {
+            const date = new Date(item.sale_date).toISOString().split('T')[0];
+            if (!aggregatedData[date]) aggregatedData[date] = { listingSum: 0, listingCount: 0, saleSum: 0, saleCount: 0 };
+            aggregatedData[date].saleSum += item.total_sale_price;
+            aggregatedData[date].saleCount++;
+        });
+
+        const sortedDates = Object.keys(aggregatedData).sort();
+        const avgListingPrices = sortedDates.map(date => {
+            const d = aggregatedData[date];
+            return d.listingCount > 0 ? d.listingSum / d.listingCount : null;
+        });
+        const avgSalePrices = sortedDates.map(date => {
+            const d = aggregatedData[date];
+            return d.saleCount > 0 ? d.saleSum / d.saleCount : null;
+        });
+
+        const datasets = [
+            {
+                label: 'Avg Listing Price (Stack)',
+                data: avgListingPrices,
+                borderColor: 'rgb(255, 159, 64)',
+                backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                spanGaps: true
+            },
+            {
+                label: 'Avg Sale Price (Stack)',
+                data: avgSalePrices,
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                spanGaps: true
+            }
+        ];
+
+        if (specificItemListingVsSaleChartInstance) {
+            specificItemListingVsSaleChartInstance.destroy();
+            specificItemListingVsSaleChartInstance = null;
+        }
+
+        specificItemListingVsSaleChartInstance = renderChart(chartId, sortedDates, datasets);
+
+    } catch (err) {
+        const ctx = document.getElementById(chartId)?.getContext('2d');
+        if (ctx) {
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#FF6666';
+            ctx.font = '14px Arial';
+            ctx.fillText(`Error: ${err.message}`, ctx.canvas.width / 2, ctx.canvas.height / 2);
+        }
+        console.error('Error loading item listing vs sale chart:', err);
+    }
+}
+
+
 async function populateDropdown(selectElementId, rpcFunctionName, valueColumn, textColumn, defaultOptionText) {
   const selectElement = document.getElementById(selectElementId);
   if (!selectElement) {
@@ -758,6 +904,7 @@ async function loadAllTrendsData() {
   await loadDailyAverageItemPriceChart();
   await loadDailyAverageListingTimeframeChart();
   await loadSpecificItemPriceChart(currentSelectedItemId);
+  await loadSpecificItemListingVsSaleChart(currentSelectedItemId);
 }
 
 async function clearFilters() {
@@ -840,6 +987,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       itemFilterSelect.addEventListener('change', (event) => {
         currentSelectedItemId = event.target.value === 'all' || event.target.value === '' ? null : parseInt(event.target.value, 10);
         loadSpecificItemPriceChart(currentSelectedItemId);
+        loadSpecificItemListingVsSaleChart(currentSelectedItemId);
       });
     }
 
@@ -869,11 +1017,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-// ===========================
-// Timeframe Filter Integration (FULL MULTI-CHART AGGREGATION)
-// ===========================
-
-import { startOfWeek, startOfMonth } from "https://cdn.jsdelivr.net/npm/date-fns@2.30.0/+esm";
 
 let currentTimeframe = 'daily';
 
@@ -916,7 +1059,6 @@ async function loadAllTrendsDataByTimeframe() {
   const unit = currentTimeframe === 'weekly' ? 'week' : 'month';
 
   try {
-    // === 1. Total Sales ===
     const { data: salesData } = await supabase.rpc('get_daily_total_sales', {
       p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all',
       p_character_id: currentSelectedCharacterId
@@ -939,7 +1081,6 @@ async function loadAllTrendsDataByTimeframe() {
       updateTimeUnit(dailySalesChartInstance, unit);
     }
 
-    // === 2. Average Price ===
     const { data: avgPriceData } = await supabase.rpc('get_daily_average_sale_price', {
       p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all',
       p_character_id: currentSelectedCharacterId
@@ -962,7 +1103,6 @@ async function loadAllTrendsDataByTimeframe() {
       updateTimeUnit(dailyAvgPriceChartInstance, unit);
     }
 
-    // === 3. Market Activity ===
     const { data: marketData } = await supabase.rpc('get_daily_market_activity_data', {
       p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all',
       p_character_id: currentSelectedCharacterId
@@ -1003,7 +1143,6 @@ async function loadAllTrendsDataByTimeframe() {
       updateTimeUnit(dailyMarketActivityChartInstance, unit);
     }
 
-    // === 4. Listing Duration ===
     const { data: listingData } = await supabase.rpc('get_average_listing_timeframe', {
       p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all',
       p_character_id: currentSelectedCharacterId
@@ -1031,9 +1170,6 @@ async function loadAllTrendsDataByTimeframe() {
   }
 }
 
-// ===========================
-// Timeframe Button Listeners + Center Alignment
-// ===========================
 document.addEventListener('DOMContentLoaded', () => {
   const dailyBtn = document.getElementById('viewDaily');
   const weeklyBtn = document.getElementById('viewWeekly');
@@ -1061,10 +1197,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (weeklyBtn) weeklyBtn.addEventListener('click', () => refreshChartsFor('weekly', weeklyBtn));
   if (monthlyBtn) monthlyBtn.addEventListener('click', () => refreshChartsFor('monthly', monthlyBtn));
 
-  // Default selection
   setActiveButton(dailyBtn);
 
-  // Enforce centering of buttons
   const buttonContainer = dailyBtn?.parentElement;
   if (buttonContainer) {
     buttonContainer.classList.add(
