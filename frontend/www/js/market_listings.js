@@ -2,6 +2,23 @@ import { supabase } from './supabaseClient.js';
 import { openImportModal } from './import_data.js';
 import { isLoggedIn, logout, getUserProfile } from './utils.js';
 
+const REGION_SHARD_MAP = {
+    'EU': ['Arcadia', 'Demeter', 'Tyr', 'Fenrir'],
+    'NA': ['Sif', 'Selene'],
+    'SEA': ['Balder']
+};
+
+const getAllShards = () => Object.values(REGION_SHARD_MAP).flat();
+
+const getRegionsForShard = (shard) => {
+    for (const region in REGION_SHARD_MAP) {
+        if (REGION_SHARD_MAP[region].includes(shard)) {
+            return region;
+        }
+    }
+    return null;
+};
+
 const showAccessDeniedModal = () => {
     const modal = document.getElementById('accessDeniedModal');
     const countdownElement = document.getElementById('redirectCountdown');
@@ -55,6 +72,7 @@ const listingResultsBody = document.getElementById('listingResultsBody');
 const applyFiltersBtn = document.getElementById('applyFiltersBtn');
 const clearFiltersBtn = document.getElementById('clearFiltersBtn');
 const filterRegionInput = document.getElementById('filterRegion');
+const filterShardInput = document.getElementById('filterShard');
 const filterProvinceInput = document.getElementById('filterProvince');
 const filterHomeValleyInput = document.getElementById('filterHomeValley');
 const filterCategoryInput = document.getElementById('filterCategory');
@@ -73,21 +91,58 @@ const listingsPerPage = 20;
 
 export const getCurrentFilters = () => ({
     region: filterRegionInput.value.trim(),
+    shard: filterShardInput.value.trim(),
     province: filterProvinceInput.value.trim(),
     homeValley: filterHomeValleyInput.value.trim(),
     category: filterCategoryInput.value.trim(),
     itemName: filterItemNameInput.value.trim(),
 });
 
-export const populateFilters = async () => {
-    const createOption = (value, text) => {
-        const option = document.createElement('option');
-        option.value = value;
-        option.textContent = text;
-        return option;
-    };
+const createOption = (value, text) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = text;
+    return option;
+};
+
+const updateShardOptions = (selectedRegion, initialLoad = false) => {
+    const currentShard = filterShardInput.value;
+    filterShardInput.innerHTML = '<option value="">All Shards</option>';
+
+    const shardsToShow = selectedRegion 
+        ? REGION_SHARD_MAP[selectedRegion] || []
+        : getAllShards();
+
+    shardsToShow.forEach(s => filterShardInput.appendChild(createOption(s, s)));
+
+    if (shardsToShow.includes(currentShard)) {
+        filterShardInput.value = currentShard;
+    } else if (!initialLoad && selectedRegion) {
+        filterShardInput.value = '';
+    }
+};
+
+const updateRegionOptions = (selectedShard, initialLoad = false) => {
+    const currentRegion = filterRegionInput.value;
     filterRegionInput.innerHTML = '<option value="">All Regions</option>';
-    ['EU', 'NA', 'SEA'].forEach(r => filterRegionInput.appendChild(createOption(r, r)));
+
+    const regionToShow = selectedShard 
+        ? [getRegionsForShard(selectedShard)]
+        : Object.keys(REGION_SHARD_MAP);
+
+    regionToShow.filter(r => r !== null).forEach(r => filterRegionInput.appendChild(createOption(r, r)));
+
+    if (regionToShow.includes(currentRegion)) {
+        filterRegionInput.value = currentRegion;
+    } else if (!initialLoad && selectedShard) {
+        filterRegionInput.value = '';
+    }
+};
+
+export const populateFilters = async () => {
+    updateRegionOptions('', true);
+    updateShardOptions('', true);
+
     filterProvinceInput.innerHTML = '<option value="">All Provinces</option>';
     ['Kerys', 'Ancien', 'Merrie', 'Inis Gallia'].forEach(p => filterProvinceInput.appendChild(createOption(p, p)));
     filterHomeValleyInput.innerHTML = '<option value="">All Valleys</option>';
@@ -165,7 +220,6 @@ const renderMarketSummary = (listings) => {
 
     const activeListings = listings.filter(l => !(l.is_fully_sold || l.is_cancelled));
     
-    // Price/Unit calculations
     const activeUnitPrices = activeListings
         .map(l => parseFloat(l.listed_price_per_unit))
         .filter(price => !isNaN(price));
@@ -180,7 +234,6 @@ const renderMarketSummary = (listings) => {
         highestPriceUnit.textContent = 'N/A';
     }
 
-    // Total Price (Price/Stack) calculations
     const activeTotalPrices = activeListings
         .map(l => parseFloat(l.total_listed_price))
         .filter(price => !isNaN(price));
@@ -263,7 +316,8 @@ export const fetchActiveListings = async (page, filters = {}) => {
         listing_id, item_id, quantity_listed, listed_price_per_unit, total_listed_price,
         listing_date, is_fully_sold, is_cancelled,
         items ( item_name, category_id, item_categories:category_id ( category_name ) ),
-        market_stalls ( region, province, home_valley )
+        market_stalls ( region, province, home_valley ),
+        characters ( shard )
     `;
 
     try {
@@ -289,12 +343,12 @@ export const fetchActiveListings = async (page, filters = {}) => {
         let filtered = allRows;
 
         if (filters.region) filtered = filtered.filter(l => l.market_stalls?.region === filters.region);
+        if (filters.shard) filtered = filtered.filter(l => l.characters?.shard === filters.shard);
         if (filters.province) filtered = filtered.filter(l => l.market_stalls?.province === filters.province);
         if (filters.homeValley) filtered = filtered.filter(l => l.market_stalls?.home_valley === filters.homeValley);
         if (filters.itemName) filtered = filtered.filter(l => l.item_id === parseInt(filters.itemName));
         if (filters.category) filtered = filtered.filter(l => l.items?.category_id === parseInt(filters.category));
         
-        // Render the summary statistics for ALL filtered listings (before pagination)
         renderMarketSummary(filtered);
 
 
@@ -348,8 +402,24 @@ const applyFilters = () => {
     fetchActiveListings(currentPage, getCurrentFilters());
 };
 
+const handleRegionFilterChange = () => {
+    const selectedRegion = filterRegionInput.value;
+    updateShardOptions(selectedRegion); 
+    currentPage = 1;
+    fetchActiveListings(currentPage, getCurrentFilters());
+};
+
+const handleShardFilterChange = () => {
+    const selectedShard = filterShardInput.value;
+    updateRegionOptions(selectedShard);
+    currentPage = 1;
+    fetchActiveListings(currentPage, getCurrentFilters());
+};
+
 const clearFilters = () => {
-    [filterRegionInput, filterProvinceInput, filterHomeValleyInput, filterCategoryInput, filterItemNameInput].forEach(i => i.value = '');
+    [filterRegionInput, filterShardInput, filterProvinceInput, filterHomeValleyInput, filterCategoryInput, filterItemNameInput].forEach(i => i.value = '');
+    updateRegionOptions('', true);
+    updateShardOptions('', true);
     currentPage = 1;
     fetchActiveListings(currentPage, {});
 };
@@ -361,8 +431,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const traderLoginContainer = document.getElementById('traderLoginContainer');
         
         await populateFilters();
+        
         applyFiltersBtn.addEventListener('click', applyFilters);
         clearFiltersBtn.addEventListener('click', clearFilters);
+        
+        filterRegionInput.addEventListener('change', handleRegionFilterChange);
+        filterShardInput.addEventListener('change', handleShardFilterChange);
+        
         attachSortingHandlers();
         fetchActiveListings(currentPage);
     }
