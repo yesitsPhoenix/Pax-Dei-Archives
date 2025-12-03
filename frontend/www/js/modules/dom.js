@@ -88,6 +88,31 @@ export const getActiveStallId = () => {
     return null;
 };
 
+export const closeModal = () => {
+    const modalContainer = document.getElementById('customModalContainer');
+    if (modalContainer) {
+        modalContainer.classList.add('hidden');
+    }
+};
+
+export const openModal = (content) => {
+    const modalContainer = document.getElementById('customModalContainer');
+    const contentWrapper = document.getElementById('customModalContentWrapper');
+
+    if (modalContainer && contentWrapper) {
+        contentWrapper.innerHTML = content;
+        
+        if (content.includes('Bulk Edit Listings')) {
+            contentWrapper.classList.add('max-w-xl', 'bg-gray-800', 'border', 'border-emerald-400');
+            contentWrapper.classList.remove('max-w-sm', 'bg-white', 'border-none');
+        } else {
+            contentWrapper.classList.add('max-w-sm', 'bg-white', 'border-none');
+            contentWrapper.classList.remove('max-w-xl', 'bg-gray-800', 'border', 'border-emerald-400');
+        }
+
+        modalContainer.classList.remove('hidden');
+    }
+};
 
 const editListingModalHtml = `
     <div id="editListingModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">

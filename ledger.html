@@ -233,10 +233,18 @@
                 </section>
 
                 <section id="active-listings-section" class="active-listings">
-                    <h2>Active Market Listings</h2>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-40 min-w-max"></div> 
+
+                        <h2 class="text-2xl font-semibold text-white">Active Market Listings</h2>
+
+                        <button id="bulkEditListingsBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-full shadow-md transition duration-150 ease-in-out transform hover:scale-105" style="display: none;">
+                            <i class="fas fa-edit mr-2"></i> Bulk Edit (<span id="selectedListingCount">0</span>)
+                        </button>
+                    </div>
                     <div class="market-stall-tabs"></div>
                     <div class="tab-content-container"></div>
-
+                    
                     <div class="flex flex-wrap items-center gap-4 mb-6">
                         <div class="flex-1 min-w-[200px]">
                             <label for="filter-listing-item-name" class="block text-gray-400 text-sm font-bold mb-1">Filter by Item Name:</label>
@@ -275,10 +283,13 @@
                             </select>
                         </div>
                     </div>
-                    <div id="loader">Loading...</div>
+                   <div id="loader">Loading...</div>
                     <table id="listings-table" style="display:none;">
                         <thead>
                             <tr>
+                                <th class="w-1">
+                                    <input type="checkbox" id="selectAllListingsCheckbox" title="Select All" class="form-checkbox h-4 w-4 text-gray-800 rounded">
+                                </th>
                                 <th>Item Name</th>
                                 <th>Item Category</th>
                                 <th>Total Quantity</th>
@@ -293,7 +304,7 @@
                         </tbody>
                     </table>
                     <div id="listings-pagination" class="flex justify-center items-center space-x-2 mt-4 text-white"></div>
-                </section>
+                    </section>
                 <section id="transaction-history-section" class="sales-history my-8">
                     <h2 class="text-2xl font-bold mb-4 text-gray-800">Transaction History Ledger</h2>
                     <div class="flex flex-wrap items-center gap-4 mb-6">
@@ -564,6 +575,10 @@
     </div>
 </div>
 
+<div id="bulkEditModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+    <div class="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md border border-emerald-400">
+        </div>
+</div>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
