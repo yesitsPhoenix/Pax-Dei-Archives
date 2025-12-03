@@ -16,9 +16,8 @@
 .dashboard {
     display: flex;
     flex-wrap: wrap;
-    gap: 20px;
-    margin-bottom: 40px;
-    padding-bottom: 10px;
+    justify-content: space-between;
+    display: flex ;
 }
 
 .dashboard-card {
