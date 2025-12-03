@@ -715,34 +715,6 @@ export const handleEditListingSave = async (e) => {
 };
 
 
-// export const showManageMarketStallsModal = async () => {
-//     //console.log('showManageMarketStallsModal called.');
-//     if (!manageMarketStallsModal) {
-//         console.error('showManageMarketStallsModal: manageMarketStallsModal element not found.');
-//         return;
-//     }
-
-//     if (!currentCharacterId) {
-//         await showCustomModal('Error', 'Please select a character first to manage market stalls.', [{
-//             text: 'OK',
-//             value: true
-//         }]);
-//         console.error('showManageMarketStallsModal: No character selected. Aborting.');
-//         return;
-//     }
-//     //console.log('Character ID present. Preparing manage market stalls modal.');
-
-//     createStallError.classList.add('hidden');
-//     deleteStallError.classList.add('hidden');
-//     newMarketStallNameInput.value = '';
-//     //console.log('Cleared previous errors and input for new stall.');
-
-//     await renderMarketStallsInModal();
-//     manageMarketStallsModal.classList.remove('hidden');
-//     //console.log('Manage Market Stalls modal displayed.');
-// };
-
-
 export const loadMarketStallsList = async () => {
     if (!currentCharacterId) {
         marketStallsList.innerHTML = '<p class="text-red-500">No character selected.</p>';
@@ -1074,7 +1046,6 @@ export const handleAddMarketStall = async (e) => {
     clearMarketStallsCache();
     await showCustomModal('Success', 'Market Stall created successfully!', [{ text: 'OK', value: true }]);
     newMarketStallNameInput.value = '';
-    // Clear selections by resetting dropdowns (optional, depending on desired behavior)
     newMarketStallProvinceSelect.value = '';
     newMarketStallHomeValleySelect.value = '';
     await renderMarketStallsInModal();
@@ -1153,4 +1124,132 @@ export const handleDeleteMarketStall = async (stallId) => {
     deleteStallError.textContent = 'Failed to delete market stall: ' + e.message;
     deleteStallError.classList.remove('hidden');
   }
+};
+
+
+export const updateListingStatus = async (updates) => {
+    if (!currentCharacterId) {
+        return { success: false, error: 'No character selected. Cannot perform bulk update.' };
+    }
+
+    const successfulUpdates = [];
+    const failedUpdates = [];
+    // Renaming this variable for clarity, but it holds the total gold to be credited (Gross).
+    let totalGoldToCredit = 0; 
+
+    const updatePromises = updates.map(async (update) => {
+        const { id, new_status, gold_received } = update;
+
+        let payload = {};
+        if (new_status === 'cancelled') {
+            payload = {
+                is_cancelled: true,
+                is_fully_sold: false
+            };
+        } else if (new_status === 'sold') {
+            payload = {
+                is_cancelled: false,
+                is_fully_sold: true
+            };
+        } else {
+            return { success: false, id, error: 'Invalid status provided.' };
+        }
+
+        if (new_status === 'sold') {
+            const { data: listing, error: fetchError } = await supabase
+                .from('market_listings')
+                // Keeping market_fee in select just in case it's used elsewhere, but ignoring it in logic.
+                .select('quantity_listed, total_listed_price, market_fee') 
+                .eq('listing_id', id)
+                .single();
+
+            if (fetchError || !listing) {
+                return { success: false, id, error: `Could not fetch listing ${id} for sale record.` };
+            }
+
+            const isGoldReceivedExplicit = gold_received !== undefined && gold_received !== null;
+
+            // FIX 1: Determine the amount to credit, explicitly ignoring all fee properties.
+            const goldCreditAmount = isGoldReceivedExplicit
+                ? gold_received // Use explicit amount if provided
+                : listing.total_listed_price; // Otherwise, use the full listed price (e.g., 22 gold per listing)
+
+            // FIX 2: Use the full credit amount for the sale record fields.
+            const salePricePerUnit = goldCreditAmount / listing.quantity_listed;
+
+            const { error: insertSaleError } = await supabase
+                .from('sales')
+                .insert({
+                    listing_id: id,
+                    quantity_sold: listing.quantity_listed, 
+                    sale_price_per_unit: salePricePerUnit,
+                    total_sale_price: goldCreditAmount, // Store the full listed price here
+                    character_id: currentCharacterId
+                });
+            
+            if (insertSaleError) {
+                console.error(`Error inserting sale record for listing ${id}:`, insertSaleError.message);
+            }
+
+            // FIX 3: Accumulate the full amount to credit the character.
+            totalGoldToCredit += goldCreditAmount;
+        }
+
+        const { error } = await supabase
+            .from('market_listings')
+            .update(payload)
+            .eq('listing_id', id)
+            .eq('character_id', currentCharacterId)
+            .select('listing_id')
+            .single();
+
+        if (error) {
+            return { success: false, id, error: error.message };
+        }
+        return { success: true, id };
+    });
+
+    const results = await Promise.all(updatePromises);
+    
+    results.forEach(result => {
+        if (result.success) {
+            successfulUpdates.push(result.id);
+        } else {
+            failedUpdates.push(result);
+        }
+    });
+    
+    if (totalGoldToCredit > 0) { 
+        const { data: characterData, error: fetchGoldError } = await supabase
+            .from('characters')
+            .select('gold')
+            .eq('character_id', currentCharacterId)
+            .single();
+
+        if (fetchGoldError) {
+            const errorMsg = 'Failed to fetch character gold for final balance update.';
+            failedUpdates.push({ success: false, id: 'GOLD_UPDATE', error: errorMsg });
+            console.error(errorMsg, fetchGoldError);
+        } else {
+            const newGold = (characterData.gold || 0) + totalGoldToCredit;
+            
+            const { error: updateGoldError } = await supabase
+                .from('characters')
+                .update({ gold: newGold })
+                .eq('character_id', currentCharacterId);
+
+            if (updateGoldError) {
+                const errorMsg = 'Failed to update character gold balance after bulk sale.';
+                failedUpdates.push({ success: false, id: 'GOLD_UPDATE', error: errorMsg });
+                console.error(errorMsg, updateGoldError);
+            }
+        }
+    }
+
+    if (failedUpdates.length > 0) {
+        const errorDetails = failedUpdates.map(f => `Listing ${f.id}: ${f.error}`).join('; ');
+        return { success: false, error: `${failedUpdates.length} of ${updates.length} operations failed to update. Details: ${errorDetails}` };
+    }
+
+    return { success: true, error: null };
 };

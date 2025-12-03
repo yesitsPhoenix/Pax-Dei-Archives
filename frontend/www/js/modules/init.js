@@ -245,14 +245,13 @@ export const loadActiveListings = async (marketStallId = null) => {
         targetLoader.style.display = 'none';
         targetTable.style.display = 'table';
         if (actualListingsBody) {
-            actualListingsBody.innerHTML = '<tr><td colspan="7" class="text-center py-4">Please select a character or create one to view listings.</td></tr>';
+            actualListingsBody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Please select a character or create one to view listings.</td></tr>';
         }
         return;
     }
     targetLoader.style.display = 'block';
     targetTable.style.display = 'none';
 
-    // Retrieve the CURRENT page for the given marketStallId
     const currentPage = getCurrentListingsPage(marketStallId);
 
     try {
@@ -282,11 +281,11 @@ export const loadActiveListings = async (marketStallId = null) => {
         const total_count = listings.length > 0 ? listings[0].total_count : 0;
 
         renderListingsTable(listings, actualListingsBody);
-        renderListingsPagination(total_count, marketStallId); // This function uses getCurrentListingsPage internally
+        renderListingsPagination(total_count, marketStallId);
     } catch (e) {
         console.error("Error loading active listings:", e.message);
         if (actualListingsBody) {
-            actualListingsBody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-red-500">Error loading listings: ${e.message}</td></tr>`;
+            actualListingsBody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-red-500">Error loading listings: ${e.message}</td></tr>`;
         }
     } finally {
         targetLoader.style.display = 'none';

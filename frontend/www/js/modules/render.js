@@ -12,7 +12,7 @@ import {
 export const renderListingsTable = (listings) => {
     listingsBody.innerHTML = '';
     if (listings.length === 0) {
-        listingsBody.innerHTML = '<tr><td colspan="8" class="text-center py-4">No listings found for the current filters.</td></tr>';
+        listingsBody.innerHTML = '<tr><td colspan="9" class="text-center py-4">No listings found for the current filters.</td></tr>';
         return;
     }
 
@@ -28,6 +28,11 @@ export const renderListingsTable = (listings) => {
 
         const row = document.createElement('tr');
         row.innerHTML = `
+            <td class="py-3 px-6 text-center w-1">
+                <input type="checkbox" 
+                       data-listing-id="${listing.listing_id}" 
+                       class="listing-select-checkbox form-checkbox h-4 w-4 text-indigo-600 rounded">
+            </td>
             <td class="py-3 px-6 text-left">
                 <a href="${paxDeiUrl}" ${linkTarget} class="${linkClasses}">
                     ${listing.item_name || 'N/A'}

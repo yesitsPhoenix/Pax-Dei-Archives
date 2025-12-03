@@ -22,6 +22,19 @@ let fullTransactionHistory = [];
 let availableCategories = new Set();
 let availableTransactionTypes = new Set();
 
+const fetchCharacterTransactions = async (characterId) => {
+    if (!characterId) return [];
+    
+    const { data, error } = await supabase
+        .rpc('get_full_transaction_history', { p_character_id: characterId });
+        
+    if (error) {
+        console.error('Error fetching transaction history:', error.message);
+        return [];
+    }
+    return data || [];
+};
+
 export const initializeSales = () => {
     if (downloadSalesCsvButton) {
         downloadSalesCsvButton.addEventListener('click', handleDownloadCsv);
@@ -105,7 +118,6 @@ const handleDeleteTransaction = async (id, type) => {
 
         if (transaction) {
             const amount = parseFloat(transaction.total_amount) || 0;
-            const feeAmount = parseFloat(transaction.fee) || 0;
             
             if (type === 'Sale') {
                 listingId = transaction.listing_id;
@@ -120,7 +132,8 @@ const handleDeleteTransaction = async (id, type) => {
                     goldChange = -amount;
                     break;
                 case 'Sale':
-                    goldChange = -(amount - feeAmount);
+
+                    goldChange = -amount;
                     break;
                 
             }
@@ -128,8 +141,7 @@ const handleDeleteTransaction = async (id, type) => {
              console.warn('Transaction details not found in local history for ID:', id, 'Gold and listing reversal skipped.');
         }
 
-        
-        // 1. Gold Reversal
+
         if (goldChange !== 0 && currentCharacterId) {
             
             const { data: charData, error: fetchError } = await supabase
@@ -142,14 +154,13 @@ const handleDeleteTransaction = async (id, type) => {
                 console.error('Failed to fetch character gold for reversal:', fetchError?.message || 'No character data found.');
             } else {
                 const currentGold = parseFloat(charData.gold) || 0;
-                const newGold = Math.max(0, currentGold + goldChange);
+                const newGold = currentGold + goldChange; 
                 
-                // CRITICAL FIX: Round the final gold value before updating the bigint column
                 const roundedNewGold = Math.round(newGold);
 
                 const { error: updateError } = await supabase
                     .from('characters')
-                    .update({ gold: roundedNewGold }) // Use the rounded value here
+                    .update({ gold: roundedNewGold })
                     .eq('character_id', currentCharacterId);
 
                 if (updateError) {
@@ -157,19 +168,16 @@ const handleDeleteTransaction = async (id, type) => {
                 }
             }
         }
-        
-        // 2. Market Listing Reversion (Only for successful Sale deletion)
-        
+       
         if (type === 'Sale') {
             
             if (!listingId || quantitySold <= 0) {
                  console.warn(`Sale deletion attempted, but missing required listing data (Listing ID: ${listingId}, Quantity Sold: ${quantitySold}). Skipping market listing reversal.`);
             } else {
                 
-                
                 const { data: listingData, error: fetchListingError } = await supabase
                     .from('market_listings')
-                    .select('quantity_listed')
+                    .select('quantity_listed, is_fully_sold') 
                     .eq('listing_id', listingId)
                     .single();
 
@@ -177,7 +185,10 @@ const handleDeleteTransaction = async (id, type) => {
                     console.warn('Failed to fetch market listing for reversal. Only proceeding with sale record deletion.', fetchListingError?.message);
                 } else {
                     const currentQuantity = parseFloat(listingData.quantity_listed) || 0;
-                    const newQuantity = currentQuantity + quantitySold; 
+                    
+                    const newQuantity = (listingData.is_fully_sold && currentQuantity > 0) 
+                        ? currentQuantity
+                        : currentQuantity + quantitySold;
                     
                     const { error: updateListingError } = await supabase
                         .from('market_listings')
@@ -195,7 +206,6 @@ const handleDeleteTransaction = async (id, type) => {
             }
         }
         
-        // 3. Delete transaction record (for all types)
         const deleteResult = await supabase
             .from(tableName)
             .delete()
@@ -234,7 +244,6 @@ const handleDeleteTransaction = async (id, type) => {
 };
 
 
-
 const setupDeleteListeners = () => {
     if (salesBody) {
         salesBody.addEventListener('click', (event) => {
@@ -253,7 +262,11 @@ const setupDeleteListeners = () => {
     }
 };
 
-export const loadTransactionHistory = (transactions) => {
+export const loadTransactionHistory = async (transactions) => {
+    if (!transactions && currentCharacterId) {
+        transactions = await fetchCharacterTransactions(currentCharacterId);
+    }
+    
     fullTransactionHistory = transactions || [];
     availableCategories.clear();
     availableTransactionTypes.clear(); 
@@ -422,24 +435,30 @@ const renderTransactionPagination = (totalCount) => {
     const totalPages = Math.ceil(totalCount / TRANSACTIONS_PER_PAGE);
     salesPaginationContainer.innerHTML = '';
     if (totalPages <= 1) return;
-    
-    const MAX_VISIBLE_PAGES = 7; 
-    const halfVisiblePages = Math.floor(MAX_VISIBLE_PAGES / 2);
 
-    const createButton = (text, page, disabled = false, isCurrent = false) => {
+    const createButton = (text, page, isActive, isDisabled) => {
         const button = document.createElement('button');
         button.textContent = text;
-        let classes = 'px-4 py-2 rounded-full font-bold transition duration-150 ease-in-out ';
-        if (disabled) {
-            classes += 'bg-gray-700 text-gray-500 cursor-not-allowed';
-        } else if (isCurrent) {
-            classes += 'bg-yellow-500 text-gray-900';
+        
+        // Base classes from user's explicit request
+        const baseClasses = 'px-4 py-2 rounded-full font-bold transition duration-150 ease-in-out focus:outline-none';
+        
+        let stateClasses;
+        if (isActive) {
+            // Active: Use the strongest blue from the hover state to distinguish the current page
+            stateClasses = 'bg-blue-700 text-white';
+        } else if (isDisabled) {
+            // Disabled: Muted gray for non-clickable buttons (Previous/Next on limits)
+            stateClasses = 'bg-gray-300 text-gray-500 cursor-not-allowed';
         } else {
-            classes += 'bg-blue-500 hover:bg-blue-700 text-white';
+            // Inactive: Use the user's base style with the defined hover effect
+            stateClasses = 'bg-blue-500 hover:bg-blue-700 text-white';
         }
-        button.className = classes;
-        button.disabled = disabled;
-        if (!disabled) {
+
+        button.className = `${baseClasses} ${stateClasses} mx-1`;
+        button.disabled = isDisabled;
+        
+        if (!isDisabled) {
             button.addEventListener('click', () => {
                 currentTransactionsPage = page;
                 applyTransactionFilters();
@@ -447,63 +466,64 @@ const renderTransactionPagination = (totalCount) => {
         }
         return button;
     };
-    
-    salesPaginationContainer.appendChild(createButton('Previous', currentTransactionsPage - 1, currentTransactionsPage === 1));
 
-    let startPage = Math.max(1, currentTransactionsPage - halfVisiblePages);
-    let endPage = Math.min(totalPages, currentTransactionsPage + halfVisiblePages);
+    salesPaginationContainer.appendChild(createButton('Previous', currentTransactionsPage - 1, false, currentTransactionsPage === 1));
 
-    if (endPage - startPage + 1 < MAX_VISIBLE_PAGES) {
-        if (currentTransactionsPage <= halfVisiblePages) {
-            endPage = Math.min(totalPages, MAX_VISIBLE_PAGES);
-            startPage = 1;
-        } else if (currentTransactionsPage > totalPages - halfVisiblePages) {
-            startPage = Math.max(1, totalPages - MAX_VISIBLE_PAGES + 1);
-            endPage = totalPages;
-        }
+    let startPage = Math.max(1, currentTransactionsPage - 2);
+    let endPage = Math.min(totalPages, currentTransactionsPage + 2);
+
+    if (currentTransactionsPage <= 3) {
+        endPage = Math.min(totalPages, 5);
+    } else if (currentTransactionsPage > totalPages - 3) {
+        startPage = Math.max(1, totalPages - 4);
     }
 
     if (startPage > 1) {
-        salesPaginationContainer.appendChild(createButton('1', 1));
+        salesPaginationContainer.appendChild(createButton('1', 1, false, false));
         if (startPage > 2) {
             const ellipsis = document.createElement('span');
             ellipsis.textContent = '...';
-            ellipsis.className = 'px-2 py-2 text-gray-400';
+            ellipsis.className = 'px-3 py-1 mx-1 text-gray-500';
             salesPaginationContainer.appendChild(ellipsis);
         }
     }
 
     for (let i = startPage; i <= endPage; i++) {
-        salesPaginationContainer.appendChild(createButton(i, i, false, i === currentTransactionsPage));
+        salesPaginationContainer.appendChild(createButton(i.toString(), i, i === currentTransactionsPage, false));
     }
 
     if (endPage < totalPages) {
         if (endPage < totalPages - 1) {
             const ellipsis = document.createElement('span');
             ellipsis.textContent = '...';
-            ellipsis.className = 'px-2 py-2 text-gray-400';
+            ellipsis.className = 'px-3 py-1 mx-1 text-gray-500';
             salesPaginationContainer.appendChild(ellipsis);
         }
-        salesPaginationContainer.appendChild(createButton(totalPages, totalPages));
+        salesPaginationContainer.appendChild(createButton(totalPages.toString(), totalPages, false, false));
     }
-    
-    salesPaginationContainer.appendChild(createButton('Next', currentTransactionsPage + 1, currentTransactionsPage === totalPages));
+
+    salesPaginationContainer.appendChild(createButton('Next', currentTransactionsPage + 1, false, currentTransactionsPage === totalPages));
 };
 
-export const handleDownloadCsv = async () => {
-    if (!currentCharacterId) return;
-    if (downloadSalesCsvButton) {
-        downloadSalesCsvButton.disabled = true;
-        downloadSalesCsvButton.textContent = 'Preparing Market History CSV...';
-    }
+
+const handleDownloadCsv = async () => {
+    if (!downloadSalesCsvButton) return;
+    downloadSalesCsvButton.disabled = true;
+
     try {
-        const headers = ['Type', 'Date (UTC)', 'Item Name', 'Category', 'Market Stall', 'Quantity', 'Price Per Unit', 'Total Amount', 'Fee']; 
-        const csvRows = [headers.join(',')];
+        if (fullTransactionHistory.length === 0) {
+            await showCustomModal('Warning', 'No transactions to download.', [{ text: 'OK', value: true }]);
+            return;
+        }
+
+        const csvRows = [];
+        csvRows.push(['Type', 'Date (UTC)', 'Item Name', 'Category', 'Market Stall', 'Quantity', 'Price Per Unit', 'Total Amount', 'Fee'].join(','));
+
         fullTransactionHistory.forEach(transaction => {
-            const date = transaction.date ? new Date(transaction.date).toISOString() : 'N/A';
-            const itemName = `"${transaction.type === 'PVE Gold' ? transaction.item_name : (transaction.item_name || 'N/A').replace(/"/g, '""')}"`;
-            const category = `"${transaction.category_name || 'N/A'}"`;
-            const marketStall = `"${(transaction.market_stall_name || '').replace(/"/g, '""')}"`;
+            const date = transaction.date ? new Date(transaction.date).toISOString().replace(/T.*/, '') : '';
+            const itemName = (transaction.item_name || '').replace(/"/g, '""');
+            const category = (transaction.category_name || '').replace(/"/g, '""');
+            const marketStall = (transaction.market_stall_name || '').replace(/"/g, '""');
             const quantity = transaction.type === 'PVE Gold' ? '' : (transaction.quantity?.toLocaleString() || '');
             const pricePerUnit = (parseFloat(transaction.price_per_unit) || 0).toFixed(2);
             const totalAmount = (parseFloat(transaction.total_amount) || 0).toFixed(2);
@@ -527,7 +547,6 @@ export const handleDownloadCsv = async () => {
     } finally {
         if (downloadSalesCsvButton) {
             downloadSalesCsvButton.disabled = false;
-            downloadSalesCsvButton.textContent = 'Download Market History CSV';
         }
     }
 };
