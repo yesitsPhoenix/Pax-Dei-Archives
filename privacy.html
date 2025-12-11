@@ -17,97 +17,67 @@
         };
     </script>
     <style>
-        /* Basic styling for the main content area */
         .privacy-content {
             max-width: 800px;
             margin: 4rem auto;
             padding: 2rem;
-            background-color: #1a202c; /* Tailwind's gray-900 or similar dark background */
-            color: #e2e8f0; /* Tailwind's gray-200 or similar light text */
-            border-radius: 0.75rem; /* rounded-xl */
+            background-color: #1a202c;
+            color: #e2e8f0; 
+            border-radius: 0.75rem; 
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
         .privacy-content h1 {
-            font-size: 2.25rem; /* text-4xl */
+            font-size: 2.25rem; 
             font-weight: bold;
-            margin-bottom: 1.5rem; /* mb-6 */
-            color: #63b3ed; /* Tailwind's blue-400 or similar accent color */
+            margin-bottom: 1.5rem; 
+            color: #63b3ed; 
         }
         .privacy-content h2 {
-            font-size: 1.5rem; /* text-2xl */
-            font-weight: 600; /* semi-bold */
-            margin-top: 2rem; /* mt-8 */
-            margin-bottom: 1rem; /* mb-4 */
-            color: #90cdf4; /* Tailwind's blue-300 or similar accent color */
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-top: 2rem; 
+            margin-bottom: 1rem;
+            color: #90cdf4; 
         }
         .privacy-content p {
-            margin-bottom: 1rem; /* mb-4 */
+            margin-bottom: 1rem;
             line-height: 1.6;
         }
         .privacy-content ul {
             list-style-type: disc;
-            margin-left: 1.5rem; /* ml-6 */
-            margin-bottom: 1rem; /* mb-4 */
+            margin-left: 1.5rem; 
+            margin-bottom: 1rem; 
         }
         .privacy-content ul li {
-            margin-bottom: 0.5rem; /* mb-2 */
+            margin-bottom: 0.5rem; 
         }
-        /* Specific styling for the header and footer links to ensure visibility on dark background */
         .header-area, footer {
-            background-color: #2d3748; /* Darker background for header/footer */
-            color: #cbd5e0; /* Lighter text for header/footer */
+            background-color: #2d3748; 
+            color: #cbd5e0; /
         }
         .main-nav a, footer a {
-            color: #a0aec0; /* Lighter grey for links */
+            color: #a0aec0;
         }
         .main-nav a.active {
-            color: #ffffff; /* White for active link */
+            color: #ffffff; 
         }
         .logo h1 {
-            color: #ffffff; /* White for logo text */
+            color: #ffffff; 
         }
         .search-input input {
-            background-color: #4a5568; /* Darker input background */
-            color: #e2e8f0; /* Light text for input */
-            border-color: #636b6f; /* Border color */
+            background-color: #4a5568;
+            color: #e2e8f0;
+            border-color: #636b6f; 
         }
         .search-button {
-            background-color: #63b3ed; /* Blue button */
+            background-color: #63b3ed;
             color: #ffffff;
         }
     </style>
 </head>
 <body class="bg-gray-800 text-gray-200 min-h-screen flex flex-col">
-    <header class="header-area bg-gray-900 text-white py-4">
-        <div class="container mx-auto px-4">
-            <nav class="main-nav flex items-center justify-between flex-wrap">
-                <a href="index.html" class="logo flex items-center space-x-2">
-                    <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon w-8 h-8 rounded-full">
-                    <h1 class="text-xl font-bold">Pax Dei Archives</h1>
-                </a>
-                <a class='menu-trigger lg:hidden block text-white'>
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </a>
-                <div class="nav-and-search-wrapper lg:flex lg:items-center lg:w-auto w-full hidden" id="navigation">
-                    <ul class="nav flex flex-col lg:flex-row lg:space-x-8 mt-4 lg:mt-0">
-                        <li><a href="index.html" class="block py-2 px-4 hover:text-blue-400">Home</a></li>
-                        <li><a href="abilities.html" class="block py-2 px-4 hover:text-blue-400">Abilities</a></li>
-                        <li><a href="gems.html" class="block py-2 px-4 hover:text-blue-400">Gems</a></li>
-                        <!-- <li><a href="articles.html" class="block py-2 px-4 hover:text-blue-400">Articles</a></li> -->
-                        <!-- <li><a href="news-updates.html" class="block py-2 px-4 hover:text-blue-400">News</a></li> -->
-                        <li><a href="developer-comments.html" class="block py-2 px-4 hover:text-blue-400">Dev Comments</a></li>
-                        <li><a href="lore.html" class="block py-2 px-4 hover:text-blue-400">Lore</a></li>
-                        <li><a href="ledger.html" class="block py-2 px-4 hover:text-blue-400">Ledger</a></li>
-                        <li><a href="trends.html" class="block py-2 px-4 hover:text-blue-400">Market Trends</a></li>
-                        <li><a href="map.html" class="block py-2 px-4 hover:text-blue-400">Map</a></li>
-                    </ul>
+<div id="header-placeholder"></div>
 
-                </div>
-            </nav>
-        </div>
-    </header>
 
     <main class="flex-grow">
         <div class="privacy-content">
@@ -169,10 +139,11 @@
 
     <div id="auth-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden z-50">
         <div class="modal-content-wrapper bg-gray-800 p-6 rounded-lg shadow-xl w-11/12 md:w-1/2 lg:w-1/3">
-            <!-- Modal content will be loaded here -->
         </div>
     </div>
     <div id="ability-popup-overlay" class="popup-overlay fixed inset-0 bg-black bg-opacity-75 hidden z-40"></div>
+
+    <script type="module" src="frontend/www/js/loadHeader.js"></script>
 
 </body>
 </html>

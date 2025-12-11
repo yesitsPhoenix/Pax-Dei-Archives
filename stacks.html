@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pax Dei Archives - Item Stack Sizes</title>
+    <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="frontend/www/css/trader.css">
+    <link rel="stylesheet" href="frontend/www/css/sidebar.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+
+    <script type="module" src="frontend/www/js/supabaseClient.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script async src="https://paxdei.gaming.tools/embed.js"></script>
+    <style>
+        .category-section h2 {
+            color: #ffffff;
+            border-bottom: 2px solid #4b5563;
+            padding-bottom: 10px;
+            margin-top: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .item-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .item-row {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            gap: 15px;
+            padding: 12px 0;
+            border-bottom: 1px solid #374151;
+            align-items: center;
+            font-size: 1.1rem;
+        }
+
+        .item-row:last-child {
+            border-bottom: none;
+        }
+
+        .item-header {
+            font-weight: bold;
+            color: #9ca3af;
+            padding: 10px 0;
+            border-bottom: 2px solid #4b5563;
+            font-size: 1.2rem;
+        }
+
+        .stack-size {
+            text-align: center;
+            font-weight: 600;
+            color: #10b981;
+        }
+
+        #category-filter, #item-search {
+            background-color: #1f2937;
+            color: #f0f0f0;
+            border: 1px solid #4b5563;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 1rem;
+            width: 100%;
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+<div id="header-placeholder"></div>
+
+<aside id="sidebar" class="w-64 bg-[#1c1c1c] border-r-4 border-amber-300 shadow-lg transition-all duration-300 hover:bg-slate-700 px-3 py-4 cursor-pointer fixed h-[50vh] z-50 top-[220px] collapsed">
+    <ul class="space-y-2 font-medium">
+        <li>
+            <a href="ledger.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                <i class="fas fa-book w-5 h-5 text-gray-400 transition duration-75"></i>
+                <span class="ml-3">View Ledger</span>
+            </a>
+        </li>
+        <li>
+            <a href="trends.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                <i class="fas fa-chart-line w-5 h-5 text-gray-400 transition duration-75"></i>
+                <span class="ml-3">View Market Trends</span>
+            </a>
+        </li>
+        <li>
+            <a href="listings.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                <i class="fas fa-tags w-5 h-5 text-gray-400 transition duration-75"></i>
+                <span class="ml-3">View All Listings</span>
+            </a>
+        </li>
+
+    </ul>
+</aside>
+<main class="trader-container">
+    <div class="container">
+        <div class="p-6 rounded-xl">
+            <h1 class="text-3xl font-extrabold mb-2 text-white text-center">
+                <i class="fas fa-boxes-stacked mr-2 text-amber-300"></i>
+                Current Item Stack Sizes
+            </h1>
+            
+            <div id="filters-container" class="mb-6 flex gap-4 justify-center">
+                <input type="text" id="item-search" placeholder="Search item (min 3 letters)" oninput="applyFiltersAndRender()">
+                <select id="category-filter" onchange="applyFiltersAndRender()">
+                    <option value="all">Filter by Category (All)</option>
+                </select>
+            </div>
+
+            <div id="archives-container">
+                <p class="text-gray-300 text-center">Loading item data...</p>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <p>Pax Dei Archives is a fan-made site and not affiliated with Pax Dei or MAINFRAME.</p>
+                <p>All intellectual property and assets related to Pax Dei game are reserved by MAINFRAME INDUSTRIES.</p>
+                <a href="admin.html">Admin</a>
+                <a href="privacy.html">Privacy Policy</a>
+            </div>
+        </div>
+    </div>
+    <div class="corner-credit">
+        <div class="corner-credit-top-row">
+            <img src="frontend/www/assets/phoenix.png" alt="Phoenix profile image" class="profile-image" />
+            <span class="nav-text-profile">Made by Phoenix ✨</span>
+        </div>
+        <div id="utc-clock-display" class="utc-clock"></div>
+    </div>
+</footer>
+
+<div id="accessDeniedModal" class="hidden fixed inset-0 bg-opacity-75 z-50 flex items-center justify-center">
+    <div class="bg-gray-800 p-8 rounded-lg shadow-2xl text-white text-center">
+        <h2 class="text-2xl font-bold text-red-400 mb-4">Access Denied</h2>
+        <p class="mb-6">This page requires elevated permissions to view item data.</p>
+        <p id="redirectCountdown" class="text-amber-300 font-semibold"></p>
+        <a href="trends.html" class="mt-4 inline-block px-4 py-2 bg-red-600 rounded hover:bg-red-700">Go to Market Trends</a>
+    </div>
+</div>
+
+<div id="auth-modal">
+    <div class="modal-content-wrapper" id="modal-content-wrapper">
+    </div>
+</div>
+
+<div id="floating-avatar-container">
+    <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar js-floating-avatar">
+</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script type="module" src="frontend/www/js/popoutAuth.js"></script>
+<script type="module" src="frontend/www/js/small_sidebar.js"></script>
+<script type="module" src="frontend/www/js/stack_sizes.js"></script>
+<script type="module" src="frontend/www/js/loadHeader.js"></script>
+</body>
+</html>

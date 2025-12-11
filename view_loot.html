@@ -20,88 +20,8 @@
 
 </head>
 <body>
-<header class="header-area">
-    <div class="container">
-        <nav class="main-nav">
-            <a href="index.html" class="logo">
-                <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
-                <h1>Pax Dei Archives</h1>
-            </a>
-            <a class="menu-trigger">
-                <span></span>
-                <span></span>
-                <span></span>
-            </a>
-            <div class="nav-and-search-wrapper">
-                <ul class="nav">
-                    <li>
-                        <a href="index.html">
-                            <i class="fas fa-home mr-1"></i> Home
-                        </a>
-                    </li>
-                    <li class="dropdown">
-                        <a href="#" class="active">
-                            <i class="fas fa-calculator mr-1"></i> Calculators 
-                            <i class="fas fa-caret-down ml-1"></i>
-                        </a>
-                        <div class="dropdown-content">
-                            <ul>
-                                <li><a href="grace.html"><i class="fas fa-hands-praying mr-1"></i> Grace Calculator</a></li>
-                                <li><a href="gathering.html"><i class="fas fa-leaf mr-1"></i> Gathering Tracker</a></li>
-                                <li><a href="runs.html"><i class="fas fa-route mr-1"></i> Run History</a></li>
-                                <!-- <li><a href="loot.html"><i class="fas fa-box mr-1"></i> Loot Tracker</a></li> -->
-                                <!-- <li><a href="view_loot.html" class="active"><i class="fas fa-inbox mr-1"></i> View Loot</a></li> -->
-                                <li><a href="crafting.html"><i class="fas fa-hammer mr-1"></i> Crafting Rate Calculator</a></li>
-                            </ul>
-                        </div>
-                    </li>
-                    <li class="dropdown">
-                        <a href="#">
-                            <i class="fas fa-store mr-1"></i> Markets 
-                            <i class="fas fa-caret-down ml-1"></i>
-                        </a>
-                        <div class="dropdown-content">
-                            <ul>
-                                <li><a href="dashboard.html"><i class="fas fa-tachometer-alt mr-1"></i> Dashboard</a></li>
-                                <li><a href="ledger.html"><i class="fas fa-book mr-1"></i> Ledger</a></li>
-                                <li><a href="trends.html"><i class="fas fa-chart-line mr-1"></i> Market Trends</a></li>
-                                <li><a href="listings.html"><i class="fas fa-tags mr-1"></i> Listings</a></li>
-                                <li><a href="profile.html"><i class="fas fa-user mr-1"></i> Profile</a></li>
-                            </ul>
-                        </div>
-                    </li>
-                    <li>
-                        <a href="developer-comments.html">
-                            <i class="fas fa-code mr-1"></i> Dev Comments
-                        </a>
-                    </li>
-                    <li>
-                        <a href="lore.html">
-                            <i class="fas fa-book-open mr-1"></i> Lore
-                        </a>
-                    </li>
-                    <li class="dropdown">
-                        <a href="#">
-                            <i class="fas fa-boxes-stacked mr-1"></i> Resources
-                            <i class="fas fa-caret-down ml-1"></i>
-                        </a>
-                        <div class="dropdown-content">
-                            <ul>
-                                <li><a href="abilities.html"><i class="fas fa-wand-magic-sparkles mr-1"></i> Abilities</a></li>
-                                <li><a href="gems.html"><i class="fas fa-gem mr-1"></i> Gems</a></li>
-                            </ul>
-                        </div>
-                    </li>
-                    <li>
-                        <a href="map.html">
-                            <i class="fas fa-map mr-1"></i> Map
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </nav>
-    </div>
-</header>
+<div id="header-placeholder"></div>
+
     <div class="container mt-8 mb-8">
         <div class="row">
             <div class="col-lg-12">
@@ -185,4 +105,6 @@
     <script type="module" src="frontend/www/js/main.js"></script>
     <script type="module" src="frontend/www/js/dungeon_modules/view_dungeon.js"></script> </body>
     <script type="module" src="frontend/www/js/popoutAuth.js"></script>
+    <script type="module" src="frontend/www/js/loadHeader.js"></script>
+
 </html>

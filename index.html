@@ -15,88 +15,8 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <body>
 </head>
-<header class="header-area">
-    <div class="container">
-        <nav class="main-nav">
-            <a href="index.html" class="logo">
-                <img src="frontend/www/assets/logo.png" alt="Pax Dei Archives Icon" class="site-icon">
-                <h1>Pax Dei Archives</h1>
-            </a>
-            <a class="menu-trigger">
-                <span></span>
-                <span></span>
-                <span></span>
-            </a>
-            <div class="nav-and-search-wrapper">
-                <ul class="nav">
-                    <li>
-                        <a href="index.html" class="active">
-                            <i class="fas fa-home mr-1"></i> Home
-                        </a>
-                    </li>
-                    <li class="dropdown">
-                        <a href="#">
-                            <i class="fas fa-calculator mr-1"></i> Calculators 
-                            <i class="fas fa-caret-down ml-1"></i>
-                        </a>
-                        <div class="dropdown-content">
-                            <ul>
-                                <li><a href="grace.html"><i class="fas fa-hands-praying mr-1"></i> Grace Calculator</a></li>
-                                <li><a href="gathering.html"><i class="fas fa-leaf mr-1"></i> Gathering Tracker</a></li>
-                                <li><a href="runs.html"><i class="fas fa-route mr-1"></i> Run History</a></li>
-                                <!-- <li><a href="loot.html"><i class="fas fa-box mr-1"></i> Loot Tracker</a></li> -->
-                                <!-- <li><a href="view_loot.html"><i class="fas fa-inbox mr-1"></i> View Loot</a></li> -->
-                                <li><a href="crafting.html"><i class="fas fa-hammer mr-1"></i> Crafting Rate Calculator</a></li>
-                            </ul>
-                        </div>
-                    </li>
-                    <li class="dropdown">
-                        <a href="#">
-                            <i class="fas fa-store mr-1"></i> Markets 
-                            <i class="fas fa-caret-down ml-1"></i>
-                        </a>
-                        <div class="dropdown-content">
-                            <ul>
-                                <li><a href="dashboard.html"><i class="fas fa-tachometer-alt mr-1"></i> Dashboard</a></li>
-                                <li><a href="ledger.html"><i class="fas fa-book mr-1"></i> Ledger</a></li>
-                                <li><a href="trends.html"><i class="fas fa-chart-line mr-1"></i> Market Trends</a></li>
-                                <li><a href="listings.html"><i class="fas fa-tags mr-1"></i> Listings</a></li>
-                                <li><a href="profile.html"><i class="fas fa-user mr-1"></i> Profile</a></li>
-                            </ul>
-                        </div>
-                    </li>
-                    <li>
-                        <a href="developer-comments.html">
-                            <i class="fas fa-code mr-1"></i> Dev Comments
-                        </a>
-                    </li>
-                    <li>
-                        <a href="lore.html">
-                            <i class="fas fa-book-open mr-1"></i> Lore
-                        </a>
-                    </li>
-                    <li class="dropdown">
-                        <a href="#">
-                            <i class="fas fa-boxes-stacked mr-1"></i> Resources
-                            <i class="fas fa-caret-down ml-1"></i>
-                        </a>
-                        <div class="dropdown-content">
-                            <ul>
-                                <li><a href="abilities.html"><i class="fas fa-wand-magic-sparkles mr-1"></i> Abilities</a></li>
-                                <li><a href="gems.html"><i class="fas fa-gem mr-1"></i> Gems</a></li>
-                            </ul>
-                        </div>
-                    </li>
-                    <li>
-                        <a href="map.html">
-                            <i class="fas fa-map mr-1"></i> Map
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </nav>
-    </div>
-</header>
+<div id="header-placeholder"></div>
+
     <div class="container">
         <div class="row">
             <div class="col-lg-12">
@@ -110,7 +30,6 @@
                             </div>
                         </div>
                     </div>
-
                     <div class="feature-cards-section" id="feature-cards">
                         <div class="row">
                             <div class="col-lg-12">
@@ -170,6 +89,14 @@
                             <div class="col-lg-1 col-md-4 col-sm-6">
                                 <div class="feature-card">
                                     <a href="ledger.html">
+                                        <i class="fa-solid fa-tachometer-alt"></i>
+                                        <h5>Market<br>Dashboard</h5>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-lg-1 col-md-4 col-sm-6">
+                                <div class="feature-card">
+                                    <a href="ledger.html">
                                         <i class="fa-solid fa-sack-dollar"></i>
                                         <h5>Ledger</h5>
                                     </a>
@@ -177,8 +104,16 @@
                             </div>
                             <div class="col-lg-1 col-md-4 col-sm-6">
                                 <div class="feature-card">
+                                    <a href="ledger.html">
+                                        <i class="fa-solid fa-tags"></i>
+                                        <h5>Active Listings</h5>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-lg-1 col-md-4 col-sm-6">
+                                <div class="feature-card">
                                     <a href="trends.html">
-                                        <i class="fa-solid fa-chart-simple"></i>
+                                        <i class="fa-solid fa-chart-line"></i>
                                         <h5>Market Trends</h5>
                                     </a>
                                 </div>
@@ -188,14 +123,6 @@
                                     <a href="#" id="roadmapLink">
                                         <i class="fa-solid fa-map-marked-alt"></i>
                                         <h5>Latest Roadmap</h5>
-                                    </a>
-                                </div>
-                            </div>
-                            <div class="col-lg-1 col-md-4 col-sm-6">
-                                <div class="feature-card">
-                                    <a href="loot.html">
-                                        <i class="fa-solid fa-users"></i>
-                                        <h5>Loot Tracker</h5>
                                     </a>
                                 </div>
                             </div>
@@ -237,7 +164,6 @@
                                 <div class="feature-card">
                                     <a href="https://discord.gg/rWpsquDXqA">
                                         <i class="fa-brands fa-discord"></i>
-                                        <!-- <h5>Pax Dei</h5> -->
                                         <h5>Archives Discord</h5>
                                         <h5>(external)</h5>
                                     </a>
@@ -259,21 +185,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- <div class="news-updates">
-                        <div class="row">
-                            <div class="col-lg-12">
-                                <div class="heading-section">
-                                    <h4><em>Latest</em> News</h4>
-                                </div>
-                            </div>
-                            <div class="col-lg-12">
-                                <div id="news-updates-home" class="row">
-                                    <div class="loading-indicator">Loading latest news...</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div> -->
                 </div>
             </div>
         </div>
@@ -285,6 +196,7 @@
                     <p>Pax Dei Archives is a fan-made site and not affiliated with Pax Dei or MAINFRAME.</p>
                     <p>All intellectual property and assets related to Pax Dei game are reserved by MAINFRAME INDUSTRIES.</p>
                     <a href="admin.html">Admin</a>
+                    <a href="#">|</a>
                     <a href="privacy.html">Privacy Policy</a>
                 </div>
             </div>
@@ -316,6 +228,7 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script type="module" src="frontend/www/js/main.js"></script>
     <script type="module" src="frontend/www/js/popoutAuth.js"></script>
+    <script type="module" src="frontend/www/js/loadHeader.js"></script>
 
 </body>
 </html>
