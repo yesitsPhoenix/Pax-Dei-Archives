@@ -6,18 +6,20 @@
     <title>Pax Dei Archives - Admin</title>
     <link rel="stylesheet" href="frontend/www/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
     <script type="module" src="frontend/www/js/supabaseClient.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.min.js"></script>
 </head>
 <body>
-<div id="header-placeholder"></div>
+    <div id="header-placeholder"></div>
 
     <div class="container">
         <div class="row">
             <div class="col-lg-12">
                 <div class="page-content">
+                    
                     <div class="heading-section" id="loginHeading">
                         <h4>Admin <em>Login</em></h4>
                     </div>
@@ -30,25 +32,26 @@
                     </div>
 
                     <div id="adminDashboardAndForm" style="display: none;">
-                        <div class="heading-section" style="margin-top: 50px;">
+                        <div class="heading-section">
                             <h4>Admin <em>Dashboard</em></h4>
                         </div>
+                        
                         <div id="dashboard" class="row">
-                            <div class="col-sm-6 col-md-3 col-sm-12">
+                            <div class="col-sm-6 col-md-4">
                                 <div class="admin-dashboard-card">
                                     <h6>Total Dev Comments</h6>
                                     <p id="totalCommentsCount">--</p>
                                     <i class="fas fa-comments"></i>
                                 </div>
                             </div>
-                            <div class="col-lg-3 col-md-3 col-sm-12">
+                            <div class="col-sm-6 col-md-4">
                                 <div class="admin-dashboard-card">
                                     <h6>Comments This Month</h6>
                                     <p id="commentsMonthCount">--</p>
                                     <i class="fas fa-calendar-alt"></i>
                                 </div>
                             </div>
-                            <div class="col-lg-3 col-md-3 col-sm-12">
+                            <div class="col-sm-6 col-md-4">
                                 <div class="admin-dashboard-card">
                                     <h6>Total Lore Items</h6>
                                     <p id="totalLoreCount">--</p>
@@ -56,66 +59,134 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="heading-section" style="margin-top: 50px;">
-                                    <h4>Add New <em>Developer Comment</em></h4>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-12">
+                            <div class="flex flex-col">
+                                <div class="heading-section">
+                                    <h4>Add New <em>Dev Comment</em></h4>
                                 </div>
-                                <div id="commentFormSection" class="admin-form-container">
-                                    <p>Paste the developer comment block below, and the form will attempt to parse it.</p>
+                                <div id="commentFormSection" class="admin-form-container h-full">
+                                    <p>Paste the developer comment block below to parse it.</p>
                                     <textarea id="commentInput" rows="10" placeholder="Paste comment here..."></textarea>
                                     <button id="parseButton" class="main-button">Parse & Preview</button>
-
+                                    
                                     <div id="formMessage" role="alert"></div>
 
                                     <form id="devCommentForm" style="display: none;">
-                                        <h5>Parsed Data Preview:</h5>
-                                        <label for="author">Author:</label>
+                                        <h5 class="mt-4 mb-2">Parsed Data Preview:</h5>
+                                        <label>Author:</label>
                                         <input type="text" id="author" name="author" readonly>
-
-                                        <label for="author_type">Author Type:</label>
-                                        <select id="author_type" name="author_type" required>
-                                        </select>
-                                        <label for="source">Source:</label>
+                                        <label>Author Type:</label>
+                                        <select id="author_type" name="author_type" required></select>
+                                        <label>Source:</label>
                                         <input type="text" id="source" name="source" readonly>
-
-                                        <label for="timestamp">Timestamp:</label>
+                                        <label>Timestamp:</label>
                                         <input type="datetime-local" id="timestamp" name="timestamp" readonly>
-
-                                        <label for="commentContent">Comment Content:</label>
+                                        <label>Content:</label>
                                         <textarea id="commentContent" name="content" rows="10" readonly></textarea>
-
-                                        <label for="tagSelect">Tag:</label>
-                                        <select id="tagSelect" name="tag" multiple size="5">
-                                            <option value="">Select one or more tags</option>
-                                        </select>
-                                        <div style="margin-top: 10px;">
-                                            <input type="text" id="newTagInput" placeholder="Or add a new tag" style="width: calc(100% - 70px); margin-right: 5px;">
-                                            <button type="button" id="addNewTagButton" class="main-button" style="padding: 10px 15px; font-size: 0.9em;">Add Tag</button>
+                                        
+                                        <label>Tags:</label>
+                                        <select id="tagSelect" name="tag" multiple size="5"></select>
+                                        <div class="flex gap-2 mt-2">
+                                            <input type="text" id="newTagInput" placeholder="Add new tag" class="flex-grow">
+                                            <button type="button" id="addNewTagButton" class="main-button py-2 px-4 text-sm">Add</button>
                                         </div>
-
-                                        <div class="form-actions">
-                                            <button type="submit" class="main-button submit-button">Add Comment to DB</button>
+                                        
+                                        <div class="form-actions mt-4">
+                                            <button type="submit" class="main-button submit-button">Add to DB</button>
                                             <button type="button" id="editButton" class="main-button secondary-button">Edit Raw</button>
                                         </div>
                                     </form>
-                                    <p id="parseError" style="color: red; display: none;"></p>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-col">
+                                <div class="heading-section">
+                                    <h4>Add New <em>Article</em></h4>
+                                </div>
+                                <div class="admin-form-container h-full">
+                                    <p class="text-gray-400 mb-6">Create new site articles using Markdown.</p>
+                                    <form id="addArticleForm" class="space-y-4">
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div class="flex flex-col">
+                                                <label class="text-xs uppercase font-bold text-gray-400 mb-1">Title</label>
+                                                <input type="text" id="articleTitle" required class="bg-[#1f2122] border border-gray-700 rounded-lg p-2 text-white outline-none focus:border-[#e75e8d]">
+                                            </div>
+                                            <div class="flex flex-col">
+                                                <label class="text-xs uppercase font-bold text-gray-500 mb-1">Slug (Auto)</label>
+                                                <input type="text" id="articleSlug" readonly class="bg-[#343637] border border-gray-700 rounded-lg p-2 text-gray-500 cursor-not-allowed">
+                                            </div>
+                                        </div>
+
+                                        <div class="flex flex-col">
+                                            <label class="text-xs uppercase font-bold text-gray-400 mb-1">Summary</label>
+                                            <textarea id="articleSummary" rows="2" required class="bg-[#1f2122] border border-gray-700 rounded-lg p-2 text-white outline-none focus:border-[#e75e8d]"></textarea>
+                                        </div>
+
+                                        <div class="flex flex-col">
+                                            <label class="text-xs uppercase font-bold text-gray-400 mb-1">Content (Markdown)</label>
+                                            <textarea id="articleContent" rows="12" required class="bg-[#1f2122] border border-gray-700 rounded-lg p-2 text-white font-mono text-sm outline-none focus:border-[#e75e8d]"></textarea>
+                                        </div>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div class="flex flex-col">
+                                                <label class="text-xs uppercase font-bold text-gray-400 mb-1">Author</label>
+                                                <input type="text" id="articleAuthor" required class="bg-[#1f2122] border border-gray-700 rounded-lg p-2 text-white outline-none focus:border-[#e75e8d]">
+                                            </div>
+                                            <div class="flex flex-col">
+                                                <label class="text-xs uppercase font-bold text-gray-400 mb-1">Date</label>
+                                                <input type="datetime-local" id="articlePublicationDate" class="bg-[#1f2122] border border-gray-700 rounded-lg p-2 text-white outline-none focus:border-[#e75e8d]">
+                                            </div>
+                                        </div>
+
+                                            <div class="flex flex-col sm:flex-row gap-3">
+                                                <select
+                                                    id="articleCategory"
+                                                    required
+                                                    class="flex-grow bg-[#1f2122] border border-gray-700 rounded-lg p-2 h-[42px] text-white outline-none focus:border-[#e75e8d]">
+                                                </select>
+
+                                                <div class="flex ml-1">
+                                                    <input
+                                                        type="text"
+                                                        id="addNewArticleCategoryInput"
+                                                        placeholder="New category"
+                                                        class="flex bg-[#1f2122] border border-gray-700 rounded-l-lg p-2 h-[42px] text-white outline-none focus:border-[#e75e8d] border-r-0">
+                                                    <button
+                                                        type="button"
+                                                        id="addNewArticleCategoryButton"
+                                                        class="main-button py-2 px-4 text-sm h-[42px] rounded-l-none padding-left-100px">
+                                                        Add
+                                                    </button>
+                                                </div>
+                                            </div>
+
+
+                                        <div class="pt-4 border-t border-gray-700">
+                                            <button type="submit" class="main-button w-full">Publish Article</button>
+                                            <div id="addArticleMessage" style="display:none;" class="mt-4 text-sm"></div>
+                                        </div>
+                                    </form>
                                 </div>
                             </div>
                         </div>
+
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
     <footer>
         <div class="container">
             <div class="row">
-                <div class="col-lg-12">
+                <div class="col-lg-12 text-center">
                     <p>Pax Dei Archives is a fan-made site and not affiliated with Pax Dei or MAINFRAME.</p>
                     <p>All intellectual property and assets related to Pax Dei game are reserved by MAINFRAME INDUSTRIES.</p>
-                    <a href="admin.html">Admin</a>
-                    <a href="privacy.html">Privacy Policy</a>
+                    <div class="footer-links">
+                        <a href="admin.html">Admin</a>
+                        <a href="privacy.html">Privacy Policy</a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -127,18 +198,19 @@
             <div id="utc-clock-display" class="utc-clock"></div>
         </div>
     </footer>
+
     <div id="floating-avatar-container">
         <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar js-floating-avatar">
     </div>
 
     <div id="auth-modal">
-        <div class="modal-content-wrapper" id="modal-content-wrapper">
-        </div>
+        <div class="modal-content-wrapper" id="modal-content-wrapper"></div>
     </div>
+
     <script type="module" src="frontend/www/js/loadHeader.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script type="module" src="frontend/www/js/admin.js"></script>
-    <script type="module" src="frontend/www/js/articlePosts.js"></script>
+    <script type="module" src="frontend/www/js/articles/articlePosts.js"></script>
     <script type="module" src="frontend/www/js/main.js"></script>
     <script type="module" src="frontend/www/js/popoutAuth.js"></script>
 </body>

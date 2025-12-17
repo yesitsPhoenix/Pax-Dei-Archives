@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient.js';
+import { supabase } from '../supabaseClient.js';
 
 function showFormMessage(messageElement, message, type) {
     messageElement.textContent = message;
@@ -19,7 +19,6 @@ function showFormMessage(messageElement, message, type) {
     }
 }
 
-
 function slugify(text) {
     return text
         .toString()
@@ -31,7 +30,6 @@ function slugify(text) {
         .replace(/[^\w-]+/g, '') 
         .replace(/--+/g, '-');
 }
-
 
 async function populateCategorySelect(selectElement) {
     if (!selectElement) {
@@ -142,7 +140,6 @@ document.addEventListener('DOMContentLoaded', async function() {
             const slug = articleSlugInput.value.trim();
             let publication_date = articlePublicationDateInput.value;
 
-            // Validate required fields
             if (!title || !content || !summary || !author || !category || !slug) {
                 showFormMessage(addArticleMessage, 'Please fill in all required fields.', 'error');
                 if (submitButton) {
@@ -192,7 +189,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                     showFormMessage(addArticleMessage, `Error saving article: ${error.message}`, 'error');
                 } else {
                     showFormMessage(addArticleMessage, 'Article added successfully!', 'success');
-                    // Reset the form after successful submission
                     addArticleForm.reset();
                     await populateCategorySelect(articleCategorySelect); 
                 }

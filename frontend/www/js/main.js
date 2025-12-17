@@ -3,76 +3,41 @@ import { formatCommentDateTime, formatNewsDate } from './utils.js';
 import { fetchAndRenderDeveloperComments } from './devComments.js';
 import { fetchAndRenderNewsUpdates } from './newsUpdates.js';
 import { fetchAndRenderLorePosts } from './lorePosts.js';
-import { fetchAndRenderArticles, fetchAndRenderArticleCategories, setupArticleModalListeners, fetchSingleArticle } from './articles.js';
-
+import { fetchAndRenderArticles, handleArticlePageLogic } from './articles/articles.js';
 import DOMPurify from 'https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.es.min.js';
 
 const TAG_LIST_CACHE_KEY = 'paxDeiTagList';
 const TAG_LIST_CACHE_EXPIRY_MS = 10 * 1000; 
-
 const DEV_COMMENTS_CACHE_KEY = 'paxDeiDevComments';
 const DEV_COMMENTS_CACHE_EXPIRY_MS = 5 * 60 * 1000;
-
-function showFormMessage(messageElement, message, type) {
-    messageElement.textContent = message;
-    messageElement.className = '';
-    if (type) {
-        messageElement.classList.add('form-message', type);
-        messageElement.style.display = 'block';
-
-        if (message) {
-            setTimeout(() => {
-                messageElement.style.display = 'none';
-                messageElement.textContent = '';
-            }, 5000);
-        }
-    } else {
-        messageElement.style.display = 'none';
-        messageElement.textContent = '';
-    }
-}
 
 function normalizeAbilityNameForHash(name) {
     return name.toLowerCase().replace(/\s+/g, '-').replace(/'/g, '');
 }
 
 async function fetchAbilitiesForSearch(searchTerm) {
-    if (!searchTerm) {
-        return [];
-    }
+    if (!searchTerm) return [];
     try {
-        const { data: abilitiesByName, error: errorName } = await supabase
+        const { data: abilitiesByName } = await supabase
             .from('abilities')
             .select('*')
             .ilike('name', `%${searchTerm}%`);
 
-        if (errorName) {
-            console.error('Error fetching abilities by name:', errorName.message);
-            return [];
-        }
-
-        const { data: abilitiesByDescription, error: errorDescription } = await supabase
+        const { data: abilitiesByDescription } = await supabase
             .from('abilities')
             .select('*')
             .ilike('description', `%${searchTerm}%`);
 
-        if (errorDescription) {
-            console.error('Error fetching abilities by description:', errorDescription.message);
-            return [];
-        }
-
         const combinedAbilitiesMap = new Map();
-        abilitiesByName.forEach(ability => combinedAbilitiesMap.set(ability.name, ability));
-        abilitiesByDescription.forEach(ability => combinedAbilitiesMap.set(ability.name, ability));
+        (abilitiesByName || []).forEach(ability => combinedAbilitiesMap.set(ability.name, ability));
+        (abilitiesByDescription || []).forEach(ability => combinedAbilitiesMap.set(ability.name, ability));
 
         return Array.from(combinedAbilitiesMap.values());
-
     } catch (e) {
-        console.error('Unexpected error in fetchAbilitiesForSearch:', e);
+        console.error(e);
         return [];
     }
 }
-
 
 async function performSearch(searchTerm) {
     const searchResultsDropdown = $('#searchResultsDropdown');
@@ -84,7 +49,7 @@ async function performSearch(searchTerm) {
             fetchAndRenderDeveloperComments(null, null, searchTerm),
             fetchAndRenderNewsUpdates(null, null, searchTerm),
             fetchAndRenderLorePosts(null, null, searchTerm),
-            fetchAndRenderArticles(null, null, searchTerm),
+            fetchAndRenderArticles(null, searchTerm),
             fetchAbilitiesForSearch(searchTerm)
         ]);
 
@@ -153,7 +118,6 @@ async function performSearch(searchTerm) {
             });
         });
 
-
         allResults.sort((a, b) => {
             const dateA = a.date ? new Date(a.date) : new Date(0);
             const dateB = b.date ? new Date(b.date) : new Date(0);
@@ -169,11 +133,7 @@ async function performSearch(searchTerm) {
                 if (item.source) {
                     const urlPattern = /^(https?:\/\/[^\s]+)$/i;
                     if (urlPattern.test(item.source)) {
-                        sourceDisplay = `
-                                <a href="${item.source}" target="_blank" rel="noopener noreferrer" class="source-link-button">
-                                    <i class="fas fa-external-link-alt"></i> Source
-                                </a>
-                            `;
+                        sourceDisplay = `<a href="${item.source}" target="_blank" rel="noopener noreferrer" class="source-link-button"><i class="fas fa-external-link-alt"></i> Source</a>`;
                     } else {
                         sourceDisplay = `<span class="comment-source">Source: ${item.source}</span>`;
                     }
@@ -183,26 +143,15 @@ async function performSearch(searchTerm) {
                     (item.type === 'Developer Comment' ? formatCommentDateTime(item.date) :
                         (item.type === 'News Update' || item.type === 'Article' ? formatNewsDate(item.date) : '')) : '';
 
-
                 const mainLink = item.link ? item.link : '#';
-
                 let displayedContent = item.content;
                 if ((item.type === 'Lore Post' || item.type === 'Ability') && typeof marked !== 'undefined') {
                     const contentString = item.content ?? ''; 
-                    const snippetLength = 200;
-                    let snippet = contentString.substring(0, snippetLength);
-                    if (contentString.length > snippetLength) {
-                        snippet += '...';
-                    }
+                    const snippet = contentString.length > 200 ? contentString.substring(0, 200) + '...' : contentString;
                     displayedContent = marked.parse(snippet);
                 } else if (item.type === 'News Update' || item.type === 'Article') {
                     const contentString = item.content ?? '';
-                    const snippetLength = 200;
-                    let snippet = contentString.substring(0, snippetLength);
-                    if (contentString.length > snippetLength) {
-                        snippet += '...';
-                    }
-                    displayedContent = snippet;
+                    displayedContent = contentString.length > 200 ? contentString.substring(0, 200) + '...' : contentString;
                 }
                 const titleDisplay = item.title ? item.title : '';
                 const authorPrefix = item.type === 'Developer Comment' && item.author ? item.author + ' - ' : '';
@@ -220,26 +169,23 @@ async function performSearch(searchTerm) {
                 }
 
                 const resultHtml = `
-                                <div class="search-result-item ${item.type.toLowerCase().replace(/\s/g, '-')}-item">
-                                    <div class="down-content">
-                                        ${item.link ? `<h6><a href="${mainLink}">${headingContent}</a></h6>` : `<h6>${headingContent}</h6>`}
-                                        <p>${displayedContent}</p> ${sourceDisplay ? sourceDisplay : ''}
-                                        ${item.link && (item.type === 'News Update' || item.type === 'Lore Post' || item.type === 'Article' || item.type === 'Ability') ? `<div class="main-button"><a href="${mainLink}" ${item.type === 'News Update' || item.type === 'Article' ? 'target="_blank"' : ''}>Read More</a></div>` : ''}
-                                    </div>
-                                </div>
-                            `;
+                    <div class="search-result-item ${item.type.toLowerCase().replace(/\s/g, '-')}-item">
+                        <div class="down-content">
+                            ${item.link ? `<h6><a href="${mainLink}">${headingContent}</a></h6>` : `<h6>${headingContent}</h6>`}
+                            <p>${displayedContent}</p> ${sourceDisplay ? sourceDisplay : ''}
+                            ${item.link && (['News Update', 'Lore Post', 'Article', 'Ability'].includes(item.type)) ? `<div class="main-button"><a href="${mainLink}" ${item.type === 'News Update' || item.type === 'Article' ? 'target="_blank"' : ''}>Read More</a></div>` : ''}
+                        </div>
+                    </div>`;
                 searchResultsDropdown.append(resultHtml);
             });
         }
-
     } catch (error) {
-        console.error('Search error:', error);
-        searchResultsDropdown.html('<div class="search-error-message">An error occurred during search. Please try again.</div>');
+        console.error(error);
+        searchResultsDropdown.html('<div class="search-error-message">An error occurred during search.</div>');
     }
 }
 
 $(document).ready(async function() {
-
     const utcClockDisplay = document.getElementById('utc-clock-display');
     if (utcClockDisplay) {
         updateUtcClock(utcClockDisplay);
@@ -256,87 +202,27 @@ $(document).ready(async function() {
             var target = $(this.hash);
             target = target.length ? target : $('[name=' + this.hash.slice(1) + ']');
             if (target.length) {
-                $('html, body').animate({
-                    scrollTop: target.offset().top - 80
-                }, 1000);
+                $('html, body').animate({ scrollTop: target.offset().top - 80 }, 1000);
                 return false;
             }
         }
     });
 
-    const roadmapLink = $('#roadmapLink');
-    const roadmapModalOverlay = $('#roadmapModalOverlay');
-    const closeRoadmapModalButton = $('#closeRoadmapModal');
-
-    if (roadmapLink.length && roadmapModalOverlay.length && closeRoadmapModalButton.length) {
-        roadmapLink.on('click', function(event) {
-            event.preventDefault();
-            roadmapModalOverlay.addClass('active');
-            $('body').addClass('modal-open');
-        });
-
-        closeRoadmapModalButton.on('click', function(event) {
-            event.preventDefault();
-            event.stopPropagation();
-            roadmapModalOverlay.removeClass('active');
-            $('body').removeClass('modal-open');
-        });
-
-        roadmapModalOverlay.on('click', function(event) {
-            if ($(event.target).is(roadmapModalOverlay)) {
-                event.stopPropagation();
-                roadmapModalOverlay.removeClass('active');
-                $('body').removeClass('modal-open');
-            }
-        });
-
-        $(document).on('keydown', function(event) {
-            if (event.key === 'Escape' && roadmapModalOverlay.hasClass('active')) {
-                roadmapModalOverlay.removeClass('active');
-                $('body').removeClass('modal-open');
-            }
-        });
-    }
-
     const searchInput = $('#searchText');
     const searchResultsDropdown = $('#searchResultsDropdown');
-    const searchForm = $('#search');
 
     if (searchInput.length) {
         searchInput.on('input', function() {
             const searchTerm = $(this).val().trim();
-            if (searchTerm.length >= 3) {
-                performSearch(searchTerm);
-            } else {
-                searchResultsDropdown.empty().removeClass('active');
-            }
+            if (searchTerm.length >= 3) performSearch(searchTerm);
+            else searchResultsDropdown.empty().removeClass('active');
         });
     }
 
-    if (searchForm.length) {
-        searchForm.on('submit', function(event) {
-            event.preventDefault();
-            const searchText = searchInput.val().trim();
-            if (searchText) {
-                performSearch(searchText);
-            } else {
-                searchResultsDropdown.removeClass('active');
-                searchResultsDropdown.empty();
-            }
-        });
-    }
-
-    $(document).on('click', function(event) {
-        if (!$(event.target).closest('.header-area .search-input').length &&
-            !$(event.target).closest('#searchResultsDropdown').length) {
-            searchResultsDropdown.removeClass('active');
-        }
-    });
-
-    $(document).on('keydown', function(event) {
-        if (event.key === 'Escape' && searchResultsDropdown.hasClass('active')) {
-            searchResultsDropdown.removeClass('active');
-        }
+    $('#search').on('submit', function(event) {
+        event.preventDefault();
+        const searchText = searchInput.val().trim();
+        if (searchText) performSearch(searchText);
     });
 
     const currentPage = window.location.pathname.split('/').pop();
@@ -346,41 +232,25 @@ $(document).ready(async function() {
         fetchAndRenderNewsUpdates('news-updates-home', 3);
     } else if (currentPage === 'developer-comments.html') {
         const devCommentsContainer = $('#dev-comments-container');
-        const filterAuthorSelect = $('#filterAuthor');
-
         const filterTagContainer = $('#filterTagContainer');
-        const filterDateInput = $('#filterDate');
-        const applyFiltersButton = $('#applyFilters');
-        const clearFiltersButton = $('#clearFilters');
 
-        async function populateTagsFromSupabase() {
-            filterTagContainer.empty();
-
+        async function populateTags() {
             const cachedData = localStorage.getItem(TAG_LIST_CACHE_KEY);
             if (cachedData) {
                 const { data, timestamp } = JSON.parse(cachedData);
                 if (Date.now() - timestamp < TAG_LIST_CACHE_EXPIRY_MS) {
                     renderTags(data);
                     return;
-                } else {
-                    localStorage.removeItem(TAG_LIST_CACHE_KEY);
                 }
             }
-            try {
-                const { data, error } = await supabase
-                    .from('tag_list')
-                    .select('tag_name');
-
-                if (error) {
-                    return;
-                }
+            const { data } = await supabase.from('tag_list').select('tag_name');
+            if (data) {
                 data.sort((a, b) => a.tag_name.localeCompare(b.tag_name));
                 localStorage.setItem(TAG_LIST_CACHE_KEY, JSON.stringify({ data, timestamp: Date.now() }));
                 renderTags(data);
-
-            } catch (e) {
             }
         }
+
         function renderTags(tags) {
             tags.forEach(tag => {
                 const tagElement = $(`<span class="tag-button">${tag.tag_name}</span>`);
@@ -392,180 +262,40 @@ $(document).ready(async function() {
             });
         }
 
-        function populateAuthorsFromComments() {
-            filterAuthorSelect.find('option:not(:first)').remove();
-            const authors = new Set();
-
-            const commentElements = devCommentsContainer.children('.dev-comment-item');
-
-            commentElements.each(function() {
-                const author = $(this).data('author');
-                if (author) authors.add(author);
-            });
-
-            const sortedAuthors = Array.from(authors).sort();
-
-            sortedAuthors.forEach(author => {
-                filterAuthorSelect.append(`<option value="${author}">${author}</option>`);
-            });
-        }
-
         function applyFilters() {
-            const selectedAuthor = filterAuthorSelect.val();
-            const selectedDate = filterDateInput.val();
+            const selectedAuthor = $('#filterAuthor').val();
+            const selectedDate = $('#filterDate').val();
             const selectedTags = [];
-            $('#filterTagContainer .tag-button.selected').each(function() {
-                selectedTags.push($(this).text());
-            });
-
-            let commentsFound = false;
+            $('#filterTagContainer .tag-button.selected').each(function() { selectedTags.push($(this).text()); });
 
             devCommentsContainer.children('.dev-comment-item').each(function() {
-                const commentAuthor = $(this).data('author');
-                const commentTags = $(this).data('tag') || [];
-                const commentDate = $(this).data('date');
-
-                const matchesAuthor = selectedAuthor === "" || commentAuthor === selectedAuthor;
-                const matchesDate = selectedDate === "" || commentDate === selectedDate;
-
-
-                const matchesTag = selectedTags.length === 0 || selectedTags.every(tag => commentTags.includes(tag));
-
-                if (matchesAuthor && matchesTag && matchesDate) {
-                    $(this).show();
-                    commentsFound = true;
-                } else {
-                    $(this).hide();
-                }
+                const authorMatch = selectedAuthor === "" || $(this).data('author') === selectedAuthor;
+                const dateMatch = selectedDate === "" || $(this).data('date') === selectedDate;
+                const tagMatch = selectedTags.length === 0 || selectedTags.every(tag => ($(this).data('tag') || []).includes(tag));
+                $(this).toggle(authorMatch && dateMatch && tagMatch);
             });
-
-            const noCommentsMessage = devCommentsContainer.find('.no-comments-found');
-            if (!commentsFound) {
-                if (noCommentsMessage.length === 0) {
-                    devCommentsContainer.append('<div class="col-lg-12 no-comments-found"><p class="text-center text-white-50">No comments found matching your filters.</p></div>');
-                } else {
-                    noCommentsMessage.show();
-                }
-            } else {
-                noCommentsMessage.hide();
-            }
         }
-
-        function clearFilters() {
-            filterAuthorSelect.val('');
-            filterDateInput.val('');
-            $('#filterTagContainer .tag-button').removeClass('selected');
-
-            devCommentsContainer.children('.dev-comment-item').show();
-            devCommentsContainer.find('.no-comments-found').hide();
-        }
-
-        devCommentsContainer.on('commentsRendered', function() {
-            populateAuthorsFromComments();
-            applyFilters();
-        });
 
         await fetchAndRenderDeveloperComments('dev-comments-container', null, null, DEV_COMMENTS_CACHE_KEY, DEV_COMMENTS_CACHE_EXPIRY_MS);
-
-        populateTagsFromSupabase();
-
-        applyFiltersButton.on('click', applyFilters);
-        clearFiltersButton.on('click', clearFilters);
-
+        populateTags();
+        $('#applyFilters').on('click', applyFilters);
+        $('#clearFilters').on('click', () => {
+            $('#filterAuthor, #filterDate').val('');
+            $('.tag-button').removeClass('selected');
+            devCommentsContainer.children('.dev-comment-item').show();
+        });
     } else if (currentPage === 'news-updates.html') {
         fetchAndRenderNewsUpdates('news-updates-container');
     } else if (currentPage === 'articles.html') {
-        const articlesListContainer = $('#articlesListContainer');
-        const articleCategoryButtons = $('#articleCategoryButtons');
-        const clearArticleCategoryFiltersButton = $('#clearArticleCategoryFilters');
-
-        setupArticleModalListeners();
-
-        async function loadArticles(category = null) {
-            await fetchAndRenderArticles('articlesListContainer', category);
-        }
-
-        await fetchAndRenderArticleCategories('articleCategoryButtons');
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const articleSlug = urlParams.get('item');
-        const categoryFilter = urlParams.get('category');
-
-        if (articleSlug) {
-            const article = await fetchSingleArticle(articleSlug);
-            if (article) {
-                $('#articleModalTitle').text(article.title);
-                $('#articleModalAuthor').text(`By ${article.author || 'Unknown'}`);
-                $('#articleModalDate').text(article.publication_date ? formatCommentDateTime(article.publication_date) : 'No Date');
-                const markdownHtml = marked.parse(article.content || '');
-                const sanitizedHtmlContent = DOMPurify.sanitize(markdownHtml);
-                $('#articleModalContent').html(sanitizedHtmlContent);
-                const sourceLinkElement = $('#articleModalSourceLink');
-                if (article.source && article.source.startsWith('http')) {
-                    sourceLinkElement.attr('href', article.source).show();
-                } else {
-                    sourceLinkElement.hide();
-                }
-                $('#fullArticleModalOverlay').addClass('active');
-                $('body').addClass('modal-open');
-            } else {
-                loadArticles();
-            }
-        } else if (categoryFilter) {
-            loadArticles(categoryFilter);
-            $(`.category-button[data-category="${categoryFilter}"]`).addClass('selected');
-        } else {
-            loadArticles();
-        }
-
-        $(document).on('articleCategorySelected', function(event, category) {
-            loadArticles(category);
-            const newUrl = new URL(window.location.href);
-            newUrl.searchParams.set('category', category);
-            newUrl.searchParams.delete('item');
-            window.history.pushState({ path: newUrl.href }, '', newUrl.href);
-        });
-
-        clearArticleCategoryFiltersButton.on('click', function() {
-            $('.category-button').removeClass('selected');
-            loadArticles(null);
-            const newUrl = new URL(window.location.href);
-            newUrl.searchParams.delete('category');
-            newUrl.searchParams.delete('item');
-            window.history.pushState({ path: newUrl.href }, '', newUrl.href);
-        });
+        handleArticlePageLogic();
     }
 });
-
-function handleSearchKeyPress(event) {
-    if (event.key === 'Enter') {
-        event.preventDefault();
-        $('#search').trigger('submit');
-    }
-}
 
 export const updateUtcClock = (element) => {
     if (!element) return;
     const now = new Date();
-    const month = now.getUTCMonth();
-    const day = now.getUTCDate();
     const hours = now.getUTCHours().toString().padStart(2, '0');
     const minutes = now.getUTCMinutes().toString().padStart(2, '0');
-    const monthNames = [
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"
-    ];
-    element.textContent = `${monthNames[month]} ${day}, ${hours}:${minutes} UTC`;
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    element.textContent = `${monthNames[now.getUTCMonth()]} ${now.getUTCDate()}, ${hours}:${minutes} UTC`;
 };
-
-// const originalFrom = supabase.from.bind(supabase);
-// supabase.from = (table) => {
-//   console.log(`📦 supabase.from('${table}') called`);
-//   return originalFrom(table);
-// };
-
-// const originalRpc = supabase.rpc.bind(supabase);
-// supabase.rpc = (fn, args) => {
-//   console.log(`📦 supabase.rpc('${fn}') called with`, args);
-//   return originalRpc(fn, args);
-// };

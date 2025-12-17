@@ -7,87 +7,96 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="frontend/www/css/style.css">
     <link rel="stylesheet" href="frontend/www/css/articles.css">
-    <link rel="stylesheet" href="https://unpkg.com/swiper@7/swiper-bundle.min.css"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script type="module" src="frontend/www/js/main.js"></script>
-    <script type="module" src="frontend/www/js/articles.js"></script>
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
 </head>
-<body>
-<div id="header-placeholder"></div>
+<body class="bg-[#1f2122] text-white min-h-screen font-sans">
+    <div id="header-placeholder"></div>
 
-    <div class="container">
-        <div class="row">
-            <div class="col-lg-12">
-                <div class="page-content">
-                    <div class="p-6 sm:p-8 md:p-10 rounded-lg shadow-xl w-full max-w-6xl mx-auto border border-gray-700">
-                        <h1 class="text-3xl sm:text-4xl font-bold text-center mb-6 text-white-400">Articles</h1>
-                        <div class="filter-section">
-                            <h3>Filter Articles by Category</h3>
-                            <div id="articleCategoryButtons" class="category-buttons">
-                            </div>
-                            <button id="clearArticleCategoryFilters" class="clear-filters-button">Clear Filters</button>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-lg-12">
-                                <div id="articlesListContainer" class="articles-list">
-
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+    <main class="container mx-auto px-4 py-12">
+        <div class="bg-gray-800 rounded-[30px] p-8 md:p-12 border border-[#333] shadow-2xl">
+            <header class="mb-12 text-center">
+                <h1 class="text-4xl md:text-5xl font-bold text-[#FFD700] mb-4">Latest Articles</h1>
+                <div class="h-1 w-24 bg-[#FFD700] mx-auto rounded-full"></div>
+            </header>
+            
+            <div id="articlesListContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 </div>
-            </div>
         </div>
-    </div>
+    </main>
 
-    <div id="fullArticleModalOverlay" class="article-modal-overlay">
-        <div class="article-modal-content">
-            <button id="closeArticleModal" class="close-button">&times;</button>
-            <h2 id="articleModalTitle"></h2>
-            <div class="meta-info">
-                <span id="articleModalAuthor"></span> - <span id="articleModalDate"></span>
+    <div id="fullArticleModalOverlay" class="fixed inset-0 bg-black/90 backdrop-blur-md z-[10000] hidden items-center justify-center p-4">
+        <div class="bg-[#27292a] w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-[30px] p-8 md:p-12 border border-[#444] shadow-2xl relative">
+            <button id="closeArticleModal" class="absolute top-6 right-8 text-4xl text-gray-400 hover:text-[#FFD700] transition-colors">&times;</button>
+            
+            <h2 id="articleModalTitle" class="text-3xl font-bold text-[#FFD700] mb-4 pr-12"></h2>
+            
+            <div class="flex items-center gap-6 text-gray-400 text-sm mb-8 border-b border-[#333] pb-6">
+                <span id="articleModalAuthor" class="flex items-center gap-2">
+                    <i class="fa fa-user text-[#FFD700]"></i> 
+                </span>
+                <span id="articleModalDate" class="flex items-center gap-2">
+                    <i class="fa fa-calendar text-[#FFD700]"></i>
+                </span>
             </div>
-            <div id="articleModalContent" class="full-article-body"></div>
-            <div class="main-button" style="text-align: right; margin-top: 20px;">
-                <a id="articleModalSourceLink" href="#" target="_blank" rel="noopener noreferrer" style="display: none;">
-                    <i class="fas fa-external-link-alt"></i> Original Source
+            
+            <div id="articleModalContent" class="text-gray-300 leading-relaxed text-lg space-y-4">
+                </div>
+            
+            <div class="mt-10 flex justify-end">
+                <a id="articleModalSourceLink" href="#" target="_blank" rel="noopener noreferrer" class="hidden bg-[#FFD700] text-black px-8 py-3 rounded-full font-bold hover:bg-white transition-all duration-300 shadow-lg">
+                    <i class="fas fa-external-link-alt mr-2"></i> View Original Source
                 </a>
             </div>
         </div>
     </div>
 
-    <footer>
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-12">
-                    <p>Pax Dei Archives is a fan-made site and not affiliated with Pax Dei or MAINFRAME.</p>
-                    <p>All intellectual property and assets related to Pax Dei game are reserved by MAINFRAME INDUSTRIES.</p>
-                    <a href="admin.html">Admin</a>
-                    <a href="privacy.html">Privacy Policy</a>
-                </div>
-            </div>
+<footer>
+  <div class="container mx-auto">
+    <div class="row">
+      <div class="col-lg-12 text-center py-10 text-gray-500 text-sm">
+        <p>
+          Pax Dei Archives is a fan-made site and not affiliated with Pax Dei or
+          MAINFRAME.
+        </p>
+        <p class="mb-4">
+          All intellectual property and assets related to Pax Dei game are
+          reserved by MAINFRAME INDUSTRIES.
+        </p>
+        <div class="flex justify-center gap-4">
+          <a href="admin.html" class="hover:text-white">Admin</a>
+          <a href="privacy.html" class="hover:text-white">Privacy Policy</a>
         </div>
-        <div class="corner-credit">
-            <div class="corner-credit-top-row"> <img src="frontend/www/assets/phoenix.png" alt="Phoenix profile image" class="profile-image" />
-                <span class="nav-text-profile">Made by Phoenix ✨</span>
-            </div>
-            <div id="utc-clock-display" class="utc-clock"></div>
-        </div>
-    </footer>
+      </div>
+    </div>
+  </div>
+  <div class="corner-credit">
+    <div class="corner-credit-top-row">
+      <img
+        src="frontend/www/assets/phoenix.png"
+        alt="Phoenix"
+        class="profile-image"
+      />
+      <span class="nav-text-profile">Made by Phoenix ✨</span>
+    </div>
+    <div id="utc-clock-display" class="utc-clock"></div>
+  </div>
+</footer>
+
     <div id="floating-avatar-container">
         <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar js-floating-avatar">
     </div>
 
     <div id="auth-modal">
-        <div class="modal-content-wrapper" id="modal-content-wrapper">
-        </div>
+        <div class="modal-content-wrapper" id="modal-content-wrapper"></div>
     </div>
+    <script type="module" src="frontend/www/js/main.js"></script>
+    <script type="module" src="frontend/www/js/articles/articles.js"></script>
     <script type="module" src="frontend/www/js/popoutAuth.js"></script>
     <script type="module" src="frontend/www/js/loadHeader.js"></script>
-
 </body>
 </html>

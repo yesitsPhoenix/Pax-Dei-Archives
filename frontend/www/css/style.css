@@ -3,7 +3,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap');
 
 html {
-	font-family: 'Poppins', sans-serif !important;
 	background-color: #1c1c1c;
 	color: #fff;
 	margin: 0;
@@ -12,7 +11,7 @@ html {
 	-moz-osx-font-smoothing: grayscale;
 }
 body {
-	font-family: 'Poppins', sans-serif;
+	font-family: 'Poppins', sans-serif !important;
 	background-color: #1c1c1c;
 	color: #fff;
 	margin: 0;
@@ -650,9 +649,10 @@ footer a:hover {
 	text-align: center;
 	cursor: pointer;
 	transition: all 0.3s ease;
-	margin-top: 20px;
+	/* margin-top: 20px;
 	margin-right: 15px;
-	margin-bottom: 20px;
+	margin-bottom: 20px; */
+	margin-left: 10px;
 }
 .admin-form-container button.main-button:hover, .admin-form-container .main-button:hover {
 	background-color: var(--light-gold-color);
