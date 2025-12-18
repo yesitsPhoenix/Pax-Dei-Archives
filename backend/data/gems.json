@@ -10,7 +10,8 @@
   {
     "name": "Amber",
     "found_in": [
-      "Iron, Impure Iron"
+      "Iron",
+      "Impure Iron"
     ],
     "imageUrl": "https://gtcdn.info/paxdei/20250624/images/256/environment/props/economy/craftingproducts/icons/t_icon_rawgemstone_amber.webp",
     "item_Url": "https://paxdei.gaming.tools/items/item_raw_material_gemstone_amber"

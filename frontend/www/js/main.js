@@ -2,7 +2,7 @@ import { supabase } from './supabaseClient.js';
 import { formatCommentDateTime, formatNewsDate } from './utils.js';
 import { fetchAndRenderDeveloperComments } from './devComments.js';
 import { fetchAndRenderNewsUpdates } from './newsUpdates.js';
-import { fetchAndRenderLorePosts } from './lorePosts.js';
+import { fetchAndRenderLorePosts } from './lore/lorePosts.js';
 import { fetchAndRenderArticles, handleArticlePageLogic } from './articles/articles.js';
 import DOMPurify from 'https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.es.min.js';
 

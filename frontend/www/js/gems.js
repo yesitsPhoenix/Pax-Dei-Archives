@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         filtersContainer.innerHTML = `
             <div class="mb-6 flex flex-wrap gap-2 justify-center items-center">
                 ${sortedSources.map(source => `
-                    <button class="source-filter-btn bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600 transition text-sm ${activeFilters.has(source) ? 'active-filter' : ''}" data-source="${source}">
+                    <button class="source-filter-btn bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600 transition text-sm" data-source="${source}">
                         ${source}
                     </button>
                 `).join('')}
@@ -61,14 +61,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
 
         document.querySelectorAll('.source-filter-btn').forEach(button => {
-            button.addEventListener('click', (event) => {
-                const source = event.target.dataset.source;
+            button.addEventListener('click', () => {
+                const source = button.dataset.source;
+                
                 if (activeFilters.has(source)) {
                     activeFilters.delete(source);
-                    event.target.classList.remove('active-filter');
+                    button.classList.remove('bg-yellow-500', 'text-gray-900');
+                    button.classList.add('bg-gray-700', 'text-white');
                 } else {
                     activeFilters.add(source);
-                    event.target.classList.add('active-filter');
+                    button.classList.add('bg-yellow-500', 'text-gray-900');
+                    button.classList.remove('bg-gray-700', 'text-white');
                 }
                 applyFilters();
             });
@@ -77,7 +80,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('clear-filters-btn').addEventListener('click', () => {
             activeFilters.clear();
             document.querySelectorAll('.source-filter-btn').forEach(button => {
-                button.classList.remove('active-filter');
+                button.classList.remove('bg-yellow-500', 'text-gray-900');
+                button.classList.add('bg-gray-700', 'text-white');
             });
             applyFilters();
         });

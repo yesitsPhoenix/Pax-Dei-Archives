@@ -73,13 +73,13 @@ function renderArticleCards(container, articles) {
     const formattedDate = article.publication_date ? formatCommentDateTime(article.publication_date) : 'No Date';
 
     const articleHtml = `
-      <div class="bg-[#1f2122] rounded-[25px] p-8 border border-[#333] hover:border-[#FFD700] transition-all duration-500 hover:-translate-y-2 flex flex-col h-full group">
+      <div class="bg-gray-700 rounded-[25px] p-8 border border-[#333] hover:border-[#FFD700] transition-all duration-500 hover:-translate-y-2 flex flex-col h-full group">
         <h4 class="text-2xl font-bold text-white mb-3 group-hover:text-[#FFD700] transition-colors duration-300 leading-tight">${article.title}</h4>
-        <div class="flex flex-wrap gap-4 text-[11px] text-gray-500 uppercase tracking-widest mb-6 font-semibold">
+        <div class="flex flex-wrap gap-4 text-[11px] text-gray-200 uppercase tracking-widest mb-6 font-semibold">
           <span class="flex items-center gap-2"><i class="fa fa-user text-[#FFD700]"></i> ${article.author || 'Unknown'}</span>
           <span class="flex items-center gap-2"><i class="fa fa-calendar text-[#FFD700]"></i> ${formattedDate}</span>
         </div>
-        <p class="text-gray-400 text-base leading-relaxed mb-8 flex-grow">
+        <p class="text-gray-200 text-base leading-relaxed mb-8 flex-grow">
           ${article.summary || (article.content ? article.content.substring(0, 150) + '...' : '')}
         </p>
         <div class="mt-auto">

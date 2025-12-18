@@ -1,6 +1,6 @@
 // lorePosts.js
-import { supabase } from './supabaseClient.js';
-import { formatCommentDateTime } from './utils.js';
+import { supabase } from '../supabaseClient.js';
+import { formatCommentDateTime } from '../utils.js';
 
 export async function fetchAndRenderLorePosts(containerId, limit = null, searchTerm = null) {
   const container = document.getElementById(containerId);

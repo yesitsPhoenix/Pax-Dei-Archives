@@ -119,20 +119,6 @@
         </div>
     </main>
 
-    <footer class="bg-gray-900 text-white py-6 mt-auto">
-        <div class="container mx-auto px-4 text-center">
-            <div class="row">
-                <div class="col-lg-12">
-                    <p>Pax Dei Archives is a fan-made site and not affiliated with Pax Dei or MAINFRAME.</p>
-                    <p>All intellectual property and assets related to Pax Dei game are reserved by MAINFRAME INDUSTRIES.</p>
-                    <a href="admin.html">Admin</a>
-                    <a href="privacy.html">Privacy Policy</a>
-                </div>
-            </div>
-        </div>
-
-    </footer>
-
     <div id="floating-avatar-container" class="fixed bottom-16 right-4 z-50">
         <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar w-12 h-12 rounded-full cursor-pointer shadow-lg js-floating-avatar">
     </div>
@@ -143,7 +129,9 @@
     </div>
     <div id="ability-popup-overlay" class="popup-overlay fixed inset-0 bg-black bg-opacity-75 hidden z-40"></div>
 
-    <script type="module" src="frontend/www/js/loadHeader.js"></script>
+    <div id="footer-placeholder"></div>
+    <script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
+    <script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
 
 </body>
 </html>

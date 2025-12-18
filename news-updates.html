@@ -13,7 +13,8 @@
 </head>
 <body>
 <div id="header-placeholder"></div>
-
+    <h1 class="text-xl font-semibold mt-6 mb-3 text-white text-center">News & Updates</h1>
+    <div class="h-1 w-24 bg-[#FFD700] mx-auto rounded-full"></div><br>
     <div class="container">
         <div class="row">
             <div class="col-lg-12">
@@ -21,11 +22,7 @@
                     <div class="bg-[#1A202C] p-6 sm:p-8 md:p-10 rounded-lg shadow-xl w-full max-w-6xl mx-auto border border-gray-700">
                         <div class="news-updates-full">
                             <div class="row">
-                                <div class="col-lg-12">
-                                    <div class="heading-section">
-                                        <h4><em>News</em> & Updates</h4>
-                                    </div>
-                                </div>
+
                                 <div class="col-lg-12">
                                     <div id="news-updates-container" class="row">
                                         <div class="loading-indicator">Loading news updates...</div>
@@ -39,24 +36,7 @@
         </div>
     </div>
 
-    <footer>
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-12">
-                    <p>Pax Dei Archives is a fan-made site and not affiliated with Pax Dei or MAINFRAME.</p>
-                    <p>All intellectual property and assets related to Pax Dei game are reserved by MAINFRAME INDUSTRIES.</p>
-                    <a href="admin.html">Admin</a>
-                    <a href="privacy.html">Privacy Policy</a>
-                </div>
-            </div>
-        </div>
-        <div class="corner-credit">
-            <div class="corner-credit-top-row"> <img src="frontend/www/assets/phoenix.png" alt="Phoenix profile image" class="profile-image" />
-                <span class="nav-text-profile">Made by Phoenix ✨</span>
-            </div>
-            <div id="utc-clock-display" class="utc-clock"></div>
-        </div>
-    </footer>
+
     <div id="floating-avatar-container">
         <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar js-floating-avatar">
     </div>
@@ -66,10 +46,14 @@
         </div>
     </div>
     <div id="ability-popup-overlay" class="popup-overlay"></div>
+    
+    <div id="footer-placeholder"></div>
+    <script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
+    <script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script type="module" src="frontend/www/js/main.js"></script>
     <script type="module" src="frontend/www/js/popoutAuth.js"></script>
-    <script type="module" src="frontend/www/js/loadHeader.js"></script>
+
 
 </body>
 </html>

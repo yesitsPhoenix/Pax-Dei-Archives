@@ -121,26 +121,6 @@
     </div>
 </main>
 
-    <footer>
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-12">
-                    <p>Pax Dei Archives is a fan-made site and not affiliated with Pax Dei or MAINFRAME.</p>
-                    <p>All intellectual property and assets related to Pax Dei game are reserved by MAINFRAME INDUSTRIES.</p>
-                    <a href="admin.html">Admin</a>
-                    <a href="privacy.html">Privacy Policy</a>
-                </div>
-            </div>
-        </div>
-        <div class="corner-credit">
-            <div class="corner-credit-top-row">
-                <img src="frontend/www/assets/phoenix.png" alt="Phoenix profile image" class="profile-image" />
-                <span class="nav-text-profile">Made by Phoenix ✨</span>
-            </div>
-            <div id="utc-clock-display" class="utc-clock"></div>
-        </div>
-    </footer>
-
     <div id="addBuyOrderModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
         <div class="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md border border-emerald-400">
             <h3 class="text-2xl font-bold text-white mb-6 text-center">Add New Buy Order</h3>
@@ -182,19 +162,24 @@
             </form>
         </div>
     </div>
-
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script type="module" src="frontend/www/js/buys.js"></script>
-    <script type="module" src="frontend/www/js/popoutAuth.js"></script>
-    <script type="module" src="frontend/www/js/main.js"></script>
-    <script type="module" src="frontend/www/js/loadHeader.js"></script>
-
     <div id="floating-avatar-container">
     <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar js-floating-avatar">
         </div>
         <div id="auth-modal">
     <div class="modal-content-wrapper" id="modal-content-wrapper">
     </div>
+
+    
+<div id="footer-placeholder"></div>
+    <script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
+    <script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script type="module" src="frontend/www/js/buys.js"></script>
+    <script type="module" src="frontend/www/js/popoutAuth.js"></script>
+    <script type="module" src="frontend/www/js/main.js"></script>
+
+
 </div>
 </body>
 </html>

@@ -24,8 +24,8 @@
     <main class="trader-container">
         <div class="container">
                 <div class="page-content max-w-7xl mx-auto p-6 sm:p-8 md:p-10 rounded-lg w-full">
-                    <div class="p-6 sm:p-8 md:p-10 rounded-lg shadow-xl w-full max-w-10xl mx-auto">
-                        <h1 class="text-2xl sm:text-2xl font-bold text-center mb-6 text-white-400">Unique Armor & Weapon Abilities</h1>
+                        <h1 class="text-xl font-semibold mt-6 mb-3 text-white text-center">Unique Armor & Weapon Abilities</h1>
+                                                <div class="h-1 w-24 bg-[#FFD700] mx-auto rounded-full"></div><br>
                         <div id="ability-filters" class="mb-8"></div>
                         <div id="abilities-list" class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-6"></div>
                     </div>
@@ -34,24 +34,10 @@
         </div>
     </div>
 
-    <footer>
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-12">
-                    <p>Pax Dei Archives is a fan-made site and not affiliated with Pax Dei or MAINFRAME.</p>
-                    <p>All intellectual property and assets related to Pax Dei game are reserved by MAINFRAME INDUSTRIES.</p>
-                    <a href="admin.html">Admin</a>
-                    <a href="privacy.html">Privacy Policy</a>
-                </div>
-            </div>
-        </div>
-        <div class="corner-credit">
-            <div class="corner-credit-top-row"> <img src="frontend/www/assets/phoenix.png" alt="Phoenix profile image" class="profile-image" />
-                <span class="nav-text-profile">Made by Phoenix ✨</span>
-            </div>
-            <div id="utc-clock-display" class="utc-clock"></div>
-        </div>
-    </footer>
+<div id="footer-placeholder"></div>
+    <script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
+    <script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
+
         <div id="floating-avatar-container">
         <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar js-floating-avatar">
     </div>
@@ -61,6 +47,7 @@
         </div>
     </div>
     <div id="ability-popup-overlay" class="popup-overlay"></div>
+    
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script type="module" src="frontend/www/js/supabaseClient.js"></script>
@@ -68,7 +55,7 @@
     <script type="module" src="frontend/www/js/main.js"></script>
     <script type="module" src="frontend/www/js/abilities.js"></script>
     <script type="module" src="frontend/www/js/popoutAuth.js"></script>
-    <script type="module" src="frontend/www/js/loadHeader.js"></script>
+
 
 </body>
 </html>
