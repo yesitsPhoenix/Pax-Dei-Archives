@@ -1,5 +1,3 @@
-// const QUART_API_BASE_URL = 'https://homecraftlodge.serveminecraft.net';
-
 const renderMarkdown = (markdownText) => {
     if (typeof marked === 'undefined') {
         console.error("marked.js is not loaded. Cannot render Markdown.");

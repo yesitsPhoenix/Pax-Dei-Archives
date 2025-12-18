@@ -1,8 +1,7 @@
 [
-  {
+    {
     "category": "Ages",
-    "items": 
-     [
+    "items": [
       {
         "slug": "before-creation",
         "title": "Before Creation",
@@ -20,9 +19,80 @@
         "date": null,
         "sources": null,
         "research": null
+      },
+      {
+        "slug": "the-age-of-legends",
+        "title": "The Age of Legends",
+        "file": "ages/the-age-of-legends.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "the-age-of-the-ancients-demira",
+        "title": "The Age of the Ancients Demira",
+        "file": "ages/the-age-of-the-ancients-demira.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "the-age-of-the-ancients-meirothea",
+        "title": "The Age of the Ancients Meirothea",
+        "file": "ages/the-age-of-the-ancients-meirothea.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "the-age-of-the-kingdoms",
+        "title": "The Age of the Kingdoms",
+        "file": "ages/the-age-of-the-kingdoms.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "the-age-of-the-papacy",
+        "title": "The Age of the Papacy",
+        "file": "ages/the-age-of-the-papacy.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "the-elysium-age",
+        "title": "The Elysium Age",
+        "file": "ages/the-elysium-age.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "the-great-catacysm",
+        "title": "The Great Catacysm",
+        "file": "ages/the-great-catacysm.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "the-great-surge",
+        "title": "The Great Surge",
+        "file": "ages/the-great-surge.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
       }
-      
-     ]
+    ]
   },
   {
     "category": "Divine",
@@ -39,12 +109,57 @@
     ]
   },
   {
-    "category": "Factions",
+    "category": "Factions/Orders",
     "items": [
+      {
+        "slug": "acolytes-of-the-unseen-thread",
+        "title": "Acolytes of the Unseen Thread",
+        "file": "factions/acolytes-of-the-unseen-thread.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
       {
         "slug": "cult-of-zeb",
         "title": "Cult of Zeb",
         "file": "factions/cult-of-zeb.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "keepers-of-hidden-light",
+        "title": "Keepers of Hidden Light",
+        "file": "factions/keepers-of-hidden-light.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "inquisition",
+        "title": "Inquisition",
+        "file": "factions/inquisition.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "papacy",
+        "title": "Papacy",
+        "file": "factions/papacy.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "wardens-of-the-veil",
+        "title": "Wardens of the Veil",
+        "file": "factions/wardens-of-the-veil.md",
         "author": null,
         "date": null,
         "sources": null,
@@ -377,6 +492,42 @@
       "date": "Unknown",
       "sources": "",
       "research": "1. Likely some sort of religious text, unknown faction/association"
+    },
+    {
+      "slug": "lay-of-fair-lyonesse",
+      "title": "Lay of Fair Lyonesse",
+      "file": "writings/lay-of-fair-lyonesse.md",
+      "author": "Unknown",
+      "date": "Unknown",
+      "sources": "",
+      "research": "1. Likely some sort of religious text, unknown faction/association"
+    },
+    {
+      "slug": "of-the-inquisition-and-the-ambergrasp",
+      "title": "Of the Inquisition and the Ambergrasp",
+      "file": "writings/of-the-inquisition-and-the-ambergrasp.md",
+      "author": "Brother Matthew of the Inquisition",
+      "date": "Unknown",
+      "sources": "",
+      "research": ""
+    },
+    {
+      "slug": "segurant-and-the-pit-of-lyonesse",
+      "title": "Segurant and the Pit of Lyonesse",
+      "file": "writings/segurant-and-the-pit-of-lyonesse.md",
+      "author": "Unknown",
+      "date": "Unknown",
+      "sources": "",
+      "research": ""
+    },
+    {
+      "slug": "a-letter-found-in-lyonesse",
+      "title": "A Letter Found in Lyonesse",
+      "file": "writings/a-letter-found-in-lyonesse.md",
+      "author": "Alain",
+      "date": "Unknown",
+      "sources": "",
+      "research": ""
     }
     ]
   }

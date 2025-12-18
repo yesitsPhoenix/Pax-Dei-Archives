@@ -20,3 +20,4 @@ Her teachings brought about many orders, one of which Thelonius was known to rep
 > From her teachings sprang many orders, some cloaked in secrecy, others named in daylight. The most visible were the Wardens of the Veil, builders of glyph-marked towers along leyline thresholds. Another, far quieter, were the Acolytes of the Unseen Thread, who stitched charms into cloaks and warded dreams with signs. Few of these orders are known to remain. Only the Keepers of Hidden Light endure, watching, not claiming.
 
 > There came a time when these orders rose together. Not with swords, but with signs and words. Not with battle cries, but with silence. Scholars later called it the Silent Crusade, a war of seals, memory, and song. Corruption was turned back not by armies, but by rites. Glyphs sang to the walls. Ink held back the dark.
+
