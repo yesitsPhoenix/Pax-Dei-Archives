@@ -18,20 +18,34 @@
     
     <div class="container">
         <div class="row">
-            <div class="col-lg-12">
-                <div class="page-content">
-                    
-                    <div class="max-w-3xl mx-auto mt-8">
-                        <div id="input-section" class="bg-[#27292a] p-8 rounded-3xl border border-[#333]">
-                            <h6 class="text-[#FFD700] uppercase text-xs font-bold tracking-widest mb-4">Deciphered Discovery Code</h6>
-                            <div class="flex flex-col md:flex-row gap-4">
-                                <input type="text" id="claim-code" placeholder="ENTER THE CIPHERED LETTERS" 
-                                    class="flex-grow bg-[#1f2122] border border-[#444] rounded-full py-3 px-6 text-white focus:outline-none focus:border-[#72e0cc] transition-colors uppercase tracking-wider text-sm">
-                                <button id="verify-btn" class="bg-[#72e0cc] hover:bg-white hover:text-[#1f2122] text-[#1f2122] font-bold py-3 px-10 rounded-full transition-all duration-300 text-sm">
-                                    TRANSLATE & VERIFY
+
+                    <div class="max-w-6xl mx-auto mt-8">
+                        <div id="input-section" class="bg-gray-800 p-8 rounded-2xl border border-[#333]">
+                            <div class="flex justify-between items-center mb-4">
+                                <h6 class="text-[#FFD700] uppercase text-xs font-bold tracking-widest">Select the Sign Sequence</h6>
+
                                 </button>
                             </div>
-                            <p id="error-msg" class="text-[#ee626b] mt-4 hidden text-sm italic font-sans"></p>
+
+                            <div id="sign-grid" class="grid grid-cols-4 md:grid-cols-12 gap-2 mb-6 p-4 bg-[#1f2122] rounded-2xl border border-[#444] max-h-[555px] overflow-y-auto"></div>
+
+                            <div class="mb-8">
+                                <h6 class="text-white uppercase text-[12px] font-bold mb-3">Your Sequence Preview</h6>
+                                <div id="selected-signs" class="flex flex-wrap gap-3 min-h-[60px] p-4 bg-[#111] rounded-xl border border-dashed border-[#444]"></div>
+                            </div>
+
+                            <div class="flex flex-col md:flex-row gap-4 items-center justify-center border-t border-[#444] pt-6">
+                                <div class="hidden">
+                                    <input type="text" id="claim-code">
+                                </div>
+                                <button id="clear-signs" class="text-xs bg-red-900/50 hover:bg-red-600 text-red-200 px-3 py-1 rounded-full transition-colors">
+                                <i class="fa-solid fa-trash-can mr-1"></i> RESET
+
+                                <button id="verify-btn" class="bg-[#72e0cc]  hover:bg-white hover:text-[#1f2122] text-[#1f2122] font-bold py-4 px-10 rounded-full transition-all duration-300 text-sm shadow-lg shadow-[#72e0cc]/20">
+                                    VERIFY SIGN SEQUENCE
+                                </button>
+                            </div>
+                            <p id="error-msg" class="text-[#ee626b] mt-4 hidden text-center text-sm italic font-sans"></p>
                         </div>
 
                         <div id="reward-display" class="hidden mt-8">
@@ -61,6 +75,18 @@
                 </div>
             </div>
         </div>
+    </div>
+    <div id="quest-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center z-[100] p-4">
+    <div class="bg-[#1a202c] border border-gray-700 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden relative animate-in fade-in zoom-in duration-200">
+        <button onclick="document.getElementById('quest-modal').classList.add('hidden')" class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors">
+            <i class="fa-solid fa-xmark text-xl"></i>
+        </button>
+        
+        <div class="h-2 w-full bg-[#72e0cc]"></div>
+        
+        <div id="modal-quest-details" class="p-8">
+            </div>
+    </div>
     </div>
 
     <div id="footer-placeholder"></div>

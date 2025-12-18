@@ -1,62 +1,36 @@
 {
   "categories": [
     {
-      "id": "gear",
-      "prefix": "gear_",
+      "id": "consumables",
+      "prefix": "consumables_",
       "items": [
-        "bowarrows",
-        "armor",
-        "bakery",
-        "beams",
+        "alcohol",
+        "bakedgoods",
         "berries",
-        "bright",
-        "carpentry",
-        "charcoal",
-        "clay",
-        "cloth",
-        "clothoutfits",
-        "cooked",
-        "divine",
-        "drinks",
-        "extracts",
-        "fibrous",
-        "filaments",
+        "cookedpot",
+        "drink",
         "flowers",
-        "furnishings",
-        "gems",
-        "grains",
         "herbs",
-        "jewelry",
-        "knicks",
-        "leather",
-        "leatheroutfits",
-        "lovely",
-        "lumber",
-        "magical",
-        "meats",
-        "minerals",
-        "ore",
-        "pottery",
-        "poultry",
-        "raw",
-        "reagents",
-        "rocks",
-        "seeds",
-        "tailoring",
-        "tools",
-        "vegetables",
-        "weapons",
-        "wood"
+        "meat",
+        "mushrooms",
+        "plants",
+        "potions",
+        "wheat"
       ]
     },
     {
-      "id": "symbol",
-      "prefix": "symbol_",
+      "id": "gear",
+      "prefix": "gear_",
       "items": [
-        "heart",
-        "skull",
-        "cross",
-        "star"
+        "armorcraft",
+        "bowarrows",
+        "jewerly",
+        "leathercraft",
+        "magicitem",
+        "shield",
+        "tailorcraft",
+        "tools",
+        "weapons"
       ]
     },
     {
@@ -66,7 +40,75 @@
         "arrowdown",
         "arrowleft",
         "arrowright",
-        "arrowup"
+        "arrowup",
+        "buildingpieces",
+        "coins",
+        "heart",
+        "paxdei",
+        "questionmark",
+        "relic"
+      ]
+    },
+    {
+      "id": "numbers",
+      "prefix": "numbers_",
+      "items": [
+        "i",
+        "ii",
+        "iii",
+        "iv",
+        "v",
+        "vi",
+        "vii",
+        "viii",
+        "ix",
+        "x"
+      ]
+    },
+    {
+      "id": "processedmaterials",
+      "prefix": "processedmaterials_",
+      "items": [
+        "beams",
+        "carpentry",
+        "charcoal",
+        "cloth",
+        "components",
+        "ingots",
+        "leatherstrap",
+        "planks",
+        "smithcraft",
+        "stringspool",
+        "vial"
+      ]
+    },
+    {
+      "id": "rawmaterials",
+      "prefix": "rawmaterials_",
+      "items": [
+        "clay",
+        "fibercloth",
+        "gems",
+        "hides",
+        "minerals",
+        "ore",
+        "rocks",
+        "woodlogs"
+      ]
+    },
+    {
+      "id": "utilitysymbols",
+      "prefix": "utilitysymbols_",
+      "items": [
+        "banner",
+        "celtic",
+        "crown",
+        "moon",
+        "scales",
+        "scythe",
+        "star",
+        "sun",
+        "wheel"
       ]
     }
   ],

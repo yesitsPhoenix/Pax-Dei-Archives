@@ -10,23 +10,88 @@
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="bg-[#111827] text-white">
+<body>
 
-<div id="header-placeholder"></div>
+    <div id="header-placeholder"></div>
 
-<div class="container mx-auto py-6 max-w-5xl">
-    <h1 class="text-2xl font-semibold mb-6 text-center">Available Quests</h1>
-    <div id="quest-list" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
-</div>
+    <h1 class="text-xl font-semibold mt-6 mb-3 text-white text-center">Quests</h1>
+    <div class="h-1 w-32 bg-[#FFD700] mx-auto rounded-full"></div><br>
 
-<div id="footer-placeholder"></div>
+    <div class="container mx-auto px-4 max-w-8xl">
+        <div class="page-content overflow-hidden rounded-2xl border border-gray-700 bg-[#1f2937] shadow-2xl">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-black/40 text-[#FFD700] uppercase text-[10px] tracking-widest border-b border-gray-700">
+                            <th class="px-6 py-4 font-bold">Quest Name</th>
+                            <th class="px-6 py-4 font-bold">Sign Sequence</th>
+                            <th class="px-6 py-4 font-bold">Rewards</th>
+                            <th class="px-6 py-4 font-bold text-right">Bounty</th>
+                            <th class="px-6 py-4 font-bold text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="quest-list-table" class="divide-y divide-gray-700">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
-<script type="module" src="frontend/www/js/redemption/quests.js"></script>
-<script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
-<script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
-<script type="module" src="frontend/www/js/utils.js"></script>
-<script type="module" src="frontend/www/js/main.js"></script>
-<script type="module" src="frontend/www/js/popoutAuth.js"></script>
+    <div id="footer-placeholder"></div>
 
+    <div id="floating-avatar-container">
+        <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" class="floating-avatar js-floating-avatar">
+    </div>
+
+    <div id="auth-modal">
+        <div class="modal-content-wrapper" id="modal-content-wrapper"></div>
+    </div>
+
+        <div id="quest-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div class="bg-[#1f2937] w-full max-w-2xl rounded-3xl border border-gray-700 shadow-2xl overflow-hidden transform transition-all">
+            <div class="relative h-32 bg-gradient-to-r from-[#72e0cc]/20 to-[#FFD700]/20 flex items-center px-8 border-b border-gray-700">
+                <h2 id="modal-quest-name" class="text-3xl font-bold text-white">Quest Name</h2>
+                <button id="close-modal" class="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="p-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <h4 class="text-[#FFD700] uppercase text-xs font-bold tracking-widest mb-2">Lore & Description</h4>
+                        <p id="modal-quest-lore" class="text-gray-300 italic leading-relaxed mb-6"></p>
+                        
+                        <h4 class="text-[#FFD700] uppercase text-xs font-bold tracking-widest mb-2">Location Hints</h4>
+                        <p id="modal-quest-location" class="text-gray-300 mb-6"></p>
+                    </div>
+                    
+                    <div class="space-y-6">
+                        <div>
+                            <h4 class="text-[#FFD700] uppercase text-xs font-bold tracking-widest mb-3">Sign Sequence</h4>
+                            <div id="modal-sign-sequence" class="flex flex-wrap gap-2 p-4 bg-black/30 rounded-2xl border border-gray-700"></div>
+                        </div>
+                        
+                        <div class="bg-gray-900/50 p-4 rounded-2xl border border-gray-700">
+                            <h4 class="text-[#FFD700] uppercase text-xs font-bold tracking-widest mb-2">Rewards</h4>
+                            <div id="modal-quest-items" class="text-white font-medium mb-1"></div>
+                            <div id="modal-quest-gold" class="text-[#ecaf48] font-bold text-xl"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 bg-black/20 border-t border-gray-700 flex justify-end gap-4">
+                <button id="modal-close-btn" class="px-6 py-3 rounded-full text-gray-400 font-bold hover:text-white transition-all">Close</button>
+                <button id="modal-redeem-btn" class="bg-[#FFD700] text-black px-8 py-3 rounded-full font-bold hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-900/20">Go to Redemption</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script type="module" src="frontend/www/js/redemption/quests.js"></script>
+    <script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
+    <script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
+    <script type="module" src="frontend/www/js/popoutAuth.js"></script>
 </body>
 </html>

@@ -25,85 +25,138 @@ async function fetchUserClaims(userId) {
     return data || [];
 }
 
+function openQuestModal(quest, signHtml, userClaimed) {
+    const modal = document.getElementById('quest-modal');
+    document.getElementById('modal-quest-name').innerText = quest.quest_name;
+    document.getElementById('modal-quest-lore').innerText = `"${quest.lore || 'No lore available.'}"`;
+    document.getElementById('modal-quest-location').innerText = quest.location || 'Location details are hidden.';
+    document.getElementById('modal-sign-sequence').innerHTML = signHtml;
+    document.getElementById('modal-quest-items').innerText = quest.items ? (Array.isArray(quest.items) ? quest.items.join(', ') : quest.items) : 'None';
+    document.getElementById('modal-quest-gold').innerText = `${quest.gold || 0} Gold`;
+
+    const redeemBtn = document.getElementById('modal-redeem-btn');
+    if (userClaimed) {
+        redeemBtn.innerText = "Quest Completed";
+        redeemBtn.disabled = true;
+        redeemBtn.className = "bg-gray-700 text-gray-500 px-8 py-3 rounded-full font-bold cursor-not-allowed";
+    } else {
+        redeemBtn.innerText = "Go to Redemption";
+        redeemBtn.disabled = false;
+        redeemBtn.className = "bg-[#FFD700] text-black px-8 py-3 rounded-full font-bold hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-900/20";
+        redeemBtn.onclick = () => window.location.href = `redeem.html?quest=${quest.quest_key}`;
+    }
+
+    modal.classList.remove('hidden');
+}
+
 async function renderQuests() {
     const user = await getCurrentUser();
     const quests = await fetchQuests();
+    
+    let signConfig;
+    try {
+        const response = await fetch('frontend/www/assets/signs.json');
+        signConfig = await response.json();
+    } catch (err) {
+        console.error("Failed to load signs.json", err);
+        return;
+    }
+
+    const { baseUrl, version } = signConfig.config;
     let userClaims = [];
     if (user) userClaims = await fetchUserClaims(user.id);
 
-    const questList = document.getElementById("quest-list");
-    questList.innerHTML = "";
+    const tableBody = document.getElementById("quest-list-table");
+    if (!tableBody) return;
+    tableBody.innerHTML = "";
 
     quests.forEach(quest => {
         const userClaimed = userClaims.some(c => c.quest_id === quest.id);
-        const remainingClaims = quest.max_claims - (userClaimed ? 1 : 0);
 
-        let items = [];
-        if (quest.items) {
-            if (typeof quest.items === "string") {
-                try {
-                    items = JSON.parse(quest.items.trim());
-                } catch {
-                    items = [];
-                }
-            } else if (Array.isArray(quest.items)) {
-                items = quest.items;
-            }
+        let signHtml = "";
+        if (quest.signs && Array.isArray(quest.signs)) {
+            signHtml = quest.signs.map(fullId => {
+                const parts = fullId.split('_');
+                const category = parts[0];
+                const itemName = parts.slice(1).join('_');
+                const imgSrc = `${baseUrl}${category}_${itemName}.webp?${version}`;
+                return `<img src="${imgSrc}" class="w-16 h-16 bg-gray-900 rounded-lg p-1.5 border-2 border-gray-600 shadow-md transition-transform hover:scale-110" title="${itemName.replace(/_/g, ' ')}">`;
+            }).join("");
         }
 
-        const card = document.createElement("div");
-        card.className = "bg-gray-800 p-4 rounded shadow hover:shadow-lg transition";
-
-        card.innerHTML = `
-            <h2 class="text-lg font-semibold mb-2">${quest.quest_name}</h2>
-            <p class="mb-2 text-gray-300">${quest.lore || "No description available."}</p>
-            <p class="mb-1"><strong>Gold:</strong> ${quest.gold || 0}</p>
-            <p class="mb-1"><strong>Items:</strong> ${items.join(", ") || "None"}</p>
-            <p class="mb-1"><strong>Location:</strong> ${quest.location || "Unknown"}</p>
-            <button class="claim-btn mt-2 px-4 py-2 bg-[#FFD700] text-black rounded font-semibold" ${remainingClaims <= 0 ? "disabled" : ""}>
-                ${userClaimed ? "Already Claimed" : remainingClaims <= 0 ? "Full" : "Claim Quest"}
-            </button>
+        const row = document.createElement("tr");
+        row.className = "hover:bg-white/5 transition-colors group border-b border-gray-800/50 cursor-pointer";
+        row.innerHTML = `
+            <td class="px-6 py-6">
+                <div class="font-bold text-lg text-white mb-1">${quest.quest_name}</div>
+                <div class="text-sm text-gray-400 italic leading-relaxed max-w-sm">${quest.lore || ''}</div>
+            </td>
+            <td class="px-6 py-6">
+                <div class="flex flex-wrap gap-2 min-w-[180px]">
+                    ${signHtml}
+                </div>
+            </td>
+            <td class="px-6 py-6">
+                <div class="text-sm text-gray-200 font-medium">
+                    ${quest.items ? (Array.isArray(quest.items) ? quest.items.join(', ') : quest.items) : 'None'}
+                </div>
+            </td>
+            <td class="px-6 py-6 text-right">
+                <div class="text-[#ecaf48] font-bold text-lg whitespace-nowrap">${quest.gold || 0} Gold</div>
+            </td>
+            <td class="px-6 py-6 text-center">
+                <div class="flex items-center justify-center gap-3">
+                    <button class="info-btn px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold uppercase transition-all">
+                        More Info
+                    </button>
+                    <button class="claim-btn px-6 py-3 rounded-full text-sm font-bold uppercase tracking-wide transition-all shadow-lg ${userClaimed ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-[#FFD700] text-black hover:bg-yellow-400 hover:shadow-yellow-500/20 active:scale-95'}" ${userClaimed ? "disabled" : ""}>
+                        ${userClaimed ? "Complete" : "Redeem"}
+                    </button>
+                </div>
+            </td>
         `;
 
-        const claimBtn = card.querySelector(".claim-btn");
-        claimBtn?.addEventListener("click", async () => {
-            if (!user) {
-                alert("You must be logged in to claim a quest.");
-                return;
-            }
-
-            const { count: claimCount, error: countError } = await supabase
-                .from("user_claims")
-                .select("*", { count: "exact" })
-                .eq("quest_id", quest.id);
-
-            if (countError) {
-                alert("Error checking claims: " + countError.message);
-                return;
-            }
-
-            if (claimCount >= quest.max_claims) {
-                alert("This quest has already reached the maximum number of claims.");
-                renderQuests();
-                return;
-            }
-
-            const { error } = await supabase.from("user_claims").insert({
-                user_id: user.id,
-                quest_id: quest.id
-            });
-
-            if (error) {
-                alert("Error claiming quest: " + error.message);
-            } else {
-                alert("Quest successfully claimed!");
-                renderQuests();
+        row.addEventListener('click', (e) => {
+            if (!e.target.closest('button')) {
+                openQuestModal(quest, signHtml, userClaimed);
             }
         });
 
-        questList.appendChild(card);
+        row.querySelector('.info-btn').addEventListener('click', () => {
+            openQuestModal(quest, signHtml, userClaimed);
+        });
+
+        const btn = row.querySelector(".claim-btn");
+        if (!userClaimed && btn) {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                window.location.href = `redeem.html?quest=${quest.quest_key}`;
+            };
+        }
+
+        tableBody.appendChild(row);
     });
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('quest-modal');
+    if (!modal) return;
+    
+    const closeElements = [
+        document.getElementById('close-modal'),
+        document.getElementById('modal-close-btn'),
+        modal
+    ];
+    
+    closeElements.forEach(el => {
+        if (!el) return;
+        el.addEventListener('click', (e) => {
+            if (e.target === el || el.id === 'close-modal' || el.id === 'modal-close-btn') {
+                modal.classList.add('hidden');
+            }
+        });
+    });
+});
 
 supabase.auth.onAuthStateChange(() => {
     renderQuests();
