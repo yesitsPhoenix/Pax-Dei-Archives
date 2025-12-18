@@ -1,35 +1,33 @@
-"In the centuries that followed Meirotheaâ€™s departure, humanity did not fall into silence again. Her precious gifts endured. 
+As we emerged from the dying echoes of Paradise, we were little more than wanderers, mute and directionless, stumbling through a world of frightening wonder. The waters had receded and so had our innocence. Where once only summer reigned, the world had changed. The sun no longer lingered forever in the sky. Night had come, and in the fulfillment of time, Winter. Not as punishment, but as a reflection of our loss.
 
-With **speech**, we named the rivers and skies. With **song**, we remembered. And with **symbols**, we began to mark time and events. Our people wandered still, but no longer as beasts. We tamed the wilds in small ways. We learned to track, to gather, to hunt with intention rather than desperation. **The first sages appeared**, those who spoke to the wind and fire. In caves and on stones, we carved our thoughts, painted our stories. **The first druids** enlightened the glades, and **the first shamans** listened to the stars.
+Yet we found that Winter carries grace.
 
-Yet knowledge alone could not feed the hungry and memory would not warm a child.
+It was then that the Divine, in Their mercy, sent Meirothea, a Second Redeemer. A Cherubim of flowing voice and luminous form, she descended and taught us how to endure the cold, the silence, the night. She gave us language that we might name what we feared. She gave us song, to remember what we loved. And she gave us symbols, to preserve what we learned. From her gifts came memory.
 
-So the Divine, in Their endless mercy, sent us **Demira**, the Third Redeemer.
+Before her arrival, we possessed no speech, no stories, no ability to shape thought into legacy. With her gifts, we crossed the threshold from survival to culture. And the world itself seemed to reply. Forests echoed with chant, rivers whispered with verse, and it is said that in her presence vines would grow, curling toward her voice like flowers to sunlight.
 
-Where Meirothea had given voice to the soul, Demira gave strength to the body and gentleness to the hand. She came not with radiance or spectacle, but with **seeds**, with **tools**, and with **care**. She walked among the humble and the weary, clad in green, her staff in hand with awned ears of wheat woven into her hair.
+The birds, too, came in her time, or returned. Some say they were not born here, but slipped through from the old worlds of Heaven and Fay, drawn by the sound of Meirotheaâ€™s voice. They circled above her and nested near her glades, reminders of the divine chorus no longer allowed to walk the earth. Their songs, in her shadow, became sacred. 
 
-Demira brought three great gifts to mankind, **Agriculture**, **Care**, and **Craft**. She taught us to till the earth, to plant and reap, to tend to beasts not for domination but companionship. Yet her greatest gift was Care itself, a virtue that flowed into every act of tending, healing, and nurturing, be it child or soil, lamb or elder. Under her guidance, we learned to build homes, raise herds, and create the first true **communities**.
+Her sanctuaries were not of stone, but of earth and moonlight, waterfalls, twilight glades and caves, where by the fire, reflections danced to ancient rhythms.
 
-Her breath brought the **Spring**, and her tears, the first **Autumn** rains. For before her, there was only **Summer**, endless sun without rest or renewal, and **Winter**, a time for silence and slumber. Demira completed the cycle, giving the world Spring for birth and Autumn for harvest and reflection. The seasons became spokes on the wheel of time, and life began to turn.
+But as ever, light draws shadow.
 
-But as always, sin follows the seed.
+Moloch, born of Wrath and shaped by divine fury, rose from the deep wilds to oppose her. His beasts tore at what she nurtured. A war began, unseen by most, but felt in the shivers of the wind and by growls in the dark. But Meirothea did not fight alone. Beside her stood our ancestors, the first to wield magic through dance and voice. And beside them walked beings older still, strange, luminous, half-remembered. We would later call them the Fay.
 
-With harvest came abundance, and from abundance, indulgence. With craftsmanship came wealth, and with wealth; envy and hoarding. With communities came rumors and suspicions towards ones neighbors, as for when one man thrives, another seeks to prove him unworthy. Thus, the peace she nurtured began to crack. The sins of **Gluttony**, **Greed**, and **Wrath** stirred again. Their Princes, **Zeb**, **Mammon**, and **Moloch**, returned with armies of corruption, cloaked in hunger and fire. 
+Also the wolves abandoned the wild and were drawn to her. Under her gaze they howled not in rage, but in reverence. They became her silent allies, not servants, but spirits of understanding and strength.
 
-Demira, foreseeing the storm, allied once more with the **Fay** and created what are now the **Ancient Stela**, monoliths rooted in the **Ley Lines** of Creation. With sacred inscriptions and divine resonance, they sheltered the faithful and stood as beacons against the encroaching darkness.
+To guide us through the darkness, Meirothea placed the Moon into the sky. Legends speak of her tearing a silvered slab from the mountains of Gallia, raising it into the heavens not only as a lantern, but as a mirror, to reflect what must be seen. Beneath its light, the beasts of Wrath were unmasked. And ever since, those twisted by fury can no longer hide under its glow.
 
-But the tide of sin would not relent.
+Winter returned each year, but under Meirothea it was given meaning. It became a season of reflection, a time to remember and prepare, not to mourn. Death was no longer a void. It became a passage, and memory its light.
 
-The Divine, in grief and fury, resolved to cleanse the world in flood, but Demira, in sorrow and out of love, pleaded for the innocent. The Divine offered a choice, to save mankind, she must  sacrifice everything.
+But not all sought remembrance.
 
-And she did.
+Lucifer and Leviathan, spirits of Pride and Envy, moved in secret. They sought not to destroy Meirothea, but to turn her. What happened remains debated even among the wise. Some say Pride nearly tempted her to abandon her path. Others say Envy struck first to prevent a defection. What is certain is this: both were cast back into the abyss, and Meirothea, wounded in spirit, returned to the heavens.
 
-Demira fashioned not a wooden ark, but a **spiritual sanctuary** woven from her very being. With her **Shepherds**, she sought out the worthy. As the waters rose and the world drowned, she held fast. And when the deluge reached its ultimate height, she **sacrificed herself**, cursing Zeb, Mammon, and Moloch with eternal torment. They would hunger and never be sated, desire and never be fulfilled, rage and never be calmed.
+She left behind no temple, no crown, no empire.
 
-From that day forward, they bore a shard of her spirit like burning iron in the soul. Where once they took joy in their sins, now they only found suffering.
+She left the Moon. She left Stories and Songs. And through them, we remember her.
 
-Her body, untouched by decay, was seen floating above **Axis Mundi**, and dissolving into droplets of grace, falling onto what remained of **Protennoiaâ€™s Tree**. Her essence flowed into the **Ley Lines**, weaving a great network of life, memory, and power. The **Pax Dei**, fragile but enduring, grew from her roots.
-
-To this day, when the **Autumn rains** fall cold and sudden, the old say it is **Demira weeping**, not for those she saved, but for those she could not.
+By every winter fire, in every sacred song, her presence lingers. The Moon still watches. And beneath its glow, we are not haunted by the darkness, but reminded of the one who first taught us how to walk through it.
 
 — [Thelonius the Scribe](lore.html?category=Known%20Figures&item=thelonius-the-scribe)
