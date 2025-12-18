@@ -11,6 +11,7 @@ let isAdminAuthorizedCache = null;
 let loreItemsCache = [];
 
 function showFormMessage(messageElement, message, type) {
+    if (!messageElement) return;
     messageElement.textContent = message;
     messageElement.className = '';
     if (type) {
@@ -33,9 +34,11 @@ const authorTypeDropdown = document.getElementById('author_type');
 const formMessage = document.getElementById('formMessage');
 
 if (authorTypeDropdown) {
+    authorTypeDropdown.style.color = "black";
     const defaultOption = document.createElement('option');
     defaultOption.value = "";
     defaultOption.textContent = "Select Author Type";
+    defaultOption.style.color = "black";
     defaultOption.selected = true;
     authorTypeDropdown.appendChild(defaultOption);
 
@@ -44,9 +47,14 @@ if (authorTypeDropdown) {
             const option = document.createElement('option');
             option.value = type;
             option.textContent = type;
+            option.style.color = "black";
             authorTypeDropdown.appendChild(option);
         }
     }
+    
+    authorTypeDropdown.addEventListener('change', () => {
+        authorTypeDropdown.style.color = "black";
+    });
 }
 
 const devCommentForm = document.getElementById('devCommentForm');
@@ -128,15 +136,16 @@ if (devCommentForm) {
                 devCommentForm.reset();
                 if (authorTypeDropdown) {
                     authorTypeDropdown.value = "";
+                    authorTypeDropdown.style.color = "black";
                 }
                 if (tagSelect) {
                     Array.from(tagSelect.options).forEach(option => option.selected = false);
                 }
 
-                document.getElementById('devCommentForm').style.display = 'none';
-                document.getElementById('commentInput').style.display = 'block';
-                document.getElementById('parseButton').style.display = 'block';
-                document.getElementById('parseError').style.display = 'none';
+                if(document.getElementById('devCommentForm')) document.getElementById('devCommentForm').style.display = 'none';
+                if(document.getElementById('commentInput')) document.getElementById('commentInput').style.display = 'block';
+                if(document.getElementById('parseButton')) document.getElementById('parseButton').style.display = 'block';
+                if(document.getElementById('parseError')) document.getElementById('parseError').style.display = 'none';
 
                 const currentPage = window.location.pathname.split('/').pop();
                 if (currentPage === 'developer-comments.html' && typeof fetchAndRenderDeveloperComments === 'function' && document.getElementById('dev-comments-container')) {
@@ -370,11 +379,13 @@ async function populateTagSelect(tagSelectElement) {
         return;
     }
     tagSelectElement.innerHTML = '';
+    tagSelectElement.style.color = 'black';
 
     if (!tagSelectElement.multiple && tagSelectElement.id === 'loreCategory') {
         const defaultOption = document.createElement('option');
         defaultOption.value = '';
         defaultOption.textContent = 'Select a category';
+        defaultOption.style.color = 'black';
         tagSelectElement.appendChild(defaultOption);
     }
 
@@ -401,6 +412,7 @@ async function populateTagSelect(tagSelectElement) {
             const option = document.createElement('option');
             option.value = tag.tag_name;
             option.textContent = tag.tag_name;
+            option.style.color = 'black';
             tagSelectElement.appendChild(option);
         });
     }
@@ -518,6 +530,7 @@ async function editLoreItem(id) {
     document.getElementById('loreTitle').value = loreItem.title;
     document.getElementById('loreSlug').value = loreItem.slug;
     document.getElementById('loreCategory').value = loreItem.category;
+    document.getElementById('loreCategory').style.color = "black";
     document.getElementById('loreContent').value = loreItem.content;
     document.getElementById('addLoreItemForm').dataset.editingId = loreItem.id;
     document.getElementById('addLoreItemForm').querySelector('button[type="submit"]').textContent = 'Update Lore Item';
@@ -525,9 +538,12 @@ async function editLoreItem(id) {
     document.getElementById('newLoreCategoryInput').style.display = 'none';
     document.getElementById('addNewLoreCategoryButton').style.display = 'none';
 
-    document.getElementById('addLoreItemMessage').textContent = 'Editing Lore Item';
-    document.getElementById('addLoreItemMessage').className = 'form-message info';
-    document.getElementById('addLoreItemMessage').style.display = 'block';
+    const addLoreItemMessage = document.getElementById('addLoreItemMessage');
+    if (addLoreItemMessage) {
+        addLoreItemMessage.textContent = 'Editing Lore Item';
+        addLoreItemMessage.className = 'form-message info';
+        addLoreItemMessage.style.display = 'block';
+    }
 }
 
 async function deleteLoreItem(id) {
@@ -559,6 +575,8 @@ function resetLoreForm() {
     document.getElementById('cancelEditLoreItemButton').style.display = 'none';
     document.getElementById('newLoreCategoryInput').style.display = 'block';
     document.getElementById('addNewLoreCategoryButton').style.display = 'inline-block';
+    const loreCategory = document.getElementById('loreCategory');
+    if (loreCategory) loreCategory.style.color = "black";
     showFormMessage(document.getElementById('addLoreItemMessage'), '', '');
 }
 
@@ -668,7 +686,7 @@ function setupCommentFormHandlers() {
     const editButton = document.getElementById('editButton');
     const formMessage = document.getElementById('formMessage');
 
-    if (parseButton && commentInput && devCommentForm && parseError) {
+    if (parseButton && commentInput && devCommentForm) {
         parseButton.addEventListener('click', () => {
             showFormMessage(formMessage, '', '');
             const inputText = commentInput.value;
@@ -683,8 +701,9 @@ function setupCommentFormHandlers() {
                 devCommentForm.style.display = 'block';
                 commentInput.style.display = 'none';
                 parseButton.style.display = 'none';
-                parseError.style.display = 'none';
-            } else {
+                if (parseError) parseError.style.display = 'none';
+                if (authorTypeDropdown) authorTypeDropdown.style.color = "black";
+            } else if (parseError) {
                 parseError.textContent = 'Could not parse the input. Please ensure it matches one of the expected formats: "Author — Timestamp Content [Optional URL]" or "Author — Content [Optional URL]"';
                 parseError.style.display = 'block';
                 devCommentForm.style.display = 'none';
@@ -694,13 +713,13 @@ function setupCommentFormHandlers() {
         });
     }
 
-    if (editButton && devCommentForm && commentInput && parseButton && parseError) {
+    if (editButton && devCommentForm && commentInput && parseButton) {
         editButton.addEventListener('click', () => {
             showFormMessage(formMessage, '', '');
             devCommentForm.style.display = 'none';
             commentInput.style.display = 'block';
             parseButton.style.display = 'block';
-            parseError.style.display = 'none';
+            if (parseError) parseError.style.display = 'none';
         });
     }
 }
