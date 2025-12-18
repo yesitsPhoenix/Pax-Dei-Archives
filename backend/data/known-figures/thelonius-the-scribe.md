@@ -1,4 +1,4 @@
-A most humble master scribe, well-known for a series of letters providing crucial information about ages and times past. Thelonius was associated with Scriptorium of Lunthyr, and occasionally signed his letters with "Last Keeper of Hidden Light".
+A most humble master scribe, well-known for a series of letters providing crucial information about ages and times past. Thelonius was associated with Scriptorium of Lunthyr, and signed his letters with "Last Keeper of Hidden Light" showing alignment to the order that rose during Eleleth's time as a Redeemer.
 
 <br>
 

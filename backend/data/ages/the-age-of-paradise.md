@@ -1,4 +1,4 @@
-# Other names: The Age of Paradise
+# Other names: The Tenth Creation
 
 <br>
 
@@ -10,11 +10,11 @@
 
 <br>
 
-Sins that rose:
+# Sins that rose:
 - Sloth
 - Lust
 
-Other notable occurences:
+# Other notable occurences:
 - Divine root was violated
 - Wild Firsts born out of the calamity of the fall of paradise fell into shadow
 - Some did not fall into shadow but found sanctuaries

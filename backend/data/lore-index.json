@@ -12,27 +12,9 @@
         "research": null
       },
       {
-        "slug": "the-first-creation",
-        "title": "The First Creation",
-        "file": "ages/the-first-creation.md",
-        "author": null,
-        "date": null,
-        "sources": null,
-        "research": null
-      },
-      {
-        "slug": "the-age-of-legends",
-        "title": "The Age of Legends",
-        "file": "ages/the-age-of-legends.md",
-        "author": null,
-        "date": null,
-        "sources": null,
-        "research": null
-      },
-      {
-        "slug": "the-age-of-the-ancients-demira",
-        "title": "The Age of the Ancients Demira",
-        "file": "ages/the-age-of-the-ancients-demira.md",
+        "slug": "the-age-of-paradise",
+        "title": "0-350 - The Age of Paradise",
+        "file": "ages/the-age-of-paradise.md",
         "author": null,
         "date": null,
         "sources": null,
@@ -40,7 +22,7 @@
       },
       {
         "slug": "the-age-of-the-ancients-meirothea",
-        "title": "The Age of the Ancients Meirothea",
+        "title": "350-500 - The Age of the Ancients Meirothea",
         "file": "ages/the-age-of-the-ancients-meirothea.md",
         "author": null,
         "date": null,
@@ -48,8 +30,44 @@
         "research": null
       },
       {
+        "slug": "the-age-of-the-ancients-demira",
+        "title": "876-1050 - The Age of the Ancients Demira",
+        "file": "ages/the-age-of-the-ancients-demira.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "the-elysium-age",
+        "title": "1050-1930 - The Elysium Age",
+        "file": "ages/the-elysium-age.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "the-great-surge",
+        "title": "1930-1950 - The Great Surge",
+        "file": "ages/the-great-surge.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "the-age-of-legends",
+        "title": "1950-2350 - The Age of Legends",
+        "file": "ages/the-age-of-legends.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
         "slug": "the-age-of-the-kingdoms",
-        "title": "The Age of the Kingdoms",
+        "title": "2350-2996 - The Age of the Kingdoms",
         "file": "ages/the-age-of-the-kingdoms.md",
         "author": null,
         "date": null,
@@ -58,7 +76,7 @@
       },
       {
         "slug": "the-age-of-the-papacy",
-        "title": "The Age of the Papacy",
+        "title": "2996-3900 - The Age of the Papacy",
         "file": "ages/the-age-of-the-papacy.md",
         "author": null,
         "date": null,
@@ -66,27 +84,9 @@
         "research": null
       },
       {
-        "slug": "the-elysium-age",
-        "title": "The Elysium Age",
-        "file": "ages/the-elysium-age.md",
-        "author": null,
-        "date": null,
-        "sources": null,
-        "research": null
-      },
-      {
         "slug": "the-great-catacysm",
-        "title": "The Great Catacysm",
+        "title": "3900-Present - The Great Catacysm",
         "file": "ages/the-great-catacysm.md",
-        "author": null,
-        "date": null,
-        "sources": null,
-        "research": null
-      },
-      {
-        "slug": "the-great-surge",
-        "title": "The Great Surge",
-        "file": "ages/the-great-surge.md",
         "author": null,
         "date": null,
         "sources": null,
