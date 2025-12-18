@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pax Dei Archives - Redeem Rewards</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="frontend/www/css/popout.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+</head>
+<body>
+    <div id="header-placeholder"></div>
+
+    <h1 class="text-xl font-semibold mt-6 mb-3 text-white text-center">Reward Redemption</h1>
+    <div class="h-1 w-24 bg-[#FFD700] mx-auto rounded-full"></div><br>
+    
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="page-content">
+                    
+                    <div class="max-w-3xl mx-auto mt-8">
+                        <div id="input-section" class="bg-[#27292a] p-8 rounded-3xl border border-[#333]">
+                            <h6 class="text-[#FFD700] uppercase text-xs font-bold tracking-widest mb-4">Deciphered Discovery Code</h6>
+                            <div class="flex flex-col md:flex-row gap-4">
+                                <input type="text" id="claim-code" placeholder="ENTER THE CIPHERED LETTERS" 
+                                    class="flex-grow bg-[#1f2122] border border-[#444] rounded-full py-3 px-6 text-white focus:outline-none focus:border-[#72e0cc] transition-colors uppercase tracking-wider text-sm">
+                                <button id="verify-btn" class="bg-[#72e0cc] hover:bg-white hover:text-[#1f2122] text-[#1f2122] font-bold py-3 px-10 rounded-full transition-all duration-300 text-sm">
+                                    TRANSLATE & VERIFY
+                                </button>
+                            </div>
+                            <p id="error-msg" class="text-[#ee626b] mt-4 hidden text-sm italic font-sans"></p>
+                        </div>
+
+                        <div id="reward-display" class="hidden mt-8">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="bg-[#27292a] p-8 rounded-3xl border border-[#333]">
+                                    <h4 class="text-white text-xl mb-4">Found <em>Spoils</em></h4>
+                                    <ul id="item-list" class="space-y-3 text-zinc-400 mb-4"></ul>
+                                    <div id="gold-amount" class="text-2xl font-bold text-[#ecaf48]"></div>
+                                </div>
+                                <div class="bg-[#1f2122] p-8 rounded-3xl border border-[#72e0cc]">
+                                    <h6 class="text-zinc-500 uppercase text-xs font-bold mb-2">Instructions</h6>
+                                    <p id="pickup-location" class="text-white text-sm mb-6"></p>
+                                    <button id="claim-btn" class="w-full bg-transparent border-2 border-[#72e0cc] text-[#72e0cc] hover:bg-[#72e0cc] hover:text-[#1f2122] py-3 rounded-full font-bold transition-all duration-300">
+                                        CLAIM ITEMS
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="success-state" class="hidden text-center bg-[#27292a] p-12 rounded-3xl border border-[#333]">
+                            <i class="fa-solid fa-circle-check text-6xl text-[#72e0cc] mb-6"></i>
+                            <h4 class="text-white">Quest <em>Complete</em></h4>
+                            <p class="text-zinc-400 mt-4">The code was valid. Visit the location mentioned to receive your reward.</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="footer-placeholder"></div>
+
+    <div id="floating-avatar-container">
+        <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar js-floating-avatar">
+    </div>
+
+    <div id="auth-modal">
+        <div class="modal-content-wrapper" id="modal-content-wrapper"></div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
+    <script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
+    <script type="module" src="frontend/www/js/supabaseClient.js"></script>
+    <script type="module" src="frontend/www/js/utils.js"></script>
+    <script type="module" src="frontend/www/js/main.js"></script>
+    <script type="module" src="frontend/www/js/popoutAuth.js"></script>
+    <script type="module" src="frontend/www/js/redemption/redeem.js"></script>
+</body>
+</html>

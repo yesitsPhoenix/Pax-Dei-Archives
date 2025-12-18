@@ -1,0 +1,77 @@
+{
+  "categories": [
+    {
+      "id": "gear",
+      "prefix": "gear_",
+      "items": [
+        "bowarrows",
+        "armor",
+        "bakery",
+        "beams",
+        "berries",
+        "bright",
+        "carpentry",
+        "charcoal",
+        "clay",
+        "cloth",
+        "clothoutfits",
+        "cooked",
+        "divine",
+        "drinks",
+        "extracts",
+        "fibrous",
+        "filaments",
+        "flowers",
+        "furnishings",
+        "gems",
+        "grains",
+        "herbs",
+        "jewelry",
+        "knicks",
+        "leather",
+        "leatheroutfits",
+        "lovely",
+        "lumber",
+        "magical",
+        "meats",
+        "minerals",
+        "ore",
+        "pottery",
+        "poultry",
+        "raw",
+        "reagents",
+        "rocks",
+        "seeds",
+        "tailoring",
+        "tools",
+        "vegetables",
+        "weapons",
+        "wood"
+      ]
+    },
+    {
+      "id": "symbol",
+      "prefix": "symbol_",
+      "items": [
+        "heart",
+        "skull",
+        "cross",
+        "star"
+      ]
+    },
+    {
+      "id": "miscellaneous",
+      "prefix": "miscellaneous_",
+      "items": [
+        "arrowdown",
+        "arrowleft",
+        "arrowright",
+        "arrowup"
+      ]
+    }
+  ],
+  "config": {
+    "baseUrl": "https://gtcdn.info/paxdei/images/256/environment/props/da_buildingprops/icons/menu_tab_building_props/tab_group_signs/t_icon_craftingsign_",
+    "version": "1766014965213"
+  }
+}
