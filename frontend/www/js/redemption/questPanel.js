@@ -59,7 +59,7 @@ async function loadSigns() {
         btn.appendChild(img);
         btn.onclick = () => {
             const limitMsg = document.getElementById("limit-message");
-            if (selected.length < 3) {
+            if (selected.length < 5) {
                 selected.push(fullId);
                 updateSelected(baseUrl, version);
                 if (limitMsg) limitMsg.classList.add("hidden");
@@ -197,7 +197,7 @@ document.getElementById("create-quest").onclick = async () => {
     });
 
     if (!quest_name || !quest_key || selected.length === 0) {
-        await showModal("Missing Fields", "Please fill in all required fields and select 1-3 signs.");
+        await showModal("Missing Fields", "Please fill in all required fields and select 2-5 signs.");
         return;
     }
 

@@ -22,7 +22,7 @@ async function loadSigns() {
 
             btn.appendChild(img);
             btn.onclick = () => {
-                if (selected.length < 3) {
+                if (selected.length < 5) {
                     selected.push(fullId);
                     updateSelected(baseUrl, version);
                 }
@@ -71,7 +71,7 @@ async function fetchQuests() {
 function showNotification(message, type = "error") {
     const errorMsg = document.getElementById("error-msg");
     errorMsg.textContent = message;
-    errorMsg.className = `p-4 rounded-lg mb-4 text-sm font-bold text-center ${
+    errorMsg.className = `p-4 rounded-lg mb-4 flex justify-center items-center mx-auto w-[30rem] text-sm font-bold text-center ${
         type === "error" ? "bg-red-900/50 text-red-200 border border-red-700" : "bg-[#72e0cc]/20 text-[#72e0cc] border border-[#72e0cc]/50"
     }`;
     errorMsg.classList.remove("hidden");

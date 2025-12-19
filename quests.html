@@ -48,15 +48,15 @@
     </div>
 
         <div id="quest-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-        <div class="bg-[#1f2937] w-full max-w-2xl rounded-3xl border border-gray-700 shadow-2xl overflow-hidden transform transition-all">
+        <div class="bg-[#1f2937] w-full max-w-4xl rounded-3xl border border-gray-700 shadow-2xl overflow-hidden transform transition-all">
             <div class="relative h-32 bg-gradient-to-r from-[#72e0cc]/20 to-[#FFD700]/20 flex items-center px-8 border-b border-gray-700">
                 <h2 id="modal-quest-name" class="text-3xl font-bold text-white">Quest Name</h2>
                 <button id="close-modal" class="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl">
                     <i class="fa-solid fa-times"></i>
                 </button>
             </div>
-            
-            <div class="p-8">
+        
+            <div class="m-4">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
                         <h4 class="text-[#FFD700] uppercase text-xs font-bold tracking-widest mb-2">Lore & Description</h4>
@@ -68,7 +68,7 @@
                     
                     <div class="space-y-6">
                         <div>
-                            <h4 class="text-[#FFD700] uppercase text-xs font-bold tracking-widest mb-3">Sign Sequence</h4>
+                            <h4 class="text-[#FFD700] uppercase text-m font-bold tracking-widest mb-3">Sign Sequence</h4>
                             <div id="modal-sign-sequence" class="flex flex-wrap gap-2 p-4 bg-black/30 rounded-2xl border border-gray-700"></div>
                         </div>
                         
@@ -80,6 +80,7 @@
                     </div>
                 </div>
             </div>
+    
 
             <div class="p-6 bg-black/20 border-t border-gray-700 flex justify-end gap-4">
                 <button id="modal-close-btn" class="px-6 py-3 rounded-full text-gray-400 font-bold hover:text-white transition-all">Close</button>
