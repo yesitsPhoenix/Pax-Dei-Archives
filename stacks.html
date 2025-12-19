@@ -30,12 +30,17 @@
 
         .item-row {
             display: grid;
-            grid-template-columns: 3fr 1fr;
+            grid-template-columns: 1.5fr 1.5fr 1fr 0.5fr;
             gap: 15px;
             padding: 12px 0;
             border-bottom: 1px solid #374151;
             align-items: center;
             font-size: 1.1rem;
+            transition: background-color 0.2s;
+        }
+
+        .item-row:hover:not(.item-header) {
+            background-color: #2d3748;
         }
 
         .item-row:last-child {
@@ -54,6 +59,21 @@
             text-align: center;
             font-weight: 600;
             color: #10b981;
+        }
+
+        .copy-btn {
+            background: #4b5563;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: #6b7280;
         }
 
         #category-filter, #item-search {
@@ -91,7 +111,6 @@
                 <span class="ml-3">View All Listings</span>
             </a>
         </li>
-
     </ul>
 </aside>
 <main class="trader-container">

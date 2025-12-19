@@ -4,6 +4,18 @@ const LOCALIZATION_URL = 'backend/data/json/localisation_en.json';
 let allItemData = [];
 let allCategories = new Set();
 
+window.copyRow = function(name, jsonKey, stackSize, btn) {
+    const textToCopy = `${name}\t${stackSize}\t\t${jsonKey}`;
+    navigator.clipboard.writeText(textToCopy).then(() => {
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i>';
+        btn.style.backgroundColor = '#10b981';
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.style.backgroundColor = '#4b5563';
+        }, 1500);
+    });
+};
 
 const showAccessDeniedModal = () => {
     const modal = document.getElementById('accessDeniedModal');
@@ -95,6 +107,7 @@ function processStaticData(staticData, localizationMap) {
                 processedItems.push({
                     category: category.toUpperCase(),
                     name: itemName,
+                    jsonKey: localizationKey,
                     stackSize: maxStackSize
                 });
             }
@@ -169,7 +182,9 @@ function renderArchives(groupedItems) {
         headerRow.className = 'item-row item-header';
         headerRow.innerHTML = `
             <span>Item Name</span>
+            <span>JSON Value</span>
             <span class="text-center">Max Stack Size</span>
+            <span class="text-right">Copy</span>
         `;
         list.appendChild(headerRow);
 
@@ -179,7 +194,13 @@ function renderArchives(groupedItems) {
             
             itemRow.innerHTML = `
                 <strong class="text-gray-200">${item.name}</strong>
+                <code class="text-gray-400 break-all">${item.jsonKey}</code>
                 <span class="stack-size">${item.stackSize}</span>
+                <div class="text-right">
+                    <button class="copy-btn" onclick="copyRow('${item.name.replace(/'/g, "\\'")}', '${item.jsonKey}', '${item.stackSize}', this)">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
             `;
             list.appendChild(itemRow);
         });
@@ -194,7 +215,7 @@ async function loadDataAndRender() {
     
     const isAuthenticated = await checkAdminAuth();
     if (!isAuthenticated) {
-        container.innerHTML = '<p class="text-red-400 text-center">Authentication failed. Access denied.</p>';
+        container.innerHTML = '<p class=\"text-red-400 text-center\">Authentication failed. Access denied.</p>';
         return;
     }
 

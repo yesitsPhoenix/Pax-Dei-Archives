@@ -1,7 +1,6 @@
 import { supabase } from "../supabaseClient.js";
 
 const alphabet = "abcdefghijklmnopqrstuvwxyz";
-const keyword = "thelonius";
 
 function getCipherShift(word) {
     const firstChar = word.charAt(0).toLowerCase();
@@ -94,6 +93,7 @@ async function loadSigns() {
 
 function updateSelected(baseUrl, version) {
     selectedDisplay.innerHTML = "";
+    const keyword = document.getElementById("cipher-keyword-select").value;
     
     selected.forEach((placedId, index) => {
         const column = document.createElement("div");
@@ -118,7 +118,7 @@ function updateSelected(baseUrl, version) {
         const placedName = placedId.split('_').slice(1).join(' ').replace(/_/g, ' ');
         const labelTop = document.createElement("span");
         labelTop.className = "text-[14px] text-white font-bold uppercase mt-1 text-center";
-        labelTop.textContent = labelTop.textContent = placedName;
+        labelTop.textContent = placedName;
 
         const removeBtn = document.createElement("button");
         removeBtn.innerHTML = "×";
@@ -163,6 +163,12 @@ document.getElementById("clear-signs").onclick = () => {
     document.getElementById("limit-message")?.classList.add("hidden");
 };
 
+document.getElementById("cipher-keyword-select").addEventListener("change", () => {
+    fetch('frontend/www/assets/signs.json').then(r => r.json()).then(data => {
+        updateSelected(data.config.baseUrl, data.config.version);
+    });
+});
+
 const questNameInput = document.getElementById("quest-name");
 const questKeyInput = document.getElementById("quest-key");
 
@@ -206,6 +212,7 @@ document.getElementById("create-quest").onclick = async () => {
     const quest_key = questKeyInput.value.trim();
     const region_id = document.getElementById("region-selection").value;
     const locationStr = document.getElementById("location").value.trim();
+    const keyword = document.getElementById("cipher-keyword-select").value;
     const lore = document.getElementById("lore").value.trim();
     const itemsInput = document.getElementById("items").value;
     const items = itemsInput ? itemsInput.split(",").map(i => i.trim()).filter(Boolean) : [];

@@ -110,10 +110,30 @@
                         <input id="max-claims" type="number" min="1" value="1" class="w-full p-3 rounded-lg bg-[#1f2937] text-white border border-gray-700 focus:border-[#FFD700] outline-none text-base" placeholder="1">
                     </div>
                 </div>
-
+                
+                
                 <div class="lg:col-span-2 flex flex-col gap-4">
-                    <div class="flex justify-between items-end border-b border-gray-800 pb-2">
-                        <h2 class="font-bold text-[#FFD700] uppercase text-sm tracking-widest">Select Sign Sequence</h2>
+                    
+                    <div class="space-y-4">
+                        <div class="border-b border-gray-800 pb-2">
+                            <h2 class="font-bold text-[#FFD700] uppercase text-sm tracking-widest">Cipher Configuration</h2>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-2 tracking-widest">Cipher Keyword</label>
+                            <select id="cipher-keyword-select" class="w-full bg-[#111827] border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FFD700] transition-colors text-base">
+                                <option value="paxdei">paxdei</option>
+                                <option value="thelonius" selected>thelonius</option>
+                                <option value="badgers">badgers</option>
+                                <option value="zebian">zebian</option>
+                                <option value="demira">demira</option>
+                                <option value="armozel">armozel</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-end border-b border-gray-800 pb-2 mt-4">
+                        <h2 class="font-bold text-[#FFD700] uppercase text-sm tracking-widest">Select Sign Sequence (2-5 signs)</h2>
                         <button id="clear-signs" class="text-xs font-bold bg-red-900/40 hover:bg-red-600 text-red-200 px-4 py-2 rounded-lg transition-all border border-red-800/50 uppercase tracking-tighter">
                             <i class="fa-solid fa-trash-can mr-2"></i> Clear Grid
                         </button>
