@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pax Dei Archives - Quest Panel</title>
+    <title>Pax Dei Archives - Edit Quest</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="frontend/www/css/style.css">
     <link rel="stylesheet" href="frontend/www/css/popout.css">
@@ -48,7 +48,7 @@
     </ul>
 </aside>
 
-    <h1 class="text-xl font-semibold mt-6 mb-3 text-white text-center">Quest Panel</h1>
+    <h1 class="text-xl font-semibold mt-6 mb-3 text-white text-center">Edit Quest</h1>
     <div class="h-1 w-32 bg-[#FFD700] mx-auto rounded-full"></div><br>
 
     <div class="container mx-auto px-4 pb-20">
@@ -63,12 +63,12 @@
                         </div>
 
                         <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Quest Key (Automatic)</label>
-                            <input id="quest-key" class="w-full p-3 rounded-lg bg-[#111827] border border-gray-700 text-gray-400 text-base" placeholder="quest-slug" readonly>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Quest Key</label>
+                            <input id="quest-key" class="w-full p-3 rounded-lg bg-[#111827] border border-gray-700 text-gray-400 text-base" readonly>
                         </div>
 
                         <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">World Location (Region/Shard/Valley)</label>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">World Location</label>
                             <select id="region-selection" class="w-full p-3 rounded-lg bg-[#1f2937] text-white border border-gray-700 focus:border-[#FFD700] outline-none text-base">
                                 <option value="">Select Location...</option>
                             </select>
@@ -101,7 +101,7 @@
                     
                     <div>
                         <label class="block text-xs font-bold text-gray-400 uppercase mb-2 tracking-wider">Max Redemption Claims</label>
-                        <input id="max-claims" type="number" min="1" value="1" class="w-full p-3 rounded-lg bg-[#1f2937] text-white border border-gray-700 focus:border-[#FFD700] outline-none text-base" placeholder="1">
+                        <input id="max-claims" type="number" min="1" class="w-full p-3 rounded-lg bg-[#1f2937] text-white border border-gray-700 focus:border-[#FFD700] outline-none text-base">
                     </div>
                 </div>
 
@@ -124,8 +124,8 @@
             </div>
 
             <div class="mt-12 text-center">
-                <button id="create-quest" class="px-12 py-4 bg-[#FFD700] hover:bg-yellow-400 text-black rounded-full font-black shadow-[0_0_20px_rgba(255,215,0,0.3)] transition-all hover:scale-105 active:scale-95 uppercase tracking-widest text-lg">
-                    PUBLISH QUEST
+                <button id="update-quest" class="px-12 py-4 bg-[#FFD700] hover:bg-yellow-400 text-black rounded-full font-black shadow-[0_0_20px_rgba(255,215,0,0.3)] transition-all hover:scale-105 active:scale-95 uppercase tracking-widest text-lg">
+                    SAVE CHANGES
                 </button>
             </div>
         </div>
@@ -143,17 +143,17 @@
 
     <div id="confirmation-modal" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden z-[200] backdrop-blur-sm">
         <div class="bg-[#1f2937] p-8 rounded-3xl w-full max-w-md text-white shadow-2xl border border-gray-700 mx-4">
-            <h3 id="modal-title" class="text-xl font-bold mb-3 text-[#FFD700]"></h3>
-            <p id="modal-message" class="text-base text-gray-300 mb-8 leading-relaxed"></p>
+            <h3 id="modal-title" class="text-xl font-bold mb-3 text-[#FFD700]">Update Quest</h3>
+            <p id="modal-message" class="text-base text-gray-300 mb-8 leading-relaxed">Are you sure you want to save these changes to the quest?</p>
             <div class="flex flex-col sm:flex-row justify-end gap-3">
                 <button id="modal-cancel" class="px-6 py-3 bg-gray-700 rounded-xl hover:bg-gray-600 font-bold transition-colors order-2 sm:order-1 uppercase text-xs">Cancel</button>
-                <button id="modal-confirm" class="px-6 py-3 bg-[#FFD700] text-black rounded-xl font-black hover:bg-yellow-400 transition-colors order-1 sm:order-2 uppercase text-xs">Confirm</button>
+                <button id="modal-confirm" class="px-6 py-3 bg-[#FFD700] text-black rounded-xl font-black hover:bg-yellow-400 transition-colors order-1 sm:order-2 uppercase text-xs">Confirm Update</button>
             </div>
         </div>
     </div>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    <script type="module" src="frontend/www/js/redemption/questPanel.js"></script>
+    <script type="module" src="frontend/www/js/redemption/editQuest.js"></script>
     <script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
     <script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
     <script type="module" src="frontend/www/js/popoutAuth.js"></script>

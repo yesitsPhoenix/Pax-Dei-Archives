@@ -1,5 +1,8 @@
 import { supabase } from "../supabaseClient.js";
 
+let allQuests = [];
+let regionsData = [];
+
 async function getCurrentUser() {
     const { data: { user }, error } = await supabase.auth.getUser();
     if (error) console.error(error);
@@ -9,9 +12,20 @@ async function getCurrentUser() {
 async function fetchQuests() {
     const { data, error } = await supabase
         .from("cipher_quests")
-        .select("*")
+        .select(`
+            *,
+            regions:region_id (*)
+        `)
         .eq("active", true)
         .order("sort_order", { ascending: true });
+    if (error) console.error(error);
+    return data || [];
+}
+
+async function fetchRegions() {
+    const { data, error } = await supabase
+        .from("regions")
+        .select("*");
     if (error) console.error(error);
     return data || [];
 }
@@ -23,6 +37,44 @@ async function fetchUserClaims(userId) {
         .eq("user_id", userId);
     if (error) console.error(error);
     return data || [];
+}
+
+function populateFilters(regions) {
+    const regionSelect = document.getElementById('filter-region');
+    const shardSelect = document.getElementById('filter-shard');
+    const provinceSelect = document.getElementById('filter-province');
+    const valleySelect = document.getElementById('filter-homevalley');
+    const statusSelect = document.getElementById('filter-status');
+    const clearBtn = document.getElementById('clear-filters');
+
+    const uniqueRegions = [...new Set(regions.map(r => r.region_name))].sort();
+    const uniqueShards = [...new Set(regions.map(r => r.shard))].sort();
+    const uniqueProvinces = [...new Set(regions.map(r => r.province))].sort();
+    const uniqueValleys = [...new Set(regions.map(r => r.home_valley))].sort();
+
+    uniqueRegions.forEach(name => {
+        regionSelect.innerHTML += `<option value="${name}">${name}</option>`;
+    });
+    uniqueShards.forEach(name => {
+        shardSelect.innerHTML += `<option value="${name}">${name}</option>`;
+    });
+    uniqueProvinces.forEach(name => {
+        provinceSelect.innerHTML += `<option value="${name}">${name}</option>`;
+    });
+    uniqueValleys.forEach(name => {
+        valleySelect.innerHTML += `<option value="${name}">${name}</option>`;
+    });
+
+    [regionSelect, shardSelect, provinceSelect, valleySelect, statusSelect].forEach(select => {
+        select.addEventListener('change', () => renderQuestsList());
+    });
+
+    clearBtn.addEventListener('click', () => {
+        [regionSelect, shardSelect, provinceSelect, valleySelect, statusSelect].forEach(select => {
+            select.value = "";
+        });
+        renderQuestsList();
+    });
 }
 
 function openQuestModal(quest, signHtml, userClaimed) {
@@ -40,7 +92,7 @@ function openQuestModal(quest, signHtml, userClaimed) {
     if (!modalShareBtn) {
         modalShareBtn = document.createElement('button');
         modalShareBtn.id = 'modal-share-btn';
-        modalShareBtn.className = "mr-auto px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-all text-xs font-bold uppercase flex items-center gap-2";
+        modalShareBtn.className = "mr-auto px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-all text-md font-bold uppercase flex items-center gap-2";
         modalShareBtn.innerHTML = '<i class="fa-solid fa-share-nodes"></i><span>Share Quest</span>';
         modalFooter.prepend(modalShareBtn);
     }
@@ -87,10 +139,18 @@ function generateSignHtml(quest, baseUrl, version) {
     return "";
 }
 
-async function renderQuests() {
+async function renderQuestsList() {
+    const tableBody = document.getElementById("quest-list-table");
+    if (!tableBody) return;
+
     const user = await getCurrentUser();
-    const quests = await fetchQuests();
     
+    const filterR = document.getElementById('filter-region').value;
+    const filterS = document.getElementById('filter-shard').value;
+    const filterP = document.getElementById('filter-province').value;
+    const filterV = document.getElementById('filter-homevalley').value;
+    const filterStatus = document.getElementById('filter-status').value;
+
     let signConfig;
     try {
         const response = await fetch('frontend/www/assets/signs.json');
@@ -102,13 +162,33 @@ async function renderQuests() {
 
     const { baseUrl, version } = signConfig.config;
     let userClaims = [];
-    if (user) userClaims = await fetchUserClaims(user.id);
+    if (user) {
+        try {
+            userClaims = await fetchUserClaims(user.id);
+        } catch (err) {
+            console.error("Failed to fetch user claims", err);
+        }
+    }
 
-    const tableBody = document.getElementById("quest-list-table");
-    if (!tableBody) return;
     tableBody.innerHTML = "";
 
-    quests.forEach(quest => {
+    const filteredQuests = allQuests.filter(quest => {
+        const reg = quest.regions || {};
+        const userClaimed = userClaims.some(c => c.quest_id === quest.id);
+        
+        const matchesRegion = !filterR || reg.region_name === filterR;
+        const matchesShard = !filterS || reg.shard === filterS;
+        const matchesProvince = !filterP || reg.province === filterP;
+        const matchesValley = !filterV || reg.home_valley === filterV;
+        
+        let matchesStatus = true;
+        if (filterStatus === "completed") matchesStatus = userClaimed;
+        if (filterStatus === "incomplete") matchesStatus = !userClaimed;
+
+        return matchesRegion && matchesShard && matchesProvince && matchesValley && matchesStatus;
+    });
+
+    filteredQuests.forEach(quest => {
         const userClaimed = userClaims.some(c => c.quest_id === quest.id);
         const signHtml = generateSignHtml(quest, baseUrl, version);
 
@@ -116,8 +196,11 @@ async function renderQuests() {
         row.className = "hover:bg-white/5 transition-colors group border-b border-gray-800/50 cursor-pointer";
         row.innerHTML = `
             <td class="px-6 py-6">
-                <div class="font-bold text-lg text-white mb-1">${quest.quest_name}</div>
-                <div class="text-sm text-gray-400 italic leading-relaxed max-w-sm">${quest.lore || ''}</div>
+                <div class="font-bold text-xl text-white mb-1">${quest.quest_name}</div>
+                <div class="text-lg text-[#FFD700] uppercase mb-1">
+                    ${quest.regions ? `${quest.regions.region_name} • ${quest.regions.shard} • ${quest.regions.home_valley}` : 'World Quest'}
+                </div>
+                <div class="text-md text-gray-400 italic leading-relaxed max-w-sm">${quest.lore || ''}</div>
             </td>
             <td class="px-6 py-6">
                 <div class="flex flex-wrap gap-2 min-w-[180px]">
@@ -138,7 +221,7 @@ async function renderQuests() {
                         <i class="fa-solid fa-share-nodes"></i>
                         <span>Share Quest</span>
                     </button>
-                    <button class="info-btn px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold uppercase transition-all">
+                    <button class="info-btn px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-md font-bold uppercase transition-all">
                         More Info
                     </button>
                     <button class="claim-btn px-6 py-3 rounded-full text-sm font-bold uppercase tracking-wide transition-all shadow-lg ${userClaimed ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-[#FFD700] text-black hover:bg-yellow-400 hover:shadow-yellow-500/20 active:scale-95'}" ${userClaimed ? "disabled" : ""}>
@@ -154,7 +237,8 @@ async function renderQuests() {
             }
         });
 
-        row.querySelector('.info-btn').addEventListener('click', () => {
+        row.querySelector('.info-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
             openQuestModal(quest, signHtml, userClaimed);
         });
 
@@ -164,11 +248,15 @@ async function renderQuests() {
             navigator.clipboard.writeText(shareUrl).then(() => {
                 const icon = row.querySelector('.share-btn i');
                 const text = row.querySelector('.share-btn span');
+                const originalIcon = icon.className;
+                const originalText = text.innerText;
+                
                 icon.className = "fa-solid fa-check text-green-500";
                 text.innerText = "Copied!";
+                
                 setTimeout(() => { 
-                    icon.className = "fa-solid fa-share-nodes"; 
-                    text.innerText = "Share Quest";
+                    icon.className = originalIcon; 
+                    text.innerText = originalText;
                 }, 2000);
             });
         });
@@ -183,18 +271,36 @@ async function renderQuests() {
 
         tableBody.appendChild(row);
     });
+}
+
+async function init() {
+    allQuests = await fetchQuests();
+    regionsData = await fetchRegions();
+    populateFilters(regionsData);
+    
+    await renderQuestsList();
 
     const urlParams = new URLSearchParams(window.location.search);
     const targetQuestKey = urlParams.get('quest');
     if (targetQuestKey) {
-        const targetQuest = quests.find(q => q.quest_key === targetQuestKey);
+        const targetQuest = allQuests.find(q => q.quest_key === targetQuestKey);
         if (targetQuest) {
+            const user = await getCurrentUser();
+            let userClaims = [];
+            if (user) userClaims = await fetchUserClaims(user.id);
             const userClaimed = userClaims.some(c => c.quest_id === targetQuest.id);
+            
+            let signConfig;
+            const response = await fetch('frontend/www/assets/signs.json');
+            signConfig = await response.json();
+            const { baseUrl, version } = signConfig.config;
+            
             const signHtml = generateSignHtml(targetQuest, baseUrl, version);
             openQuestModal(targetQuest, signHtml, userClaimed);
         }
     }
 }
+
 
 document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('quest-modal');
@@ -220,7 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 supabase.auth.onAuthStateChange(() => {
-    renderQuests();
+    renderQuestsList();
 });
 
-renderQuests();
+init();

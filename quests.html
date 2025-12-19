@@ -6,16 +6,81 @@
     <title>Pax Dei Archives - Available Quests</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="frontend/www/css/sidebar.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
-    <div id="header-placeholder"></div>
+<div id="header-placeholder"></div>
 
+<aside id="sidebar" class="w-64 bg-[#1c1c1c] border-r-4 border-amber-300 shadow-lg transition-all duration-300 hover:bg-slate-700 px-3 py-4 cursor-pointer fixed h-[50vh] z-50 top-[220px] collapsed">
+    <ul class="space-y-2 font-medium">
+        <li>
+            <a href="quests.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                <i class="fas fa-book w-5 h-5 text-gray-400 transition duration-75"></i>
+                <span class="ml-3">View Quests</span>
+            </a>
+        </li>
+        <li>
+            <a href="panel.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                <i class="fas fa-chart-line w-5 h-5 text-gray-400 transition duration-75"></i>
+                <span class="ml-3">Create New Quest</span>
+            </a>
+        </li>
+        <li>
+            <a href="edit_quest.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                <i class="fas fa-tags w-5 h-5 text-gray-400 transition duration-75"></i>
+                <span class="ml-3">Edit Existing Quests</span>
+            </a>
+        </li>
+    </ul>
+</aside>
     <h1 class="text-xl font-semibold mt-6 mb-3 text-white text-center">Quests</h1>
     <div class="h-1 w-32 bg-[#FFD700] mx-auto rounded-full"></div><br>
+
+    <div class="container mx-auto px-4 max-w-8xl mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-6 gap-4 bg-[#1f2937] p-4 rounded-2xl border border-gray-700 shadow-lg items-end">
+            <div>
+                <label class="block text-[10px] uppercase tracking-widest text-[#FFD700] font-bold mb-2">Region</label>
+                <select id="filter-region" class="w-full bg-white border border-gray-600 text-black rounded-lg px-3 py-2 focus:outline-none focus:border-[#FFD700] transition-colors">
+                    <option value="">All Regions</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[10px] uppercase tracking-widest text-[#FFD700] font-bold mb-2">Shard</label>
+                <select id="filter-shard" class="w-full bg-white border border-gray-600 text-black rounded-lg px-3 py-2 focus:outline-none focus:border-[#FFD700] transition-colors">
+                    <option value="">All Shards</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[10px] uppercase tracking-widest text-[#FFD700] font-bold mb-2">Province</label>
+                <select id="filter-province" class="w-full bg-white border border-gray-600 text-black rounded-lg px-3 py-2 focus:outline-none focus:border-[#FFD700] transition-colors">
+                    <option value="">All Provinces</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[10px] uppercase tracking-widest text-[#FFD700] font-bold mb-2">Home Valley</label>
+                <select id="filter-homevalley" class="w-full bg-white border border-gray-600 text-black rounded-lg px-3 py-2 focus:outline-none focus:border-[#FFD700] transition-colors">
+                    <option value="">All Valleys</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[10px] uppercase tracking-widest text-[#FFD700] font-bold mb-2">Status</label>
+                <select id="filter-status" class="w-full bg-white border border-gray-600 text-black rounded-lg px-3 py-2 focus:outline-none focus:border-[#FFD700] transition-colors">
+                    <option value="">All Quests</option>
+                    <option value="completed">Completed</option>
+                    <option value="incomplete">Incomplete</option>
+                </select>
+            </div>
+            <div>
+                <button id="clear-filters" class="w-full bg-gray-900 hover:bg-yellow-300 text-white hover:text-black px-4 py-2 rounded-lg font-bold text-xs uppercase transition-all border border-gray-600">
+                    Clear Filters
+                </button>
+            </div>
+        </div>
+    </div>
 
     <div class="container mx-auto px-4 max-w-8xl">
         <div class="page-content overflow-hidden rounded-2xl border border-gray-700 bg-[#1f2937] shadow-2xl">
@@ -59,10 +124,10 @@
             <div class="m-4">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
-                        <h4 class="text-[#FFD700] uppercase text-xs font-bold tracking-widest mb-2">Lore & Description</h4>
+                        <h4 class="text-[#FFD700] uppercase text-md font-bold tracking-widest mb-2">Lore & Description</h4>
                         <p id="modal-quest-lore" class="text-gray-300 italic leading-relaxed mb-6"></p>
                         
-                        <h4 class="text-[#FFD700] uppercase text-xs font-bold tracking-widest mb-2">Location Hints</h4>
+                        <h4 class="text-[#FFD700] uppercase text-md font-bold tracking-widest mb-2">Location Hints</h4>
                         <p id="modal-quest-location" class="text-gray-300 mb-6"></p>
                     </div>
                     
@@ -73,7 +138,7 @@
                         </div>
                         
                         <div class="bg-gray-900/50 p-4 rounded-2xl border border-gray-700">
-                            <h4 class="text-[#FFD700] uppercase text-xs font-bold tracking-widest mb-2">Rewards</h4>
+                            <h4 class="text-[#FFD700] uppercase text-md font-bold tracking-widest mb-2">Rewards</h4>
                             <div id="modal-quest-items" class="text-white font-medium mb-1"></div>
                             <div id="modal-quest-gold" class="text-[#ecaf48] font-bold text-xl"></div>
                         </div>
@@ -91,8 +156,10 @@
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script type="module" src="frontend/www/js/redemption/quests.js"></script>
+    <script type="module" src="frontend/www/js/small_sidebar.js"></script>
     <script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
     <script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
     <script type="module" src="frontend/www/js/popoutAuth.js"></script>
+    
 </body>
 </html>

@@ -36,6 +36,27 @@ async function checkAccess() {
     init();
 }
 
+async function loadRegions() {
+    const { data, error } = await supabase
+        .from("regions")
+        .select("*")
+        .order("region_name", { ascending: true })
+        .order("shard", { ascending: true });
+
+    if (error) {
+        console.error("Error fetching regions:", error);
+        return;
+    }
+
+    const select = document.getElementById("region-selection");
+    data.forEach(reg => {
+        const option = document.createElement("option");
+        option.value = reg.id;
+        option.textContent = `${reg.region_name} | ${reg.shard} | ${reg.province} | ${reg.home_valley}`;
+        select.appendChild(option);
+    });
+}
+
 async function loadSigns() {
     const response = await fetch('frontend/www/assets/signs.json');
     const data = await response.json();
@@ -97,7 +118,7 @@ function updateSelected(baseUrl, version) {
         const placedName = placedId.split('_').slice(1).join(' ').replace(/_/g, ' ');
         const labelTop = document.createElement("span");
         labelTop.className = "text-[14px] text-white font-bold uppercase mt-1 text-center";
-        labelTop.textContent = placedName;
+        labelTop.textContent = labelTop.textContent = placedName;
 
         const removeBtn = document.createElement("button");
         removeBtn.innerHTML = "×";
@@ -183,6 +204,7 @@ document.getElementById("create-quest").onclick = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     const quest_name = questNameInput.value.trim();
     const quest_key = questKeyInput.value.trim();
+    const region_id = document.getElementById("region-selection").value;
     const locationStr = document.getElementById("location").value.trim();
     const lore = document.getElementById("lore").value.trim();
     const itemsInput = document.getElementById("items").value;
@@ -196,8 +218,8 @@ document.getElementById("create-quest").onclick = async () => {
         return allSignIds[encodedIndex].split('_').slice(1).join('_');
     });
 
-    if (!quest_name || !quest_key || selected.length === 0) {
-        await showModal("Missing Fields", "Please fill in all required fields and select 2-5 signs.");
+    if (!quest_name || !quest_key || selected.length === 0 || !region_id) {
+        await showModal("Missing Fields", "Please fill in all required fields (including Region) and select 2-5 signs.");
         return;
     }
 
@@ -207,6 +229,7 @@ document.getElementById("create-quest").onclick = async () => {
     const { error } = await supabase.from("cipher_quests").insert({
         quest_key,
         quest_name,
+        region_id,
         signs: selected,
         reward_key: reward_keys.join(","),
         cipher_keyword: keyword,
@@ -228,6 +251,7 @@ document.getElementById("create-quest").onclick = async () => {
 };
 
 function init() {
+    loadRegions();
     loadSigns();
 }
 
