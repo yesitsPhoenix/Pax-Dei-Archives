@@ -1,3 +1,4 @@
+import { supabase } from "../supabaseClient.js";
 document.addEventListener('DOMContentLoaded', () => {
     const headerPlaceholder = document.getElementById('header-placeholder');
     if (!headerPlaceholder) return;
@@ -12,28 +13,50 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return response.text();
         })
-        .then(html => {
+        .then(async html => {
             const headerElement = document.createElement('header');
             headerElement.className = 'header-area';
             headerElement.innerHTML = html;
-            
-            headerPlaceholder.replaceWith(headerElement);
 
+            const questsNavItem = headerElement.querySelector('#quests-nav-item');
+
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+
+                if (user) {
+                    const { data, error } = await supabase
+                        .from('admin_users')
+                        .select('quest_role')
+                        .eq('user_id', user.id)
+                        .single();
+
+                    if (!error && data && data.quest_role === 'quest_adder') {
+                        if (questsNavItem) {
+                            questsNavItem.style.display = 'block';
+                        }
+                    } else {
+                        if (questsNavItem) questsNavItem.remove();
+                    }
+                } else {
+                    if (questsNavItem) questsNavItem.remove();
+                }
+            } catch (err) {
+                if (questsNavItem) questsNavItem.remove();
+            }
+
+            headerPlaceholder.replaceWith(headerElement);
 
             const path = new URL(window.location.href).pathname;
             const pathSegments = path.split('/');
-            const currentPage = pathSegments.pop() || 'index.html'; 
+            const currentPage = pathSegments.pop() || 'index.html';
 
             const navLinks = headerElement.querySelectorAll('.main-nav a');
             navLinks.forEach(link => {
                 const linkHref = link.getAttribute('href');
-                
                 const cleanedLinkHref = linkHref ? linkHref.split('/').pop().toLowerCase() : '';
 
                 if (cleanedLinkHref === currentPage.toLowerCase()) {
-                                        
                     link.classList.add('active');
-                    
                     const parentLi = link.closest('li');
                     if (parentLi) {
                         parentLi.classList.add('active');
