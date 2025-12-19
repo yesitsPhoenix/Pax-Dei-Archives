@@ -11,7 +11,7 @@ async function fetchQuests() {
         .from("cipher_quests")
         .select("*")
         .eq("active", true)
-        .order("created_at", { ascending: false });
+        .order("sort_order", { ascending: true });
     if (error) console.error(error);
     return data || [];
 }
@@ -34,6 +34,31 @@ function openQuestModal(quest, signHtml, userClaimed) {
     document.getElementById('modal-quest-items').innerText = quest.items ? (Array.isArray(quest.items) ? quest.items.join(', ') : quest.items) : 'None';
     document.getElementById('modal-quest-gold').innerText = `${quest.gold || 0} Gold`;
 
+    const modalFooter = modal.querySelector('div.p-6.border-t');
+    let modalShareBtn = document.getElementById('modal-share-btn');
+    
+    if (!modalShareBtn) {
+        modalShareBtn = document.createElement('button');
+        modalShareBtn.id = 'modal-share-btn';
+        modalShareBtn.className = "mr-auto px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-all text-xs font-bold uppercase flex items-center gap-2";
+        modalShareBtn.innerHTML = '<i class="fa-solid fa-share-nodes"></i><span>Share Quest</span>';
+        modalFooter.prepend(modalShareBtn);
+    }
+
+    modalShareBtn.onclick = () => {
+        const shareUrl = `${window.location.origin}${window.location.pathname}?quest=${quest.quest_key}`;
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            const icon = modalShareBtn.querySelector('i');
+            const text = modalShareBtn.querySelector('span');
+            icon.className = "fa-solid fa-check text-green-500";
+            text.innerText = "Copied!";
+            setTimeout(() => { 
+                icon.className = "fa-solid fa-share-nodes"; 
+                text.innerText = "Share Quest";
+            }, 2000);
+        });
+    };
+
     const redeemBtn = document.getElementById('modal-redeem-btn');
     if (userClaimed) {
         redeemBtn.innerText = "Quest Completed";
@@ -47,6 +72,19 @@ function openQuestModal(quest, signHtml, userClaimed) {
     }
 
     modal.classList.remove('hidden');
+}
+
+function generateSignHtml(quest, baseUrl, version) {
+    if (quest.signs && Array.isArray(quest.signs)) {
+        return quest.signs.map(fullId => {
+            const parts = fullId.split('_');
+            const category = parts[0];
+            const itemName = parts.slice(1).join('_');
+            const imgSrc = `${baseUrl}${category}_${itemName}.webp?${version}`;
+            return `<img src="${imgSrc}" class="w-16 h-16 bg-gray-900 rounded-lg p-1.5 border-2 border-gray-600 shadow-md transition-transform hover:scale-110" title="${itemName.replace(/_/g, ' ')}">`;
+        }).join("");
+    }
+    return "";
 }
 
 async function renderQuests() {
@@ -72,17 +110,7 @@ async function renderQuests() {
 
     quests.forEach(quest => {
         const userClaimed = userClaims.some(c => c.quest_id === quest.id);
-
-        let signHtml = "";
-        if (quest.signs && Array.isArray(quest.signs)) {
-            signHtml = quest.signs.map(fullId => {
-                const parts = fullId.split('_');
-                const category = parts[0];
-                const itemName = parts.slice(1).join('_');
-                const imgSrc = `${baseUrl}${category}_${itemName}.webp?${version}`;
-                return `<img src="${imgSrc}" class="w-16 h-16 bg-gray-900 rounded-lg p-1.5 border-2 border-gray-600 shadow-md transition-transform hover:scale-110" title="${itemName.replace(/_/g, ' ')}">`;
-            }).join("");
-        }
+        const signHtml = generateSignHtml(quest, baseUrl, version);
 
         const row = document.createElement("tr");
         row.className = "hover:bg-white/5 transition-colors group border-b border-gray-800/50 cursor-pointer";
@@ -106,6 +134,10 @@ async function renderQuests() {
             </td>
             <td class="px-6 py-6 text-center">
                 <div class="flex items-center justify-center gap-3">
+                    <button class="share-btn px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-all text-[10px] font-bold uppercase flex items-center gap-2">
+                        <i class="fa-solid fa-share-nodes"></i>
+                        <span>Share Quest</span>
+                    </button>
                     <button class="info-btn px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold uppercase transition-all">
                         More Info
                     </button>
@@ -126,6 +158,21 @@ async function renderQuests() {
             openQuestModal(quest, signHtml, userClaimed);
         });
 
+        row.querySelector('.share-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const shareUrl = `${window.location.origin}${window.location.pathname}?quest=${quest.quest_key}`;
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                const icon = row.querySelector('.share-btn i');
+                const text = row.querySelector('.share-btn span');
+                icon.className = "fa-solid fa-check text-green-500";
+                text.innerText = "Copied!";
+                setTimeout(() => { 
+                    icon.className = "fa-solid fa-share-nodes"; 
+                    text.innerText = "Share Quest";
+                }, 2000);
+            });
+        });
+
         const btn = row.querySelector(".claim-btn");
         if (!userClaimed && btn) {
             btn.onclick = (e) => {
@@ -136,6 +183,17 @@ async function renderQuests() {
 
         tableBody.appendChild(row);
     });
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetQuestKey = urlParams.get('quest');
+    if (targetQuestKey) {
+        const targetQuest = quests.find(q => q.quest_key === targetQuestKey);
+        if (targetQuest) {
+            const userClaimed = userClaims.some(c => c.quest_id === targetQuest.id);
+            const signHtml = generateSignHtml(targetQuest, baseUrl, version);
+            openQuestModal(targetQuest, signHtml, userClaimed);
+        }
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -153,6 +211,9 @@ document.addEventListener('DOMContentLoaded', () => {
         el.addEventListener('click', (e) => {
             if (e.target === el || el.id === 'close-modal' || el.id === 'modal-close-btn') {
                 modal.classList.add('hidden');
+                const url = new URL(window.location);
+                url.searchParams.delete('quest');
+                window.history.replaceState({}, '', url);
             }
         });
     });
