@@ -21,9 +21,8 @@ Demira's breath brought about the season of Spring, and it was said that her tea
 > The sins of Gluttony, Greed, and Wrath stirred again, and their princes Zeb, Mammon, and Moloch returned with armies of corruption
 
 <br>
-Demira allied with the Fay and created the Ancient Stela across Creation to shelter the faithful and stand as beacons agains the encroaching darkness.
+Demira allied with the Fay and created the Ancient Stela across Creation to shelter the faithful and stand as beacons agains the encroaching darkness. She pleaded to the Divine to save the innocent, in sorrow out of love. She sacrificed everything, including herself, to stem the tide of darkness.
 
-Demira pleaded to the Divine to save the innocent, in sorrow out of love. She sacrificed everything, including herself, to stem the tide of darkness.
 
 > Demira fashioned not a wooden ark, but a spiritual sanctuary woven from her very being. With her Shepherds, she sought out the worthy. As the waters rose and the world drowned, she held fast. And when the deluge reached its ultimate height, she sacrificed herself, cursing Zeb, Mammon, and Moloch with eternal torment. They would hunger and never be sated, desire and never be fulfilled, rage and never be calmed.
 
