@@ -3,9 +3,10 @@ import { supabase } from "../supabaseClient.js";
 const alphabet = "abcdefghijklmnopqrstuvwxyz";
 
 function getCipherShift(word) {
+    if (!word || word.toLowerCase() === "none") return 0;
     const firstChar = word.charAt(0).toLowerCase();
     const index = alphabet.indexOf(firstChar);
-    return index !== -1 ? (index + 1) : 5;
+    return index !== -1 ? (index + 1) : 0;
 }
 
 const selected = [];
@@ -48,6 +49,12 @@ async function loadRegions() {
     }
 
     const select = document.getElementById("region-selection");
+    
+    const globalOption = document.createElement("option");
+    globalOption.value = "global";
+    globalOption.textContent = "Global | All Shards | All Provinces | All Valleys";
+    select.appendChild(globalOption);
+
     data.forEach(reg => {
         const option = document.createElement("option");
         option.value = reg.id;
@@ -93,14 +100,15 @@ async function loadSigns() {
 
 function updateSelected(baseUrl, version) {
     selectedDisplay.innerHTML = "";
-    const keyword = document.getElementById("cipher-keyword-select").value;
+    const keywordRaw = document.getElementById("cipher-keyword-select").value;
+    const currentKeyword = (keywordRaw === "none" || !keywordRaw) ? "" : keywordRaw;
     
     selected.forEach((placedId, index) => {
         const column = document.createElement("div");
         column.className = "flex flex-col items-center gap-3 mb-4 w-40";
 
         const currentIndex = allSignIds.indexOf(placedId);
-        const shift = getCipherShift(keyword);
+        const shift = getCipherShift(currentKeyword);
         const encodedIndex = (currentIndex + shift) % allSignIds.length;
         const encodedSignId = allSignIds[encodedIndex];
 
@@ -210,9 +218,11 @@ document.getElementById("create-quest").onclick = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     const quest_name = questNameInput.value.trim();
     const quest_key = questKeyInput.value.trim();
+    const category = document.getElementById("quest-category").value;
     const region_id = document.getElementById("region-selection").value;
     const locationStr = document.getElementById("location").value.trim();
-    const keyword = document.getElementById("cipher-keyword-select").value;
+    const keywordRaw = document.getElementById("cipher-keyword-select").value;
+    const currentKeyword = (keywordRaw === "none" || !keywordRaw) ? "" : keywordRaw;
     const lore = document.getElementById("lore").value.trim();
     const itemsInput = document.getElementById("items").value;
     const items = itemsInput ? itemsInput.split(",").map(i => i.trim()).filter(Boolean) : [];
@@ -220,13 +230,13 @@ document.getElementById("create-quest").onclick = async () => {
     
     const reward_keys = selected.map(placedId => {
         const currentIndex = allSignIds.indexOf(placedId);
-        const shift = getCipherShift(keyword);
+        const shift = getCipherShift(currentKeyword);
         const encodedIndex = (currentIndex + shift) % allSignIds.length;
         return allSignIds[encodedIndex].split('_').slice(1).join('_');
     });
 
-    if (!quest_name || !quest_key || selected.length === 0 || !region_id) {
-        await showModal("Missing Fields", "Please fill in all required fields (including Region) and select 2-5 signs.");
+    if (!quest_name || !quest_key || !category || !region_id) {
+        await showModal("Missing Fields", "Please fill in all required fields (Name, Key, Category, and Region).");
         return;
     }
 
@@ -236,10 +246,11 @@ document.getElementById("create-quest").onclick = async () => {
     const { error } = await supabase.from("cipher_quests").insert({
         quest_key,
         quest_name,
-        region_id,
-        signs: selected,
-        reward_key: reward_keys.join(","),
-        cipher_keyword: keyword,
+        category,
+        region_id: region_id === "global" ? null : region_id,
+        signs: selected.length > 0 ? selected : null,
+        reward_key: reward_keys.length > 0 ? reward_keys.join(",") : null,
+        cipher_keyword: currentKeyword || null,
         location: locationStr,
         lore,
         items,

@@ -1,12 +1,12 @@
 import { supabase } from "../supabaseClient.js";
 
 const alphabet = "abcdefghijklmnopqrstuvwxyz";
-const keyword = "thelonius";
 
 function getCipherShift(word) {
+    if (!word || word.toLowerCase() === "none") return 0;
     const firstChar = word.charAt(0).toLowerCase();
     const index = alphabet.indexOf(firstChar);
-    return index !== -1 ? (index + 1) : 5;
+    return index !== -1 ? (index + 1) : 0;
 }
 
 let selected = [];
@@ -25,23 +25,34 @@ async function init() {
         return;
     }
 
+    const signRes = await fetch('frontend/www/assets/signs.json');
+    const signData = await signRes.json();
+    
+    signData.categories.forEach(category => {
+        category.items.forEach(itemName => {
+            allSignIds.push(`${category.id}_${itemName}`);
+        });
+    });
+
     if (!questId) {
-        await renderQuestManager(user.id);
+        await renderQuestManager(user.id, signData.config);
     } else {
-        await loadEditor(user.id);
+        await loadEditor(user.id, signData);
     }
 }
 
-async function renderQuestManager(userId) {
+async function renderQuestManager(userId, config) {
+    const { baseUrl, version } = config;
     const container = document.querySelector('.page-content');
     container.innerHTML = `
         <div class="bg-[#1f2937] rounded-2xl border border-gray-700 overflow-hidden shadow-2xl">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="bg-black/40 text-[#FFD700] text-[10px] uppercase tracking-widest font-bold border-b border-gray-700">
+                    <tr class="bg-black/40 text-[#FFD700] text-md uppercase tracking-widest font-bold border-b border-gray-700">
                         <th class="px-6 py-4">Quest Name</th>
-                        <th class="px-6 py-4">Location</th>
-                        <th class="px-6 py-4">Key</th>
+                        <th class="px-6 py-4">Signs (Solution)</th>
+                        <th class="px-6 py-4">Signs (Encoded)</th>
+                        <th class="px-6 py-4">Cipher Key</th>
                         <th class="px-6 py-4 text-right">Actions</th>
                     </tr>
                 </thead>
@@ -56,7 +67,7 @@ async function renderQuestManager(userId) {
 
     const { data: quests, error } = await supabase
         .from("cipher_quests")
-        .select("*, regions(region_name)")
+        .select("*")
         .eq("created_by", userId);
 
     const list = document.getElementById('user-quest-list');
@@ -64,20 +75,39 @@ async function renderQuestManager(userId) {
     if (loader) loader.remove();
 
     if (error || !quests || quests.length === 0) {
-        list.innerHTML = '<tr><td colspan="4" class="p-10 text-center text-gray-400">You haven\'t created any quests yet.</td></tr>';
+        list.innerHTML = '<tr><td colspan="5" class="p-10 text-center text-gray-400">You haven\'t created any quests yet.</td></tr>';
         return;
     }
 
     quests.forEach(quest => {
+        const keyword = quest.cipher_keyword || 'None';
+        const shift = getCipherShift(keyword);
+        
+        const inputSignsHtml = quest.signs && quest.signs.length > 0 
+            ? quest.signs.map(id => 
+                `<img src="${baseUrl}${id}.webp?${version}" style="width: 70px; height: 70px;" class="inline-block bg-gray-800 rounded p-1 border border-gray-600 mr-1" title="${id}">`
+              ).join('')
+            : '<span class="text-gray-500 italic text-md">No Signs</span>';
+
+        const encodedSignsHtml = quest.signs && quest.signs.length > 0 
+            ? quest.signs.map(id => {
+                const currentIndex = allSignIds.indexOf(id);
+                const encodedIndex = (currentIndex + shift) % allSignIds.length;
+                const encodedId = allSignIds[encodedIndex];
+                return `<img src="${baseUrl}${encodedId}.webp?${version}" style="width: 70px; height: 70px;" class="inline-block bg-black/40 rounded p-1 border border-amber-900/50 mr-1" title="${encodedId}">`;
+              }).join('')
+            : '<span class="text-gray-500 italic text-md">No Signs</span>';
+
         const row = document.createElement('tr');
         row.className = 'hover:bg-white/5 transition-colors group';
         row.innerHTML = `
             <td class="px-6 py-4 font-bold">${quest.quest_name}</td>
-            <td class="px-6 py-4 text-sm text-gray-400">${quest.regions ? quest.regions.region_name : 'N/A'}</td>
-            <td class="px-6 py-4 font-mono text-lg text-[#FFD700]">${quest.quest_key}</td>
+            <td class="px-6 py-4">${inputSignsHtml}</td>
+            <td class="px-6 py-4">${encodedSignsHtml}</td>
+            <td class="px-6 py-4 font-mono text-[#FFD700] uppercase text-md">${keyword}</td>
             <td class="px-6 py-4 text-right">
                 <a href="edit_quest.html?id=${quest.id}" class="bg-[#FFD700] hover:bg-yellow-400 text-black px-4 py-2 rounded-lg font-bold text-m uppercase transition-all inline-block">
-                    Edit Quest
+                    Edit
                 </a>
             </td>
         `;
@@ -85,9 +115,7 @@ async function renderQuestManager(userId) {
     });
 }
 
-async function loadEditor(userId) {
-    const signRes = await fetch('frontend/www/assets/signs.json');
-    const signData = await signRes.json();
+async function loadEditor(userId, signData) {
     const { baseUrl, version } = signData.config;
 
     const { data: quest, error: questError } = await supabase
@@ -109,17 +137,17 @@ async function loadEditor(userId) {
         .order("shard", { ascending: true });
 
     const select = document.getElementById("region-selection");
+    
+    const globalOption = document.createElement("option");
+    globalOption.value = "global";
+    globalOption.textContent = "Global | All Shards | All Provinces | All Valleys";
+    select.appendChild(globalOption);
+
     regions.forEach(reg => {
         const option = document.createElement("option");
         option.value = reg.id;
         option.textContent = `${reg.region_name} | ${reg.shard} | ${reg.province} | ${reg.home_valley}`;
         select.appendChild(option);
-    });
-
-    signData.categories.forEach(category => {
-        category.items.forEach(itemName => {
-            allSignIds.push(`${category.id}_${itemName}`);
-        });
     });
 
     allSignIds.forEach(fullId => {
@@ -147,10 +175,12 @@ async function loadEditor(userId) {
 
     document.getElementById('quest-name').value = quest.quest_name;
     document.getElementById('quest-key').value = quest.quest_key;
-    document.getElementById('region-selection').value = quest.region_id;
+    document.getElementById('quest-category').value = quest.category || '';
+    document.getElementById('region-selection').value = quest.region_id || "global";
     document.getElementById('location').value = quest.location || '';
+    document.getElementById('cipher-keyword-select').value = quest.cipher_keyword || "None";
     document.getElementById('lore').value = quest.lore || '';
-    document.getElementById('items').value = Array.isArray(quest.items) ? quest.items.join(', ') : quest.items;
+    document.getElementById('items').value = Array.isArray(quest.items) ? quest.items.join(', ') : (quest.items || '');
     document.getElementById('gold').value = quest.gold || 0;
     document.getElementById('max-claims').value = quest.max_claims || 1;
 
@@ -159,18 +189,20 @@ async function loadEditor(userId) {
         updateSelected(baseUrl, version);
     }
 
-    setupEditorEvents();
+    setupEditorEvents(baseUrl, version);
 }
 
 function updateSelected(baseUrl, version) {
     selectedDisplay.innerHTML = "";
+    const keywordRaw = document.getElementById("cipher-keyword-select").value;
+    const currentKeyword = (keywordRaw === "None" || !keywordRaw) ? "" : keywordRaw;
     
     selected.forEach((placedId, index) => {
         const column = document.createElement("div");
         column.className = "flex flex-col items-center gap-3 mb-4 w-40";
 
         const currentIndex = allSignIds.indexOf(placedId);
-        const shift = getCipherShift(keyword);
+        const shift = getCipherShift(currentKeyword);
         const encodedIndex = (currentIndex + shift) % allSignIds.length;
         const encodedSignId = allSignIds[encodedIndex];
 
@@ -217,7 +249,7 @@ function updateSelected(baseUrl, version) {
         labelBottom.textContent = encodedName;
         
         const infoBottom = document.createElement("span");
-        infoBottom.className = "text-[10px] text-gray-400 uppercase mt-2 font-bold";
+        infoBottom.className = "text-md text-gray-400 uppercase mt-2 font-bold";
         infoBottom.textContent = "User Enters This";
 
         bottomContainer.append(imgBottom, labelBottom, infoBottom);
@@ -227,12 +259,16 @@ function updateSelected(baseUrl, version) {
     });
 }
 
-function setupEditorEvents() {
+function setupEditorEvents(baseUrl, version) {
     document.getElementById("clear-signs").onclick = () => {
         selected.length = 0;
         selectedDisplay.innerHTML = "";
         document.getElementById("limit-message")?.classList.add("hidden");
     };
+
+    document.getElementById("cipher-keyword-select").addEventListener("change", () => {
+        updateSelected(baseUrl, version);
+    });
 
     document.getElementById('update-quest').onclick = () => {
         document.getElementById('confirmation-modal').classList.remove('hidden');
@@ -246,9 +282,13 @@ function setupEditorEvents() {
 
     document.getElementById('modal-confirm').onclick = async () => {
         const itemsInput = document.getElementById('items').value;
+        const keywordRaw = document.getElementById('cipher-keyword-select').value;
+        const currentKeyword = (keywordRaw === "None" || !keywordRaw) ? "" : keywordRaw;
+        const region_id = document.getElementById('region-selection').value;
+        
         const reward_keys = selected.map(placedId => {
             const currentIndex = allSignIds.indexOf(placedId);
-            const shift = getCipherShift(keyword);
+            const shift = getCipherShift(currentKeyword);
             const encodedIndex = (currentIndex + shift) % allSignIds.length;
             return allSignIds[encodedIndex].split('_').slice(1).join('_');
         });
@@ -256,14 +296,16 @@ function setupEditorEvents() {
         const updatedData = {
             quest_name: document.getElementById('quest-name').value.trim(),
             quest_key: document.getElementById('quest-key').value.trim(),
-            region_id: document.getElementById('region-selection').value,
+            category: document.getElementById('quest-category').value,
+            region_id: region_id === "global" ? null : region_id,
             location: document.getElementById('location').value.trim(),
+            cipher_keyword: currentKeyword || null,
             lore: document.getElementById('lore').value.trim(),
             items: itemsInput ? itemsInput.split(',').map(i => i.trim()).filter(Boolean) : [],
             gold: parseInt(document.getElementById('gold').value) || 0,
             max_claims: parseInt(document.getElementById('max-claims').value) || 1,
-            signs: selected,
-            reward_key: reward_keys.join(",")
+            signs: selected.length > 0 ? selected : null,
+            reward_key: reward_keys.length > 0 ? reward_keys.join(",") : null
         };
 
         const { error } = await supabase
