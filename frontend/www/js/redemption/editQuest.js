@@ -1,6 +1,9 @@
 import { supabase } from "../supabaseClient.js";
+import { enableSignTooltip } from '../ui/signTooltip.js';
+
 
 const alphabet = "abcdefghijklmnopqrstuvwxyz";
+
 
 function getCipherShift(word) {
     if (!word || word.toLowerCase() === "none") return 0;
@@ -43,80 +46,155 @@ async function init() {
 
 async function renderQuestManager(userId, config) {
     const { baseUrl, version } = config;
-    const container = document.querySelector('.page-content');
-    container.innerHTML = `
+    
+    const managerInterface = document.getElementById('manager-interface');
+    const editorInterface = document.getElementById('editor-interface');
+    
+    if (managerInterface) managerInterface.classList.remove('hidden');
+    if (editorInterface) editorInterface.classList.add('hidden');
+
+    managerInterface.innerHTML = `
+        <div id="manager-controls" class="mb-6 flex flex-wrap gap-4 items-end">
+            <div class="w-full md:w-64">
+                <label class="block text-base font-bold text-gray-400 uppercase mb-2 tracking-wider">Filter by Category</label>
+                <select id="filter-category" class="w-full bg-[#1f2937] border border-gray-700 rounded-lg p-3 text-white focus:border-[#FFD700] outline-none cursor-pointer text-base">
+                    <option value="all">All Categories</option>
+                </select>
+            </div>
+            <div class="w-full md:w-64">
+                <label class="block text-base font-bold text-gray-400 uppercase mb-2 tracking-wider">Search Quests</label>
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"></i>
+                    <input type="text" id="search-quests" placeholder="Quest name..." class="w-full bg-[#1f2937] border border-gray-700 rounded-lg p-3 pl-10 text-white focus:border-[#FFD700] outline-none text-base">
+                </div>
+            </div>
+        </div>
         <div class="bg-[#1f2937] rounded-2xl border border-gray-700 overflow-hidden shadow-2xl">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="bg-black/40 text-[#FFD700] text-md uppercase tracking-widest font-bold border-b border-gray-700">
-                        <th class="px-6 py-4">Quest Name</th>
-                        <th class="px-6 py-4">Signs (Solution)</th>
-                        <th class="px-6 py-4">Signs (Encoded)</th>
-                        <th class="px-6 py-4">Cipher Key</th>
-                        <th class="px-6 py-4 text-right">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="user-quest-list" class="text-white divide-y divide-gray-700/50">
-                </tbody>
-            </table>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-black/40 text-[#FFD700] text-base uppercase tracking-widest font-bold border-b border-gray-700">
+                            <th class="px-6 py-4">Quest Name</th>
+                            <th class="px-6 py-4">Category</th>
+                            <th class="px-6 py-4">Cipher (World)</th>
+                            <th class="px-6 py-4">Solution (Input)</th>
+                            <th class="px-6 py-4">Key</th>
+                            <th class="px-6 py-4">Claims</th>
+                            <th class="px-6 py-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-quest-list" class="text-white divide-y divide-gray-700/50">
+                    </tbody>
+                </table>
+            </div>
             <div id="manager-loading" class="p-12 text-center">
                 <i class="fas fa-circle-notch fa-spin text-2xl text-[#FFD700]"></i>
             </div>
         </div>
     `;
 
-    const { data: quests, error } = await supabase
-        .from("cipher_quests")
-        .select("*")
-        .eq("created_by", userId);
+    const questsReq = supabase.from("cipher_quests").select("*").eq("created_by", userId);
+    const claimsReq = supabase.from("user_claims").select("quest_id");
 
+    const [questsRes, claimsRes] = await Promise.all([questsReq, claimsReq]);
+
+    const quests = questsRes.data || [];
+    const claims = claimsRes.data || [];
     const list = document.getElementById('user-quest-list');
     const loader = document.getElementById('manager-loading');
+    const filterSelect = document.getElementById('filter-category');
+    const searchInput = document.getElementById('search-quests');
+    
     if (loader) loader.remove();
 
-    if (error || !quests || quests.length === 0) {
-        list.innerHTML = '<tr><td colspan="5" class="p-10 text-center text-gray-400">You haven\'t created any quests yet.</td></tr>';
+    if (questsRes.error || quests.length === 0) {
+        list.innerHTML = '<tr><td colspan="7" class="p-10 text-center text-gray-400 text-base">No quests found.</td></tr>';
         return;
     }
 
-    quests.forEach(quest => {
-        const keyword = quest.cipher_keyword || 'None';
-        const shift = getCipherShift(keyword);
-        
-        const inputSignsHtml = quest.signs && quest.signs.length > 0 
-            ? quest.signs.map(id => 
-                `<img src="${baseUrl}${id}.webp?${version}" style="width: 70px; height: 70px;" class="inline-block bg-gray-800 rounded p-1 border border-gray-600 mr-1" title="${id}">`
-              ).join('')
-            : '<span class="text-gray-500 italic text-md">No Signs</span>';
-
-        const encodedSignsHtml = quest.signs && quest.signs.length > 0 
-            ? quest.signs.map(id => {
-                const currentIndex = allSignIds.indexOf(id);
-                const encodedIndex = (currentIndex + shift) % allSignIds.length;
-                const encodedId = allSignIds[encodedIndex];
-                return `<img src="${baseUrl}${encodedId}.webp?${version}" style="width: 70px; height: 70px;" class="inline-block bg-black/40 rounded p-1 border border-amber-900/50 mr-1" title="${encodedId}">`;
-              }).join('')
-            : '<span class="text-gray-500 italic text-md">No Signs</span>';
-
-        const row = document.createElement('tr');
-        row.className = 'hover:bg-white/5 transition-colors group';
-        row.innerHTML = `
-            <td class="px-6 py-4 font-bold">${quest.quest_name}</td>
-            <td class="px-6 py-4">${inputSignsHtml}</td>
-            <td class="px-6 py-4">${encodedSignsHtml}</td>
-            <td class="px-6 py-4 font-mono text-[#FFD700] uppercase text-md">${keyword}</td>
-            <td class="px-6 py-4 text-right">
-                <a href="edit_quest.html?id=${quest.id}" class="bg-[#FFD700] hover:bg-yellow-400 text-black px-4 py-2 rounded-lg font-bold text-m uppercase transition-all inline-block">
-                    Edit
-                </a>
-            </td>
-        `;
-        list.appendChild(row);
+    const categories = [...new Set(quests.map(q => q.category).filter(Boolean))];
+    categories.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.textContent = cat;
+        filterSelect.appendChild(opt);
     });
+
+    const renderRows = () => {
+        const catFilter = filterSelect.value;
+        const searchFilter = searchInput.value.toLowerCase();
+        list.innerHTML = "";
+
+        const filtered = quests.filter(q => {
+            const matchesCat = catFilter === 'all' || q.category === catFilter;
+            const matchesSearch = q.quest_name.toLowerCase().includes(searchFilter);
+            return matchesCat && matchesSearch;
+        });
+
+        filtered.forEach(quest => {
+            const claimCount = claims.filter(c => c.quest_id === quest.id).length;
+            const maxClaims = quest.max_claims || 0;
+            const keyword = quest.cipher_keyword || 'None';
+            const shift = getCipherShift(keyword);
+            
+            const cipherKeyHtml = quest.signs && quest.signs.length > 0
+                ? quest.signs.map(id =>
+                    `<img src="${baseUrl}${id}.webp?${version}" style="width: 50px; height: 50px;" class="inline-block bg-black/40 rounded p-1 border border-gray-700 mr-1 hover:border-[#72e0cc]" data-sign="${id}">`
+                ).join('')
+                : '<span class="text-gray-500 italic text-base">None</span>';
+
+
+            const solutionSignsHtml = quest.signs && quest.signs.length > 0
+                ? quest.signs.map(id => {
+                    const currentIndex = allSignIds.indexOf(id);
+                    const encodedIndex = (currentIndex + shift) % allSignIds.length;
+                    const encodedId = allSignIds[encodedIndex];
+                    return `<img src="${baseUrl}${encodedId}.webp?${version}" style="width: 50px; height: 50px;" class="inline-block bg-gray-800 rounded p-1 border border-gray-600 mr-1 hover:border-[#72e0cc]" data-sign="${encodedId}">`;
+                }).join('')
+                : '<span class="text-gray-500 italic text-base">No Signs</span>';
+
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-white/5 transition-colors group';
+            
+            row.innerHTML = `
+                <td class="px-6 py-4">
+                    <div class="font-bold text-base">${quest.quest_name}</div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="text-base text-gray-300 font-medium">${quest.category || 'No Category'}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">${cipherKeyHtml}</td>
+                <td class="px-6 py-4 whitespace-nowrap">${solutionSignsHtml}</td>
+                <td class="px-6 py-4">
+                     <span class="text-base font-bold text-[#FFD700] uppercase">${keyword}</span>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="flex items-center gap-2 text-base">
+                        <span class="font-bold ${claimCount >= maxClaims && maxClaims > 0 ? 'text-red-400' : 'text-green-400'}">${claimCount}</span>
+                        <span class="text-gray-500">/</span>
+                        <span class="text-gray-400">${maxClaims}</span>
+                    </div>
+                </td>
+                <td class="px-6 py-4 text-right">
+                    <a href="?id=${quest.id}" class="bg-[#FFD700] hover:bg-yellow-400 text-black px-6 py-3 rounded-xl font-black text-base uppercase transition-all shadow-lg active:scale-95 inline-block text-center decoration-0">
+                        Edit Quest
+                    </a>
+                </td>
+            `;
+            list.appendChild(row);
+        });
+    };
+
+    filterSelect.addEventListener('change', renderRows);
+    searchInput.addEventListener('input', renderRows);
+    renderRows();
 }
 
 async function loadEditor(userId, signData) {
     const { baseUrl, version } = signData.config;
+
+    document.getElementById('manager-interface').classList.add('hidden');
+    document.getElementById('editor-interface').classList.remove('hidden');
 
     const { data: quest, error: questError } = await supabase
         .from("cipher_quests")
@@ -130,6 +208,22 @@ async function loadEditor(userId, signData) {
         return;
     }
 
+    const { data: allQuests } = await supabase
+        .from("cipher_quests")
+        .select("category");
+
+    const categories = [...new Set(allQuests.map(q => q.category).filter(Boolean))];
+    const catSelect = document.getElementById("quest-category-select");
+    
+    catSelect.innerHTML = '<option value="" disabled selected>Select Category</option><option value="NEW">+ Add New Category</option>';
+    
+    categories.forEach(cat => {
+        const opt = document.createElement("option");
+        opt.value = cat;
+        opt.textContent = cat;
+        catSelect.appendChild(opt);
+    });
+
     const { data: regions } = await supabase
         .from("regions")
         .select("*")
@@ -137,7 +231,7 @@ async function loadEditor(userId, signData) {
         .order("shard", { ascending: true });
 
     const select = document.getElementById("region-selection");
-    
+    select.innerHTML = '<option value="">Select Location...</option>';
     const globalOption = document.createElement("option");
     globalOption.value = "global";
     globalOption.textContent = "Global | All Shards | All Provinces | All Valleys";
@@ -150,9 +244,11 @@ async function loadEditor(userId, signData) {
         select.appendChild(option);
     });
 
+
+    grid.innerHTML = "";
     allSignIds.forEach(fullId => {
         const btn = document.createElement("button");
-        btn.className = "p-1 bg-[#374151] rounded hover:bg-[#4b5563] border border-transparent hover:border-[#FFD700] transition-all";
+        btn.className = "p-1 bg-[#374151] rounded hover:bg-[#4b5563] border border-transparent hover:border-[#72e0cc] transition-all";
 
         const img = document.createElement("img");
         img.src = `${baseUrl}${fullId}.webp?${version}`;
@@ -175,7 +271,7 @@ async function loadEditor(userId, signData) {
 
     document.getElementById('quest-name').value = quest.quest_name;
     document.getElementById('quest-key').value = quest.quest_key;
-    document.getElementById('quest-category').value = quest.category || '';
+    document.getElementById('quest-category-select').value = quest.category || '';
     document.getElementById('region-selection').value = quest.region_id || "global";
     document.getElementById('location').value = quest.location || '';
     document.getElementById('cipher-keyword-select').value = quest.cipher_keyword || "None";
@@ -184,6 +280,7 @@ async function loadEditor(userId, signData) {
     document.getElementById('gold').value = quest.gold || 0;
     document.getElementById('max-claims').value = quest.max_claims || 1;
 
+    selected = [];
     if (quest.signs) {
         selected.push(...quest.signs);
         updateSelected(baseUrl, version);
@@ -260,6 +357,18 @@ function updateSelected(baseUrl, version) {
 }
 
 function setupEditorEvents(baseUrl, version) {
+    const categorySelect = document.getElementById("quest-category-select");
+    const newCategoryWrapper = document.getElementById("new-category-wrapper");
+    const newCategoryInput = document.getElementById("new-category-input");
+
+    categorySelect.addEventListener("change", () => {
+        if (categorySelect.value === "NEW") {
+            newCategoryWrapper.classList.remove("hidden");
+        } else {
+            newCategoryWrapper.classList.add("hidden");
+        }
+    });
+
     document.getElementById("clear-signs").onclick = () => {
         selected.length = 0;
         selectedDisplay.innerHTML = "";
@@ -286,6 +395,11 @@ function setupEditorEvents(baseUrl, version) {
         const currentKeyword = (keywordRaw === "None" || !keywordRaw) ? "" : keywordRaw;
         const region_id = document.getElementById('region-selection').value;
         
+        let finalCategory = categorySelect.value;
+        if (finalCategory === "NEW") {
+            finalCategory = newCategoryInput.value.trim();
+        }
+
         const reward_keys = selected.map(placedId => {
             const currentIndex = allSignIds.indexOf(placedId);
             const shift = getCipherShift(currentKeyword);
@@ -296,7 +410,7 @@ function setupEditorEvents(baseUrl, version) {
         const updatedData = {
             quest_name: document.getElementById('quest-name').value.trim(),
             quest_key: document.getElementById('quest-key').value.trim(),
-            category: document.getElementById('quest-category').value,
+            category: finalCategory,
             region_id: region_id === "global" ? null : region_id,
             location: document.getElementById('location').value.trim(),
             cipher_keyword: currentKeyword || null,
@@ -321,4 +435,5 @@ function setupEditorEvents(baseUrl, version) {
     };
 }
 
+enableSignTooltip();
 init();
