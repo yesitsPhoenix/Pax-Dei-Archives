@@ -33,7 +33,7 @@ async function loadSigns() {
         category.items.forEach(itemName => {
             const fullId = `${category.id}_${itemName}`;
             const btn = document.createElement("button");
-            btn.className = "p-1 bg-[#374151] rounded hover:bg-[#4b5563] border border-transparent hover:border-[#72e0cc] transition-all";
+            btn.className = "p-1 bg-[#374151] rounded hover:bg-[#4b5563] border border-transparent hover:border-[#72e0cc] transition-all relative";
 
             const img = document.createElement("img");
             img.src = `${baseUrl}${fullId}.webp?${version}`;
@@ -41,6 +41,17 @@ async function loadSigns() {
             img.onerror = () => btn.remove();
 
             btn.appendChild(img);
+            
+            btn.onmouseenter = () => {
+                mouseTooltip.innerText = itemName.replace(/-/g, ' ');
+                mouseTooltip.style.display = "block";
+            };
+            btn.onmousemove = (e) => {
+                mouseTooltip.style.left = `${e.clientX + 15}px`;
+                mouseTooltip.style.top = `${e.clientY + 15}px`;
+            };
+            btn.onmouseleave = () => { mouseTooltip.style.display = "none"; };
+
             btn.onclick = () => {
                 if (selected.length < 10) {
                     selected.push(fullId);
