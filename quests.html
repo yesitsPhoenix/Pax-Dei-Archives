@@ -38,8 +38,8 @@
 <aside id="sidebar" class="w-64 bg-[#1c1c1c] border-r-4 border-amber-300 shadow-lg transition-all duration-300 hover:bg-slate-700 px-3 py-4 cursor-pointer fixed h-[50vh] z-50 top-[220px] collapsed">
     <ul class="space-y-2 font-medium">
         <li><a href="quests.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900"><i class="fas fa-book w-5 h-5 text-gray-400"></i><span class="ml-3"> Quest Log</span></a></li>
-        <li><a href="panel.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900"><i class="fas fa-table-columns w-5 h-5 text-gray-400"></i><span class="ml-3"> Create New Quest</span></a></li>
-        <li><a href="edit_quest.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900"><i class="fas fa-tags w-5 h-5 text-gray-400"></i><span class="ml-3"> Edit Existing Quests</span></a></li>
+        <li><a id="create-quest-nav" href="panel.html" class="hidden flex items-center p-2 text-white rounded-lg hover:bg-gray-900"><i class="fas fa-table-columns w-5 h-5 text-gray-400"></i><span class="ml-3"> Create New Quest</span></a></li>
+        <li><a id="edit-quest-nav" href="edit_quest.html" class="hidden flex items-center p-2 text-white rounded-lg hover:bg-gray-900"><i class="fas fa-tags w-5 h-5 text-gray-400"></i><span class="ml-3"> Edit Existing Quests</span></a></li>
     </ul>
 </aside>
 
@@ -80,7 +80,7 @@
         <button id="clear-filters" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-bold text-md uppercase border border-gray-600 transition-all">Clear</button>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-12 gap-0 bg-[#1f2937] rounded-2xl border border-gray-700 shadow-2xl overflow-hidden quest-log-container mt-4">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-0 bg-[#1f2937] rounded-2xl border border-gray-700 shadow-2xl overflow-auto quest-log-container mt-4">
         <div class="md:col-span-3 border-r border-gray-700 flex flex-col bg-black/20">
             <div class="p-4 border-b border-gray-700 bg-black/40 text-[#FFD700] font-bold uppercase text-md tracking-widest">Chapters</div>
             <div id="quest-titles-list" class="flex-1 overflow-y-auto quest-list-scroll"></div>
@@ -107,7 +107,7 @@
             <div class="lg:col-span-2 space-y-6">
                 <section>
                     <h4 class="text-md uppercase tracking-widest text-gray-500 font-bold mb-2">The Tale</h4>
-                    <div id="detail-lore" class="text-gray-300 italic leading-relaxed text-lg"></div>
+                    <div id="detail-lore" class="text-gray-300 leading-relaxed text-lg"></div>
                 </section>
                 <section>
                     <h4 class="text-md uppercase tracking-widest text-gray-500 font-bold mb-2">Quest Location / Detail</h4>
@@ -218,6 +218,7 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script type="module" src="frontend/www/js/redemption/quests.js"></script>
 <script type="module" src="frontend/www/js/redemption/redeem.js"></script>
+<script type="module" src="frontend/www/js/redemption/unlocks.js"></script>
 <script type="module" src="frontend/www/js/small_sidebar.js"></script>
 <script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
 <script type="module" src="frontend/www/js/ui/loadFooter.js"></script>

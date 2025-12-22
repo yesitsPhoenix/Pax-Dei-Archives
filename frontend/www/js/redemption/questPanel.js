@@ -36,6 +36,34 @@ async function checkAccess() {
     init();
 }
 
+async function loadCategories() {
+    const { data: categories, error } = await supabase
+        .from("quest_categories")
+        .select("name")
+        .order("name", { ascending: true });
+    
+    if (error) return;
+
+    const catSelect = document.getElementById("quest-category-select");
+    const preCatSelect = document.getElementById("unlock-pre-cat");
+
+    if (catSelect) {
+        catSelect.innerHTML = '<option value="" disabled selected>Select Category</option><option value="NEW">+ Add New Category</option>';
+        categories.forEach(cat => {
+            const opt = new Option(cat.name, cat.name);
+            catSelect.add(opt);
+        });
+    }
+
+    if (preCatSelect) {
+        preCatSelect.innerHTML = '<option value="" disabled selected>None (Always Unlocked)</option>';
+        categories.forEach(cat => {
+            const opt = new Option(cat.name, cat.name);
+            preCatSelect.add(opt);
+        });
+    }
+}
+
 async function loadRegions() {
     const { data, error } = await supabase
         .from("regions")
@@ -43,13 +71,13 @@ async function loadRegions() {
         .order("region_name", { ascending: true })
         .order("shard", { ascending: true });
 
-    if (error) {
-        console.error("Error fetching regions:", error);
-        return;
-    }
+    if (error) return;
 
     const select = document.getElementById("region-selection");
-    
+    if (!select) return;
+
+    select.innerHTML = '<option value="" disabled selected>Select Location...</option>';
+
     const globalOption = document.createElement("option");
     globalOption.value = "global";
     globalOption.textContent = "Global | All Shards | All Provinces | All Valleys";
@@ -76,13 +104,11 @@ async function loadSigns() {
 
     allSignIds.forEach(fullId => {
         const btn = document.createElement("button");
-        btn.className = "p-1 bg-[#374151] rounded hover:bg-[#4b5563] border border-transparent hover:border-[#FFD700] transition-all";
-
+        btn.className = "p-1 bg-[#374151] rounded hover:bg-[#4b5563] border border-transparent hover:border-[#72e0cc] transition-all";
         const img = document.createElement("img");
         img.src = `${baseUrl}${fullId}.webp?${version}`;
         img.className = "w-full h-auto pointer-events-none";
         img.onerror = () => btn.remove();
-
         btn.appendChild(img);
         btn.onclick = () => {
             const limitMsg = document.getElementById("limit-message");
@@ -106,7 +132,6 @@ function updateSelected(baseUrl, version) {
     selected.forEach((placedId, index) => {
         const column = document.createElement("div");
         column.className = "flex flex-col items-center gap-3 mb-4 w-40";
-
         const currentIndex = allSignIds.indexOf(placedId);
         const shift = getCipherShift(currentKeyword);
         const encodedIndex = (currentIndex + shift) % allSignIds.length;
@@ -114,19 +139,15 @@ function updateSelected(baseUrl, version) {
 
         const topContainer = document.createElement("div");
         topContainer.className = "relative group flex flex-col items-center";
-
         const badge = document.createElement("div");
         badge.className = "absolute -top-2 -left-2 bg-[#FFD700] text-black w-6 h-6 rounded-full flex items-center justify-center font-bold text-m shadow-md z-10";
         badge.textContent = index + 1;
-
         const imgTop = document.createElement("img");
         imgTop.src = `${baseUrl}${placedId}.webp?${version}`;
         imgTop.className = "w-28 h-28 bg-gray-700 rounded-xl p-3 border-2 border-[#FFD700] shadow-xl";
-
-        const placedName = placedId.split('_').slice(1).join(' ').replace(/_/g, ' ');
         const labelTop = document.createElement("span");
         labelTop.className = "text-[14px] text-white font-bold uppercase mt-1 text-center";
-        labelTop.textContent = placedName;
+        labelTop.textContent = placedId.split('_').slice(1).join(' ').replace(/_/g, ' ');
 
         const removeBtn = document.createElement("button");
         removeBtn.innerHTML = "×";
@@ -137,29 +158,23 @@ function updateSelected(baseUrl, version) {
         };
 
         topContainer.append(badge, imgTop, labelTop, removeBtn);
-
         const arrow = document.createElement("div");
         arrow.className = "text-[#FFD700] flex flex-col items-center opacity-80";
         arrow.innerHTML = '<span class="text-[14px] font-black uppercase mb-1">Place this sign:</span><i class="fa-solid fa-circle-chevron-down text-lg"></i>';
 
         const bottomContainer = document.createElement("div");
         bottomContainer.className = "flex flex-col items-center p-4 bg-black/60 rounded-xl border-2 border-dashed border-gray-600 w-full";
-        
         const imgBottom = document.createElement("img");
         imgBottom.src = `${baseUrl}${encodedSignId}.webp?${version}`;
         imgBottom.className = "w-24 h-24 object-contain mb-2";
-        
-        const encodedName = encodedSignId.split('_').slice(1).join('_').replace(/_/g, ' ');
         const labelBottom = document.createElement("span");
         labelBottom.className = "text-[14px] text-[#FFD700] font-bold uppercase text-center";
-        labelBottom.textContent = encodedName;
-        
+        labelBottom.textContent = encodedSignId.split('_').slice(1).join('_').replace(/_/g, ' ');
         const infoBottom = document.createElement("span");
         infoBottom.className = "text-[10px] text-gray-400 uppercase mt-2 font-bold";
         infoBottom.textContent = "User Enters This";
 
         bottomContainer.append(imgBottom, labelBottom, infoBottom);
-
         column.append(topContainer, arrow, bottomContainer);
         selectedDisplay.appendChild(column);
     });
@@ -175,6 +190,15 @@ document.getElementById("cipher-keyword-select").addEventListener("change", () =
     fetch('frontend/www/assets/signs.json').then(r => r.json()).then(data => {
         updateSelected(data.config.baseUrl, data.config.version);
     });
+});
+
+document.getElementById('quest-category-select').addEventListener('change', (e) => {
+    const wrapper = document.getElementById('new-category-wrapper');
+    if (e.target.value === 'NEW') {
+        wrapper.classList.remove('hidden');
+    } else {
+        wrapper.classList.add('hidden');
+    }
 });
 
 const questNameInput = document.getElementById("quest-name");
@@ -218,16 +242,34 @@ document.getElementById("create-quest").onclick = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     const quest_name = questNameInput.value.trim();
     const quest_key = questKeyInput.value.trim();
-    const category = document.getElementById("quest-category").value;
+    let category = document.getElementById("quest-category-select").value;
     const region_id = document.getElementById("region-selection").value;
     const locationStr = document.getElementById("location").value.trim();
     const keywordRaw = document.getElementById("cipher-keyword-select").value;
     const currentKeyword = (keywordRaw === "none" || !keywordRaw) ? "" : keywordRaw;
     const lore = document.getElementById("lore").value.trim();
-    const itemsInput = document.getElementById("items").value;
+    const itemsInput = document.getElementById("items")?.value;
     const items = itemsInput ? itemsInput.split(",").map(i => i.trim()).filter(Boolean) : [];
-    const gold = parseInt(document.getElementById("gold").value || 0);
-    
+    const gold = parseInt(document.getElementById("gold")?.value || 0);
+    const unlockPreCat = document.getElementById("unlock-pre-cat")?.value || null;
+    const unlockReqCount = parseInt(document.getElementById("unlock-req-count")?.value || 0);
+
+    if (category === 'NEW') {
+        const newCatName = document.getElementById("new-category-input").value.trim();
+        if (!newCatName) {
+            await showModal("Error", "Please enter a name for the new category.");
+            return;
+        }
+        const { error: catError } = await supabase
+            .from("quest_categories")
+            .upsert({ name: newCatName }, { onConflict: 'name' });
+        if (catError) {
+            await showModal("Error", "Error saving new category: " + catError.message);
+            return;
+        }
+        category = newCatName;
+    }
+
     const reward_keys = selected.map(placedId => {
         const currentIndex = allSignIds.indexOf(placedId);
         const shift = getCipherShift(currentKeyword);
@@ -255,21 +297,24 @@ document.getElementById("create-quest").onclick = async () => {
         lore,
         items,
         gold,
-        max_claims: parseInt(document.getElementById("max-claims").value) || 1,
+        max_claims: parseInt(document.getElementById("max-claims")?.value) || 1,
         active: true,
-        created_by: user.id
+        created_by: user.id,
+        unlock_prerequisite_category: unlockPreCat,
+        unlock_required_count: unlockReqCount
     });
 
     if (error) {
         await showModal("Error", error.message);
     } else {
         await showModal("Success", "Quest created!");
-        location.reload();
+        window.location.reload();
     }
 };
 
 function init() {
     loadRegions();
+    loadCategories();
     loadSigns();
 }
 

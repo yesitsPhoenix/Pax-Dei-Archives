@@ -1,4 +1,6 @@
 import { supabase } from "../supabaseClient.js";
+import { getUnlockedCategories, applyLockStyles } from "./unlocks.js";
+import { enableSignTooltip } from '../ui/signTooltip.js';
 
 let allQuests = [];
 let regionsData = [];
@@ -14,6 +16,34 @@ async function getCurrentUser() {
         return null;
     }
 }
+
+async function updateSidebarPermissions() {
+    const sidebar = document.getElementById("sidebar");
+    const createBtn = document.getElementById("create-quest-nav");
+    const editBtn = document.getElementById("edit-quest-nav");
+
+    if (!sidebar || !createBtn || !editBtn) return;
+
+    sidebar.classList.add("hidden");
+    createBtn.classList.add("hidden");
+    editBtn.classList.add("hidden");
+
+    const user = await getCurrentUser();
+    if (!user) return;
+
+    const { data } = await supabase
+        .from("admin_users")
+        .select("quest_role")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+    if (data?.quest_role === "quest_adder") {
+        sidebar.classList.remove("hidden");
+        createBtn.classList.remove("hidden");
+        editBtn.classList.remove("hidden");
+    }
+}
+
 
 async function fetchQuests() {
     const { data, error } = await supabase
@@ -85,7 +115,7 @@ function generateSignHtml(quest, baseUrl, version) {
             const category = parts[0];
             const itemName = parts.slice(1).join('_');
             const imgSrc = `${baseUrl}${category}_${itemName}.webp?${version}`;
-            return `<img src="${imgSrc}" class="w-16 h-16 bg-gray-900 rounded-lg p-1 border border-gray-600 transition-transform duration-200 hover:scale-110 hover:border-[#FFD700] cursor-pointer" title="${itemName.replace(/_/g, ' ')}" onerror="this.style.display='none'">`;
+            return `<img src="${imgSrc}" class="w-16 h-16 bg-gray-900 rounded-lg p-1 border border-gray-600 transition-transform duration-200 hover:scale-110 hover:border-[#72e0cc] cursor-pointer" data-sign="${fullId}" onerror="this.style.display='none'">`;
         }).join("");
     }
     return `<span class="text-white font-medium mb-1 text-gray-500 italic">No sign sequence found for this quest.</span>`;
@@ -104,7 +134,16 @@ async function claimQuestDirectly(quest) {
         });
 
     if (!error) {
-        location.reload();
+        const modal = document.getElementById('redemption-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        await renderQuestsList();
+        await showQuestDetails(quest, true);
+    } else {
+        alert("Error claiming quest: " + error.message);
     }
 }
 
@@ -197,7 +236,7 @@ async function showQuestDetails(quest, userClaimed) {
     } else {
         redeemBtn.innerText = "Complete Quest";
         redeemBtn.disabled = false;
-        redeemBtn.className = "ml-auto bg-[#FFD700] w-52 text-black py-3 rounded-lg font-bold uppercase text-sm hover:bg-yellow-400 transition-all";
+        redeemBtn.className = "ml-auto bg-[#FFD700] w-52 text-black py-3 rounded-lg font-bold uppercase text-sm hover:bg-green-300 transition-all";
         
         redeemBtn.onclick = async () => {
             const user = await getCurrentUser();
@@ -224,7 +263,7 @@ async function showQuestDetails(quest, userClaimed) {
                         <p class="text-gray-400 mb-8">Confirm completion of <span class="text-[#FFD700] font-bold">"${quest.quest_name}"</span>?</p>
                         <div class="flex gap-4 justify-center">
                             <button id="cancel-direct-claim" class="px-6 py-2 bg-gray-700 text-white rounded-lg font-bold hover:bg-gray-600 transition-all">Cancel</button>
-                            <button id="confirm-direct-claim" class="px-6 py-2 bg-[#FFD700] text-black rounded-lg font-bold hover:bg-yellow-400 transition-all">Confirm</button>
+                            <button id="confirm-direct-claim" class="px-6 py-2 bg-[#FFD700] text-black rounded-lg font-bold hover:bg-green-300 transition-all">Confirm</button>
                         </div>
                     </div>
                 `;
@@ -287,6 +326,17 @@ async function renderQuestsList() {
     let userClaims = [];
     if (user) userClaims = await fetchUserClaims(user.id);
 
+    const unlockedCategoriesList = await getUnlockedCategories(user?.id, allQuests, userClaims);
+    const unlockedCategories = new Set(unlockedCategoriesList);
+
+    const categoryProgress = {};
+    userClaims.forEach(claim => {
+        const quest = allQuests.find(q => q.id === claim.quest_id);
+        if (quest && quest.category) {
+            categoryProgress[quest.category] = (categoryProgress[quest.category] || 0) + 1;
+        }
+    });
+
     listContainer.innerHTML = "";
 
     const filteredQuests = allQuests.filter(quest => {
@@ -311,38 +361,60 @@ async function renderQuestsList() {
 
     Object.keys(groupedQuests).sort().forEach(category => {
         const isCollapsed = collapsedCategories.has(category);
+        const isLocked = !unlockedCategories.has(category);
+        
         const categoryHeader = document.createElement("div");
         categoryHeader.className = "category-header p-3 px-4 text-[12px] font-bold uppercase tracking-widest text-[#FFD700] border-b border-gray-700/50 sticky top-0 z-10 backdrop-blur-md cursor-pointer flex justify-between items-center hover:bg-white/5";
-        categoryHeader.innerHTML = `
-            <span>${category} (${groupedQuests[category].length})</span>
-            <i class="fa-solid ${isCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'} text-gray-500"></i>
-        `;
-        categoryHeader.onclick = () => {
-            if (isCollapsed) {
-                collapsedCategories.delete(category);
-            } else {
-                collapsedCategories.add(category);
-            }
-            renderQuestsList();
-        };
+        
+        const catTitle = document.createElement("span");
+        catTitle.innerText = `${category} (${groupedQuests[category].length})`;
+        categoryHeader.appendChild(catTitle);
+
+        const catIconContainer = document.createElement("div");
+        catIconContainer.className = "flex items-center gap-3";
+        catIconContainer.innerHTML = `<i class="fa-solid ${isCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'} text-gray-500"></i>`;
+        categoryHeader.appendChild(catIconContainer);
+
+        if (isLocked) {
+            applyLockStyles(categoryHeader, catIconContainer);
+        } else {
+            categoryHeader.onclick = () => {
+                if (isCollapsed) collapsedCategories.delete(category);
+                else collapsedCategories.add(category);
+                renderQuestsList();
+            };
+        }
 
         listContainer.appendChild(categoryHeader);
 
-        if (!isCollapsed) {
+        if (!isCollapsed && !isLocked) {
             groupedQuests[category].forEach(quest => {
+                const reqCat = quest.unlock_prerequisite_category;
+                const reqCount = quest.unlock_required_count || 0;
+                const questIsLocked = reqCat && reqCat !== "" && (categoryProgress[reqCat] || 0) < reqCount;
+
                 const userClaimed = userClaims.some(c => c.quest_id === quest.id);
                 const item = document.createElement("div");
                 item.dataset.key = quest.quest_key;
                 item.className = `quest-item p-4 border-b border-gray-700/50 cursor-pointer text-md transition-all hover:bg-white/5 ${activeQuestKey === quest.quest_key ? 'bg-white/10 border-l-4 border-[#FFD700]' : ''}`;
-                item.innerHTML = `
-                    <div class="flex justify-between items-center pointer-events-none">
-                        <div>
-                            <div class="font-bold text-white text-sm">${quest.quest_name}</div>
-                        </div>
-                        ${userClaimed ? '<i class="fa-solid fa-circle-check text-green-500 text-md"></i>' : '<i class="fa-solid fa-circle text-gray-700 text-[8px]"></i>'}
-                    </div>
-                `;
-                item.onclick = () => showQuestDetails(quest, userClaimed);
+                
+                const itemFlex = document.createElement("div");
+                itemFlex.className = "flex justify-between items-center pointer-events-none";
+                itemFlex.innerHTML = `<div><div class="font-bold text-white text-sm">${quest.quest_name}</div></div>`;
+                
+                const statusIconContainer = document.createElement("div");
+                statusIconContainer.innerHTML = userClaimed 
+                    ? '<i class="fa-solid fa-circle-check text-green-500 text-md"></i>' 
+                    : '<i class="fa-solid fa-circle text-gray-700 text-[8px]"></i>';
+                
+                itemFlex.appendChild(statusIconContainer);
+                item.appendChild(itemFlex);
+
+                if (questIsLocked) {
+                    applyLockStyles(item, statusIconContainer);
+                } else {
+                    item.onclick = () => showQuestDetails(quest, userClaimed);
+                }
                 listContainer.appendChild(item);
             });
         }
@@ -350,6 +422,8 @@ async function renderQuestsList() {
 }
 
 async function init() {
+    enableSignTooltip();
+    await updateSidebarPermissions();
     allQuests = await fetchQuests();
     regionsData = await fetchRegions();
     populateFilters(regionsData);
@@ -363,12 +437,39 @@ async function init() {
             const user = await getCurrentUser();
             let userClaims = [];
             if (user) userClaims = await fetchUserClaims(user.id);
-            showQuestDetails(targetQuest, userClaims.some(c => c.quest_id === targetQuest.id));
+            
+            const categoryProgress = {};
+            userClaims.forEach(claim => {
+                const q = allQuests.find(item => item.id === claim.quest_id);
+                if (q && q.category) {
+                    categoryProgress[q.category] = (categoryProgress[q.category] || 0) + 1;
+                }
+            });
+
+            const reqCat = targetQuest.unlock_prerequisite_category;
+            const reqCount = targetQuest.unlock_required_count || 0;
+            const questIsLocked = reqCat && reqCat !== "" && (categoryProgress[reqCat] || 0) < reqCount;
+
+            if (!questIsLocked) {
+                showQuestDetails(targetQuest, userClaims.some(c => c.quest_id === targetQuest.id));
+            } else {
+                const emptyState = document.getElementById('empty-state');
+                if (emptyState) {
+                    emptyState.innerHTML = `
+                        <div class="text-center">
+                            <i class="fa-solid fa-lock text-4xl mb-4 text-[#FFD700]/50"></i>
+                            <p class="text-xl font-bold text-white mb-2">Quest Locked</p>
+                            <p class="text-gray-400 italic">This chapter is currently hidden from your records.</p>
+                        </div>
+                    `;
+                }
+            }
         }
     }
 }
 
 supabase.auth.onAuthStateChange(() => {
+    updateSidebarPermissions();
     renderQuestsList();
 });
 
