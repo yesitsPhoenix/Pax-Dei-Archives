@@ -18,18 +18,24 @@ async function getCurrentUser() {
 }
 
 async function updateSidebarPermissions() {
-    const sidebar = document.getElementById("sidebar");
     const createBtn = document.getElementById("create-quest-nav");
     const editBtn = document.getElementById("edit-quest-nav");
 
-    if (!sidebar || !createBtn || !editBtn) return;
+    if (!createBtn || !editBtn) return;
 
-    sidebar.classList.add("hidden");
-    createBtn.classList.add("hidden");
-    editBtn.classList.add("hidden");
+    const cachedRole = sessionStorage.getItem("user_quest_role");
+    if (cachedRole === "quest_adder") {
+        createBtn.classList.remove("hidden");
+        editBtn.classList.remove("hidden");
+        return;
+    }
 
     const user = await getCurrentUser();
-    if (!user) return;
+    if (!user) {
+        createBtn.classList.add("hidden");
+        editBtn.classList.add("hidden");
+        return;
+    }
 
     const { data } = await supabase
         .from("admin_users")
@@ -38,12 +44,15 @@ async function updateSidebarPermissions() {
         .maybeSingle();
 
     if (data?.quest_role === "quest_adder") {
-        sidebar.classList.remove("hidden");
+        sessionStorage.setItem("user_quest_role", "quest_adder");
         createBtn.classList.remove("hidden");
         editBtn.classList.remove("hidden");
+    } else {
+        sessionStorage.removeItem("user_quest_role");
+        createBtn.classList.add("hidden");
+        editBtn.classList.add("hidden");
     }
 }
-
 
 async function fetchQuests() {
     const { data, error } = await supabase
@@ -71,38 +80,34 @@ async function fetchUserClaims(userId) {
 }
 
 function populateFilters(regions) {
-    const regionSelect = document.getElementById('filter-region');
-    const shardSelect = document.getElementById('filter-shard');
-    const provinceSelect = document.getElementById('filter-province');
-    const valleySelect = document.getElementById('filter-homevalley');
-    const statusSelect = document.getElementById('filter-status');
+    const statusInput = document.getElementById('filter-status');
+    const filterButtons = document.querySelectorAll('.sidebar-filter-btn');
+
+    if (statusInput && filterButtons.length > 0) {
+        filterButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation(); 
+                
+                filterButtons.forEach(b => b.classList.remove('active', 'bg-[#FFD700]', 'text-black'));
+                btn.classList.add('active', 'bg-[#FFD700]', 'text-black');
+
+                const statusValue = btn.getAttribute('data-filter-status');
+                statusInput.value = statusValue;
+
+                renderQuestsList();
+            });
+        });
+    }
+
     const clearBtn = document.getElementById('clear-filters');
-
-    if (!regionSelect) return;
-
-    const uniqueRegions = [...new Set(regions.map(r => r.region_name))].filter(Boolean).sort();
-    const uniqueShards = [...new Set(regions.map(r => r.shard))].filter(Boolean).sort();
-    const uniqueProvinces = [...new Set(regions.map(r => r.province))].filter(Boolean).sort();
-    const uniqueValleys = [...new Set(regions.map(r => r.home_valley))].filter(Boolean).sort();
-
-    uniqueRegions.forEach(name => { regionSelect.innerHTML += `<option value="${name}">${name}</option>`; });
-    uniqueShards.forEach(name => { shardSelect.innerHTML += `<option value="${name}">${name}</option>`; });
-    uniqueProvinces.forEach(name => { provinceSelect.innerHTML += `<option value="${name}">${name}</option>`; });
-    uniqueValleys.forEach(name => { valleySelect.innerHTML += `<option value="${name}">${name}</option>`; });
-
-    [regionSelect, shardSelect, provinceSelect, valleySelect, statusSelect].forEach(select => {
-        if (select) select.addEventListener('change', () => renderQuestsList());
-    });
-
     if (clearBtn) {
         clearBtn.addEventListener('click', () => {
-            [regionSelect, shardSelect, provinceSelect, valleySelect, statusSelect].forEach(select => { if(select) select.value = ""; });
+            if (statusInput) statusInput.value = "";
+            filterButtons.forEach(b => b.classList.remove('active', 'bg-[#FFD700]', 'text-black'));
+            const allBtn = document.querySelector('[data-filter-status=""]');
+            if (allBtn) allBtn.classList.add('active', 'bg-[#FFD700]', 'text-black');
+            
             activeQuestKey = null;
-            document.getElementById('empty-state')?.classList.remove('hidden');
-            document.getElementById('details-content')?.classList.add('hidden');
-            const url = new URL(window.location);
-            url.searchParams.delete('quest');
-            window.history.replaceState({}, '', url.pathname);
             renderQuestsList();
         });
     }
@@ -317,10 +322,6 @@ async function renderQuestsList() {
     if (!listContainer) return;
 
     const user = await getCurrentUser();
-    const filterR = document.getElementById('filter-region')?.value;
-    const filterS = document.getElementById('filter-shard')?.value;
-    const filterP = document.getElementById('filter-province')?.value;
-    const filterV = document.getElementById('filter-homevalley')?.value;
     const filterStatus = document.getElementById('filter-status')?.value;
 
     let userClaims = [];
@@ -340,16 +341,11 @@ async function renderQuestsList() {
     listContainer.innerHTML = "";
 
     const filteredQuests = allQuests.filter(quest => {
-        const reg = quest.regions || {};
         const userClaimed = userClaims.some(c => c.quest_id === quest.id);
-        const matchesRegion = !filterR || reg.region_name === filterR;
-        const matchesShard = !filterS || reg.shard === filterS;
-        const matchesProvince = !filterP || reg.province === filterP;
-        const matchesValley = !filterV || reg.home_valley === filterV;
         let matchesStatus = true;
         if (filterStatus === "completed") matchesStatus = userClaimed;
         if (filterStatus === "incomplete") matchesStatus = !userClaimed;
-        return matchesRegion && matchesShard && matchesProvince && matchesValley && matchesStatus;
+        return matchesStatus;
     });
 
     const groupedQuests = filteredQuests.reduce((acc, quest) => {
@@ -423,7 +419,7 @@ async function renderQuestsList() {
 
 async function init() {
     enableSignTooltip();
-    await updateSidebarPermissions();
+    updateSidebarPermissions();
     allQuests = await fetchQuests();
     regionsData = await fetchRegions();
     populateFilters(regionsData);
@@ -468,7 +464,10 @@ async function init() {
     }
 }
 
-supabase.auth.onAuthStateChange(() => {
+supabase.auth.onAuthStateChange((event) => {
+    if (event === "SIGNED_OUT") {
+        sessionStorage.removeItem("user_quest_role");
+    }
     updateSidebarPermissions();
     renderQuestsList();
 });

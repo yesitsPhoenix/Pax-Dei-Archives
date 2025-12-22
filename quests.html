@@ -11,22 +11,54 @@
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<style>
-        .quest-log-container { height: 75vh; }
+    <style>
+        .quest-log-container { height: 80vh; max-height: 850px; }
         .quest-list-scroll { scrollbar-width: thin; scrollbar-color: #FFD700 #1f2937; }
         .category-header { background: rgba(0,0,0,0.3); }
         .quest-item.active { background-color: rgba(255, 215, 0, 0.1); border-left: 4px solid #FFD700; }
-        #quest-details-pane { overflow-y: auto; scrollbar-width: thin; scrollbar-color: #FFD700 #1f2937; }
+        #quest-details-pane { overflow-y: hidden; }
+        .details-scroll-area { overflow-y: auto; scrollbar-width: thin; scrollbar-color: #FFD700 #1f2937; }
+        
+        #sidebar.collapsed .sidebar-text {
+            display: none;
+        }
+
+        #sidebar.collapsed .filter-container {
+            display: block;
+            padding-left: 0;
+            padding-right: 0;
+        }
+
+        #sidebar.collapsed .sidebar-filter-btn {
+            justify-content: center;
+            padding-left: 0;
+            padding-right: 0;
+        }
+
+        #sidebar.collapsed .sidebar-filter-btn i {
+            margin: 0;
+            width: 100%;
+            text-align: center;
+        }
+
+        .sidebar-filter-btn.active {
+            background-color: #FFD700 !important;
+            color: #000 !important;
+        }
+
+        .sidebar-filter-btn.active i {
+            color: #000 !important;
+        }
     </style>
     <meta property="og:title" content="Pax Dei Archives - Quests">
     <meta property="og:description" content="The Archives hold more than mere ink and parchment; they preserve the echoes of those who dared to wander. Sift through the unwritten tales below to discover and explore our world.">
     <meta property="og:image" content="https://yesitsphoenix.github.io/Pax-Dei-Archives/frontend/www/assets/banner.png">
     <meta property="og:url" content="https://paxdei-archives.com/quests.html">
-
-<meta name="theme-color" content="#FFD700">
-    <script> window.gtTooltipConfig = {
-        scale: 0.8,
-        delay: 30,
+    <meta name="theme-color" content="#FFD700">
+    <script> 
+        window.gtTooltipConfig = {
+            scale: 0.8,
+            delay: 30,
         };
     </script>
     <script async src="https://paxdei.gaming.tools/embed.js"></script>
@@ -35,54 +67,61 @@
 
 <div id="header-placeholder"></div>
 
-<aside id="sidebar" class="w-64 bg-[#1c1c1c] border-r-4 border-amber-300 shadow-lg transition-all duration-300 hover:bg-slate-700 px-3 py-4 cursor-pointer fixed h-[50vh] z-50 top-[220px] collapsed">
+<aside id="sidebar" class="w-64 bg-[#1c1c1c] border-r-4 border-amber-300 shadow-lg transition-all duration-300 hover:bg-slate-700 px-3 py-4 cursor-pointer fixed h-auto z-50 top-[220px] collapsed overflow-hidden">
     <ul class="space-y-2 font-medium">
-        <li><a href="quests.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900"><i class="fas fa-book w-5 h-5 text-gray-400"></i><span class="ml-3"> Quest Log</span></a></li>
-        <li><a id="create-quest-nav" href="panel.html" class="hidden flex items-center p-2 text-white rounded-lg hover:bg-gray-900"><i class="fas fa-table-columns w-5 h-5 text-gray-400"></i><span class="ml-3"> Create New Quest</span></a></li>
-        <li><a id="edit-quest-nav" href="edit_quest.html" class="hidden flex items-center p-2 text-white rounded-lg hover:bg-gray-900"><i class="fas fa-tags w-5 h-5 text-gray-400"></i><span class="ml-3"> Edit Existing Quests</span></a></li>
+        <li>
+            <a href="quests.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                <i class="fas fa-book w-5 h-5 text-gray-400"></i>
+                <span class="ml-3 sidebar-text"> Quest Log</span>
+            </a>
+        </li>
+        <li id="create-quest-nav" class="hidden">
+            <a href="panel.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                <i class="fas fa-table-columns w-5 h-5 text-gray-400"></i>
+                <span class="ml-3 sidebar-text"> Create New Quest</span>
+            </a>
+        </li>
+        <li id="edit-quest-nav" class="hidden">
+            <a href="edit_quest.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                <i class="fas fa-tags w-5 h-5 text-gray-400"></i>
+                <span class="ml-3 sidebar-text"> Edit Existing Quests</span>
+            </a>
+        </li>
     </ul>
+
+    <div class="filter-container mt-2 pt-4 border-t border-gray-700 px-0">
+        <h3 class="text-[12px] uppercase tracking-widest text-[#FFD700] font-bold mb-3 px-2 sidebar-text">Quest Filter</h3>
+        <div class="flex flex-col gap-2">
+            <button data-filter-status="" class="sidebar-filter-btn active w-full text-left px-3 py-2 rounded-lg text-xs font-bold uppercase transition-all flex items-center gap-3">
+                <i class="fa-solid fa-list-ul w-5"></i> 
+                <span class="sidebar-text">All Quests</span>
+            </button>
+            <button data-filter-status="incomplete" class="sidebar-filter-btn w-full text-left px-3 py-2 rounded-lg text-xs font-bold uppercase transition-all flex items-center gap-3">
+                <i class="fa-solid fa-circle text-[8px] text-gray-500 w-5"></i> 
+                <span class="sidebar-text">Incomplete</span>
+            </button>
+            <button data-filter-status="completed" class="sidebar-filter-btn w-full text-left px-3 py-2 rounded-lg text-xs font-bold uppercase transition-all flex items-center gap-3">
+                <i class="fa-solid fa-circle-check text-green-500 w-5"></i> 
+                <span class="sidebar-text">Completed</span>
+            </button>
+        </div>
+        <input type="hidden" id="filter-status" value="">
+    </div>
 </aside>
 
-<h1 class="text-xl font-semibold mt-6 mb-3 text-white text-center">Quest Log</h1>
-<div class="h-1 w-32 bg-[#FFD700] mx-auto rounded-full mb-8"></div>
 
-<p class="max-w-6xl mx-auto text-center text-gray-400 italic text-lg mb-10 px-6">
+<h1 class="text-xl font-semibold mt-4 mb-2 text-white text-center">Quest Log</h1>
+<div class="h-1 w-24 bg-[#FFD700] mx-auto rounded-full mb-4"></div>
+
+<p class="max-w-6xl mx-auto text-center text-gray-400 italic text-sm mb-6 px-6">
     "The Archives hold more than mere ink and parchment; they preserve the echoes of those who dared to wander.<br>
     Sift through the unwritten tales below to discover and explore our world."
 </p>
 
 <div class="container mx-auto px-4 max-w-8xl mb-6">
-    <div class="grid grid-cols-2 md:grid-cols-6 gap-4 bg-[#1f2937]/50 p-4 rounded-xl border border-gray-700 shadow-lg items-end">
-        <div>
-            <label class="block text-[12px] uppercase tracking-widest text-[#FFD700] font-bold mb-2">Region</label>
-            <select id="filter-region" class="w-full bg-gray-900 border border-gray-600 text-white rounded-lg px-3 py-2 text-md focus:border-[#FFD700] outline-none"><option value="">All Regions</option></select>
-        </div>
-        <div>
-            <label class="block text-[12px] uppercase tracking-widest text-[#FFD700] font-bold mb-2">Shard</label>
-            <select id="filter-shard" class="w-full bg-gray-900 border border-gray-600 text-white rounded-lg px-3 py-2 text-md focus:border-[#FFD700] outline-none"><option value="">All Shards</option></select>
-        </div>
-        <div>
-            <label class="block text-[12px] uppercase tracking-widest text-[#FFD700] font-bold mb-2">Province</label>
-            <select id="filter-province" class="w-full bg-gray-900 border border-gray-600 text-white rounded-lg px-3 py-2 text-md focus:border-[#FFD700] outline-none"><option value="">All Provinces</option></select>
-        </div>
-        <div>
-            <label class="block text-[12px] uppercase tracking-widest text-[#FFD700] font-bold mb-2">Valley</label>
-            <select id="filter-homevalley" class="w-full bg-gray-900 border border-gray-600 text-white rounded-lg px-3 py-2 text-md focus:border-[#FFD700] outline-none"><option value="">All Valleys</option></select>
-        </div>
-        <div>
-            <label class="block text-[12px] uppercase tracking-widest text-[#FFD700] font-bold mb-2">Status</label>
-            <select id="filter-status" class="w-full bg-gray-900 border border-gray-600 text-white rounded-lg px-3 py-2 text-md focus:border-[#FFD700] outline-none">
-                <option value="">All Quests</option>
-                <option value="completed">Completed</option>
-                <option value="incomplete">Incomplete</option>
-            </select>
-        </div>
-        <button id="clear-filters" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-bold text-md uppercase border border-gray-600 transition-all">Clear</button>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-12 gap-0 bg-[#1f2937] rounded-2xl border border-gray-700 shadow-2xl overflow-auto quest-log-container mt-4">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-0 bg-[#1f2937] rounded-2xl border border-gray-700 shadow-2xl overflow-hidden quest-log-container">
         <div class="md:col-span-3 border-r border-gray-700 flex flex-col bg-black/20">
-            <div class="p-4 border-b border-gray-700 bg-black/40 text-[#FFD700] font-bold uppercase text-md tracking-widest">Chapters</div>
+            <div class="p-4 border-b border-gray-700 bg-black/40 text-[#FFD700] font-bold uppercase text-sm tracking-widest">Chapters</div>
             <div id="quest-titles-list" class="flex-1 overflow-y-auto quest-list-scroll"></div>
         </div>
 
@@ -91,75 +130,74 @@
                 Select a quest from the log to view details
             </div>
             
-<div id="details-content" class="hidden flex-1 flex flex-col">
-    <div class="relative shrink-0 h-32 bg-gradient-to-r from-[#72e0cc]/20 to-[#FFD700]/20 flex items-center px-8 border-b border-gray-700">
-        <div class="flex justify-between items-center w-full">
-            <div>
-                <h2 id="detail-name" class="text-3xl font-bold text-white mb-1"></h2>
-                <span id="detail-region" class="text-[#FFD700] text-md font-bold uppercase tracking-wider"></span>
-            </div>
-            <div id="detail-status-badge"></div>
-        </div>
-    </div>
-
-    <div class="p-8">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div class="lg:col-span-2 space-y-6">
-                <section>
-                    <h4 class="text-md uppercase tracking-widest text-gray-500 font-bold mb-2">The Tale</h4>
-                    <div id="detail-lore" class="text-gray-300 leading-relaxed text-lg"></div>
-                </section>
-                <section>
-                    <h4 class="text-md uppercase tracking-widest text-gray-500 font-bold mb-2">Quest Location / Detail</h4>
-                    <p id="detail-location" class="text-gray-300"></p>
-                </section>
-            </div>
-
-            <div class="lg:col-span-1 space-y-6">
-                <section>
-                    <h4 class="text-md uppercase tracking-widest text-gray-500 font-bold mb-2">Sign Sequence</h4>
-                    <div id="detail-signs" class="flex flex-wrap gap-2 p-4 bg-black/30 rounded-xl border border-gray-700/50"></div>
-                </section>
-                
-                <section> 
-                    <h4 class="text-md uppercase tracking-widest text-gray-500 font-bold mb-2">Rewards</h4>
-                    <div id="detail-rewards-section" class="bg-black/20 p-4 rounded-xl border border-gray-700/50">
-                        <div id="detail-items" class="text-white font-medium mb-1"></div>
-                        <div id="detail-gold" class="text-[#ecaf48] font-bold text-2xl"></div>
+            <div id="details-content" class="hidden flex-1 flex flex-col overflow-hidden">
+                <div class="relative shrink-0 h-24 bg-gradient-to-r from-[#72e0cc]/20 to-[#FFD700]/20 flex items-center px-8 border-b border-gray-700">
+                    <div class="flex justify-between items-center w-full">
+                        <div>
+                            <h2 id="detail-name" class="text-2xl font-bold text-white mb-0"></h2>
+                            <span id="detail-region" class="text-[#FFD700] text-xs font-bold uppercase tracking-wider"></span>
+                        </div>
+                        <div id="detail-status-badge"></div>
                     </div>
-                </section>
-            </div>
-        </div>
-    </div>
+                </div>
 
-    <div class="px-8 pb-8">
-        <div class="pt-8 flex border-t border-gray-700/50 gap-4">
-            <button id="detail-share-btn" class="px-6 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 text-white font-bold uppercase text-md flex items-center gap-2 transition-all">
-                <i class="fa-solid fa-share-nodes"></i><span>Share</span>
-            </button>
-            <button id="detail-redeem-btn" class="ml-auto bg-[#FFD700] text-black px-8 py-3 rounded-lg font-bold uppercase text-md hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-900/20 w-52"></button>
+                <div class="flex-1 details-scroll-area p-8">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div class="lg:col-span-2 space-y-6">
+                            <section>
+                                <h4 class="text-xs uppercase tracking-widest text-gray-500 font-bold mb-2">The Tale</h4>
+                                <div id="detail-lore" class="text-gray-300 leading-relaxed text-md"></div>
+                            </section>
+                            <section>
+                                <h4 class="text-xs uppercase tracking-widest text-gray-500 font-bold mb-2">Quest Location / Detail</h4>
+                                <p id="detail-location" class="text-gray-300 text-sm"></p>
+                            </section>
+                        </div>
+
+                        <div class="lg:col-span-1 space-y-6">
+                            <section>
+                                <h4 class="text-xs uppercase tracking-widest text-gray-500 font-bold mb-2">Sign Sequence</h4>
+                                <div id="detail-signs" class="flex flex-wrap gap-2 p-4 bg-black/30 rounded-xl border border-gray-700/50"></div>
+                            </section>
+                            
+                            <section> 
+                                <h4 class="text-xs uppercase tracking-widest text-gray-500 font-bold mb-2">Rewards</h4>
+                                <div id="detail-rewards-section" class="bg-black/20 p-4 rounded-xl border border-gray-700/50">
+                                    <div id="detail-items" class="text-white font-medium mb-1 text-sm"></div>
+                                    <div id="detail-gold" class="text-[#ecaf48] font-bold text-xl"></div>
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="px-8 py-4 shrink-0 bg-black/10">
+                    <div class="pt-4 flex border-t border-gray-700/50 gap-4">
+                        <button id="detail-share-btn" class="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-white font-bold uppercase text-xs flex items-center gap-2 transition-all">
+                            <i class="fa-solid fa-share-nodes"></i><span>Share</span>
+                        </button>
+                        <button id="detail-redeem-btn" class="ml-auto bg-[#FFD700] text-black px-6 py-2 rounded-lg font-bold uppercase text-xs hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-900/20 min-w-[150px]"></button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
-            </div>
-            </div>
-        </div>
-    </div>
 
 <div id="redemption-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md hidden items-center justify-center z-[100] p-4">
-    <div class="bg-[#1f2937] w-full max-w-4xl rounded-3xl border border-gray-700 shadow-2xl overflow-hidden relative flex flex-col max-h-[90vh]">
-        <button id="close-redemption" class="absolute top-6 right-6 text-gray-400 hover:text-white z-10">
-            <i class="fa-solid fa-xmark text-2xl"></i>
+    <div class="bg-[#1f2937] w-full max-w-6xl rounded-2xl border border-gray-700 shadow-2xl overflow-hidden relative flex flex-col max-h-[85vh]">
+        <button id="close-redemption" class="absolute top-4 right-4 text-gray-500 hover:text-white z-10 transition-colors">
+            <i class="fa-solid fa-xmark text-xl"></i>
         </button>
 
         <div id="input-section" class="flex flex-col h-full">
-            <div class="p-10 border-b border-gray-700">
-                <h3 class="text-md font-bold text-gray-500 uppercase tracking-widest mb-1">Quest Redemption</h3>
-                <p id="modal-target-quest-name" class="text-[#FFD700] font-black text-4xl mb-6 leading-none"></p>
+            <div class="p-6 border-b border-gray-700 bg-black/20">
+                <h3 class="text-[12px] font-bold text-gray-500 uppercase tracking-widest mb-1">Quest Redemption</h3>
+                <p id="modal-target-quest-name" class="text-[#FFD700] font-bold text-xl mb-4 leading-tight"></p>
                 
                 <div class="w-full max-w-xs">
-                    <label class="block text-[12px] uppercase tracking-widest text-gray-400 font-bold mb-2">Cipher Keyword</label>
-                    <select id="cipher-keyword-select" class="w-full bg-gray-900 border border-gray-600 text-white rounded-xl px-4 py-3 text-md focus:border-[#FFD700] outline-none transition-colors">
+                    <label class="block text-[12px] uppercase tracking-widest text-gray-400 font-bold mb-1.5">Cipher Keyword</label>
+                    <select id="cipher-keyword-select" class="w-full bg-gray-900 border border-gray-600 text-white rounded-lg px-3 py-1.5 text-xs focus:border-[#FFD700] outline-none transition-colors">
                         <option value="" disabled selected>Select a Category</option>
                         <option value="paxdei">paxdei</option>
                         <option value="thelonius">thelonius</option>
@@ -171,39 +209,37 @@
                 </div>
             </div>
 
-            <div class="flex-1 overflow-y-auto p-6 space-y-6">
+            <div class="flex-1 overflow-y-auto p-5 space-y-5">
                 <div>
-                    <label class="block text-[12px] uppercase tracking-widest text-gray-500 font-bold mb-4">Sign Library</label>
-                    <div id="sign-grid" class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-10 lg:grid-cols-10 gap-3 bg-black/20 p-6 rounded-2xl border border-gray-700 overflow-y-auto max-h-[350px]"></div>
+                    <label class="block text-[12px] uppercase tracking-widest text-gray-500 font-bold mb-2">Sign Library</label>
+                    <div id="sign-grid" class="grid grid-cols-5 sm:grid-cols-10 md:grid-cols-12 gap-1.5 bg-black/20 p-3 rounded-xl border border-gray-700 overflow-y-auto max-h-[350px] scrollbar-thin"></div>
                 </div>
 
                 <div>
-                    <label class="block text-[12px] uppercase tracking-widest text-gray-500 font-bold mb-4">Selected Sequence</label>
-                    <div id="selected-signs" class="flex flex-wrap gap-3 min-h-[120px] p-6 bg-black/40 rounded-2xl border border-gray-700"></div>
+                    <label class="block text-[12px] uppercase tracking-widest text-gray-500 font-bold mb-2">Selected Sequence</label>
+                    <div id="selected-signs" class="flex flex-wrap gap-1.5 min-h-[60px] p-3 bg-black/40 rounded-xl border border-gray-700"></div>
                 </div>
             </div>
 
-            <div class="p-8 bg-black/40 border-t border-gray-700">
-                <p id="modal-error-msg" class="text-[#ee626b] mb-6 hidden text-center text-md italic font-sans"></p>
-                <div class="flex flex-col md:flex-row justify-end gap-4">
-                    <button id="clear-signs" class="px-10 py-4 bg-gray-700 text-gray-300 rounded-xl font-bold uppercase text-md hover:bg-red-500/20 hover:text-red-400 transition-all border border-transparent hover:border-red-900/30">Clear Sequence</button>
-                    <button id="verify-btn" class="bg-[#FFD700] text-black px-16 py-4 rounded-xl font-black uppercase tracking-widest hover:bg-yellow-200 transition-all shadow-lg shadow-yellow-900/10">Complete Quest</button>
+            <div class="p-4 bg-black/40 border-t border-gray-700">
+                <p id="modal-error-msg" class="text-[#ee626b] mb-3 hidden text-center text-xs italic font-sans"></p>
+                <div class="flex flex-col md:flex-row justify-end gap-3">
+                    <button id="clear-signs" class="px-4 py-2 bg-gray-700 text-gray-300 rounded-lg font-bold uppercase text-[12px] hover:bg-red-500/20 hover:text-red-400 transition-all border border-transparent hover:border-red-900/30">Clear Sequence</button>
+                    <button id="verify-btn" class="bg-[#FFD700] text-black px-6 py-2 rounded-lg font-bold uppercase tracking-wider hover:bg-yellow-200 transition-all shadow-lg shadow-yellow-900/10 text-[12px]">Complete Quest</button>
                 </div>
             </div>
         </div>
 
-        <div id="success-state" class="hidden p-20 text-center flex-1 flex flex-col items-center justify-center">
-            <div class="w-20 h-20 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mb-6 border border-green-500/50">
-                <i class="fa-solid fa-check text-4xl"></i>
+        <div id="success-state" class="hidden p-12 text-center flex-1 flex flex-col items-center justify-center">
+            <div class="w-12 h-12 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mb-4 border border-green-500/50">
+                <i class="fa-solid fa-check text-2xl"></i>
             </div>
-            <h3 class="text-3xl font-bold text-white mb-2">Reward Claimed!</h3>
-            <p class="text-gray-400 mb-8">The archives have been updated.</p>
-            <button onclick="location.reload()" class="bg-gray-700 text-white px-8 py-3 rounded-lg font-bold uppercase text-md">Return to Quest Log</button>
+            <h3 class="text-xl font-bold text-white mb-1">Reward Claimed!</h3>
+            <p class="text-gray-400 text-sm mb-6">The archives have been updated.</p>
+            <button onclick="location.reload()" class="bg-gray-700 text-white px-6 py-2 rounded-lg font-bold uppercase text-[10px]">Return to Quest Log</button>
         </div>
     </div>
 </div>
-
-
 
 <div id="footer-placeholder"></div>
 
@@ -216,6 +252,16 @@
 </div>
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('.filter-btn').on('click', function() {
+            $('.filter-btn').removeClass('active');
+            $(this).addClass('active');
+            const status = $(this).data('status');
+            $('#filter-status').val(status).trigger('change');
+        });
+    });
+</script>
 <script type="module" src="frontend/www/js/redemption/quests.js"></script>
 <script type="module" src="frontend/www/js/redemption/redeem.js"></script>
 <script type="module" src="frontend/www/js/redemption/unlocks.js"></script>
