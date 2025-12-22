@@ -3,9 +3,24 @@ import { supabase } from "../supabaseClient.js";
 export async function getUnlockedCategories(userId, allQuests, userClaims) {
     const unlocked = new Set(["Uncategorized"]);
 
+    const categoryProgress = {};
+    if (userId && userClaims) {
+        userClaims.forEach(claim => {
+            const quest = allQuests.find(q => q.id === claim.quest_id);
+            if (quest && quest.category) {
+                categoryProgress[quest.category] = (categoryProgress[quest.category] || 0) + 1;
+            }
+        });
+    }
+
     allQuests.forEach(q => {
         const cat = q.category || "Uncategorized";
-        if (!q.unlock_prerequisite_category || q.unlock_prerequisite_category === "") {
+        const reqCat = q.unlock_prerequisite_category;
+        const reqCount = q.unlock_required_count || 0;
+
+        if (!reqCat || reqCat === "") {
+            unlocked.add(cat);
+        } else if (categoryProgress[reqCat] >= reqCount) {
             unlocked.add(cat);
         }
     });
