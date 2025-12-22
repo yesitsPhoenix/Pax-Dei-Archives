@@ -188,7 +188,7 @@ async function showQuestDetails(quest, userClaimed) {
 
         target.querySelectorAll('p').forEach(p => {
             p.style.whiteSpace = "pre-wrap";
-            p.style.marginBottom = "1rem";
+            // p.style.marginBottom = "1rem";
         });
 
         target.querySelectorAll('a').forEach(link => {
@@ -199,7 +199,7 @@ async function showQuestDetails(quest, userClaimed) {
 
         target.querySelectorAll('blockquote').forEach(quote => {
             quote.classList.add('border-l-4', 'border-[#FFD700]/50', 'bg-black/20', 'p-4', 'my-4', 'rounded-r-lg', 'italic', 'text-gray-400');
-            quote.style.whiteSpace = "pre-wrap";
+            // quote.style.whiteSpace = "pre-wrap";
         });
 
         target.querySelectorAll('ul').forEach(ul => {
