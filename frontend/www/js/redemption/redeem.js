@@ -4,6 +4,26 @@ const selected = [];
 const grid = document.getElementById("sign-grid");
 const selectedDisplay = document.getElementById("selected-signs");
 
+const mouseTooltip = document.createElement("div");
+Object.assign(mouseTooltip.style, {
+    position: "fixed",
+    display: "none",
+    pointerEvents: "none",
+    zIndex: "9999",
+    padding: "4px 8px",
+    backgroundColor: "#030712",
+    color: "white",
+    fontSize: "10px",
+    borderRadius: "4px",
+    border: "1px solid #4b5563",
+    fontWeight: "bold",
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+    whiteSpace: "nowrap",
+    boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.5)"
+});
+document.body.appendChild(mouseTooltip);
+
 async function loadSigns() {
     const response = await fetch('frontend/www/assets/signs.json');
     const data = await response.json();
@@ -17,7 +37,7 @@ async function loadSigns() {
 
             const img = document.createElement("img");
             img.src = `${baseUrl}${fullId}.webp?${version}`;
-            img.className = "w-22 h-20 pointer-events-none";
+            img.className = "w-22 h-22 pointer-events-none";
             img.onerror = () => btn.remove();
 
             btn.appendChild(img);
@@ -95,11 +115,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         const matchedQuest = quests.find(q => {
-            const dbName = q.quest_name.toLowerCase().trim();
-            const dbKey = q.reward_key.toLowerCase().trim();
-            const dbKeyword = q.cipher_keyword.toLowerCase().trim();
-            return dbName === targetQuestName && dbKey === playerKey && dbKeyword === selectedKeyword;
+            const dbName = (q.quest_name ?? "").toLowerCase().trim();
+            const dbKey = q.reward_key === null
+                ? null
+                : q.reward_key.toLowerCase().trim();
+            const dbKeyword = q.cipher_keyword === null
+                ? null
+                : q.cipher_keyword.toLowerCase().trim();
+
+            if (dbName !== targetQuestName) return false;
+            if (dbKey !== null && dbKey !== playerKey) return false;
+            if (dbKeyword !== null && dbKeyword !== selectedKeyword) return false;
+
+            return true;
         });
+
 
         if (!matchedQuest) {
             showError("Incorrect sequence or keyword.");
