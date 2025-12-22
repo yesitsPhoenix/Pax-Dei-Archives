@@ -166,6 +166,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         } else {
             document.getElementById("input-section").classList.add("hidden");
             document.getElementById("success-state").classList.remove("hidden");
+            
+            window.dispatchEvent(new CustomEvent("questClaimed", { 
+                detail: { quest: matchedQuest } 
+            }));
         }
     });
 });

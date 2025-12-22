@@ -172,9 +172,6 @@ async function showQuestDetails(quest, userClaimed) {
     const reg = quest.regions;
     const regionText = reg ? `${reg.region_name} • ${reg.shard} • ${reg.home_valley}` : 'World Quest';
     document.getElementById('detail-region').innerText = regionText;
-    
-    const rawLore = quest.lore || "No lore available.";
-    const loreTarget = document.getElementById('detail-lore');
 
     marked.setOptions({
         gfm: true,
@@ -184,25 +181,38 @@ async function showQuestDetails(quest, userClaimed) {
         smartypants: false
     });
 
-    loreTarget.innerHTML = marked.parse(rawLore.trim());
+    const formatMarkdownContainer = (targetId, rawContent, fallback) => {
+        const target = document.getElementById(targetId);
+        const content = rawContent?.trim() || fallback;
+        target.innerHTML = marked.parse(content);
 
-    loreTarget.querySelectorAll('p').forEach(p => {
-        p.style.whiteSpace = "pre-wrap";
-        p.style.marginBottom = "1rem";
-    });
+        target.querySelectorAll('p').forEach(p => {
+            p.style.whiteSpace = "pre-wrap";
+            p.style.marginBottom = "1rem";
+        });
 
-    loreTarget.querySelectorAll('a').forEach(link => {
-        link.classList.add('text-[#FFD700]', 'hover:underline', 'underline-offset-4', 'font-bold');
-        link.target = "_blank";
-        link.rel = "noopener noreferrer";
-    });
+        target.querySelectorAll('a').forEach(link => {
+            link.classList.add('text-[#FFD700]', 'hover:underline', 'underline-offset-4', 'font-bold');
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+        });
 
-    loreTarget.querySelectorAll('blockquote').forEach(quote => {
-        quote.classList.add('border-l-4', 'border-[#FFD700]/50', 'bg-black/20', 'p-4', 'my-4', 'rounded-r-lg', 'italic', 'text-gray-400');
-        quote.style.whiteSpace = "pre-wrap";
-    });
+        target.querySelectorAll('blockquote').forEach(quote => {
+            quote.classList.add('border-l-4', 'border-[#FFD700]/50', 'bg-black/20', 'p-4', 'my-4', 'rounded-r-lg', 'italic', 'text-gray-400');
+            quote.style.whiteSpace = "pre-wrap";
+        });
 
-    document.getElementById('detail-location').innerText = quest.location || 'No location details exist for this quest.';
+        target.querySelectorAll('ul').forEach(ul => {
+            ul.classList.add('list-disc', 'ml-6', 'mb-4', 'text-gray-300');
+        });
+
+        target.querySelectorAll('li').forEach(li => {
+            li.classList.add('mb-1');
+        });
+    };
+
+    formatMarkdownContainer('detail-lore', quest.lore, "No lore available.");
+    formatMarkdownContainer('detail-location', quest.location, "No location details exist for this quest.");
 
     const itemEl = document.getElementById('detail-items');
     const goldEl = document.getElementById('detail-gold');
@@ -225,7 +235,7 @@ async function showQuestDetails(quest, userClaimed) {
         const { baseUrl, version } = signConfig.config;
         document.getElementById('detail-signs').innerHTML = generateSignHtml(quest, baseUrl, version);
     } catch (e) {
-        document.getElementById('detail-signs').innerHTML = `<span class="text-gray-500 italic text-sm">No sign sequence found.</span>`;
+        document.getElementById('detail-signs').innerHTML = `<span class="text-gray-500 italic text-md">No sign sequence found.</span>`;
     }
 
     const statusBadge = document.getElementById('detail-status-badge');
@@ -237,11 +247,11 @@ async function showQuestDetails(quest, userClaimed) {
     if (userClaimed) {
         redeemBtn.innerText = "Quest Completed";
         redeemBtn.disabled = true;
-        redeemBtn.className = "ml-auto bg-gray-800 w-52 text-gray-500 py-3 rounded-lg font-bold uppercase text-sm cursor-not-allowed";
+        redeemBtn.className = "ml-auto bg-gray-800 w-52 text-gray-500 py-3 rounded-lg font-bold uppercase text-md cursor-not-allowed";
     } else {
         redeemBtn.innerText = "Complete Quest";
         redeemBtn.disabled = false;
-        redeemBtn.className = "ml-auto bg-[#FFD700] w-52 text-black py-3 rounded-lg font-bold uppercase text-sm hover:bg-green-300 transition-all";
+        redeemBtn.className = "ml-auto bg-[#FFD700] w-52 text-black py-3 rounded-lg font-bold uppercase text-md hover:bg-green-300 transition-all";
         
         redeemBtn.onclick = async () => {
             const user = await getCurrentUser();
@@ -396,7 +406,7 @@ async function renderQuestsList() {
                 
                 const itemFlex = document.createElement("div");
                 itemFlex.className = "flex justify-between items-center pointer-events-none";
-                itemFlex.innerHTML = `<div><div class="font-bold text-white text-sm">${quest.quest_name}</div></div>`;
+                itemFlex.innerHTML = `<div><div class="font-bold text-white text-md">${quest.quest_name}</div></div>`;
                 
                 const statusIconContainer = document.createElement("div");
                 statusIconContainer.innerHTML = userClaimed 
@@ -424,6 +434,12 @@ async function init() {
     regionsData = await fetchRegions();
     populateFilters(regionsData);
     await renderQuestsList();
+
+    window.addEventListener("questClaimed", async (e) => {
+        const { quest } = e.detail;
+        await renderQuestsList();
+        await showQuestDetails(quest, true);
+    });
 
     const urlParams = new URLSearchParams(window.location.search);
     const targetQuestKey = urlParams.get('quest');
