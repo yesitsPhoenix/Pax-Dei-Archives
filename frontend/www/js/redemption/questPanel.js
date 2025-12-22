@@ -1,4 +1,5 @@
 import { supabase } from "../supabaseClient.js";
+import { enableSignTooltip, mouseTooltip } from '../ui/signTooltip.js';
 
 const alphabet = "abcdefghijklmnopqrstuvwxyz";
 
@@ -98,29 +99,42 @@ async function loadSigns() {
 
     data.categories.forEach(category => {
         category.items.forEach(itemName => {
-            allSignIds.push(`${category.id}_${itemName}`);
-        });
-    });
+            const fullId = `${category.id}_${itemName}`;
+            allSignIds.push(fullId);
+            
+            const btn = document.createElement("button");
+            btn.className = "p-1 bg-[#374151] rounded hover:bg-[#4b5563] border border-transparent hover:border-[#72e0cc] transition-all relative";
 
-    allSignIds.forEach(fullId => {
-        const btn = document.createElement("button");
-        btn.className = "p-1 bg-[#374151] rounded hover:bg-[#4b5563] border border-transparent hover:border-[#72e0cc] transition-all";
-        const img = document.createElement("img");
-        img.src = `${baseUrl}${fullId}.webp?${version}`;
-        img.className = "w-full h-auto pointer-events-none";
-        img.onerror = () => btn.remove();
-        btn.appendChild(img);
-        btn.onclick = () => {
-            const limitMsg = document.getElementById("limit-message");
-            if (selected.length < 5) {
-                selected.push(fullId);
-                updateSelected(baseUrl, version);
-                if (limitMsg) limitMsg.classList.add("hidden");
-            } else {
-                if (limitMsg) limitMsg.classList.remove("hidden");
-            }
-        };
-        grid.appendChild(btn);
+            const img = document.createElement("img");
+            img.src = `${baseUrl}${fullId}.webp?${version}`;
+            img.className = "w-full h-auto pointer-events-none";
+            img.onerror = () => btn.remove();
+            btn.appendChild(img);
+
+            btn.onmouseenter = () => {
+                mouseTooltip.innerText = itemName.replace(/-/g, " ");
+                mouseTooltip.style.display = "block";
+            };
+            btn.onmousemove = e => {
+                mouseTooltip.style.left = `${e.clientX + 15}px`;
+                mouseTooltip.style.top = `${e.clientY + 15}px`;
+            };
+            btn.onmouseleave = () => {
+                mouseTooltip.style.display = "none";
+            };
+
+            btn.onclick = () => {
+                const limitMsg = document.getElementById("limit-message");
+                if (selected.length < 5) {
+                    selected.push(fullId);
+                    updateSelected(baseUrl, version);
+                    if (limitMsg) limitMsg.classList.add("hidden");
+                } else {
+                    if (limitMsg) limitMsg.classList.remove("hidden");
+                }
+            };
+            grid.appendChild(btn);
+        });
     });
 }
 
@@ -313,6 +327,7 @@ document.getElementById("create-quest").onclick = async () => {
 };
 
 function init() {
+    enableSignTooltip();
     loadRegions();
     loadCategories();
     loadSigns();
