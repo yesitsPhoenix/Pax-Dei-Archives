@@ -216,6 +216,180 @@ async function claimQuestDirectly(quest) {
     }
 }
 
+// async function showQuestDetails(quest, userClaimed) {
+//     activeQuestKey = quest.quest_key;
+//     const emptyState = document.getElementById('empty-state');
+//     const content = document.getElementById('details-content');
+    
+//     if (emptyState) emptyState.classList.add('hidden');
+//     if (content) content.classList.remove('hidden');
+
+//     document.querySelectorAll('.quest-item').forEach(el => {
+//         el.classList.remove('active', 'bg-white/10', 'border-l-4', 'border-[#FFD700]');
+//         if(el.dataset.key === quest.quest_key) {
+//             el.classList.add('active', 'bg-white/10', 'border-l-4', 'border-[#FFD700]');
+//         }
+//     });
+
+//     document.getElementById('detail-name').innerText = quest.quest_name;
+    
+//     const reg = quest.regions;
+//     const regionText = reg ? `${reg.region_name} • ${reg.shard} • ${reg.home_valley}` : 'World Quest';
+//     document.getElementById('detail-region').innerText = regionText;
+
+//     marked.setOptions({
+//         gfm: true,
+//         breaks: true,
+//         pedantic: false,
+//         smartLists: true,
+//         smartypants: false
+//     });
+
+//     const formatMarkdownContainer = (targetId, rawContent, fallback) => {
+//         const target = document.getElementById(targetId);
+//         const content = rawContent?.trim() || fallback;
+//         target.innerHTML = marked.parse(content);
+
+//         target.querySelectorAll('p').forEach(p => {
+//             p.style.whiteSpace = "pre-wrap";
+//         });
+
+//         target.querySelectorAll('a').forEach(link => {
+//             link.classList.add('text-[#FFD700]', 'hover:underline', 'underline-offset-4', 'font-bold');
+//             link.target = "_blank";
+//             link.rel = "noopener noreferrer";
+//         });
+
+//         target.querySelectorAll('blockquote').forEach(quote => {
+//             quote.classList.add('border-l-4', 'border-[#FFD700]/50', 'bg-black/20', 'p-4', 'my-4', 'rounded-r-lg', 'italic', 'text-gray-400');
+//         });
+
+//         target.querySelectorAll('ul').forEach(ul => {
+//             ul.classList.add('list-disc', 'ml-6', 'mb-4', 'text-gray-300');
+//         });
+
+//         target.querySelectorAll('li').forEach(li => {
+//             li.classList.add('mb-1');
+//         });
+//     };
+
+//     formatMarkdownContainer('detail-lore', quest.lore, "No lore available.");
+//     formatMarkdownContainer('detail-location', quest.location, "No location details exist for this quest.");
+
+//     const itemEl = document.getElementById('detail-items');
+//     const goldEl = document.getElementById('detail-gold');
+//     const hasGold = quest.gold && Number(quest.gold) > 0;
+//     const hasItems = quest.items && (Array.isArray(quest.items) ? quest.items.length > 0 : (quest.items !== 'None' && quest.items !== ''));
+
+//     if (!hasGold && !hasItems) {
+//         itemEl.innerText = "No reward(s) found for this quest";
+//         itemEl.classList.add('text-gray-500', 'italic');
+//         goldEl.innerText = "";
+//     } else {
+//         itemEl.classList.remove('text-gray-500', 'italic');
+//         itemEl.innerText = hasItems ? (Array.isArray(quest.items) ? quest.items.join(', ') : quest.items) : '';
+//         goldEl.innerText = hasGold ? `${quest.gold} Gold` : '';
+//     }
+
+//     try {
+//         const response = await fetch('frontend/www/assets/signs.json');
+//         const signConfig = await response.json();
+//         const { baseUrl, version } = signConfig.config;
+//         document.getElementById('detail-signs').innerHTML = generateSignHtml(quest, baseUrl, version);
+//     } catch (e) {
+//         document.getElementById('detail-signs').innerHTML = `<span class="text-gray-500 italic text-md">No sign sequence found.</span>`;
+//     }
+
+//     const statusBadge = document.getElementById('detail-status-badge');
+//     statusBadge.innerHTML = userClaimed 
+//         ? '<span class="bg-green-900/50 text-green-400 px-3 py-1 rounded-full text-md font-bold uppercase border border-green-500/30">Completed</span>'
+//         : '<span class="bg-yellow-900/50 text-yellow-400 px-3 py-1 rounded-full text-md font-bold uppercase border border-yellow-500/30">Active</span>';
+
+//     const redeemBtn = document.getElementById('detail-redeem-btn');
+//     if (userClaimed) {
+//         redeemBtn.innerText = "Quest Completed";
+//         redeemBtn.disabled = true;
+//         redeemBtn.className = "ml-auto bg-gray-800 w-52 text-gray-500 py-3 rounded-lg font-bold uppercase text-md cursor-not-allowed";
+//     } else {
+//         redeemBtn.innerText = "Complete Quest";
+//         redeemBtn.disabled = false;
+//         redeemBtn.className = "ml-auto bg-[#FFD700] w-52 text-black py-3 rounded-lg font-bold uppercase text-md hover:bg-yellow-400 transition-all";
+        
+//         redeemBtn.onclick = async () => {
+//             const user = await getCurrentUser();
+//             if (!user) {
+//                 const emptyState = document.getElementById('empty-state');
+//                 const content = document.getElementById('details-content');
+//                 if (content) content.classList.add('hidden');
+//                 if (emptyState) {
+//                     emptyState.classList.remove('hidden');
+//                     emptyState.innerHTML = `
+//                         <div class="flex flex-col items-center justify-center p-12 text-center h-full">
+//                             <div class="w-16 h-16 bg-gray-800/50 rounded-full flex items-center justify-center mb-4 border border-gray-700">
+//                                 <i class="fa-brands fa-discord text-2xl text-[#5865F2]"></i>
+//                             </div>
+//                             <h3 class="text-xl font-bold text-white mb-2 font-serif uppercase tracking-widest">Authentication Required</h3>
+//                             <p class="text-gray-400 mb-6 max-w-xs italic">The Archives require a soul to bind these records to. Please login with Discord to continue.</p>
+//                             <button onclick="window.dispatchEvent(new CustomEvent('requestLogin'))" class="px-8 py-3 bg-[#5865F2] text-white font-bold rounded shadow-lg hover:bg-[#4752C4] transition-all flex items-center gap-2 uppercase text-sm tracking-widest">
+//                                 <i class="fa-brands fa-discord"></i> Login with Discord
+//                             </button>
+//                         </div>
+//                     `;
+//                 }
+//                 return;
+//             }
+
+//             const charId = await getActiveCharacterId();
+//             if (!charId) {
+//                 showToast("Please select or create a character in the sidebar first.", "error");
+//                 return;
+//             }
+
+//             if (quest.signs && Array.isArray(quest.signs) && quest.signs.length > 0) {
+//                 const modal = document.getElementById('sign-redemption-modal');
+//                 document.getElementById('modal-target-quest-name').innerText = quest.quest_name;
+//                 modal.classList.remove('hidden');
+//                 modal.classList.add('flex');
+//             } else {
+//                 const directModal = document.getElementById('direct-confirm-modal');
+//                 document.getElementById('direct-confirm-text').innerHTML = `Confirm completion of <span class="text-[#FFD700] font-bold">"${quest.quest_name}"</span>?`;
+//                 directModal.classList.remove('hidden');
+//                 directModal.classList.add('flex');
+
+//                 document.getElementById('direct-confirm-submit').onclick = async () => {
+//                     await claimQuestDirectly(quest);
+//                 };
+//             }
+//         };
+//     }
+
+//     const shareBtn = document.getElementById('detail-share-btn');
+//     if (shareBtn) {
+//         shareBtn.onclick = async () => {
+//             try {
+//                 await navigator.clipboard.writeText(window.location.href);
+//                 const span = shareBtn.querySelector('span');
+//                 const icon = shareBtn.querySelector('i');
+//                 const originalText = span.innerText;
+//                 const originalIconClass = icon.className;
+//                 span.innerText = "Copied!";
+//                 icon.className = "fa-solid fa-check text-green-400";
+//                 setTimeout(() => {
+//                     span.innerText = originalText;
+//                     icon.className = originalIconClass;
+//                 }, 2000);
+//             } catch (err) {
+//                 console.error('Failed to copy link:', err);
+//             }
+//         };
+//     }
+
+//     const url = new URL(window.location);
+//     url.searchParams.set('quest', quest.quest_key);
+//     window.history.replaceState({}, '', url);
+// }
+
+
 async function showQuestDetails(quest, userClaimed) {
     activeQuestKey = quest.quest_key;
     const emptyState = document.getElementById('empty-state');
@@ -223,6 +397,13 @@ async function showQuestDetails(quest, userClaimed) {
     
     if (emptyState) emptyState.classList.add('hidden');
     if (content) content.classList.remove('hidden');
+
+    const charId = await getActiveCharacterId();
+    const currentClaims = await fetchUserClaims(charId);
+    const completedQuestIds = currentClaims.map(c => c.quest_id);
+
+    const prerequisites = quest.prerequisite_quest_ids || [];
+    const prerequisitesMet = prerequisites.every(id => completedQuestIds.includes(id));
 
     document.querySelectorAll('.quest-item').forEach(el => {
         el.classList.remove('active', 'bg-white/10', 'border-l-4', 'border-[#FFD700]');
@@ -245,6 +426,33 @@ async function showQuestDetails(quest, userClaimed) {
         smartypants: false
     });
 
+    // const formatMarkdownContainer = (targetId, rawContent, fallback) => {
+    //     const target = document.getElementById(targetId);
+    //     const content = rawContent?.trim() || fallback;
+    //     target.innerHTML = marked.parse(content);
+
+    //     target.querySelectorAll('p').forEach(p => {
+    //         p.style.whiteSpace = "pre-wrap";
+    //     });
+
+    //     target.querySelectorAll('a').forEach(link => {
+    //         link.classList.add('text-[#FFD700]', 'hover:underline', 'underline-offset-4', 'font-bold');
+    //         link.target = "_blank";
+    //         link.rel = "noopener noreferrer";
+    //     });
+
+    //     target.querySelectorAll('blockquote').forEach(quote => {
+    //         quote.classList.add('border-l-4', 'border-[#FFD700]/50', 'bg-black/20', 'p-4', 'my-4', 'rounded-r-lg', 'italic', 'text-gray-400');
+    //     });
+
+    //     target.querySelectorAll('ul').forEach(ul => {
+    //         ul.classList.add('list-disc', 'ml-6', 'mb-4', 'text-gray-300');
+    //     });
+
+    //     target.querySelectorAll('li').forEach(li => {
+    //         li.classList.add('mb-1');
+    //     });
+    // };
     const formatMarkdownContainer = (targetId, rawContent, fallback) => {
         const target = document.getElementById(targetId);
         const content = rawContent?.trim() || fallback;
@@ -255,9 +463,39 @@ async function showQuestDetails(quest, userClaimed) {
         });
 
         target.querySelectorAll('a').forEach(link => {
-            link.classList.add('text-[#FFD700]', 'hover:underline', 'underline-offset-4', 'font-bold');
-            link.target = "_blank";
-            link.rel = "noopener noreferrer";
+            const urlString = link.getAttribute('href');
+            let isInternalQuest = false;
+
+            try {
+                const url = new URL(link.href, window.location.origin);
+                const questKey = url.searchParams.get('quest');
+
+                if (questKey) {
+                    isInternalQuest = true;
+                    link.classList.add('text-[#FFD700]', 'hover:underline', 'underline-offset-4', 'font-bold', 'cursor-pointer');
+                    
+                    link.onclick = (e) => {
+                        e.preventDefault();
+                        const targetQuest = allQuests.find(q => q.quest_key === questKey);
+                        if (targetQuest) {
+                            const isClaimed = userClaims.some(c => c.quest_id === targetQuest.id);
+                            showQuestDetails(targetQuest, isClaimed);
+                            const detailsPanel = document.getElementById('details-content');
+                            if (detailsPanel) detailsPanel.scrollTop = 0;
+                        } else {
+                            showToast("Quest record not found in the archives.", "error");
+                        }
+                    };
+                }
+            } catch (e) {
+                isInternalQuest = false;
+            }
+
+            if (!isInternalQuest) {
+                link.classList.add('text-[#FFD700]', 'hover:underline', 'underline-offset-4', 'font-bold');
+                link.target = "_blank";
+                link.rel = "noopener noreferrer";
+            }
         });
 
         target.querySelectorAll('blockquote').forEach(quote => {
@@ -301,15 +539,23 @@ async function showQuestDetails(quest, userClaimed) {
     }
 
     const statusBadge = document.getElementById('detail-status-badge');
-    statusBadge.innerHTML = userClaimed 
-        ? '<span class="bg-green-900/50 text-green-400 px-3 py-1 rounded-full text-md font-bold uppercase border border-green-500/30">Completed</span>'
-        : '<span class="bg-yellow-900/50 text-yellow-400 px-3 py-1 rounded-full text-md font-bold uppercase border border-yellow-500/30">Active</span>';
+    if (userClaimed) {
+        statusBadge.innerHTML = '<span class="bg-green-900/50 text-green-400 px-3 py-1 rounded-full text-md font-bold uppercase border border-green-500/30">Completed</span>';
+    } else if (!prerequisitesMet) {
+        statusBadge.innerHTML = '<span class="bg-red-900/50 text-red-400 px-3 py-1 rounded-full text-md font-bold uppercase border border-red-500/30"><i class="fa-solid fa-lock mr-2"></i>Locked</span>';
+    } else {
+        statusBadge.innerHTML = '<span class="bg-yellow-900/50 text-yellow-400 px-3 py-1 rounded-full text-md font-bold uppercase border border-yellow-500/30">Active</span>';
+    }
 
     const redeemBtn = document.getElementById('detail-redeem-btn');
     if (userClaimed) {
         redeemBtn.innerText = "Quest Completed";
         redeemBtn.disabled = true;
         redeemBtn.className = "ml-auto bg-gray-800 w-52 text-gray-500 py-3 rounded-lg font-bold uppercase text-md cursor-not-allowed";
+    } else if (!prerequisitesMet) {
+        redeemBtn.innerText = "Locked";
+        redeemBtn.disabled = true;
+        redeemBtn.className = "ml-auto bg-gray-900/40 w-52 text-gray-400/50 py-3 rounded-lg font-bold uppercase text-md cursor-not-allowed border border-white/5";
     } else {
         redeemBtn.innerText = "Complete Quest";
         redeemBtn.disabled = false;
@@ -339,7 +585,6 @@ async function showQuestDetails(quest, userClaimed) {
                 return;
             }
 
-            const charId = await getActiveCharacterId();
             if (!charId) {
                 showToast("Please select or create a character in the sidebar first.", "error");
                 return;
@@ -388,6 +633,8 @@ async function showQuestDetails(quest, userClaimed) {
     url.searchParams.set('quest', quest.quest_key);
     window.history.replaceState({}, '', url);
 }
+
+
 
 async function renderQuestsList() {
     const listContainer = document.getElementById("quest-titles-list");

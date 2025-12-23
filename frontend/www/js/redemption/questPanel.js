@@ -275,6 +275,23 @@ function showModal(title, message) {
     });
 }
 
+async function loadPrerequisiteOptions(containerId) {
+    const { data: quests, error } = await supabase
+        .from('cipher_quests')
+        .select('id, quest_name, category')
+        .order('category', { ascending: true });
+
+    const container = document.getElementById(containerId);
+    if (error || !container) return;
+
+    container.innerHTML = quests.map(q => `
+        <label class="flex items-center space-x-3 p-2 hover:bg-white/5 rounded-lg cursor-pointer transition-colors">
+            <input type="checkbox" name="prereq-quest" value="${q.id}" class="w-4 h-4 rounded border-gray-700 text-[#FFD700] focus:ring-[#FFD700] bg-gray-900">
+            <span class="text-sm text-gray-300">${q.quest_name} <small class="text-gray-500 ml-2">(${q.category})</small></span>
+        </label>
+    `).join('');
+}
+
 document.getElementById("create-quest").onclick = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     const quest_name = questNameInput.value.trim();
@@ -291,6 +308,9 @@ document.getElementById("create-quest").onclick = async () => {
     const gold = parseInt(document.getElementById("gold")?.value || 0);
     const unlockPreCat = document.getElementById("unlock-pre-cat")?.value || null;
     const unlockReqCount = parseInt(document.getElementById("unlock-req-count")?.value || 0);
+
+    const selectedPrereqs = Array.from(document.querySelectorAll('input[name="prereq-quest"]:checked'))
+        .map(cb => cb.value);
 
     if (category === 'NEW') {
         const newCatName = document.getElementById("new-category-input").value.trim();
@@ -340,7 +360,8 @@ document.getElementById("create-quest").onclick = async () => {
         active: true,
         created_by: user.id,
         unlock_prerequisite_category: unlockPreCat,
-        unlock_required_count: unlockReqCount
+        unlock_required_count: unlockReqCount,
+        prerequisite_quest_ids: selectedPrereqs 
     });
 
     if (error) {
@@ -356,6 +377,7 @@ function init() {
     loadRegions();
     loadCategories();
     loadSigns();
+    loadPrerequisiteOptions('prerequisite-container');
 }
 
 checkAccess();
