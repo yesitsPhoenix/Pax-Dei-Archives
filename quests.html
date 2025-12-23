@@ -121,12 +121,12 @@
     <div class="filter-container mt-2 pt-4 border-t border-gray-700 px-0">
         <h3 class="text-[12px] uppercase tracking-widest text-[#FFD700] font-bold mb-3 px-2 sidebar-text">Quest Filter</h3>
         <div class="flex flex-col gap-2">
-            <button data-filter-status="" class="sidebar-filter-btn active w-full text-left px-3 py-2 rounded-lg text-md font-bold uppercase transition-all flex items-center gap-3">
+            <button data-filter-status="" class="sidebar-filter-btn w-full text-left px-3 py-2 rounded-lg text-md font-bold uppercase transition-all flex items-center gap-3">
                 <i class="fa-solid fa-list-ul w-5"></i> 
                 <span class="sidebar-text">All Quests</span>
             </button>
-            <button data-filter-status="incomplete" class="sidebar-filter-btn w-full text-left px-3 py-2 rounded-lg text-md font-bold uppercase transition-all flex items-center gap-3">
-                <i class="fa-solid fa-circle text-[8px] text-gray-500 w-5"></i> 
+            <button data-filter-status="incomplete" class="sidebar-filter-btn active bg-[#FFD700] text-black w-full text-left px-3 py-2 rounded-lg text-md font-bold uppercase transition-all flex items-center gap-3">
+                <i class="fa-solid fa-circle text-[8px] text-black w-5"></i> 
                 <span class="sidebar-text">Incomplete</span>
             </button>
             <button data-filter-status="completed" class="sidebar-filter-btn w-full text-left px-3 py-2 rounded-lg text-md font-bold uppercase transition-all flex items-center gap-3">
@@ -134,6 +134,7 @@
                 <span class="sidebar-text">Completed</span>
             </button>
         </div>
+        <input type="hidden" id="filter-status" value="incomplete">
         <input type="hidden" id="filter-status" value="">
     </div>
 </aside>
@@ -174,11 +175,16 @@
                                 <h2 id="detail-name" class="text-2xl font-bold text-white mb-0"></h2>
                                 <span id="detail-region" class="text-[#FFD700] text-md font-bold uppercase tracking-wider"></span>
                             </div>
-                            <div id="detail-status-badge"></div>
+                            <div class="flex items-center gap-4">
+                                <div id="detail-status-badge"></div>
+                                <button id="expand-quest-details" class="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-all text-gray-400 hover:text-[#FFD700] border border-white/5" title="Expand View">
+                                    <i class="fa-solid fa-expand text-xl"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="flex-1 details-scroll-area p-8">
+                    <div class="flex-1 details-scroll-area p-8 overflow-y-auto">
                         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                             <div class="lg:col-span-2 space-y-6">
                                 <section>
@@ -221,6 +227,26 @@
         </div>
     </div>
 </div>
+
+<div id="quest-modal" class="fixed inset-0 z-[150] hidden flex-col items-center justify-start p-4 md:p-8 bg-black/80 backdrop-blur-sm">
+    <div class="bg-gradient-to-br from-[#1f2937] to-[#111827] border border-gray-700 w-full max-w-[1400px] max-h-[80vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col mt-24">
+        <div class="relative shrink-0 h-24 bg-gradient-to-r from-[#72e0cc]/20 to-[#FFD700]/20 flex items-center px-10 border-b border-gray-700">
+            <div class="flex justify-between items-center w-full">
+                <div>
+                    <h2 id="modal-quest-title" class="text-3xl font-bold text-white mb-0"></h2>
+                    <span id="modal-quest-region" class="text-[#FFD700] text-md font-bold uppercase tracking-wider"></span>
+                </div>
+                <div class="flex items-center gap-6">
+                    <div id="modal-quest-status"></div>
+                    <button id="close-quest-modal" class="text-gray-400 hover:text-white transition-all text-4xl font-light focus:outline-none">&times;</button>
+                </div>
+            </div>
+        </div>
+        <div id="modal-quest-body" class="flex-1 p-12 grid grid-cols-1 lg:grid-cols-3 gap-12 details-scroll-area">
+        </div>
+    </div>
+</div>
+
 
 <div id="sign-redemption-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md hidden items-center justify-center z-[100] p-4">
     <div class="bg-[#1f2937] w-full max-w-2xl rounded-2xl border border-gray-700 shadow-2xl overflow-hidden relative flex flex-col max-h-[85vh]">

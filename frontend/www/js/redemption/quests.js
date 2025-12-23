@@ -1,6 +1,8 @@
 import { supabase } from "../supabaseClient.js";
 import { getUnlockedCategories, applyLockStyles } from "./unlocks.js";
 import { enableSignTooltip } from '../ui/signTooltip.js';
+import { initQuestModal } from './questModal.js';
+
 
 let allQuests = [];
 let regionsData = [];
@@ -28,7 +30,6 @@ async function getActiveCharacterId() {
     const { data: character } = await supabase
         .from("characters")
         .select("character_id")
-        //.eq("user_id", user.id)
         .eq("is_default_character", true)
         .maybeSingle();
 
@@ -139,6 +140,12 @@ function populateFilters(regions) {
 
     if (statusInput && filterButtons.length > 0) {
         filterButtons.forEach(btn => {
+            if (btn.getAttribute('data-filter-status') === statusInput.value) {
+                btn.classList.add('active', 'bg-[#FFD700]', 'text-black');
+                const icon = btn.querySelector('i');
+                if (icon) icon.classList.add('text-black');
+            }
+
             btn.addEventListener('click', (e) => {
                 e.stopPropagation(); 
                 
@@ -204,7 +211,6 @@ async function claimQuestDirectly(quest) {
         }
 
         await renderQuestsList();
-        await showQuestDetails(quest, true);
     } else {
         showToast(`Error: ${error.message}`, "error");
     }
@@ -407,8 +413,7 @@ async function renderQuestsList() {
     listContainer.innerHTML = "";
 
     const filteredQuests = allQuests.filter(quest => {
-    const userClaimed = userClaims.some(c => c.quest_id === quest.id);
-    
+        const userClaimed = userClaims.some(c => c.quest_id === quest.id);
         const reqCat = quest.unlock_prerequisite_category;
         const reqCount = quest.unlock_required_count || 0;
         const questIsLocked = reqCat && reqCat !== "" && (categoryProgress[reqCat] || 0) < reqCount;
@@ -420,6 +425,34 @@ async function renderQuestsList() {
         if (filterStatus === "incomplete") matchesStatus = !userClaimed;
         return matchesStatus;
     });
+
+    if (activeQuestKey && !filteredQuests.some(q => q.quest_key === activeQuestKey)) {
+            const previousIndex = allQuests.findIndex(q => q.quest_key === activeQuestKey);
+            
+            let nextQuest = filteredQuests.find((q, index) => {
+                const originalIndex = allQuests.findIndex(orig => orig.quest_key === q.quest_key);
+                return originalIndex >= previousIndex;
+            });
+
+            if (!nextQuest && filteredQuests.length > 0) {
+                nextQuest = filteredQuests[filteredQuests.length - 1];
+            }
+
+            if (nextQuest) {
+                activeQuestKey = nextQuest.quest_key;
+                showQuestDetails(nextQuest, userClaims.some(c => c.quest_id === nextQuest.id));
+            } else {
+                activeQuestKey = null;
+                const emptyState = document.getElementById('empty-state');
+                const content = document.getElementById('details-content');
+                if (content) content.classList.add('hidden');
+                if (emptyState) emptyState.classList.remove('hidden');
+                
+                const url = new URL(window.location);
+                url.searchParams.delete('quest');
+                window.history.replaceState({}, '', url.pathname);
+            }
+        }
 
     const groupedQuests = filteredQuests.reduce((acc, quest) => {
         const cat = quest.category || "Uncategorized";
@@ -503,7 +536,7 @@ async function init() {
     allQuests = await fetchQuests();
     regionsData = await fetchRegions();
     populateFilters(regionsData);
-
+    initQuestModal();
     const characterId = sessionStorage.getItem("active_character_id");
     if (characterId) {
         userClaims = await fetchUserClaims(characterId);
@@ -572,8 +605,6 @@ async function init() {
                 q.is_completed = userClaims.some(c => c.quest_id === q.id);
             });
             await renderQuestsList();
-            const refreshedQuest = allQuests.find(q => q.id === quest.id);
-            await showQuestDetails(refreshedQuest || quest, true);
         }
     });
 
