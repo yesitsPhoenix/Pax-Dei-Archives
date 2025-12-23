@@ -14,6 +14,7 @@ export function initQuestModal() {
         const gold = document.getElementById('detail-gold').innerText;
         const signs = document.getElementById('detail-signs').innerHTML;
         const status = document.getElementById('detail-status-badge').innerHTML;
+        const prerequisites = document.getElementById('detail-prerequisites').innerHTML;
 
         document.getElementById('modal-quest-title').innerText = title;
         document.getElementById('modal-quest-region').innerText = region;
@@ -48,8 +49,34 @@ export function initQuestModal() {
                         <div class="text-[#ecaf48] font-bold text-xl">${gold}</div>
                     </div>
                 </section>
+                <section>
+                    <h4 class="text-md uppercase tracking-widest text-gray-500 font-bold mb-2">Requirements</h4>
+                    <div id="modal-prerequisites" class="bg-black/20 p-4 rounded-xl border border-gray-700/50 flex flex-col gap-1">
+                        ${prerequisites}
+                    </div>
+                </section>
             </div>
         `;
+
+        document.getElementById('modal-quest-body').querySelectorAll('.prereq-link').forEach(btn => {
+            btn.onclick = () => {
+                const targetId = btn.getAttribute('data-quest-id');
+                
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                document.body.style.overflow = 'auto';
+
+                if (window.allQuests && typeof window.showQuestDetails === 'function') {
+                    const targetQuest = window.allQuests.find(q => q.id === targetId);
+                    if (targetQuest) {
+                        const isClaimed = window.userClaims ? window.userClaims.some(c => c.quest_id === targetQuest.id) : false;
+                        window.showQuestDetails(targetQuest, isClaimed);
+                        const detailsPanel = document.getElementById('details-content');
+                        if (detailsPanel) detailsPanel.scrollTop = 0;
+                    }
+                }
+            };
+        });
 
         modal.classList.remove('hidden');
         modal.classList.add('flex');
