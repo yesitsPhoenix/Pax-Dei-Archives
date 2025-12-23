@@ -1,10 +1,10 @@
 import { supabase } from "../supabaseClient.js";
 
-export async function getUnlockedCategories(userId, allQuests, userClaims) {
+export async function getUnlockedCategories(characterId, allQuests, userClaims) {
     const unlocked = new Set(["Uncategorized"]);
 
     const categoryProgress = {};
-    if (userId && userClaims) {
+    if (characterId && userClaims) {
         userClaims.forEach(claim => {
             const quest = allQuests.find(q => q.id === claim.quest_id);
             if (quest && quest.category) {
@@ -25,11 +25,11 @@ export async function getUnlockedCategories(userId, allQuests, userClaims) {
         }
     });
 
-    if (userId) {
+    if (characterId) {
         const { data: dbUnlocks } = await supabase
             .from("user_unlocked_categories")
             .select("category_name")
-            .eq("user_id", userId);
+            .eq("character_id", characterId);
         
         if (dbUnlocks) {
             dbUnlocks.forEach(u => unlocked.add(u.category_name));
@@ -54,7 +54,7 @@ export async function processSecretUnlock(fullIds, userId) {
     if (unlock && userId) {
         await supabase
             .from("user_unlocked_categories")
-            .upsert({ user_id: userId, category_name: unlock.target });
+            .upsert({ characterId: characterId, category_name: unlock.target });
         return unlock;
     }
     return null;

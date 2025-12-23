@@ -4,6 +4,7 @@ import { enableSignTooltip } from '../ui/signTooltip.js';
 
 let allQuests = [];
 let regionsData = [];
+let userClaims = [];
 let activeQuestKey = null;
 let collapsedCategories = new Set();
 
@@ -15,6 +16,57 @@ async function getCurrentUser() {
     } catch (e) {
         return null;
     }
+}
+
+async function getActiveCharacterId() {
+    const sessionCharId = sessionStorage.getItem("active_character_id");
+    if (sessionCharId) return sessionCharId;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data: character } = await supabase
+        .from("characters")
+        .select("character_id")
+        //.eq("user_id", user.id)
+        .eq("is_default_character", true)
+        .maybeSingle();
+
+    if (character) {
+        sessionStorage.setItem("active_character_id", character.character_id);
+        return character.character_id;
+    }
+    return null;
+}
+
+
+function showToast(message, type = 'error') {
+    const container = document.getElementById('toast-container') || createToastContainer();
+    const toast = document.createElement('div');
+    const bgColor = type === 'success' ? 'bg-green-600' : 'bg-red-600';
+    const icon = type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation';
+
+    toast.className = `${bgColor} text-white px-6 py-4 rounded-lg shadow-2xl mb-4 flex items-center gap-3 min-w-[300px] toast-animate border border-white/20`;
+    toast.innerHTML = `
+        <i class="fa-solid ${icon} text-xl"></i>
+        <span class="font-bold uppercase tracking-wide text-sm">${message}</span>
+    `;
+
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        toast.style.transition = 'all 0.5s ease-in';
+        setTimeout(() => toast.remove(), 500);
+    }, 4000);
+}
+
+function createToastContainer() {
+    const container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'fixed bottom-5 right-5 z-[9999] flex flex-col items-end';
+    document.body.appendChild(container);
+    return container;
 }
 
 async function updateSidebarPermissions() {
@@ -70,13 +122,15 @@ async function fetchRegions() {
     return data || [];
 }
 
-async function fetchUserClaims(userId) {
+
+async function fetchUserClaims(characterId) {
+    if (!characterId) return [];
     const { data, error } = await supabase
         .from("user_claims")
         .select("*")
-        .eq("user_id", userId);
-    if (error) console.error("Error fetching claims:", error);
-    return data || [];
+        .eq("character_id", characterId);
+    
+    return error ? [] : data;
 }
 
 function populateFilters(regions) {
@@ -88,27 +142,21 @@ function populateFilters(regions) {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation(); 
                 
-                filterButtons.forEach(b => b.classList.remove('active', 'bg-[#FFD700]', 'text-black'));
+                filterButtons.forEach(b => {
+                    b.classList.remove('active', 'bg-[#FFD700]', 'text-black');
+                    const icon = b.querySelector('i');
+                    if (icon) icon.classList.remove('text-black');
+                });
+
                 btn.classList.add('active', 'bg-[#FFD700]', 'text-black');
+                const activeIcon = btn.querySelector('i');
+                if (activeIcon) activeIcon.classList.add('text-black');
 
                 const statusValue = btn.getAttribute('data-filter-status');
                 statusInput.value = statusValue;
 
                 renderQuestsList();
             });
-        });
-    }
-
-    const clearBtn = document.getElementById('clear-filters');
-    if (clearBtn) {
-        clearBtn.addEventListener('click', () => {
-            if (statusInput) statusInput.value = "";
-            filterButtons.forEach(b => b.classList.remove('active', 'bg-[#FFD700]', 'text-black'));
-            const allBtn = document.querySelector('[data-filter-status=""]');
-            if (allBtn) allBtn.classList.add('active', 'bg-[#FFD700]', 'text-black');
-            
-            activeQuestKey = null;
-            renderQuestsList();
         });
     }
 }
@@ -127,28 +175,38 @@ function generateSignHtml(quest, baseUrl, version) {
 }
 
 async function claimQuestDirectly(quest) {
-    const user = await getCurrentUser();
-    if (!user) return;
+    const charId = await getActiveCharacterId();
+    if (!charId) {
+        showToast("Please select a character first.", "error");
+        return;
+    }
 
     const { error } = await supabase
         .from('user_claims')
         .insert({
-            user_id: user.id,
+            character_id: charId,
             quest_id: quest.id,
             claimed_at: new Date().toISOString()
         });
 
     if (!error) {
-        const modal = document.getElementById('redemption-modal');
-        if (modal) {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
+        const directModal = document.getElementById('direct-confirm-modal');
+        const successModal = document.getElementById('success-state');
+        
+        if (directModal) {
+            directModal.classList.add('hidden');
+            directModal.classList.remove('flex');
+        }
+
+        if (successModal) {
+            successModal.classList.remove('hidden');
+            successModal.classList.add('flex');
         }
 
         await renderQuestsList();
         await showQuestDetails(quest, true);
     } else {
-        alert("Error claiming quest: " + error.message);
+        showToast(`Error: ${error.message}`, "error");
     }
 }
 
@@ -188,7 +246,6 @@ async function showQuestDetails(quest, userClaimed) {
 
         target.querySelectorAll('p').forEach(p => {
             p.style.whiteSpace = "pre-wrap";
-            // p.style.marginBottom = "1rem";
         });
 
         target.querySelectorAll('a').forEach(link => {
@@ -199,7 +256,6 @@ async function showQuestDetails(quest, userClaimed) {
 
         target.querySelectorAll('blockquote').forEach(quote => {
             quote.classList.add('border-l-4', 'border-[#FFD700]/50', 'bg-black/20', 'p-4', 'my-4', 'rounded-r-lg', 'italic', 'text-gray-400');
-            // quote.style.whiteSpace = "pre-wrap";
         });
 
         target.querySelectorAll('ul').forEach(ul => {
@@ -251,45 +307,50 @@ async function showQuestDetails(quest, userClaimed) {
     } else {
         redeemBtn.innerText = "Complete Quest";
         redeemBtn.disabled = false;
-        redeemBtn.className = "ml-auto bg-[#FFD700] w-52 text-black py-3 rounded-lg font-bold uppercase text-md hover:bg-green-300 transition-all";
+        redeemBtn.className = "ml-auto bg-[#FFD700] w-52 text-black py-3 rounded-lg font-bold uppercase text-md hover:bg-yellow-400 transition-all";
         
         redeemBtn.onclick = async () => {
             const user = await getCurrentUser();
             if (!user) {
-                alert("Please login to complete quests.");
+                const emptyState = document.getElementById('empty-state');
+                const content = document.getElementById('details-content');
+                if (content) content.classList.add('hidden');
+                if (emptyState) {
+                    emptyState.classList.remove('hidden');
+                    emptyState.innerHTML = `
+                        <div class="flex flex-col items-center justify-center p-12 text-center h-full">
+                            <div class="w-16 h-16 bg-gray-800/50 rounded-full flex items-center justify-center mb-4 border border-gray-700">
+                                <i class="fa-brands fa-discord text-2xl text-[#5865F2]"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-white mb-2 font-serif uppercase tracking-widest">Authentication Required</h3>
+                            <p class="text-gray-400 mb-6 max-w-xs italic">The Archives require a soul to bind these records to. Please login with Discord to continue.</p>
+                            <button onclick="window.dispatchEvent(new CustomEvent('requestLogin'))" class="px-8 py-3 bg-[#5865F2] text-white font-bold rounded shadow-lg hover:bg-[#4752C4] transition-all flex items-center gap-2 uppercase text-sm tracking-widest">
+                                <i class="fa-brands fa-discord"></i> Login with Discord
+                            </button>
+                        </div>
+                    `;
+                }
                 return;
             }
 
-            const modal = document.getElementById('redemption-modal');
+            const charId = await getActiveCharacterId();
+            if (!charId) {
+                showToast("Please select or create a character in the sidebar first.", "error");
+                return;
+            }
+
             if (quest.signs && Array.isArray(quest.signs) && quest.signs.length > 0) {
+                const modal = document.getElementById('sign-redemption-modal');
                 document.getElementById('modal-target-quest-name').innerText = quest.quest_name;
                 modal.classList.remove('hidden');
                 modal.classList.add('flex');
             } else {
-                const modalContent = modal.querySelector('.bg-\\[\\#1f2937\\]');
-                const originalHtml = modalContent.innerHTML;
+                const directModal = document.getElementById('direct-confirm-modal');
+                document.getElementById('direct-confirm-text').innerHTML = `Confirm completion of <span class="text-[#FFD700] font-bold">"${quest.quest_name}"</span>?`;
+                directModal.classList.remove('hidden');
+                directModal.classList.add('flex');
 
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
-
-                modalContent.innerHTML = `
-                    <div class="p-8 text-center">
-                        <h2 class="text-2xl font-bold text-white mb-4">Complete Quest</h2>
-                        <p class="text-gray-400 mb-8">Confirm completion of <span class="text-[#FFD700] font-bold">"${quest.quest_name}"</span>?</p>
-                        <div class="flex gap-4 justify-center">
-                            <button id="cancel-direct-claim" class="px-6 py-2 bg-gray-700 text-white rounded-lg font-bold hover:bg-gray-600 transition-all">Cancel</button>
-                            <button id="confirm-direct-claim" class="px-6 py-2 bg-[#FFD700] text-black rounded-lg font-bold hover:bg-green-300 transition-all">Confirm</button>
-                        </div>
-                    </div>
-                `;
-
-                document.getElementById('cancel-direct-claim').onclick = () => {
-                    modal.classList.add('hidden');
-                    modal.classList.remove('flex');
-                    modalContent.innerHTML = originalHtml;
-                };
-
-                document.getElementById('confirm-direct-claim').onclick = async () => {
+                document.getElementById('direct-confirm-submit').onclick = async () => {
                     await claimQuestDirectly(quest);
                 };
             }
@@ -317,11 +378,6 @@ async function showQuestDetails(quest, userClaimed) {
         };
     }
 
-    document.getElementById('close-redemption')?.addEventListener('click', () => {
-        document.getElementById('redemption-modal').classList.add('hidden');
-        document.getElementById('redemption-modal').classList.remove('flex');
-    });
-
     const url = new URL(window.location);
     url.searchParams.set('quest', quest.quest_key);
     window.history.replaceState({}, '', url);
@@ -331,13 +387,13 @@ async function renderQuestsList() {
     const listContainer = document.getElementById("quest-titles-list");
     if (!listContainer) return;
 
-    const user = await getCurrentUser();
+    const charId = await getActiveCharacterId();
     const filterStatus = document.getElementById('filter-status')?.value;
 
     let userClaims = [];
-    if (user) userClaims = await fetchUserClaims(user.id);
+    if (charId) userClaims = await fetchUserClaims(charId);
 
-    const unlockedCategoriesList = await getUnlockedCategories(user?.id, allQuests, userClaims);
+    const unlockedCategoriesList = await getUnlockedCategories(charId, allQuests, userClaims);
     const unlockedCategories = new Set(unlockedCategoriesList);
 
     const categoryProgress = {};
@@ -351,7 +407,14 @@ async function renderQuestsList() {
     listContainer.innerHTML = "";
 
     const filteredQuests = allQuests.filter(quest => {
-        const userClaimed = userClaims.some(c => c.quest_id === quest.id);
+    const userClaimed = userClaims.some(c => c.quest_id === quest.id);
+    
+        const reqCat = quest.unlock_prerequisite_category;
+        const reqCount = quest.unlock_required_count || 0;
+        const questIsLocked = reqCat && reqCat !== "" && (categoryProgress[reqCat] || 0) < reqCount;
+
+        if (questIsLocked) return false;
+
         let matchesStatus = true;
         if (filterStatus === "completed") matchesStatus = userClaimed;
         if (filterStatus === "incomplete") matchesStatus = !userClaimed;
@@ -366,14 +429,23 @@ async function renderQuestsList() {
     }, {});
 
     Object.keys(groupedQuests).sort().forEach(category => {
-        const isCollapsed = collapsedCategories.has(category);
         const isLocked = !unlockedCategories.has(category);
-        
+        const categoryQuests = groupedQuests[category];
+        const visibleQuestsInCat = categoryQuests.filter(quest => {
+            const reqCat = quest.unlock_prerequisite_category;
+            const reqCount = quest.unlock_required_count || 0;
+            const questIsLocked = reqCat && reqCat !== "" && (categoryProgress[reqCat] || 0) < reqCount;
+            return !questIsLocked;
+        });
+
+        if (visibleQuestsInCat.length === 0 && isLocked) return;
+
+        const isCollapsed = collapsedCategories.has(category);
         const categoryHeader = document.createElement("div");
         categoryHeader.className = "category-header p-3 px-4 text-[12px] font-bold uppercase tracking-widest text-[#FFD700] border-b border-gray-700/50 sticky top-0 z-10 backdrop-blur-md cursor-pointer flex justify-between items-center hover:bg-white/5";
         
         const catTitle = document.createElement("span");
-        catTitle.innerText = `${category} (${groupedQuests[category].length})`;
+        catTitle.innerText = `${category} (${categoryQuests.length})`;
         categoryHeader.appendChild(catTitle);
 
         const catIconContainer = document.createElement("div");
@@ -394,10 +466,12 @@ async function renderQuestsList() {
         listContainer.appendChild(categoryHeader);
 
         if (!isCollapsed && !isLocked) {
-            groupedQuests[category].forEach(quest => {
+            categoryQuests.forEach(quest => {
                 const reqCat = quest.unlock_prerequisite_category;
                 const reqCount = quest.unlock_required_count || 0;
                 const questIsLocked = reqCat && reqCat !== "" && (categoryProgress[reqCat] || 0) < reqCount;
+
+                if (questIsLocked) return;
 
                 const userClaimed = userClaims.some(c => c.quest_id === quest.id);
                 const item = document.createElement("div");
@@ -416,11 +490,7 @@ async function renderQuestsList() {
                 itemFlex.appendChild(statusIconContainer);
                 item.appendChild(itemFlex);
 
-                if (questIsLocked) {
-                    applyLockStyles(item, statusIconContainer);
-                } else {
-                    item.onclick = () => showQuestDetails(quest, userClaimed);
-                }
+                item.onclick = () => showQuestDetails(quest, userClaimed);
                 listContainer.appendChild(item);
             });
         }
@@ -433,23 +503,85 @@ async function init() {
     allQuests = await fetchQuests();
     regionsData = await fetchRegions();
     populateFilters(regionsData);
+
+    const characterId = sessionStorage.getItem("active_character_id");
+    if (characterId) {
+        userClaims = await fetchUserClaims(characterId);
+    }
+
     await renderQuestsList();
 
+    window.addEventListener('characterChanged', async (e) => {
+        const newCharacterId = e.detail.characterId;
+        
+        activeQuestKey = null; 
+        
+        const url = new URL(window.location);
+        url.searchParams.delete('quest');
+        window.history.replaceState({}, '', url.pathname);
+
+        const emptyState = document.getElementById('empty-state');
+        const content = document.getElementById('details-content');
+        
+        if (content) content.classList.add('hidden');
+        if (emptyState) {
+            emptyState.classList.remove('hidden');
+            emptyState.innerHTML = `
+                <div class="text-center text-gray-400">
+                    <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2"></i>
+                    <p>Updating records...</p>
+                </div>`;
+        }
+
+        const { data: claims, error } = await supabase
+            .from("user_claims")
+            .select("*")
+            .eq("character_id", newCharacterId);
+
+        if (!error) {
+            userClaims = claims;
+            allQuests.forEach(q => {
+                q.is_completed = userClaims.some(c => c.quest_id === q.id);
+            });
+
+            await renderQuestsList();
+            
+            if (emptyState) {
+                emptyState.innerHTML = `
+                    <div class="text-center text-gray-400">
+                        <i class="fa-solid fa-scroll text-4xl mb-4 opacity-20"></i>
+                        <p>Select a chronicle from the list to view details</p>
+                    </div>`;
+            }
+        }
+    });
+
     window.addEventListener("questClaimed", async (e) => {
-        const { quest } = e.detail;
-        await renderQuestsList();
-        await showQuestDetails(quest, true);
+        const { quest, character_id } = e.detail;
+        const activeCharId = character_id || sessionStorage.getItem("active_character_id");
+        if (!activeCharId) return;
+
+        const { data: updatedClaims } = await supabase
+            .from("user_claims")
+            .select("*")
+            .eq("character_id", activeCharId);
+
+        if (updatedClaims) {
+            userClaims = updatedClaims;
+            allQuests.forEach(q => {
+                q.is_completed = userClaims.some(c => c.quest_id === q.id);
+            });
+            await renderQuestsList();
+            const refreshedQuest = allQuests.find(q => q.id === quest.id);
+            await showQuestDetails(refreshedQuest || quest, true);
+        }
     });
 
     const urlParams = new URLSearchParams(window.location.search);
     const targetQuestKey = urlParams.get('quest');
-    if (targetQuestKey) {
+    if (targetQuestKey && allQuests.length > 0) {
         const targetQuest = allQuests.find(q => q.quest_key === targetQuestKey);
         if (targetQuest) {
-            const user = await getCurrentUser();
-            let userClaims = [];
-            if (user) userClaims = await fetchUserClaims(user.id);
-            
             const categoryProgress = {};
             userClaims.forEach(claim => {
                 const q = allQuests.find(item => item.id === claim.quest_id);
@@ -472,8 +604,7 @@ async function init() {
                             <i class="fa-solid fa-lock text-4xl mb-4 text-[#FFD700]/50"></i>
                             <p class="text-xl font-bold text-white mb-2">Quest Locked</p>
                             <p class="text-gray-400 italic">This chapter is currently hidden from your records.</p>
-                        </div>
-                    `;
+                        </div>`;
                 }
             }
         }
