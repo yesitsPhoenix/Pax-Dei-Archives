@@ -270,6 +270,7 @@ async function loadEditor(userId, signData) {
     });
 
     document.getElementById('quest-name').value = quest.quest_name;
+    document.getElementById('quest-author').value = quest.author || '';
     document.getElementById('quest-key').value = quest.quest_key;
     document.getElementById('quest-category-select').value = quest.category || '';
     document.getElementById('region-selection').value = quest.region_id || "global";
@@ -391,6 +392,7 @@ function setupEditorEvents(baseUrl, version) {
 
     document.getElementById('modal-confirm').onclick = async () => {
         const itemsInput = document.getElementById('items').value;
+        const author = document.getElementById('quest-author').value.trim();
         const keywordRaw = document.getElementById('cipher-keyword-select').value;
         const currentKeyword = (keywordRaw === "None" || !keywordRaw) ? "" : keywordRaw;
         const region_id = document.getElementById('region-selection').value;
@@ -409,6 +411,7 @@ function setupEditorEvents(baseUrl, version) {
 
         const updatedData = {
             quest_name: document.getElementById('quest-name').value.trim(),
+            author,
             quest_key: document.getElementById('quest-key').value.trim(),
             category: finalCategory,
             region_id: region_id === "global" ? null : region_id,

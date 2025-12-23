@@ -1,19 +1,20 @@
 import { supabase } from "../supabaseClient.js";
 import { enableSignTooltip, mouseTooltip } from '../ui/signTooltip.js';
+import { initializeCharacterSystem } from "./characterManager.js";
 
 const alphabet = "abcdefghijklmnopqrstuvwxyz";
 
-function getCipherShift(word) {
-    if (!word || word.toLowerCase() === "none") return 0;
-    const firstChar = word.charAt(0).toLowerCase();
-    const index = alphabet.indexOf(firstChar);
-    return index !== -1 ? (index + 1) : 0;
+async function prefillAuthor() {
+    const characterSelect = document.getElementById('character-select');
+    const authorInput = document.getElementById("quest-author");
+    
+    if (characterSelect && authorInput) {
+        const selectedText = characterSelect.options[characterSelect.selectedIndex]?.text;
+        if (selectedText) {
+            authorInput.value = selectedText;
+        }
+    }
 }
-
-const selected = [];
-let allSignIds = [];
-const grid = document.getElementById("sign-grid");
-const selectedDisplay = document.getElementById("selected-signs");
 
 async function checkAccess() {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -34,8 +35,30 @@ async function checkAccess() {
         return;
     }
 
+    await initializeCharacterSystem(user.id);
+    
+    setTimeout(() => {
+        prefillAuthor();
+    }, 500);
+
+    window.addEventListener('characterChanged', () => {
+        prefillAuthor();
+    });
+
     init();
 }
+
+function getCipherShift(word) {
+    if (!word || word.toLowerCase() === "none") return 0;
+    const firstChar = word.charAt(0).toLowerCase();
+    const index = alphabet.indexOf(firstChar);
+    return index !== -1 ? (index + 1) : 0;
+}
+
+const selected = [];
+let allSignIds = [];
+const grid = document.getElementById("sign-grid");
+const selectedDisplay = document.getElementById("selected-signs");
 
 async function loadCategories() {
     const { data: categories, error } = await supabase
@@ -256,6 +279,7 @@ document.getElementById("create-quest").onclick = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     const quest_name = questNameInput.value.trim();
     const quest_key = questKeyInput.value.trim();
+    const author = document.getElementById("quest-author").value.trim();
     let category = document.getElementById("quest-category-select").value;
     const region_id = document.getElementById("region-selection").value;
     const locationStr = document.getElementById("location").value.trim();
@@ -302,6 +326,7 @@ document.getElementById("create-quest").onclick = async () => {
     const { error } = await supabase.from("cipher_quests").insert({
         quest_key,
         quest_name,
+        author,
         category,
         region_id: region_id === "global" ? null : region_id,
         signs: selected.length > 0 ? selected : null,
