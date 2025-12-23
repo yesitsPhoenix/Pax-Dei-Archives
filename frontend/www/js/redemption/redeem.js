@@ -98,7 +98,6 @@ if (cancelDirect) {
     };
 }
 
-
 document.addEventListener("DOMContentLoaded", async () => {
     const { baseUrl, version } = await loadSigns();
     const verifyBtn = document.getElementById("verify-btn");
@@ -128,7 +127,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         };
     }
 
-   verifyBtn.addEventListener("click", async () => {
+    verifyBtn.addEventListener("click", async () => {
         const characterId = sessionStorage.getItem('active_character_id');
         if (!characterId) return;
 
@@ -146,7 +145,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             return dbName === targetQuestName && (dbKey === "" || dbKey === playerKey) && (dbKeyword === "" || dbKeyword === selectedKeyword);
         });
 
-        if (!matchedQuest) return;
+        if (!matchedQuest) {
+            showError("The sequence or keyword provided is incorrect.");
+            return;
+        }
 
         const { error } = await supabase
             .from("user_claims")
@@ -176,6 +178,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             window.dispatchEvent(new CustomEvent("questClaimed", { 
                 detail: { quest: matchedQuest, character_id: characterId } 
             }));
+        } else {
+            showError(error.message);
         }
     });
 });
