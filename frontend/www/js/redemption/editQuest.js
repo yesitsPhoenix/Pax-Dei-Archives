@@ -57,39 +57,39 @@ async function renderQuestManager(userId, config) {
     managerInterface.innerHTML = `
         <div id="manager-controls" class="mb-6 flex flex-wrap gap-4 items-end">
             <div class="w-full md:w-64">
-                <label class="block text-base font-bold text-gray-400 uppercase mb-2 tracking-wider">Filter by Category</label>
-                <select id="filter-category" class="w-full bg-[#1f2937] border border-gray-700 rounded-lg p-3 text-white focus:border-[#FFD700] outline-none cursor-pointer text-base">
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-2 tracking-wider">Filter by Category</label>
+                <select id="filter-category" class="w-full bg-[#1f2937] border border-gray-700 rounded-lg p-2.5 text-white focus:border-[#FFD700] outline-none cursor-pointer text-sm">
                     <option value="all">All Categories</option>
                 </select>
             </div>
             <div class="w-full md:w-64">
-                <label class="block text-base font-bold text-gray-400 uppercase mb-2 tracking-wider">Search Quests</label>
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-2 tracking-wider">Search Quests</label>
                 <div class="relative">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"></i>
-                    <input type="text" id="search-quests" placeholder="Quest name..." class="w-full bg-[#1f2937] border border-gray-700 rounded-lg p-3 pl-10 text-white focus:border-[#FFD700] outline-none text-base">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
+                    <input type="text" id="search-quests" placeholder="Quest name..." class="w-full bg-[#1f2937] border border-gray-700 rounded-lg p-2.5 pl-9 text-white focus:border-[#FFD700] outline-none text-sm">
                 </div>
             </div>
         </div>
-        <div class="bg-[#1f2937] rounded-2xl border border-gray-700 overflow-hidden shadow-2xl">
+        <div class="bg-[#1f2937] rounded-xl border border-gray-700 overflow-hidden shadow-2xl">
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
+                <table class="w-full text-left border-collapse table-auto">
                     <thead>
-                        <tr class="bg-black/40 text-[#FFD700] text-base uppercase tracking-widest font-bold border-b border-gray-700">
-                            <th class="px-6 py-4">Quest Name</th>
-                            <th class="px-6 py-4">Category</th>
-                            <th class="px-6 py-4">Cipher (World)</th>
-                            <th class="px-6 py-4">Solution (Input)</th>
-                            <th class="px-6 py-4">Key</th>
-                            <th class="px-6 py-4">Claims</th>
-                            <th class="px-6 py-4 text-right">Actions</th>
+                        <tr class="bg-black/40 text-[#FFD700] text-xs uppercase tracking-widest font-bold border-b border-gray-700">
+                            <th class="px-4 py-3">Quest Name</th>
+                            <th class="px-4 py-3">Category</th>
+                            <th class="px-4 py-3">Cipher (World)</th>
+                            <th class="px-4 py-3">Solution (Input)</th>
+                            <th class="px-4 py-3">Key</th>
+                            <th class="px-4 py-3">Claims</th>
+                            <th class="px-4 py-3 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="user-quest-list" class="text-white divide-y divide-gray-700/50">
                     </tbody>
                 </table>
             </div>
-            <div id="manager-loading" class="p-12 text-center">
-                <i class="fas fa-circle-notch fa-spin text-2xl text-[#FFD700]"></i>
+            <div id="manager-loading" class="p-8 text-center">
+                <i class="fas fa-circle-notch fa-spin text-xl text-[#FFD700]"></i>
             </div>
         </div>
     `;
@@ -109,7 +109,7 @@ async function renderQuestManager(userId, config) {
     if (loader) loader.remove();
 
     if (questsRes.error || quests.length === 0) {
-        list.innerHTML = '<tr><td colspan="7" class="p-10 text-center text-gray-400 text-base">No quests found.</td></tr>';
+        list.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-gray-400 text-sm">No quests found.</td></tr>';
         return;
     }
 
@@ -140,9 +140,9 @@ async function renderQuestManager(userId, config) {
             
             const cipherKeyHtml = quest.signs && quest.signs.length > 0
                 ? quest.signs.map(id =>
-                    `<img src="${baseUrl}${id}.webp?${version}" style="width: 50px; height: 50px;" class="inline-block bg-black/40 rounded p-1 border border-gray-700 mr-1 hover:border-[#72e0cc]" data-sign="${id}">`
+                    `<img src="${baseUrl}${id}.webp?${version}" style="width: 36px; height: 36px;" class="inline-block bg-black/40 rounded p-1 border border-gray-700 mr-1 hover:border-[#72e0cc]" data-sign="${id}">`
                 ).join('')
-                : '<span class="text-gray-500 italic text-base">None</span>';
+                : '<span class="text-gray-500 italic text-xs">None</span>';
 
 
             const solutionSignsHtml = quest.signs && quest.signs.length > 0
@@ -150,35 +150,35 @@ async function renderQuestManager(userId, config) {
                     const currentIndex = allSignIds.indexOf(id);
                     const encodedIndex = (currentIndex + shift) % allSignIds.length;
                     const encodedId = allSignIds[encodedIndex];
-                    return `<img src="${baseUrl}${encodedId}.webp?${version}" style="width: 50px; height: 50px;" class="inline-block bg-gray-800 rounded p-1 border border-gray-600 mr-1 hover:border-[#72e0cc]" data-sign="${encodedId}">`;
+                    return `<img src="${baseUrl}${encodedId}.webp?${version}" style="width: 36px; height: 36px;" class="inline-block bg-gray-800 rounded p-1 border border-gray-600 mr-1 hover:border-[#72e0cc]" data-sign="${encodedId}">`;
                 }).join('')
-                : '<span class="text-gray-500 italic text-base">No Signs</span>';
+                : '<span class="text-gray-500 italic text-xs">No Signs</span>';
 
             const row = document.createElement('tr');
             row.className = 'hover:bg-white/5 transition-colors group';
             
             row.innerHTML = `
-                <td class="px-6 py-4">
-                    <div class="font-bold text-base">${quest.quest_name}</div>
+                <td class="px-4 py-3">
+                    <div class="font-bold text-sm">${quest.quest_name}</div>
                 </td>
-                <td class="px-6 py-4">
-                    <div class="text-base text-gray-300 font-medium">${quest.category || 'No Category'}</div>
+                <td class="px-4 py-3">
+                    <div class="text-xs text-gray-400 font-medium">${quest.category || 'No Category'}</div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">${cipherKeyHtml}</td>
-                <td class="px-6 py-4 whitespace-nowrap">${solutionSignsHtml}</td>
-                <td class="px-6 py-4">
-                     <span class="text-base font-bold text-[#FFD700] uppercase">${keyword}</span>
+                <td class="px-4 py-3 whitespace-nowrap">${cipherKeyHtml}</td>
+                <td class="px-4 py-3 whitespace-nowrap">${solutionSignsHtml}</td>
+                <td class="px-4 py-3">
+                     <span class="text-xs font-bold text-[#FFD700] uppercase">${keyword}</span>
                 </td>
-                <td class="px-6 py-4">
-                    <div class="flex items-center gap-2 text-base">
+                <td class="px-4 py-3">
+                    <div class="flex items-center gap-1.5 text-xs">
                         <span class="font-bold ${claimCount >= maxClaims && maxClaims > 0 ? 'text-red-400' : 'text-green-400'}">${claimCount}</span>
-                        <span class="text-gray-500">/</span>
-                        <span class="text-gray-400">${maxClaims}</span>
+                        <span class="text-gray-600">/</span>
+                        <span class="text-gray-500">${maxClaims}</span>
                     </div>
                 </td>
-                <td class="px-6 py-4 text-right">
-                    <a href="?id=${quest.id}" class="bg-[#FFD700] hover:bg-yellow-400 text-black px-6 py-3 rounded-xl font-black text-base uppercase transition-all shadow-lg active:scale-95 inline-block text-center decoration-0">
-                        Edit Quest
+                <td class="px-4 py-3 text-right">
+                    <a href="?id=${quest.id}" class="bg-[#FFD700] hover:bg-yellow-400 text-black px-4 py-1.5 rounded-lg font-bold text-xs uppercase transition-all shadow-md active:scale-95 inline-block text-center decoration-0">
+                        Edit
                     </a>
                 </td>
             `;
