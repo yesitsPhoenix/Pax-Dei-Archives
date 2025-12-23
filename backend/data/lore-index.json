@@ -22,7 +22,7 @@
       },
       {
         "slug": "the-age-of-the-ancients-meirothea",
-        "title": "350-500 - The Age of the Ancients Meirothea",
+        "title": "350-500 - The Age of the Ancients - Meirothea",
         "file": "ages/the-age-of-the-ancients-meirothea.md",
         "author": null,
         "date": null,
@@ -31,7 +31,7 @@
       },
       {
         "slug": "the-age-of-the-ancients-demira",
-        "title": "876-1050 - The Age of the Ancients Demira",
+        "title": "876-1050 - The Age of the Ancients - Demira",
         "file": "ages/the-age-of-the-ancients-demira.md",
         "author": null,
         "date": null,
@@ -341,7 +341,7 @@
         "research": ""
       },
       {
-        "slug": "the-age-of-the-ancients-meirothea",
+        "slug": "the-age-of-the-ancients-meirothea-writing",
         "title": "The Age of the Ancients - Meirothea",
         "file": "writings/the-age-of-the-ancients-meirothea.md",
        "author": "Thelonius the Scribe",
@@ -350,7 +350,7 @@
         "research": ""
       },
       {
-        "slug": "the-age-of-the-ancients-demira",
+        "slug": "the-age-of-the-ancients-demira-writing",
         "title": "The Age of the Ancients - Demira",
         "file": "writings/the-age-of-the-ancients-demira.md",
        "author": "Thelonius the Scribe",
@@ -368,7 +368,7 @@
         "research": ""
       },
       {
-        "slug": "the-great-surge",
+        "slug": "the-great-surge-writing",
         "title": "The Great Surge",
         "file": "writings/the-great-surge.md",
        "author": "Thelonius the Scribe",
