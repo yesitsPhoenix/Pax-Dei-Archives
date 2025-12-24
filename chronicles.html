@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="frontend/www/css/style.css">
     <link rel="stylesheet" href="frontend/www/css/popout.css">
+    <link rel="stylesheet" href="frontend/www/css/sidebar.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -43,6 +44,80 @@
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        #quest-details-scroll {
+            overflow-anchor: none;
+        }
+
+        #sidebar {
+            transition: width 0.3s ease;
+            height: auto !important;
+            min-height: min-content;
+        }
+
+        #sidebar.collapsed {
+            width: 4rem;
+        }
+
+        #sidebar:not(.collapsed) {
+            width: 16rem;
+        }
+
+        .sidebar-text {
+            white-space: nowrap;
+            opacity: 1;
+            transition: opacity 0.2s ease;
+        }
+
+        #sidebar.collapsed .sidebar-text {
+            display: none;
+            opacity: 0;
+        }
+
+        #sidebar.collapsed .filter-container, #sidebar.collapsed .character-container {
+            display: block;
+            padding-left: 0;
+            padding-right: 0;
+        }
+
+        #sidebar.collapsed .sidebar-filter-btn {
+            justify-content: center;
+            padding-left: 0;
+            padding-right: 0;
+        }
+
+        #sidebar.collapsed .sidebar-filter-btn i {
+            margin: 0;
+            width: 100%;
+            text-align: center;
+        }
+
+        .sidebar-filter-btn.active {
+            background-color: #FFD700 !important;
+            color: #000 !important;
+        }
+
+        .sidebar-filter-btn.active i {
+            color: #000 !important;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .toast-animate {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        #sidebar.collapsed .character-container h3,
+        #sidebar.collapsed .character-container .mb-4,
+        #sidebar.collapsed .character-container button {
+            display: none;
+        }
+
+        #sidebar.collapsed .character-container {
+            border-top: none;
+            padding: 0;
+        }
     </style>
 </head>
 
@@ -50,6 +125,35 @@
 
 <body>
     <div id="header-placeholder"></div>
+
+<aside id="sidebar" class="bg-[#1c1c1c] border-r-4 border-amber-300 shadow-lg px-3 py-4 cursor-pointer fixed z-50 top-[220px] collapsed overflow-hidden">
+    <ul class="space-y-2 font-medium">
+        <li>
+            <a href="quests.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                <i class="fas fa-scroll w-5 h-5 text-gray-400"></i>
+                <span class="ml-3 sidebar-text"> Quest Log</span>
+            </a>
+        </li>
+        <li>
+            <a href="#" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                <i class="fas fa-trophy w-5 h-5 text-gray-400"></i>
+                <span class="ml-3 sidebar-text"> Chronicles & Feats</span>
+            </a>
+        </li>
+        <li id="create-quest-nav" class="hidden">
+            <a href="panel.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                <i class="fas fa-table-columns w-5 h-5 text-gray-400"></i>
+                <span class="ml-3 sidebar-text"> Create New Quest</span>
+            </a>
+        </li>
+        <li id="edit-quest-nav" class="hidden">
+            <a href="edit_quest.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                <i class="fas fa-tags w-5 h-5 text-gray-400"></i>
+                <span class="ml-3 sidebar-text"> Edit Existing Quests</span>
+            </a>
+        </li>
+    </ul>
+</aside>
 
     <h1 class="text-xl font-semibold mt-6 mb-3 text-white text-center uppercase tracking-widest">Chronicles & Feats</h1>
     <div class="h-1 w-24 bg-[#FFD700] mx-auto rounded-full"></div><br>
@@ -102,5 +206,6 @@
     <script type="module" src="frontend/www/js/main.js"></script>
     <script type="module" src="frontend/www/js/popoutAuth.js"></script>
     <script type="module" src="frontend/www/js/redemption/chronicles.js"></script>
+    <script type="module" src="frontend/www/js/small_sidebar.js"></script>
 </body>
 </html>
