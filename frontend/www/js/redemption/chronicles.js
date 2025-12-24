@@ -2,37 +2,58 @@ import { supabase } from "../supabaseClient.js";
 import { getUnlockedCategories } from "./unlocks.js";
 
 async function getActiveCharacterId() {
-    const sessionCharId = sessionStorage.getItem("active_character_id");
-    if (sessionCharId) return sessionCharId;
+    let sessionCharId = sessionStorage.getItem("active_character_id");
+    if (sessionCharId && sessionCharId !== "null") return sessionCharId;
+
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) return null;
-    const { data: char } = await supabase.from("characters").select("character_id").eq("user_id", session.user.id).eq("is_default_character", true).maybeSingle();
+
+    const { data: char } = await supabase.from("characters")
+        .select("character_id")
+        .eq("user_id", session.user.id)
+        .eq("is_default_character", true)
+        .maybeSingle();
+
     if (char) {
         sessionStorage.setItem("active_character_id", char.character_id);
         return char.character_id;
     }
+
+    const { data: anyChar } = await supabase.from("characters")
+        .select("character_id")
+        .eq("user_id", session.user.id)
+        .limit(1)
+        .maybeSingle();
+
+    if (anyChar) {
+        sessionStorage.setItem("active_character_id", anyChar.character_id);
+        return anyChar.character_id;
+    }
+
     return null;
 }
 
 async function initChronicles() {
     const characterId = await getActiveCharacterId();
+    
+    if (!characterId) {
+        setTimeout(initChronicles, 500);
+        return;
+    }
 
     const requests = [
         supabase.from("cipher_quests").select("*").eq("active", true).order("sort_order", { ascending: true }),
-        supabase.from("heroic_feats").select("*").eq("active", true).order("sort_order", { ascending: true })
+        supabase.from("heroic_feats").select("*").eq("active", true).order("sort_order", { ascending: true }),
+        supabase.from("user_claims").select("*").eq("character_id", characterId),
+        supabase.from("user_unlocked_categories").select("category_name").eq("character_id", characterId)
     ];
-
-    if (characterId) {
-        requests.push(supabase.from("user_claims").select("*").eq("character_id", characterId));
-        requests.push(supabase.from("user_unlocked_categories").select("category_name").eq("character_id", characterId));
-    }
 
     const results = await Promise.all(requests);
     
     const allQuests = results[0].data || [];
     const allFeats = results[1].data || [];
-    const userClaims = characterId ? (results[2].data || []) : [];
-    const manualUnlocks = new Set(characterId ? (results[3].data || []).map(u => u.category_name) : []);
+    const userClaims = results[2].data || [];
+    const manualUnlocks = new Set((results[3].data || []).map(u => u.category_name));
 
     const unlockedData = await getUnlockedCategories(characterId, allQuests, userClaims);
     let unlockedCategories = new Set(unlockedData);
@@ -45,15 +66,17 @@ function showQuestModal(chapterName, quests, claims) {
     const wrapper = document.getElementById("quest-modal-content");
     if (!modal || !wrapper) return;
 
+    const claimedIds = new Set(claims.map(c => c.quest_id));
+
     let questListHtml = quests.map(q => {
-        const isDone = claims.some(c => c.quest_id === q.id);
+        const isDone = claimedIds.has(q.id);
         return `
             <div class="flex items-center justify-between p-5 rounded-lg bg-slate-800/50 border border-slate-700 w-full shadow-sm">
                 <div class="flex items-center gap-5">
                     <i class="fa-solid ${isDone ? 'fa-check-circle text-green-500' : 'fa-circle text-slate-600'} text-xl"></i>
                     <span class="${isDone ? 'text-white' : 'text-slate-400'} text-md font-medium tracking-normal">${q.quest_name}</span>
                 </div>
-                ${isDone ? '<span class="text-[11px] bg-green-500/20 text-green-400 px-3 py-1 rounded-full uppercase font-bold tracking-wider border border-green-500/20">Claimed</span>' : ''}
+                ${isDone ? '<span class="text-[11px] bg-green-500/20 text-green-400 px-3 py-1 rounded-full uppercase font-bold tracking-wider border border-green-500/20">Completed</span>' : ''}
             </div>
         `;
     }).join('');
@@ -78,14 +101,8 @@ function showQuestModal(chapterName, quests, claims) {
     `;
 
     modal.style.display = "flex";
-
-    document.getElementById("close-quest-modal").onclick = () => {
-        modal.style.display = "none";
-    };
-
-    modal.onclick = (e) => {
-        if (e.target === modal) modal.style.display = "none";
-    };
+    document.getElementById("close-quest-modal").onclick = () => modal.style.display = "none";
+    modal.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
 }
 
 function renderPage(allQuests, userClaims, allFeats, unlockedCategories, manualUnlocks) {
@@ -96,16 +113,16 @@ function renderPage(allQuests, userClaims, allFeats, unlockedCategories, manualU
     chaptersContainer.innerHTML = "";
     featsContainer.innerHTML = "";
 
-    const questMap = new Map(allQuests.map(q => [q.id, q]));
+    const claimedQuestIds = new Set(userClaims.map(c => c.quest_id));
     const categoryProgress = {};
 
-    userClaims.forEach(claim => {
-        const q = questMap.get(claim.quest_id);
-        if (q && q.category) {
-            categoryProgress[q.category] = (categoryProgress[q.category] || 0) + 1;
-            
-            const simpleName = q.category.includes(':') ? q.category.split(':').pop().trim() : q.category;
-            categoryProgress[simpleName] = (categoryProgress[simpleName] || 0) + 1;
+    allQuests.forEach(q => {
+        if (!categoryProgress[q.category]) {
+            categoryProgress[q.category] = { total: 0, completed: 0 };
+        }
+        categoryProgress[q.category].total++;
+        if (claimedQuestIds.has(q.id)) {
+            categoryProgress[q.category].completed++;
         }
     });
 
@@ -113,7 +130,13 @@ function renderPage(allQuests, userClaims, allFeats, unlockedCategories, manualU
     const tales = {};
 
     rawCategories.forEach(cat => {
-        const [taleName, chapterName] = cat.includes(':') ? cat.split(':').map(s => s.trim()) : ["Other Tales", cat];
+        let taleName = "Other Tales";
+        let chapterName = cat;
+        if (cat.includes(':')) {
+            const parts = cat.split(':');
+            taleName = parts[0].trim();
+            chapterName = parts.slice(1).join(':').trim();
+        }
         if (!tales[taleName]) tales[taleName] = [];
         tales[taleName].push({ full: cat, chapter: chapterName });
     });
@@ -125,28 +148,24 @@ function renderPage(allQuests, userClaims, allFeats, unlockedCategories, manualU
     });
 
     sortedTaleNames.forEach(taleName => {
-        const taleHtml = `
+        chaptersContainer.insertAdjacentHTML('beforeend', `
             <div class="col-span-1 lg:col-span-2 mt-8 mb-4">
                 <div class="flex items-center gap-4">
                     <h2 class="text-lg font-bold uppercase tracking-widest text-slate-400">${taleName}</h2>
                     <div class="h-px flex-grow bg-slate-800"></div>
                 </div>
             </div>
-        `;
-        chaptersContainer.insertAdjacentHTML('beforeend', taleHtml);
+        `);
 
         const chaptersInTale = tales[taleName].map(item => {
             const catQuests = allQuests.filter(q => q.category === item.full);
-            const completedCount = categoryProgress[item.full] || 0;
+            const stats = categoryProgress[item.full] || { total: 0, completed: 0 };
             const isUnlocked = unlockedCategories.has(item.full);
-            const percent = catQuests.length > 0 ? (completedCount / catQuests.length) * 100 : 0;
-            return { ...item, catQuests, completedCount, isUnlocked, percent };
+            const percent = stats.total > 0 ? (stats.completed / stats.total) * 100 : 0;
+            return { ...item, catQuests, completedCount: stats.completed, isUnlocked, percent };
         });
 
-        chaptersInTale.sort((a, b) => {
-            if (a.isUnlocked === b.isUnlocked) return 0;
-            return a.isUnlocked ? -1 : 1;
-        });
+        chaptersInTale.sort((a, b) => b.isUnlocked - a.isUnlocked);
 
         chaptersInTale.forEach(item => {
             const card = document.createElement('div');
@@ -169,37 +188,33 @@ function renderPage(allQuests, userClaims, allFeats, unlockedCategories, manualU
                     </div>
                 </div>
             `;
-
-            if (item.isUnlocked) {
-                card.onclick = () => showQuestModal(item.chapter, item.catQuests, userClaims);
-            }
-
+            if (item.isUnlocked) card.onclick = () => showQuestModal(item.chapter, item.catQuests, userClaims);
             chaptersContainer.appendChild(card);
         });
     });
 
     allFeats.forEach(feat => {
-        const currentProgress = categoryProgress[feat.required_category] || 0;
-        const hasReqCount = !feat.required_category || currentProgress >= feat.required_count;
-        const hasSecretUnlock = !feat.secret_code_required || manualUnlocks.has(feat.secret_code_required);
-        const isEarned = hasReqCount && hasSecretUnlock;
-
+        const stats = categoryProgress[feat.required_category] || { completed: 0 };
+        const isEarned = stats.completed >= (feat.required_count || 0) && (!feat.secret_code_required || manualUnlocks.has(feat.secret_code_required));
         const iconToUse = isEarned ? (feat.icon || 'fa-trophy') : 'fa-lock';
-        const statusText = isEarned ? 'Mastered' : `Progress: ${currentProgress} / ${feat.required_count}`;
 
         featsContainer.insertAdjacentHTML('beforeend', `
-            <div class="feat-card p-4 rounded-lg flex items-center gap-4 ${isEarned ? 'unlocked border-[#FFD700]' : 'border-slate-800'}">
-                <div class="w-12 h-12 rounded-full flex items-center justify-center border ${isEarned ? 'border-[#FFD700] bg-[#FFD700]/10' : 'border-slate-700 bg-slate-900'}">
+            <div class="feat-card p-4 rounded-lg flex items-center gap-4 ${isEarned ? 'unlocked border-[#FFD700]' : 'border-slate-800'}\">
+                <div class="w-12 h-12 rounded-full flex items-center justify-center border ${isEarned ? 'border-[#FFD700] bg-[#FFD700]/10' : 'border-slate-700 bg-slate-900'}\">
                     <i class="fa-solid ${iconToUse} ${isEarned ? 'text-[#FFD700]' : 'text-slate-600'} text-xl"></i>
                 </div>
                 <div>
                     <h4 class="font-bold text-md ${isEarned ? 'text-white' : 'text-slate-500'}">${feat.name}</h4>
-                    <p class="text-[10px] uppercase tracking-wider text-slate-500">${statusText}</p>
+                    <p class="text-[10px] uppercase tracking-wider text-slate-500">${isEarned ? 'Mastered' : `Progress: ${stats.completed} / ${feat.required_count}`}</p>
                 </div>
             </div>
         `);
     });
 }
 
-window.addEventListener('characterChanged', initChronicles);
+window.addEventListener('characterChanged', () => {
+    sessionStorage.removeItem("active_character_id");
+    initChronicles();
+});
+
 document.addEventListener('DOMContentLoaded', initChronicles);

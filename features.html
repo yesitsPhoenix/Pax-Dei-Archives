@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pax Dei Archives - Database Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="frontend/www/css/popout.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="header-placeholder"></div>
+
+    <div class="mt-10 mb-6 text-center">
+        <h1 class="text-2xl font-bold text-white tracking-wide uppercase">Database Management</h1>
+        <div class="h-1 w-24 bg-[#FFD700] mx-auto mt-3 rounded-full"></div>
+    </div>
+
+    <div class="container mx-auto px-6 max-w-8xl">
+        <div class="page-content bg-[#111827] rounded-xl border border-slate-800 shadow-2xl overflow-hidden">
+            
+            <div class="flex flex-col md:flex-row justify-between items-center bg-[#1f2937] px-6 py-4 border-b border-slate-700 gap-6">
+                <div class="flex space-x-8">
+                    <button id="tab-categories" class="mgmt-tab active relative py-2 font-bold text-[#FFD700] transition-all">
+                        CATEGORIES
+                    </button>
+                    <button id="tab-feats" class="mgmt-tab py-2 font-bold text-slate-400 hover:text-white transition-all uppercase tracking-tight">
+                        HEROIC FEATS
+                    </button>
+                </div>
+                <button id="add-entry-btn" class="bg-[#FFD700] hover:bg-[#e6c200] text-black px-6 py-2.5 rounded-md font-black text-md uppercase tracking-widest shadow-lg transition-transform active:scale-95">
+                    <i class="fa-solid fa-plus mr-2"></i>Create New
+                </button>
+            </div>
+
+            <div id="add-form-container" class="hidden bg-[#161b22] border-b border-[#FFD700]/20 p-8 animate-in fade-in slide-in-from-top-4 duration-300">
+                <div class="flex items-center mb-6">
+                    <div class="w-1 h-6 bg-[#FFD700] mr-3"></div>
+                    <h2 id="form-title" class="text-lg font-bold text-white uppercase tracking-wider">Add New Record</h2>
+                </div>
+                
+                <div id="dynamic-form-fields" class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 mb-8 text-white"></div>
+                
+                <div class="flex justify-end items-center space-x-6 border-t border-slate-800 pt-6">
+                    <button id="cancel-form" class="text-slate-400 hover:text-white font-semibold text-md uppercase tracking-widest transition-colors">Discard</button>
+                    <button id="save-entry" class="bg-[#FFD700] hover:bg-[#e6c200] text-black px-8 py-3 rounded font-black text-md uppercase tracking-widest shadow-md transition-all">
+                        Commit to Database
+                    </button>
+                </div>
+            </div>
+
+            <div class="content-body">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead id="mgmt-table-head" class="bg-[#111827] text-[11px] uppercase tracking-[0.2em] text-slate-500 border-b border-slate-800">
+                        </thead>
+                        <tbody id="mgmt-table-body" class="divide-y divide-slate-800/50">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="mb-20"></div>
+
+    <div id="footer-placeholder"></div>
+
+    <div id="floating-avatar-container">
+        <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar js-floating-avatar">
+    </div>
+
+    <div id="auth-modal">
+        <div class="modal-content-wrapper" id="modal-content-wrapper"></div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
+    <script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
+    <script type="module" src="frontend/www/js/supabaseClient.js"></script>
+    <script type="module" src="frontend/www/js/utils.js"></script>
+    <script type="module" src="frontend/www/js/redemption/management.js"></script>
+    <script type="module" src="frontend/www/js/main.js"></script>
+    <script type="module" src="frontend/www/js/popoutAuth.js"></script>
+</body>
+</html>
