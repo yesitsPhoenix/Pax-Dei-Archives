@@ -217,6 +217,31 @@ async function claimQuestDirectly(quest) {
     }
 }
 
+function isQuestLocked(quest, claims, quests) {
+    const claimedIds = claims.map(c => c.quest_id);
+    
+    const categoryProgress = {};
+    claims.forEach(claim => {
+        const q = quests.find(item => item.id === claim.quest_id);
+        if (q && q.category) {
+            categoryProgress[q.category] = (categoryProgress[q.category] || 0) + 1;
+        }
+    });
+
+    const reqCat = quest.unlock_prerequisite_category;
+    const reqCount = quest.unlock_required_count || 0;
+    if (reqCat && reqCat !== "" && (categoryProgress[reqCat] || 0) < reqCount) {
+        return true;
+    }
+
+    const prerequisites = quest.prerequisite_quest_ids || [];
+    if (prerequisites.length > 0 && !prerequisites.every(id => claimedIds.includes(id))) {
+        return true;
+    }
+
+    return false;
+}
+
 async function showQuestDetails(quest, userClaimed) {
     activeQuestKey = quest.quest_key;
     window.activeQuestKey = quest.quest_key;
@@ -229,6 +254,9 @@ async function showQuestDetails(quest, userClaimed) {
 
     const charId = await getActiveCharacterId();
     const currentClaims = await fetchUserClaims(charId);
+    userClaims = currentClaims; 
+    window.userClaims = userClaims;
+
     const completedQuestIds = currentClaims.map(c => c.quest_id);
 
     const prerequisites = quest.prerequisite_quest_ids || [];
@@ -280,10 +308,14 @@ async function showQuestDetails(quest, userClaimed) {
                         e.preventDefault();
                         const targetQuest = allQuests.find(q => q.quest_key === questKey);
                         if (targetQuest) {
-                            const isClaimed = userClaims.some(c => c.quest_id === targetQuest.id);
-                            showQuestDetails(targetQuest, isClaimed);
-                            const detailsPanel = document.getElementById('details-content');
-                            if (detailsPanel) detailsPanel.scrollTop = 0;
+                            if (isQuestLocked(targetQuest, userClaims, allQuests)) {
+                                showToast("Access Denied: You have not met the requirements for this archive.", "error");
+                            } else {
+                                const isClaimed = userClaims.some(c => c.quest_id === targetQuest.id);
+                                showQuestDetails(targetQuest, isClaimed);
+                                const detailsPanel = document.getElementById('details-content');
+                                if (detailsPanel) detailsPanel.scrollTop = 0;
+                            }
                         } else {
                             showToast("Quest record not found in the archives.", "error");
                         }
@@ -350,12 +382,21 @@ async function showQuestDetails(quest, userClaimed) {
                 const colorClass = isDone ? "text-green-400" : "text-red-400";
                 const icon = isDone ? "fa-circle-check" : "fa-circle-xmark";
                 
+                const locked = q ? isQuestLocked(q, userClaims, allQuests) : true;
+
+                let actionButton = '';
+                if (q && !locked) {
+                    actionButton = `<button data-quest-id="${id}" class="prereq-link text-[10px] text-gray-500 hover:text-[#FFD700] uppercase tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity">View <i class="fa-solid fa-arrow-right ml-1"></i></button>`;
+                } else {
+                    actionButton = `<span class="text-[10px] text-gray-600 uppercase tracking-tighter cursor-not-allowed opacity-0 group-hover:opacity-100 transition-opacity"><i class="fa-solid fa-lock mr-1"></i>Locked</span>`;
+                }
+
                 return `<div class="flex items-center justify-between gap-2 p-1 hover:bg-white/5 rounded transition-colors group">
                             <div class="flex items-center gap-2 ${colorClass} text-sm font-medium">
                                 <i class="fa-solid ${icon}"></i>
                                 <span>${name}</span>
                             </div>
-                            ${q ? `<button data-quest-id="${id}" class="prereq-link text-[10px] text-gray-500 hover:text-[#FFD700] uppercase tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity">View <i class="fa-solid fa-arrow-right ml-1"></i></button>` : ''}
+                            ${actionButton}
                         </div>`;
             }).join("");
             
