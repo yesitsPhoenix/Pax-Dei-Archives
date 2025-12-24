@@ -598,8 +598,8 @@ async function renderQuestsList() {
     }, {});
 
     Object.keys(groupedQuests).sort((a, b) => {
-        if (a === "Beginner's Guide") return -1;
-        if (b === "Beginner's Guide") return 1;
+        if (a === "The First Steps: Beginner's Guide") return -1;
+        if (b === "The First Steps: Beginner's Guide") return 1;
         return a.localeCompare(b);
     }).forEach(category => {
         const isLocked = !unlockedCategories.has(category);

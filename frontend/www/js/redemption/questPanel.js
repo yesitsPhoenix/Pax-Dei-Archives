@@ -281,15 +281,45 @@ async function loadPrerequisiteOptions(containerId) {
         .select('id, quest_name, category')
         .order('category', { ascending: true });
 
-    const container = document.getElementById(containerId);
-    if (error || !container) return;
+    const parent = document.getElementById(containerId);
+    if (error || !parent) return;
 
-    container.innerHTML = quests.map(q => `
-        <label class="flex items-center space-x-3 p-2 hover:bg-white/5 rounded-lg cursor-pointer transition-colors">
-            <input type="checkbox" name="prereq-quest" value="${q.id}" class="w-4 h-4 rounded border-gray-700 text-[#FFD700] focus:ring-[#FFD700] bg-gray-900">
-            <span class="text-sm text-gray-300">${q.quest_name} <small class="text-gray-500 ml-2">(${q.category})</small></span>
-        </label>
-    `).join('');
+    let selectedIds = [];
+
+    parent.innerHTML = `
+        <div class="mb-3">
+            <input type="text" id="prereq-search" placeholder="Search quests..." class="w-full bg-[#374151] border border-gray-600 rounded-lg p-2 text-sm text-white focus:border-[#FFD700] outline-none">
+        </div>
+        <div id="prereq-list" class="space-y-1"></div>
+    `;
+
+    const listContainer = document.getElementById('prereq-list');
+
+    const renderPrereqs = (filter = "") => {
+        listContainer.innerHTML = quests
+            .filter(q => q.quest_name.toLowerCase().includes(filter.toLowerCase()))
+            .map(q => {
+                const isChecked = selectedIds.includes(q.id) ? 'checked' : '';
+                return `
+                    <label class="flex items-center space-x-3 p-2 hover:bg-white/5 rounded-lg cursor-pointer transition-colors">
+                        <input type="checkbox" name="prereq-quest" value="${q.id}" ${isChecked} class="w-4 h-4 rounded border-gray-700 text-[#FFD700] focus:ring-[#FFD700] bg-gray-900">
+                        <span class="text-sm text-gray-300">${q.quest_name} <small class="text-gray-500 ml-2">(${q.category})</small></span>
+                    </label>
+                `;
+            }).join('');
+    };
+
+    document.getElementById('prereq-search').addEventListener('input', (e) => {
+        const currentChecked = Array.from(document.querySelectorAll('input[name="prereq-quest"]:checked')).map(cb => cb.value);
+        selectedIds = [...new Set([...selectedIds, ...currentChecked])];
+        
+        const currentUnchecked = Array.from(document.querySelectorAll('input[name="prereq-quest"]:not(:checked)')).map(cb => cb.value);
+        selectedIds = selectedIds.filter(id => !currentUnchecked.includes(id));
+        
+        renderPrereqs(e.target.value);
+    });
+
+    renderPrereqs();
 }
 
 document.getElementById("create-quest").onclick = async () => {

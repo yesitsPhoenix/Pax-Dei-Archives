@@ -1,14 +1,18 @@
 import { supabase } from "../supabaseClient.js";
 
 export async function getUnlockedCategories(characterId, allQuests, userClaims) {
-    const unlocked = new Set(["Uncategorized"]);
-
+    const unlocked = new Set(["Uncategorized", "The First Steps: Beginner's Guide"]);
     const categoryProgress = {};
+    const claimedCategories = new Set();
+
+    const questMap = new Map(allQuests.map(q => [q.id, q]));
+
     if (characterId && userClaims) {
         userClaims.forEach(claim => {
-            const quest = allQuests.find(q => q.id === claim.quest_id);
+            const quest = questMap.get(claim.quest_id);
             if (quest && quest.category) {
                 categoryProgress[quest.category] = (categoryProgress[quest.category] || 0) + 1;
+                claimedCategories.add(quest.category);
             }
         });
     }
@@ -25,6 +29,8 @@ export async function getUnlockedCategories(characterId, allQuests, userClaims) 
         }
     });
 
+    claimedCategories.forEach(cat => unlocked.add(cat));
+
     if (characterId) {
         const { data: dbUnlocks } = await supabase
             .from("user_unlocked_categories")
@@ -39,7 +45,7 @@ export async function getUnlockedCategories(characterId, allQuests, userClaims) 
     return Array.from(unlocked);
 }
 
-export async function processSecretUnlock(fullIds, userId) {
+export async function processSecretUnlock(fullIds, userId, characterId) {
     const SECRET_CODES = {
         "CROWN-WEAPONS-SHIELD": {
             target: "Legendary Armaments",
@@ -51,10 +57,14 @@ export async function processSecretUnlock(fullIds, userId) {
     const sequenceKey = signNames.join("-");
     
     const unlock = SECRET_CODES[sequenceKey];
-    if (unlock && userId) {
+    if (unlock && userId && characterId) {
         await supabase
             .from("user_unlocked_categories")
-            .upsert({ characterId: characterId, category_name: unlock.target });
+            .upsert({ 
+                user_id: userId,
+                character_id: characterId, 
+                category_name: unlock.target 
+            });
         return unlock;
     }
     return null;

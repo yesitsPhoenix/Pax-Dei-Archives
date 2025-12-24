@@ -19,10 +19,32 @@
         #quest-details-pane { overflow-y: hidden; }
         .details-scroll-area { overflow-y: auto; scrollbar-width: thin; scrollbar-color: #FFD700 #1f2937; }
         #quest-details-scroll {
-        overflow-anchor: none;
+            overflow-anchor: none;
         }
+
+        #sidebar {
+            transition: width 0.3s ease;
+            height: auto !important;
+            min-height: min-content;
+        }
+
+        #sidebar.collapsed {
+            width: 4rem;
+        }
+
+        #sidebar:not(.collapsed) {
+            width: 16rem;
+        }
+
+        .sidebar-text {
+            white-space: nowrap;
+            opacity: 1;
+            transition: opacity 0.2s ease;
+        }
+
         #sidebar.collapsed .sidebar-text {
             display: none;
+            opacity: 0;
         }
 
         #sidebar.collapsed .filter-container, #sidebar.collapsed .character-container {
@@ -59,16 +81,21 @@
         .toast-animate {
             animation: slideIn 0.3s ease-out;
         }
-        #sidebar.collapsed .character-container h3,
-            #sidebar.collapsed .character-container .mb-4,
-            #sidebar.collapsed .character-container button {
-                display: none;
-            }
 
-            #sidebar.collapsed .character-container {
-                border-top: none;
-                padding: 0;
-            }
+        #sidebar.collapsed .character-container h3,
+        #sidebar.collapsed .character-container .mb-4,
+        #sidebar.collapsed .character-container button {
+            display: none;
+        }
+
+        #sidebar.collapsed .character-container {
+            border-top: none;
+            padding: 0;
+        }
+        #character-select {
+            background-color: #1f2937;
+            color: white;
+        }
     </style>
     <meta property="og:title" content="Pax Dei Archives - Quests">
     <meta property="og:description" content="The Archives hold more than mere ink and parchment; they preserve the echoes of those who dared to wander. Sift through the unwritten tales below to discover and explore our world.">
@@ -87,7 +114,7 @@
 
 <div id="header-placeholder"></div>
 
-<aside id="sidebar" class="w-64 bg-[#1c1c1c] border-r-4 border-amber-300 shadow-lg transition-all duration-300 hover:bg-slate-700 px-3 py-4 cursor-pointer fixed h-auto z-50 top-[220px] collapsed overflow-hidden">
+<aside id="sidebar" class="bg-[#1c1c1c] border-r-4 border-amber-300 shadow-lg px-3 py-4 cursor-pointer fixed z-50 top-[220px] collapsed overflow-hidden">
     <ul class="space-y-2 font-medium">
         <li>
             <a href="quests.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
@@ -109,17 +136,6 @@
         </li>
     </ul>
 
-    <div class="character-container mt-4 pt-4 border-t border-gray-700 px-2 sidebar-text">
-        <h3 class="text-[12px] uppercase tracking-widest text-[#FFD700] font-bold mb-3">Active Character</h3>
-        <div class="mb-4">
-            <select id="character-select" class="bg-gray-900 border border-gray-600 text-white rounded-lg w-full py-2 px-3 text-sm focus:outline-none focus:border-[#FFD700]">
-            </select>
-        </div>
-        <button id="showCreateCharacterModalBtn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg text-[10px] uppercase tracking-wider transition-colors">
-            New Character
-        </button>
-    </div>
-
     <div class="filter-container mt-2 pt-4 border-t border-gray-700 px-0">
         <h3 class="text-[12px] uppercase tracking-widest text-[#FFD700] font-bold mb-3 px-2 sidebar-text">Quest Filter</h3>
         <div class="flex flex-col gap-2">
@@ -137,11 +153,10 @@
             </button>
         </div>
         <input type="hidden" id="filter-status" value="incomplete">
-        <input type="hidden" id="filter-status" value="">
     </div>
 </aside>
 
-<div id="traderLoginContainer" class="admin-form-container hidden flex-col items-center justify-center p-12 text-center bg-[#1f2937] rounded-2xl border border-gray-700 max-w-2xl mx-auto my-10 shadow-2xl"" style="display: none; text-align: center;">
+<div id="traderLoginContainer" class="admin-form-container hidden flex-col items-center justify-center p-12 text-center bg-[#1f2937] rounded-2xl border border-gray-700 max-w-2xl mx-auto my-10 shadow-2xl" style="display: none; text-align: center;">
     <p>Please log in to view Quests.</p>
     <button id="traderDiscordLoginButton" class="discord-button" style="margin: 15px auto;">
         <i class="fab fa-discord"></i> Login with Discord
@@ -158,86 +173,93 @@
         Sift through the unwritten tales below to discover and explore our world."
     </p>
 
-<div class="container mx-auto px-4 max-w-8xl mb-6">
-    <div class="grid grid-cols-1 md:grid-cols-12 gap-0 bg-[#1f2937] rounded-2xl border border-gray-700 shadow-2xl overflow-hidden quest-log-container min-h-[500px]">
-        <div class="md:col-span-3 border-r border-gray-700 flex flex-col bg-black/20 h-full overflow-hidden">
-            <div class="p-4 border-b border-gray-700 bg-black/40 text-[#FFD700] font-bold uppercase text-md tracking-widest shrink-0">
-                Chapters
-            </div>
-            <div id="quest-titles-list" class="flex-1 overflow-y-auto quest-list-scroll custom-scrollbar">
-                </div>
+    <div class="container mx-auto px-4 max-w-8xl mb-6">
+        <div id="character-container" class="hidden flex justify-start items-center gap-3 mb-4 bg-[#1f2937] border border-gray-700 rounded-lg px-4 py-2 w-fit">
+            <label class="text-[10px] uppercase tracking-widest text-[#FFD700] font-bold">Active Character:</label>
+            <select id="character-select" class="bg-transparent border-none text-white text-sm focus:outline-none focus:ring-0 min-w-[150px]">
+            </select>
+            <button id="showCreateCharacterModalBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded text-[10px] uppercase font-bold transition-colors">
+                <i class="fas fa-plus"></i>
+            </button>
         </div>
 
-        <div id="quest-details-pane" class="md:col-span-9 flex flex-col bg-gradient-to-br from-[#1f2937] to-[#111827] relative h-full overflow-hidden">
-            
-            <div id="empty-state" class="flex-1 flex items-center justify-center text-gray-500 italic p-10 text-center">
-                Select a quest from the log to view details
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-0 bg-[#1f2937] rounded-2xl border border-gray-700 shadow-2xl overflow-hidden quest-log-container min-h-[500px]">
+            <div class="md:col-span-3 border-r border-gray-700 flex flex-col bg-black/20 h-full overflow-hidden">
+                <div class="p-4 border-b border-gray-700 bg-black/40 text-[#FFD700] font-bold uppercase text-md tracking-widest shrink-0">
+                    Chapters
+                </div>
+                <div id="quest-titles-list" class="flex-1 overflow-y-auto quest-list-scroll custom-scrollbar">
+                </div>
             </div>
-            
-            <div id="details-content" class="hidden flex flex-col h-full overflow-hidden">
+
+            <div id="quest-details-pane" class="md:col-span-9 flex flex-col bg-gradient-to-br from-[#1f2937] to-[#111827] relative h-full overflow-hidden">
+                <div id="empty-state" class="flex-1 flex items-center justify-center text-gray-500 italic p-10 text-center">
+                    Select a quest from the log to view details
+                </div>
                 
-                <div class="relative shrink-0 h-24 bg-gradient-to-r from-[#72e0cc]/20 to-[#FFD700]/20 flex items-center px-8 border-b border-gray-700">
-                    <div class="flex justify-between items-center w-full">
-                        <div>
-                            <h2 id="detail-name" class="text-2xl font-bold text-white mb-0"></h2>
-                            <span id="detail-region" class="text-[#FFD700] text-md font-bold uppercase tracking-wider"></span>
+                <div id="details-content" class="hidden flex flex-col h-full overflow-hidden">
+                    <div class="relative shrink-0 h-24 bg-gradient-to-r from-[#72e0cc]/20 to-[#FFD700]/20 flex items-center px-8 border-b border-gray-700">
+                        <div class="flex justify-between items-center w-full">
+                            <div>
+                                <h2 id="detail-name" class="text-2xl font-bold text-white mb-0"></h2>
+                                <span id="detail-region" class="text-[#FFD700] text-md font-bold uppercase tracking-wider"></span>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div id="detail-status-badge"></div>
+                                <button id="expand-quest-details" class="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-all text-gray-400 hover:text-[#FFD700] border border-white/5" title="Expand View">
+                                    <i class="fa-solid fa-expand text-xl"></i>
+                                </button>
+                            </div>
                         </div>
-                        <div class="flex items-center gap-4">
-                            <div id="detail-status-badge"></div>
-                            <button id="expand-quest-details" class="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-all text-gray-400 hover:text-[#FFD700] border border-white/5" title="Expand View">
-                                <i class="fa-solid fa-expand text-xl"></i>
+                    </div>
+
+                    <div id="quest-details-scroll" class="flex-1 overflow-y-auto p-8 quest-list-scroll custom-scrollbar">
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            <div class="lg:col-span-2 space-y-6">
+                                <section>
+                                    <h4 class="text-md uppercase tracking-widest text-gray-500 font-bold mb-2">The Tale</h4>
+                                    <div id="detail-lore" class="text-gray-300 leading-relaxed text-md"></div>
+                                </section>
+                                <section>
+                                    <h4 class="text-md uppercase tracking-widest text-gray-500 font-bold mb-2">Quest Location / Detail</h4>
+                                    <p id="detail-location" class="text-gray-300 text-md"></p>
+                                </section>
+                            </div>
+
+                            <div class="lg:col-span-1 space-y-6">
+                                <section>
+                                    <h4 class="text-md uppercase tracking-widest text-gray-500 font-bold mb-2">Sign Sequence</h4>
+                                    <div id="detail-signs" class="flex flex-wrap gap-2 p-4 bg-black/30 rounded-xl border border-gray-700/50"></div>
+                                </section>
+                                
+                                <section> 
+                                    <h4 class="text-md uppercase tracking-widest text-gray-500 font-bold mb-2">Rewards</h4>
+                                    <div id="detail-rewards-section" class="bg-black/20 p-4 rounded-xl border border-gray-700/50">
+                                        <div id="detail-items" class="text-white font-medium mb-1 text-md"></div>
+                                        <div id="detail-gold" class="text-[#ecaf48] font-bold text-xl"></div>
+                                    </div>
+                                </section>
+
+                                <section>
+                                    <h4 class="text-md uppercase tracking-widest text-gray-500 font-bold mb-2">Pre-requisite Quest(s)</h4>
+                                    <div id="detail-prerequisites" class="bg-black/20 p-4 rounded-xl border border-gray-700/50 flex flex-col gap-1">
+                                    </div>
+                                </section>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="px-8 py-4 shrink-0 bg-black/40 border-t border-gray-700/50 mt-auto">
+                        <div class="flex items-center justify-between gap-4">
+                            <button id="detail-share-btn" class="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-white font-bold uppercase text-md flex items-center gap-2 transition-all">
+                                <i class="fa-solid fa-share-nodes"></i><span>Share</span>
+                            </button>
+                            <button id="detail-redeem-btn" class="bg-[#FFD700] text-black px-6 py-2 rounded-lg font-bold uppercase text-md hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-900/20 min-w-[150px]">
+                                Complete Quest
                             </button>
                         </div>
                     </div>
                 </div>
-
-                    <div id="quest-details-scroll" class="flex-1 overflow-y-auto p-8 quest-list-scroll custom-scrollbar">
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        <div class="lg:col-span-2 space-y-6">
-                            <section>
-                                <h4 class="text-md uppercase tracking-widest text-gray-500 font-bold mb-2">The Tale</h4>
-                                <div id="detail-lore" class="text-gray-300 leading-relaxed text-md"></div>
-                            </section>
-                            <section>
-                                <h4 class="text-md uppercase tracking-widest text-gray-500 font-bold mb-2">Quest Location / Detail</h4>
-                                <p id="detail-location" class="text-gray-300 text-md"></p>
-                            </section>
-                        </div>
-
-                        <div class="lg:col-span-1 space-y-6">
-                            <section>
-                                <h4 class="text-md uppercase tracking-widest text-gray-500 font-bold mb-2">Sign Sequence</h4>
-                                <div id="detail-signs" class="flex flex-wrap gap-2 p-4 bg-black/30 rounded-xl border border-gray-700/50"></div>
-                            </section>
-                            
-                            <section> 
-                                <h4 class="text-md uppercase tracking-widest text-gray-500 font-bold mb-2">Rewards</h4>
-                                <div id="detail-rewards-section" class="bg-black/20 p-4 rounded-xl border border-gray-700/50">
-                                    <div id="detail-items" class="text-white font-medium mb-1 text-md"></div>
-                                    <div id="detail-gold" class="text-[#ecaf48] font-bold text-xl"></div>
-                                </div>
-                            </section>
-
-                            <section>
-                                <h4 class="text-md uppercase tracking-widest text-gray-500 font-bold mb-2">Pre-requisite Quest(s)</h4>
-                                <div id="detail-prerequisites" class="bg-black/20 p-4 rounded-xl border border-gray-700/50 flex flex-col gap-1">
-                                    </div>
-                            </section>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="px-8 py-4 shrink-0 bg-black/40 border-t border-gray-700/50 mt-auto">
-                    <div class="flex items-center justify-between gap-4">
-                        <button id="detail-share-btn" class="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-white font-bold uppercase text-md flex items-center gap-2 transition-all">
-                            <i class="fa-solid fa-share-nodes"></i><span>Share</span>
-                        </button>
-                        <button id="detail-redeem-btn" class="bg-[#FFD700] text-black px-6 py-2 rounded-lg font-bold uppercase text-md hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-900/20 min-w-[150px]">
-                            Complete Quest
-                        </button>
-                    </div>
-                </div>
-
             </div>
         </div>
     </div>
@@ -262,18 +284,15 @@
     </div>
 </div>
 
-
 <div id="sign-redemption-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md hidden items-center justify-center z-[100] p-4">
     <div class="bg-[#1f2937] w-full max-w-2xl rounded-2xl border border-gray-700 shadow-2xl overflow-hidden relative flex flex-col max-h-[85vh]">
         <button id="close-sign-redemption" class="absolute top-4 right-4 text-gray-500 hover:text-white z-10 transition-colors">
             <i class="fa-solid fa-xmark text-xl"></i>
         </button>
-
         <div class="flex flex-col h-full">
             <div class="p-6 border-b border-gray-700 bg-black/20">
                 <h3 class="text-[12px] font-bold text-gray-500 uppercase tracking-widest mb-1">Quest Redemption</h3>
                 <p id="modal-target-quest-name" class="text-[#FFD700] font-bold text-xl mb-4 leading-tight"></p>
-
                 <div class="w-full max-w-xs">
                     <label class="block text-[12px] uppercase tracking-widest text-gray-400 font-bold mb-1.5">Cipher Keyword</label>
                     <select id="cipher-keyword-select" class="w-full bg-gray-900 border border-gray-600 text-white rounded-lg px-3 py-1.5 text-md focus:border-[#FFD700] outline-none transition-colors">
@@ -287,19 +306,16 @@
                     </select>
                 </div>
             </div>
-
             <div class="flex-1 overflow-y-auto p-5 space-y-5">
                 <div>
                     <label class="block text-[12px] uppercase tracking-widest text-gray-500 font-bold mb-2">Sign Library</label>
                     <div id="sign-grid" class="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-8 gap-1.5 bg-black/20 p-3 rounded-xl border border-gray-700 overflow-y-auto max-h-[350px] scrollbar-thin"></div>
                 </div>
-
                 <div>
                     <label class="block text-[12px] uppercase tracking-widest text-gray-500 font-bold mb-2">Selected Sequence</label>
                     <div id="selected-signs" class="flex flex-wrap gap-1.5 min-h-[60px] p-3 bg-black/40 rounded-xl border border-gray-700"></div>
                 </div>
             </div>
-
             <div class="p-4 bg-black/40 border-t border-gray-700">
                 <p id="modal-error-msg" class="text-[#ee626b] mb-3 hidden text-center text-md italic font-sans"></p>
                 <div class="flex flex-col md:flex-row justify-end gap-3">
@@ -316,11 +332,9 @@
         <button id="close-direct-confirm" class="absolute top-4 right-4 text-gray-500 hover:text-white z-10 transition-colors">
             <i class="fa-solid fa-xmark text-xl"></i>
         </button>
-
         <div class="p-6 text-center">
             <h3 class="text-[12px] font-bold text-gray-500 uppercase tracking-widest mb-2">Complete Quest</h3>
             <p id="direct-confirm-text" class="text-white text-lg font-semibold mb-6"></p>
-
             <div class="flex justify-center gap-4">
                 <button id="direct-confirm-cancel" class="px-5 py-2 bg-gray-700 text-gray-300 rounded-lg font-bold uppercase text-[12px] hover:bg-gray-600 transition-all">
                     Cancel
@@ -361,10 +375,10 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script>
     $(document).ready(function() {
-        $('.filter-btn').on('click', function() {
-            $('.filter-btn').removeClass('active');
-            $(this).addClass('active');
-            const status = $(this).data('status');
+        $('.sidebar-filter-btn').on('click', function() {
+            $('.sidebar-filter-btn').removeClass('active bg-[#FFD700] text-black');
+            $(this).addClass('active bg-[#FFD700] text-black');
+            const status = $(this).data('filter-status');
             $('#filter-status').val(status).trigger('change');
         });
     });
@@ -376,8 +390,15 @@
     supabase.auth.onAuthStateChange((event, session) => {
         if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
             if (session?.user) {
+                document.getElementById('create-quest-nav')?.classList.remove('hidden');
+                document.getElementById('edit-quest-nav')?.classList.remove('hidden');
+                document.getElementById('character-container')?.classList.remove('hidden');
                 initializeCharacterSystem(session.user.id);
             }
+        } else if (event === 'SIGNED_OUT') {
+            document.getElementById('create-quest-nav')?.classList.add('hidden');
+            document.getElementById('edit-quest-nav')?.classList.add('hidden');
+            document.getElementById('character-container')?.classList.add('hidden');
         }
     });
 </script>

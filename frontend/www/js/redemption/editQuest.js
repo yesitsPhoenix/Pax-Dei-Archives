@@ -1,5 +1,5 @@
 import { supabase } from "../supabaseClient.js";
-import { enableSignTooltip } from '../ui/signTooltip.js';
+import { enableSignTooltip, mouseTooltip } from '../ui/signTooltip.js';
 
 const alphabet = "abcdefghijklmnopqrstuvwxyz";
 
@@ -40,6 +40,7 @@ async function init() {
     } else {
         await loadEditor(user.id, signData);
     }
+    enableSignTooltip();
 }
 
 async function renderQuestManager(userId, config) {
@@ -118,6 +119,20 @@ async function renderQuestManager(userId, config) {
         filterSelect.appendChild(opt);
     });
 
+    const attachTooltip = (el, name) => {
+        el.onmouseenter = () => {
+            mouseTooltip.innerText = name.replace(/-/g, " ");
+            mouseTooltip.style.display = "block";
+        };
+        el.onmousemove = e => {
+            mouseTooltip.style.left = `${e.clientX + 15}px`;
+            mouseTooltip.style.top = `${e.clientY + 15}px`;
+        };
+        el.onmouseleave = () => {
+            mouseTooltip.style.display = "none";
+        };
+    };
+
     const renderRows = () => {
         const catFilter = filterSelect.value;
         const searchFilter = searchInput.value.toLowerCase();
@@ -135,49 +150,75 @@ async function renderQuestManager(userId, config) {
             const keyword = quest.cipher_keyword || 'None';
             const shift = getCipherShift(keyword);
             
-            const cipherKeyHtml = quest.signs && quest.signs.length > 0
-                ? quest.signs.map(id =>
-                    `<img src="${baseUrl}${id}.webp?${version}" style="width: 36px; height: 36px;" class="inline-block bg-black/40 rounded p-1 border border-gray-700 mr-1 hover:border-[#72e0cc]" data-sign="${id}">`
-                ).join('')
-                : '<span class="text-gray-500 italic text-xs">None</span>';
-
-            const solutionSignsHtml = quest.signs && quest.signs.length > 0
-                ? quest.signs.map(id => {
-                    const currentIndex = allSignIds.indexOf(id);
-                    const encodedIndex = (currentIndex + shift) % allSignIds.length;
-                    const encodedId = allSignIds[encodedIndex];
-                    return `<img src="${baseUrl}${encodedId}.webp?${version}" style="width: 36px; height: 36px;" class="inline-block bg-gray-800 rounded p-1 border border-gray-600 mr-1 hover:border-[#72e0cc]" data-sign="${encodedId}">`;
-                }).join('')
-                : '<span class="text-gray-500 italic text-xs">No Signs</span>';
-
             const row = document.createElement('tr');
             row.className = 'hover:bg-white/5 transition-colors group';
             
-            row.innerHTML = `
-                <td class="px-4 py-3">
-                    <div class="font-bold text-sm">${quest.quest_name}</div>
-                </td>
-                <td class="px-4 py-3">
-                    <div class="text-xs text-gray-400 font-medium">${quest.category || 'No Category'}</div>
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap">${cipherKeyHtml}</td>
-                <td class="px-4 py-3 whitespace-nowrap">${solutionSignsHtml}</td>
-                <td class="px-4 py-3">
-                     <span class="text-xs font-bold text-[#FFD700] uppercase">${keyword}</span>
-                </td>
-                <td class="px-4 py-3">
-                    <div class="flex items-center gap-1.5 text-xs">
-                        <span class="font-bold ${claimCount >= maxClaims && maxClaims > 0 ? 'text-red-400' : 'text-green-400'}">${claimCount}</span>
-                        <span class="text-gray-600">/</span>
-                        <span class="text-gray-500">${maxClaims}</span>
-                    </div>
-                </td>
-                <td class="px-4 py-3 text-right">
-                    <a href="?id=${quest.id}" class="bg-[#FFD700] hover:bg-yellow-400 text-black px-4 py-1.5 rounded-lg font-bold text-xs uppercase transition-all shadow-md active:scale-95 inline-block text-center decoration-0">
-                        Edit
-                    </a>
-                </td>
+            const questNameCell = document.createElement('td');
+            questNameCell.className = 'px-4 py-3';
+            questNameCell.innerHTML = `<div class="font-bold text-sm">${quest.quest_name}</div>`;
+
+            const categoryCell = document.createElement('td');
+            categoryCell.className = 'px-4 py-3';
+            categoryCell.innerHTML = `<div class="text-xs text-gray-400 font-medium">${quest.category || 'No Category'}</div>`;
+
+            const cipherCell = document.createElement('td');
+            cipherCell.className = 'px-4 py-3 whitespace-nowrap';
+            if (quest.signs && quest.signs.length > 0) {
+                quest.signs.forEach(id => {
+                    const img = document.createElement('img');
+                    img.src = `${baseUrl}${id}.webp?${version}`;
+                    img.style.width = '36px';
+                    img.style.height = '36px';
+                    img.className = 'inline-block bg-black/40 rounded p-1 border border-gray-700 mr-1 hover:border-[#72e0cc]';
+                    attachTooltip(img, id.split('_').slice(1).join(' '));
+                    cipherCell.appendChild(img);
+                });
+            } else {
+                cipherCell.innerHTML = '<span class="text-gray-500 italic text-xs">None</span>';
+            }
+
+            const solutionCell = document.createElement('td');
+            solutionCell.className = 'px-4 py-3 whitespace-nowrap';
+            if (quest.signs && quest.signs.length > 0) {
+                quest.signs.forEach(id => {
+                    const currentIndex = allSignIds.indexOf(id);
+                    const encodedIndex = (currentIndex + shift) % allSignIds.length;
+                    const encodedId = allSignIds[encodedIndex];
+                    const img = document.createElement('img');
+                    img.src = `${baseUrl}${encodedId}.webp?${version}`;
+                    img.style.width = '36px';
+                    img.style.height = '36px';
+                    img.className = 'inline-block bg-gray-800 rounded p-1 border border-gray-600 mr-1 hover:border-[#72e0cc]';
+                    attachTooltip(img, encodedId.split('_').slice(1).join(' '));
+                    solutionCell.appendChild(img);
+                });
+            } else {
+                solutionCell.innerHTML = '<span class="text-gray-500 italic text-xs">No Signs</span>';
+            }
+
+            const keywordCell = document.createElement('td');
+            keywordCell.className = 'px-4 py-3';
+            keywordCell.innerHTML = `<span class="text-xs font-bold text-[#FFD700] uppercase">${keyword}</span>`;
+
+            const claimsCell = document.createElement('td');
+            claimsCell.className = 'px-4 py-3';
+            claimsCell.innerHTML = `
+                <div class="flex items-center gap-1.5 text-xs">
+                    <span class="font-bold ${claimCount >= maxClaims && maxClaims > 0 ? 'text-red-400' : 'text-green-400'}">${claimCount}</span>
+                    <span class="text-gray-600">/</span>
+                    <span class="text-gray-500">${maxClaims}</span>
+                </div>
             `;
+
+            const actionsCell = document.createElement('td');
+            actionsCell.className = 'px-4 py-3 text-right';
+            actionsCell.innerHTML = `
+                <a href="?id=${quest.id}" class="bg-[#FFD700] hover:bg-yellow-400 text-black px-4 py-1.5 rounded-lg font-bold text-xs uppercase transition-all shadow-md active:scale-95 inline-block text-center decoration-0">
+                    Edit
+                </a>
+            `;
+
+            row.append(questNameCell, categoryCell, cipherCell, solutionCell, keywordCell, claimsCell, actionsCell);
             list.appendChild(row);
         });
     };
@@ -247,7 +288,7 @@ async function loadEditor(userId, signData) {
     grid.innerHTML = "";
     allSignIds.forEach(fullId => {
         const btn = document.createElement("button");
-        btn.className = "p-1 bg-[#374151] rounded hover:bg-[#4b5563] border border-transparent hover:border-[#72e0cc] transition-all";
+        btn.className = "p-1 bg-[#374151] rounded hover:bg-[#4b5563] border border-transparent hover:border-[#72e0cc] transition-all relative";
 
         const img = document.createElement("img");
         img.src = `${baseUrl}${fullId}.webp?${version}`;
@@ -255,6 +296,19 @@ async function loadEditor(userId, signData) {
         img.onerror = () => btn.remove();
 
         btn.appendChild(img);
+
+        btn.onmouseenter = () => {
+            mouseTooltip.innerText = fullId.split('_').slice(1).join(' ').replace(/-/g, " ");
+            mouseTooltip.style.display = "block";
+        };
+        btn.onmousemove = e => {
+            mouseTooltip.style.left = `${e.clientX + 15}px`;
+            mouseTooltip.style.top = `${e.clientY + 15}px`;
+        };
+        btn.onmouseleave = () => {
+            mouseTooltip.style.display = "none";
+        };
+
         btn.onclick = () => {
             const limitMsg = document.getElementById("limit-message");
             if (selected.length < 5) {
@@ -492,5 +546,4 @@ function setupEditorEvents(baseUrl, version) {
     };
 }
 
-enableSignTooltip();
 init();
