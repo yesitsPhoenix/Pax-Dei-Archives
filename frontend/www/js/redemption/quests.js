@@ -472,6 +472,12 @@ async function showQuestDetails(quest, userClaimed) {
     const url = new URL(window.location);
     url.searchParams.set('quest', quest.quest_key);
     window.history.replaceState({}, '', url);
+
+        requestAnimationFrame(() => {
+        const scrollEl = document.getElementById('quest-details-scroll');
+        if (scrollEl) scrollEl.scrollTop = 0;
+    });
+
 }
 
 window.showQuestDetails = showQuestDetails;

@@ -18,7 +18,9 @@
         .quest-item.active { background-color: rgba(255, 215, 0, 0.1); border-left: 4px solid #FFD700; }
         #quest-details-pane { overflow-y: hidden; }
         .details-scroll-area { overflow-y: auto; scrollbar-width: thin; scrollbar-color: #FFD700 #1f2937; }
-        
+        #quest-details-scroll {
+        overflow-anchor: none;
+        }
         #sidebar.collapsed .sidebar-text {
             display: none;
         }
@@ -189,7 +191,7 @@
                     </div>
                 </div>
 
-                <div class="flex-1 overflow-y-auto p-8 quest-list-scroll custom-scrollbar">
+                    <div id="quest-details-scroll" class="flex-1 overflow-y-auto p-8 quest-list-scroll custom-scrollbar">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         <div class="lg:col-span-2 space-y-6">
                             <section>
