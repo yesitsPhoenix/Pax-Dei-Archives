@@ -184,7 +184,7 @@ function renderPage(allQuests, userClaims, allFeats, unlockedCategories, manualU
                 <div class="relative pt-1">
                     <div class="flex mb-1 items-center justify-between">
                         <span class="text-[10px] uppercase font-bold text-[#FFD700]">Progress</span>
-                        <span class="text-md font-mono text-white">${Math.round(item.percent)}%</span>
+                        <span class="text-md text-white">${Math.round(item.percent)}%</span>
                     </div>
                     <div class="overflow-hidden h-1.5 flex rounded bg-slate-800">
                         <div style="width:${item.percent}%" class="progress-fill flex bg-[#FFD700]"></div>
