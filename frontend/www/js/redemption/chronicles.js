@@ -45,7 +45,8 @@ async function initChronicles() {
         supabase.from("cipher_quests").select("*").eq("active", true).order("sort_order", { ascending: true }),
         supabase.from("heroic_feats").select("*").eq("active", true).order("sort_order", { ascending: true }),
         supabase.from("user_claims").select("*").eq("character_id", characterId),
-        supabase.from("user_unlocked_categories").select("category_name").eq("character_id", characterId)
+        supabase.from("user_unlocked_categories").select("category_name").eq("character_id", characterId),
+        fetch("frontend/www/assets/signs.json").then(res => res.json()).catch(() => ({}))
     ];
 
     const results = await Promise.all(requests);
@@ -54,11 +55,12 @@ async function initChronicles() {
     const allFeats = results[1].data || [];
     const userClaims = results[2].data || [];
     const manualUnlocks = new Set((results[3].data || []).map(u => u.category_name));
+    const signsConfig = results[4];
 
     const unlockedData = await getUnlockedCategories(characterId, allQuests, userClaims);
     let unlockedCategories = new Set(unlockedData);
 
-    renderPage(allQuests, userClaims, allFeats, unlockedCategories, manualUnlocks);
+    renderPage(allQuests, userClaims, allFeats, unlockedCategories, manualUnlocks, signsConfig);
 }
 
 function showQuestModal(chapterName, quests, claims) {
@@ -105,7 +107,7 @@ function showQuestModal(chapterName, quests, claims) {
     modal.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
 }
 
-function renderPage(allQuests, userClaims, allFeats, unlockedCategories, manualUnlocks) {
+function renderPage(allQuests, userClaims, allFeats, unlockedCategories, manualUnlocks, signsConfig) {
     const chaptersContainer = document.getElementById("chapters-container");
     const featsContainer = document.getElementById("feats-container");
     if (!chaptersContainer || !featsContainer) return;
@@ -113,6 +115,7 @@ function renderPage(allQuests, userClaims, allFeats, unlockedCategories, manualU
     chaptersContainer.innerHTML = "";
     featsContainer.innerHTML = "";
 
+    const { baseUrl = "", version = "" } = signsConfig.config || {};
     const claimedQuestIds = new Set(userClaims.map(c => c.quest_id));
     const categoryProgress = {};
 
@@ -196,12 +199,36 @@ function renderPage(allQuests, userClaims, allFeats, unlockedCategories, manualU
     allFeats.forEach(feat => {
         const stats = categoryProgress[feat.required_category] || { completed: 0 };
         const isEarned = stats.completed >= (feat.required_count || 0) && (!feat.secret_code_required || manualUnlocks.has(feat.secret_code_required));
-        const iconToUse = isEarned ? (feat.icon || 'fa-trophy') : 'fa-lock';
+        
+        let iconHtml = "";
+        
+        if (isEarned) {
+            const featIconKey = feat.icon || "";
+            let matchedSignId = null;
+
+            if (signsConfig.categories) {
+                for (const cat of signsConfig.categories) {
+                    const found = cat.items.find(item => item === featIconKey);
+                    if (found) {
+                        matchedSignId = `${cat.id}_${found}`;
+                        break;
+                    }
+                }
+            }
+
+            if (matchedSignId) {
+                iconHtml = `<img src="${baseUrl}${matchedSignId}.webp?${version}" alt="${feat.name}" class="w-8 h-8 object-contain">`;
+            } else {
+                iconHtml = `<i class="fa-solid fa-trophy text-[#FFD700] text-xl"></i>`;
+            }
+        } else {
+            iconHtml = `<i class="fa-solid fa-lock text-slate-600 text-xl"></i>`;
+        }
 
         featsContainer.insertAdjacentHTML('beforeend', `
-            <div class="feat-card p-4 rounded-lg flex items-center gap-4 ${isEarned ? 'unlocked border-[#FFD700]' : 'border-slate-800'}\">
-                <div class="w-12 h-12 rounded-full flex items-center justify-center border ${isEarned ? 'border-[#FFD700] bg-[#FFD700]/10' : 'border-slate-700 bg-slate-900'}\">
-                    <i class="fa-solid ${iconToUse} ${isEarned ? 'text-[#FFD700]' : 'text-slate-600'} text-xl"></i>
+            <div class="feat-card p-4 rounded-lg flex items-center gap-4 ${isEarned ? 'unlocked border-[#FFD700]' : 'border-slate-800'}">
+                <div class="w-12 h-12 rounded-full flex items-center justify-center border ${isEarned ? 'border-[#FFD700] bg-[#FFD700]/10' : 'border-slate-700 bg-slate-900'}">
+                    ${iconHtml}
                 </div>
                 <div>
                     <h4 class="font-bold text-md ${isEarned ? 'text-white' : 'text-slate-500'}">${feat.name}</h4>
