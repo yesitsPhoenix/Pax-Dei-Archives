@@ -1,9 +1,7 @@
 import { supabase } from "../supabaseClient.js";
 import { enableSignTooltip } from '../ui/signTooltip.js';
 
-
 const alphabet = "abcdefghijklmnopqrstuvwxyz";
-
 
 function getCipherShift(word) {
     if (!word || word.toLowerCase() === "none") return 0;
@@ -42,7 +40,6 @@ async function init() {
     } else {
         await loadEditor(user.id, signData);
     }
-    
 }
 
 async function renderQuestManager(userId, config) {
@@ -144,7 +141,6 @@ async function renderQuestManager(userId, config) {
                 ).join('')
                 : '<span class="text-gray-500 italic text-xs">None</span>';
 
-
             const solutionSignsHtml = quest.signs && quest.signs.length > 0
                 ? quest.signs.map(id => {
                     const currentIndex = allSignIds.indexOf(id);
@@ -215,14 +211,17 @@ async function loadEditor(userId, signData) {
 
     const categories = [...new Set(allQuests.map(q => q.category).filter(Boolean))];
     const catSelect = document.getElementById("quest-category-select");
+    const unlockPreCat = document.getElementById("unlock-pre-cat");
     
     catSelect.innerHTML = '<option value="" disabled selected>Select Category</option><option value="NEW">+ Add New Category</option>';
+    unlockPreCat.innerHTML = '<option value="">None (Always Unlocked)</option>';
     
     categories.forEach(cat => {
         const opt = document.createElement("option");
         opt.value = cat;
         opt.textContent = cat;
-        catSelect.appendChild(opt);
+        catSelect.appendChild(opt.cloneNode(true));
+        unlockPreCat.appendChild(opt.cloneNode(true));
     });
 
     const { data: regions } = await supabase
@@ -244,7 +243,6 @@ async function loadEditor(userId, signData) {
         option.textContent = `${reg.region_name} | ${reg.shard} | ${reg.province} | ${reg.home_valley}`;
         select.appendChild(option);
     });
-
 
     grid.innerHTML = "";
     allSignIds.forEach(fullId => {
@@ -274,6 +272,8 @@ async function loadEditor(userId, signData) {
     document.getElementById('quest-author').value = quest.author || '';
     document.getElementById('quest-key').value = quest.quest_key;
     document.getElementById('quest-category-select').value = quest.category || '';
+    document.getElementById('unlock-pre-cat').value = quest.unlock_prerequisite_category || '';
+    document.getElementById('unlock-req-count').value = quest.unlock_required_count || '';
     document.getElementById('region-selection').value = quest.region_id || "global";
     document.getElementById('location').value = quest.location || '';
     document.getElementById('cipher-keyword-select').value = quest.cipher_keyword || "None";
@@ -299,18 +299,43 @@ async function loadPrerequisiteOptionsForEdit(containerId, existingIds = []) {
         .neq('id', questId)
         .order('category', { ascending: true });
 
-    const container = document.getElementById(containerId);
-    if (error || !container) return;
+    const parent = document.getElementById(containerId);
+    if (error || !parent) return;
 
-    container.innerHTML = quests.map(q => {
-        const isChecked = existingIds.includes(q.id) ? 'checked' : '';
-        return `
-            <label class="flex items-center space-x-3 p-2 hover:bg-white/5 rounded-lg cursor-pointer transition-colors">
-                <input type="checkbox" name="prereq-quest" value="${q.id}" ${isChecked} class="w-4 h-4 rounded border-gray-700 text-[#FFD700] focus:ring-[#FFD700] bg-gray-900">
-                <span class="text-sm text-gray-300">${q.quest_name} <small class="text-gray-500 ml-2">(${q.category})</small></span>
-            </label>
-        `;
-    }).join('');
+    parent.innerHTML = `
+        <div class="mb-3">
+            <input type="text" id="prereq-search" placeholder="Search quests..." class="w-full bg-[#374151] border border-gray-600 rounded-lg p-2 text-sm text-white focus:border-[#FFD700] outline-none">
+        </div>
+        <div id="prereq-list" class="space-y-1"></div>
+    `;
+
+    const listContainer = document.getElementById('prereq-list');
+
+    const renderPrereqs = (filter = "") => {
+        listContainer.innerHTML = quests
+            .filter(q => q.quest_name.toLowerCase().includes(filter.toLowerCase()))
+            .map(q => {
+                const isChecked = existingIds.includes(q.id) ? 'checked' : '';
+                return `
+                    <label class="flex items-center space-x-3 p-2 hover:bg-white/5 rounded-lg cursor-pointer transition-colors">
+                        <input type="checkbox" name="prereq-quest" value="${q.id}" ${isChecked} class="w-4 h-4 rounded border-gray-700 text-[#FFD700] focus:ring-[#FFD700] bg-gray-900">
+                        <span class="text-sm text-gray-300">${q.quest_name} <small class="text-gray-500 ml-2">(${q.category})</small></span>
+                    </label>
+                `;
+            }).join('');
+    };
+
+    document.getElementById('prereq-search').addEventListener('input', (e) => {
+        const currentChecked = Array.from(document.querySelectorAll('input[name="prereq-quest"]:checked')).map(cb => cb.value);
+        existingIds = [...new Set([...existingIds, ...currentChecked])];
+        
+        const currentUnchecked = Array.from(document.querySelectorAll('input[name="prereq-quest"]:not(:checked)')).map(cb => cb.value);
+        existingIds = existingIds.filter(id => !currentUnchecked.includes(id));
+        
+        renderPrereqs(e.target.value);
+    });
+
+    renderPrereqs();
 }
 
 function updateSelected(baseUrl, version) {
@@ -414,55 +439,57 @@ function setupEditorEvents(baseUrl, version) {
     };
 
     document.getElementById('modal-confirm').onclick = async () => {
-    const itemsInput = document.getElementById('items').value;
-    const author = document.getElementById('quest-author').value.trim();
-    const keywordRaw = document.getElementById('cipher-keyword-select').value;
-    const currentKeyword = (keywordRaw === "None" || !keywordRaw) ? "" : keywordRaw;
-    const region_id = document.getElementById('region-selection').value;
-    
-    const selectedPrereqs = Array.from(document.querySelectorAll('input[name="prereq-quest"]:checked'))
-        .map(cb => cb.value);
+        const itemsInput = document.getElementById('items').value;
+        const author = document.getElementById('quest-author').value.trim();
+        const keywordRaw = document.getElementById('cipher-keyword-select').value;
+        const currentKeyword = (keywordRaw === "None" || !keywordRaw) ? "" : keywordRaw;
+        const region_id = document.getElementById('region-selection').value;
+        
+        const selectedPrereqs = Array.from(document.querySelectorAll('input[name="prereq-quest"]:checked'))
+            .map(cb => cb.value);
 
-    let finalCategory = categorySelect.value;
-    if (finalCategory === "NEW") {
-        finalCategory = newCategoryInput.value.trim();
-    }
+        let finalCategory = categorySelect.value;
+        if (finalCategory === "NEW") {
+            finalCategory = newCategoryInput.value.trim();
+        }
 
-    const reward_keys = selected.map(placedId => {
-        const currentIndex = allSignIds.indexOf(placedId);
-        const shift = getCipherShift(currentKeyword);
-        const encodedIndex = (currentIndex + shift) % allSignIds.length;
-        return allSignIds[encodedIndex].split('_').slice(1).join('_');
-    });
+        const reward_keys = selected.map(placedId => {
+            const currentIndex = allSignIds.indexOf(placedId);
+            const shift = getCipherShift(currentKeyword);
+            const encodedIndex = (currentIndex + shift) % allSignIds.length;
+            return allSignIds[encodedIndex].split('_').slice(1).join('_');
+        });
 
-    const updatedData = {
-        quest_name: document.getElementById('quest-name').value.trim(),
-        author,
-        quest_key: document.getElementById('quest-key').value.trim(),
-        category: finalCategory,
-        region_id: region_id === "global" ? null : region_id,
-        location: document.getElementById('location').value.trim(),
-        cipher_keyword: currentKeyword || null,
-        lore: document.getElementById('lore').value.trim(),
-        items: itemsInput ? itemsInput.split(',').map(i => i.trim()).filter(Boolean) : [],
-        gold: parseInt(document.getElementById('gold').value) || 0,
-        max_claims: parseInt(document.getElementById('max-claims').value) || 1,
-        signs: selected.length > 0 ? selected : null,
-        reward_key: reward_keys.length > 0 ? reward_keys.join(",") : null,
-        prerequisite_quest_ids: selectedPrereqs
+        const updatedData = {
+            quest_name: document.getElementById('quest-name').value.trim(),
+            author,
+            quest_key: document.getElementById('quest-key').value.trim(),
+            category: finalCategory,
+            unlock_prerequisite_category: document.getElementById('unlock-pre-cat').value || null,
+            unlock_required_count: parseInt(document.getElementById('unlock-req-count').value) || null,
+            region_id: region_id === "global" ? null : region_id,
+            location: document.getElementById('location').value.trim(),
+            cipher_keyword: currentKeyword || null,
+            lore: document.getElementById('lore').value.trim(),
+            items: itemsInput ? itemsInput.split(',').map(i => i.trim()).filter(Boolean) : [],
+            gold: parseInt(document.getElementById('gold').value) || 0,
+            max_claims: parseInt(document.getElementById('max-claims').value) || 1,
+            signs: selected.length > 0 ? selected : null,
+            reward_key: reward_keys.length > 0 ? reward_keys.join(",") : null,
+            prerequisite_quest_ids: selectedPrereqs
+        };
+
+        const { error } = await supabase
+            .from("cipher_quests")
+            .update(updatedData)
+            .eq("id", questId);
+
+        if (error) {
+            alert(error.message);
+        } else {
+            window.location.href = 'edit_quest.html';
+        }
     };
-
-    const { error } = await supabase
-        .from("cipher_quests")
-        .update(updatedData)
-        .eq("id", questId);
-
-    if (error) {
-        alert(error.message);
-    } else {
-        window.location.href = 'edit_quest.html';
-    }
-};
 }
 
 enableSignTooltip();
