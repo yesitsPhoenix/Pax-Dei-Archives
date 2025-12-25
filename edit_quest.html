@@ -36,8 +36,8 @@
     <h1 class="text-xl font-semibold mt-6 mb-3 text-white text-center">Edit Quest</h1>
     <div class="h-1 w-32 bg-[#FFD700] mx-auto rounded-full"></div><br>
 
-    <div class="container mx-auto px-4 pb-20 max-w-[95">
-        <div class="page-content text-white vw] mx-auto">
+    <div class="container mx-auto px-4 pb-20 max-w-[95vw]">
+        <div class="page-content text-white mx-auto">
             
             <div id="manager-interface">
                 <div id="manager-controls" class="mb-6 flex flex-wrap gap-4 items-end">
@@ -73,10 +73,12 @@
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div class="lg:col-span-1 space-y-6">
                         <h2 class="font-bold text-[#FFD700] uppercase text-sm tracking-widest border-b border-gray-800 pb-2">Quest Details</h2>
+                        
                         <div>
-                            <label class="block text-s font-bold text-gray-400 uppercase mb-2 tracking-wider">Quest Author (Character Name)</label>
+                            <label class="block text-s font-bold text-gray-400 uppercase mb-2 tracking-wider">Quest Author</label>
                             <input id="quest-author" class="w-full p-3 rounded-lg bg-[#1f2937] text-white border border-gray-700 focus:border-[#FFD700] outline-none text-base" placeholder="Enter character name...">
                         </div>
+
                         <div>
                             <label class="block text-s font-bold text-gray-400 uppercase mb-2 tracking-wider">Quest Title</label>
                             <input id="quest-name" class="w-full p-3 rounded-lg bg-[#1f2937] text-white border border-gray-700 focus:border-[#FFD700] outline-none text-base" placeholder="Enter quest name...">
@@ -87,115 +89,109 @@
                             <input id="quest-key" class="w-full p-3 rounded-lg bg-[#111827] border border-gray-700 text-gray-400 text-base" placeholder="quest-slug" readonly>
                         </div>
 
-                        <div class="space-y-6">
-                            <div>
-                                <label class="block text-gray-400 text-xs font-bold mb-2 uppercase tracking-widest">Quest Category (Chapter)</label>
-                                <div class="flex flex-col gap-4">
-                                    <select id="quest-category-select" class="w-full bg-[#1f2937] border border-gray-700 rounded-lg p-3 text-white focus:border-[#FFD700] outline-none transition-all cursor-pointer">
-                                        <option value="" disabled selected>Select Category</option>
-                                        <option value="NEW">+ Add New Category</option>
-                                    </select>
-                                    <div id="new-category-wrapper" class="hidden">
-                                        <input type="text" id="new-category-input" placeholder="New category name..." class="w-full bg-gray-900 border border-[#FFD700]/50 rounded-lg p-3 text-white outline-none">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="border-t border-gray-700/50 pt-6">
-                                <label class="block text-gray-400 text-xs font-bold mb-2 uppercase tracking-widest">Unlock Prerequisite</label>
-                                <div class="flex gap-4">
-                                    <select id="unlock-pre-cat" class="flex-1 bg-[#1f2937] border border-gray-700 rounded-lg p-3 text-white focus:border-[#FFD700] outline-none transition-all">
-                                        <option value="">None (Always Unlocked)</option>
-                                    </select>
-                                    <div class="w-32">
-                                        <input type="number" id="unlock-req-count" placeholder="Qty" class="w-full bg-[#1f2937] border border-gray-700 rounded-lg p-3 text-white focus:border-[#FFD700] outline-none">
-                                    </div>
+                        <div>
+                            <label class="block text-gray-400 text-xs font-bold mb-2 uppercase tracking-widest">Quest Tale: Chapter</label>
+                            <div class="flex flex-col gap-4">
+                                <select id="quest-category-select" class="w-full bg-[#1f2937] border border-gray-700 rounded-lg p-3 text-white focus:border-[#FFD700] outline-none transition-all cursor-pointer">
+                                    <option value="" disabled selected>Select Category</option>
+                                    <option value="NEW">+ Add New Category</option>
+                                </select>
+                                <div id="new-category-wrapper" class="hidden">
+                                    <input type="text" id="new-category-input" placeholder="New category name..." class="w-full bg-gray-900 border border-[#FFD700]/50 rounded-lg p-3 text-white outline-none">
                                 </div>
                             </div>
                         </div>
-                        <div class="space-y-2">
-                            <label class="block text-sm font-bold text-[#FFD700] uppercase tracking-wider">Completion Prerequisites</label>
-                            <p class="text-xs text-gray-400 italic mb-2">The quest will be visible, but the "Complete" button will stay locked until these are finished.</p>
+
+                        <div class="border-t border-gray-700/50 pt-6">
+                            <div class="flex gap-4">
+                                <div class="flex-1">
+                                    <label class="block text-gray-400 text-xs font-bold mb-2 uppercase tracking-widest">Unlock Tale:Chapter Prerequisite and Qty Required</label>
+                                    <select id="unlock-pre-cat" class="w-full bg-[#1f2937] border border-gray-700 rounded-lg p-3 text-white focus:border-[#FFD700] outline-none transition-all">
+                                        <option value="">None (Always Unlocked)</option>
+                                    </select>
+                                </div>
+                                <div class="w-24">
+                                    <label class="block text-gray-400 text-xs font-bold mb-2 uppercase tracking-widest">Qty</label>
+                                    <input type="number" id="unlock-req-count" placeholder="0" class="w-full bg-[#1f2937] border border-gray-700 rounded-lg p-3 text-white focus:border-[#FFD700] outline-none">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-bold text-[#FFD700] uppercase tracking-wider mb-2">Completion Prerequisites</label>
                             <div id="prerequisite-container" class="bg-black/20 border border-gray-700 rounded-xl p-4 max-h-48 overflow-y-auto custom-scrollbar space-y-2">
                                 <div class="text-gray-500 text-xs italic">Loading quests...</div>
                             </div>
                         </div>
 
                         <div>
-                            <label class="block text-s font-bold text-gray-400 uppercase mb-2 tracking-wider">World Location (Region/Shard/Valley)</label>
+                            <label class="block text-s font-bold text-gray-400 uppercase mb-2 tracking-wider">World Location</label>
                             <select id="region-selection" class="w-full p-3 rounded-lg bg-[#1f2937] text-white border border-gray-700 focus:border-[#FFD700] outline-none text-base appearance-none cursor-pointer">
                                 <option value="">Select Location...</option>
                             </select>
                         </div>
 
                         <div>
-                            <label class="block text-s font-bold text-gray-400 uppercase mb-2 tracking-wider">Quest Instructions</label>
+                            <label class="block text-s font-bold text-gray-400 uppercase mb-2 tracking-wider">Instruction Hint</label>
                             <textarea id="location" class="w-full p-3 rounded-lg bg-[#1f2937] text-white border border-gray-700 focus:border-[#FFD700] outline-none text-base" placeholder="e.g. Near the Great Oak"></textarea>
                         </div>
 
                         <div>
-                            <label class="block text-s font-bold text-gray-400 uppercase mb-2 tracking-wider">Lore & Instructions</label>
-                            <textarea id="lore" class="w-full p-3 rounded-lg bg-[#1f2937] text-white border border-gray-700 h-40 focus:border-[#FFD700] outline-none text-base leading-relaxed" placeholder="Tell the story of this quest..."></textarea>
-                        </div>
-                                    
-</div>
-                    
-                <div class="lg:col-span-2 flex flex-col gap-4">
-                    <div class="space-y-4">
-                        <h2 class="font-bold text-[#FFD700] uppercase text-sm tracking-widest border-b border-gray-800 pb-2">Rewards</h2>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label class="block text-s font-bold text-gray-400 uppercase mb-2 tracking-wider">Item Rewards</label>
-                                <input id="items" class="w-full p-3 rounded-lg bg-[#1f2937] text-white border border-gray-700 focus:border-[#FFD700] outline-none text-base" placeholder="Comma-separated items">
-                            </div>
-
-                            <div>
-                                <label class="block text-s font-bold text-gray-400 uppercase mb-2 tracking-wider">Gold Reward</label>
-                                <div class="relative">
-                                    <i class="fa-solid fa-coins absolute left-4 top-4 text-[#ecaf48]"></i>
-                                    <input id="gold" type="number" class="w-full p-3 pl-12 rounded-lg bg-[#1f2937] text-white border border-gray-700 focus:border-[#FFD700] outline-none text-base" placeholder="0">
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="block text-s font-bold text-gray-400 uppercase mb-2 tracking-wider">Max Redemptions</label>
-                                <input id="max-claims" type="number" min="1" value="1" class="w-full p-3 rounded-lg bg-[#1f2937] text-white border border-gray-700 focus:border-[#FFD700] outline-none text-base" placeholder="1">
-                            </div>
-                        </div>
-
-                        <div class="border-b border-gray-800 pb-2">
-                            <h2 class="font-bold text-[#FFD700] uppercase text-sm tracking-widest">Cipher Configuration</h2>
-                        </div>
-                        
-                        <div>
-                            <label class="block text-s font-bold text-gray-400 uppercase mb-2 tracking-widest">OPTIONAL: Cipher Keyword</label>
-                            <select id="cipher-keyword-select" class="w-full bg-[#111827] border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FFD700] transition-colors text-base appearance-none cursor-pointer">
-                                <option value="" disabled selected>Select a Cipher</option>
-                                <option value="paxdei"> Pax Dei</option>
-                                <option value="thelonius"> Thelonius</option>
-                                <option value="badgers"> Badgers</option>
-                                <option value="zebian"> Zebian</option>
-                                <option value="demira"> Demira</option>
-                                <option value="armozel"> Armozel</option>
-                                <option value=""> None</option>
-                            </select>
+                            <label class="block text-s font-bold text-gray-400 uppercase mb-2 tracking-wider">Lore & Full Instructions</label>
+                            <textarea id="lore" class="w-full p-3 rounded-lg bg-[#1f2937] text-white border border-gray-700 h-40 focus:border-[#FFD700] outline-none text-base leading-relaxed" placeholder="Tell the story..."></textarea>
                         </div>
                     </div>
 
-                        <div class="flex justify-between items-end border-b border-gray-800 pb-2 mt-4">
-                            <h2 class="font-bold text-[#FFD700] uppercase text-sm tracking-widest">Optional: Select Sign Sequence (2-5 signs)</h2>
-                            <button id="clear-signs" class="text-s font-bold bg-red-900/40 hover:bg-red-600 text-red-200 px-4 py-2 rounded-lg transition-all border border-red-800/50 uppercase tracking-tighter">
-                                <i class="fa-solid fa-trash-can mr-2"></i> Clear Grid
-                            </button>
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="space-y-4">
+                            <h2 class="font-bold text-[#FFD700] uppercase text-sm tracking-widest border-b border-gray-800 pb-2">Rewards & Configuration</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-s font-bold text-gray-400 uppercase mb-2 tracking-wider">Item Rewards</label>
+                                    <input id="items" class="w-full p-3 rounded-lg bg-[#1f2937] text-white border border-gray-700 focus:border-[#FFD700] outline-none text-base" placeholder="Items">
+                                </div>
+                                <div>
+                                    <label class="block text-s font-bold text-gray-400 uppercase mb-2 tracking-wider">Gold</label>
+                                    <div class="relative">
+                                        <i class="fa-solid fa-coins absolute left-4 top-4 text-[#ecaf48]"></i>
+                                        <input id="gold" type="number" class="w-full p-3 pl-12 rounded-lg bg-[#1f2937] text-white border border-gray-700 focus:border-[#FFD700] outline-none text-base" placeholder="0">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-s font-bold text-gray-400 uppercase mb-2 tracking-wider">Max Claims</label>
+                                    <input id="max-claims" type="number" min="1" class="w-full p-3 rounded-lg bg-[#1f2937] text-white border border-gray-700 focus:border-[#FFD700] outline-none text-base">
+                                </div>
+                            </div>
                         </div>
 
-                        <div id="sign-grid" class="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-3 p-4 bg-[#111827] rounded-xl border border-gray-800 h-[550px] overflow-y-auto shadow-inner"></div>
-                        
-                        <div class="mt-4 p-6 bg-[#1f2937] flex flex-col items-center rounded-2xl border border-gray-700 shadow-xl">
-                            <h3 class="text-s font-bold text-gray-400 uppercase mb-6 tracking-widest">Sequence Preview</h3>
-                            <div id="selected-signs" class="flex flex-wrap gap-8 justify-center min-h-[220px] items-start w-full text-white"></div>
-                            <span id="limit-message" class="text-sm text-red-400 font-bold hidden mt-4 animate-pulse">Maximum of 5 signs allowed.</span>
+                        <div>
+                            <label class="block text-s font-bold text-gray-400 uppercase mb-2 tracking-widest">Cipher Keyword (Optional)</label>
+                            <select id="cipher-keyword-select" class="w-full bg-[#111827] border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FFD700] transition-colors text-base appearance-none cursor-pointer">
+                                <option value="" disabled selected>Select a Cipher</option>
+                                <option value="paxdei">Pax Dei</option>
+                                <option value="thelonius">Thelonius</option>
+                                <option value="badgers">Badgers</option>
+                                <option value="zebian">Zebian</option>
+                                <option value="demira">Demira</option>
+                                <option value="armozel">Armozel</option>
+                                <option value="">None</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-end border-b border-gray-800 pb-2 mt-4">
+                                <h2 class="font-bold text-[#FFD700] uppercase text-sm tracking-widest">Sign Sequence</h2>
+                                <button id="clear-signs" class="text-xs font-bold bg-red-900/40 hover:bg-red-600 text-red-200 px-4 py-2 rounded-lg transition-all border border-red-800/50 uppercase">
+                                    <i class="fa-solid fa-trash-can mr-2"></i> Clear
+                                </button>
+                            </div>
+                            <div id="sign-grid" class="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-3 p-4 bg-[#111827] rounded-xl border border-gray-800 h-[450px] overflow-y-auto shadow-inner mt-4"></div>
+                            
+                            <div class="mt-4 p-6 bg-[#1f2937] flex flex-col items-center rounded-2xl border border-gray-700 shadow-xl">
+                                <h3 class="text-xs font-bold text-gray-400 uppercase mb-6 tracking-widest">Sequence Preview</h3>
+                                <div id="selected-signs" class="flex flex-wrap gap-8 justify-center min-h-[100px] items-center w-full"></div>
+                                <span id="limit-message" class="text-sm text-red-400 font-bold hidden mt-4 animate-pulse">Maximum 5 signs.</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -225,10 +221,10 @@
     <div id="confirmation-modal" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden z-[200] backdrop-blur-sm">
         <div class="bg-[#1f2937] p-8 rounded-3xl w-full max-w-md text-white shadow-2xl border border-gray-700 mx-4">
             <h3 id="modal-title" class="text-xl font-bold mb-3 text-[#FFD700]">Update Quest</h3>
-            <p id="modal-message" class="text-base text-gray-300 mb-8 leading-relaxed">Are you sure you want to save these changes to the quest?</p>
+            <p id="modal-message" class="text-base text-gray-300 mb-8 leading-relaxed">Are you sure you want to save these changes?</p>
             <div class="flex flex-col sm:flex-row justify-end gap-3">
-                <button id="modal-cancel" class="px-6 py-3 bg-gray-700 rounded-xl hover:bg-gray-600 font-bold transition-colors order-2 sm:order-1 uppercase text-md">Cancel</button>
-                <button id="modal-confirm" class="px-6 py-3 bg-[#FFD700] text-black rounded-xl font-black hover:bg-yellow-400 transition-colors order-1 sm:order-2 uppercase text-md">Confirm Update</button>
+                <button id="modal-cancel" class="px-6 py-3 bg-gray-700 rounded-xl hover:bg-gray-600 font-bold transition-colors uppercase text-md">Cancel</button>
+                <button id="modal-confirm" class="px-6 py-3 bg-[#FFD700] text-black rounded-xl font-black hover:bg-yellow-400 transition-colors uppercase text-md">Confirm</button>
             </div>
         </div>
     </div>

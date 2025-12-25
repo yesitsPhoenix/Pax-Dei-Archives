@@ -17,7 +17,6 @@
         .feat-card { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(71, 85, 105, 0.5); }
         .feat-card.unlocked { border-color: #FFD700; background: rgba(255, 215, 0, 0.05); }
         .progress-fill { transition: width 0.8s ease-in-out; }
-
         #quest-modal {
             z-index: 10000;
             background: rgba(0, 0, 0, 0.85);
@@ -165,9 +164,13 @@
                     <div class="content-body text-white">
                         <div class="mb-10">
                             <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
-                                <i class="fas fa-book-open text-[#FFD700]"></i> Story Chapters
+                                <i class="fas fa-book-open text-[#FFD700]"></i> Chronicles
                             </h2>
-                            <div id="chapters-container" class="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-2"></div>
+                            <div class="w-full">
+                                <div id="first-steps-container" class="mb-8"></div>
+                                
+                                <div id="chapters-container" class="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-2 align-top"></div>
+                            </div>                        
                         </div>
 
                         <hr class="border-slate-700 mb-10">

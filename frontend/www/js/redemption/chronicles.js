@@ -107,41 +107,43 @@ function showQuestModal(chapterName, quests, claims) {
     modal.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
 }
 
-function renderPage(allQuests, userClaims, allFeats, unlockedCategories, manualUnlocks, signsConfig) {
-    const chaptersContainer = document.getElementById("chapters-container");
-    const featsContainer = document.getElementById("feats-container");
-    if (!chaptersContainer || !featsContainer) return;
+async function renderPage(allQuests, userClaims, allFeats, unlockedCategories, manualUnlocks, signsConfig) {
+    const chaptersContainer = document.getElementById('chapters-container');
+    const firstStepsContainer = document.getElementById('first-steps-container');
+    const featsContainer = document.getElementById('feats-container');
+    
+    if (!chaptersContainer) return;
+    chaptersContainer.innerHTML = '';
+    if (firstStepsContainer) firstStepsContainer.innerHTML = ''; 
+    if (featsContainer) featsContainer.innerHTML = '';
 
-    chaptersContainer.innerHTML = "";
-    featsContainer.innerHTML = "";
-
-    const { baseUrl = "", version = "" } = signsConfig.config || {};
-    const claimedQuestIds = new Set(userClaims.map(c => c.quest_id));
     const categoryProgress = {};
-
     allQuests.forEach(q => {
         if (!categoryProgress[q.category]) {
             categoryProgress[q.category] = { total: 0, completed: 0 };
         }
         categoryProgress[q.category].total++;
-        if (claimedQuestIds.has(q.id)) {
+        if (userClaims.some(c => c.quest_id === q.id)) {
             categoryProgress[q.category].completed++;
         }
     });
 
-    const rawCategories = [...new Set(allQuests.map(q => q.category))].filter(Boolean);
     const tales = {};
-
-    rawCategories.forEach(cat => {
-        let taleName = "Other Tales";
+    allQuests.forEach(q => {
+        const cat = q.category || "Uncategorized";
+        let taleName = "Uncategorized";
         let chapterName = cat;
+
         if (cat.includes(':')) {
             const parts = cat.split(':');
             taleName = parts[0].trim();
             chapterName = parts.slice(1).join(':').trim();
         }
+
         if (!tales[taleName]) tales[taleName] = [];
-        tales[taleName].push({ full: cat, chapter: chapterName });
+        if (!tales[taleName].some(c => c.chapter === chapterName)) {
+            tales[taleName].push({ chapter: chapterName, full: cat });
+        }
     });
 
     const sortedTaleNames = Object.keys(tales).sort((a, b) => {
@@ -151,33 +153,42 @@ function renderPage(allQuests, userClaims, allFeats, unlockedCategories, manualU
     });
 
     sortedTaleNames.forEach(taleName => {
-        chaptersContainer.insertAdjacentHTML('beforeend', `
-            <div class="col-span-1 lg:col-span-2 mt-8 mb-4">
+        const isFirstSteps = taleName === "The First Steps";
+        
+        const taleWrapper = document.createElement('div');
+        taleWrapper.className = isFirstSteps 
+            ? "flex flex-col gap-4 mb-8 w-full" 
+            : "flex flex-col gap-4 mb-8 h-fit";
+
+        taleWrapper.insertAdjacentHTML('beforeend', `
+            <div class="mt-4 mb-2">
                 <div class="flex items-center gap-4">
-                    <h2 class="text-lg font-bold uppercase tracking-widest text-slate-400">${taleName}</h2>
+                    <h2 class="text-lg font-bold uppercase tracking-widest text-slate-400 whitespace-nowrap">${taleName}</h2>
                     <div class="h-px flex-grow bg-slate-800"></div>
                 </div>
             </div>
         `);
+
+        const chaptersGrid = document.createElement('div');
+        chaptersGrid.className = isFirstSteps ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "contents";
 
         const chaptersInTale = tales[taleName].map(item => {
             const catQuests = allQuests.filter(q => q.category === item.full);
             const stats = categoryProgress[item.full] || { total: 0, completed: 0 };
             const isUnlocked = unlockedCategories.has(item.full);
             const percent = stats.total > 0 ? (stats.completed / stats.total) * 100 : 0;
-            return { ...item, catQuests, completedCount: stats.completed, isUnlocked, percent };
+            return { ...item, catQuests, isUnlocked, percent };
         });
-
-        chaptersInTale.sort((a, b) => b.isUnlocked - a.isUnlocked);
 
         chaptersInTale.forEach(item => {
             const card = document.createElement('div');
             card.className = `chapter-card p-6 rounded-lg ${item.isUnlocked ? 'cursor-pointer' : 'opacity-40 grayscale'}`;
+            
             card.innerHTML = `
                 <div class="flex justify-between items-start mb-4">
                     <div>
                         <h3 class="text-xl font-bold ${item.isUnlocked ? 'text-[#FFD700]' : 'text-gray-500'}">${item.isUnlocked ? item.chapter : 'Locked Records'}</h3>
-                        <p class="text-slate-400 text-md mt-1">${item.isUnlocked ? `Tracking your journey in ${item.chapter}` : 'Prerequisites not met'}</p>
+                        <p class="text-slate-400 text-md mt-1">${item.isUnlocked ? `Journey in ${item.chapter}` : 'Prerequisites not met'}</p>
                     </div>
                     <i class="fa-solid ${item.isUnlocked ? 'fa-book-open text-[#FFD700]' : 'fa-lock text-slate-600'} mt-1"></i>
                 </div>
@@ -191,52 +202,65 @@ function renderPage(allQuests, userClaims, allFeats, unlockedCategories, manualU
                     </div>
                 </div>
             `;
-            if (item.isUnlocked) card.onclick = () => showQuestModal(item.chapter, item.catQuests, userClaims);
-            chaptersContainer.appendChild(card);
+
+            if (item.isUnlocked) {
+                card.onclick = () => showQuestModal(item.chapter, item.catQuests, userClaims);
+            }
+            
+            chaptersGrid.appendChild(card);
         });
+
+        taleWrapper.appendChild(chaptersGrid);
+
+        if (isFirstSteps && firstStepsContainer) {
+            firstStepsContainer.appendChild(taleWrapper);
+        } else {
+            chaptersContainer.appendChild(taleWrapper);
+        }
     });
 
-    allFeats.forEach(feat => {
-        const stats = categoryProgress[feat.required_category] || { completed: 0 };
-        const isEarned = stats.completed >= (feat.required_count || 0) && (!feat.secret_code_required || manualUnlocks.has(feat.secret_code_required));
-        
-        let iconHtml = "";
-        
-        if (isEarned) {
-            const featIconKey = feat.icon || "";
-            let matchedSignId = null;
+    if (featsContainer && allFeats.length > 0) {
+        allFeats.forEach(feat => {
+            const stats = categoryProgress[feat.category] || { total: 0, completed: 0 };
+            const isEarned = stats.total > 0 && stats.completed === stats.total;
+            
+            let iconHtml = '';
+            if (isEarned) {
+                let matchedSignId = null;
+                const baseUrl = "https://paxdei-archives.com/frontend/www/assets/signs/";
+                const version = "v=1.0.4";
 
-            if (signsConfig.categories) {
-                for (const cat of signsConfig.categories) {
-                    const found = cat.items.find(item => item === featIconKey);
-                    if (found) {
-                        matchedSignId = `${cat.id}_${found}`;
-                        break;
+                if (signsConfig.signs) {
+                    for (const [signId, signData] of Object.entries(signsConfig.signs)) {
+                        if (signData.name === feat.name) {
+                            matchedSignId = signId;
+                            break;
+                        }
                     }
                 }
-            }
 
-            if (matchedSignId) {
-                iconHtml = `<img src="${baseUrl}${matchedSignId}.webp?${version}" alt="${feat.name}" class="w-8 h-8 object-contain">`;
+                if (matchedSignId) {
+                    iconHtml = `<img src="${baseUrl}${matchedSignId}.webp?${version}" alt="${feat.name}" class="w-8 h-8 object-contain">`;
+                } else {
+                    iconHtml = `<i class="fa-solid fa-trophy text-[#FFD700] text-xl"></i>`;
+                }
             } else {
-                iconHtml = `<i class="fa-solid fa-trophy text-[#FFD700] text-xl"></i>`;
+                iconHtml = `<i class="fa-solid fa-lock text-slate-600 text-xl"></i>`;
             }
-        } else {
-            iconHtml = `<i class="fa-solid fa-lock text-slate-600 text-xl"></i>`;
-        }
 
-        featsContainer.insertAdjacentHTML('beforeend', `
-            <div class="feat-card p-4 rounded-lg flex items-center gap-4 ${isEarned ? 'unlocked border-[#FFD700]' : 'border-slate-800'}">
-                <div class="w-12 h-12 rounded-full flex items-center justify-center border ${isEarned ? 'border-[#FFD700] bg-[#FFD700]/10' : 'border-slate-700 bg-slate-900'}">
-                    ${iconHtml}
+            featsContainer.insertAdjacentHTML('beforeend', `
+                <div class="feat-card p-4 rounded-lg flex items-center gap-4 ${isEarned ? 'unlocked border-[#FFD700]' : 'border-slate-800'}">
+                    <div class="w-12 h-12 rounded-full flex items-center justify-center border ${isEarned ? 'border-[#FFD700] bg-[#FFD700]/10' : 'border-slate-700 bg-slate-900'}">
+                        ${iconHtml}
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-md ${isEarned ? 'text-white' : 'text-slate-500'}">${feat.name}</h4>
+                        <p class="text-[10px] uppercase tracking-wider text-slate-500">${isEarned ? 'Mastered' : `Progress: ${stats.completed} / ${feat.required_count || stats.total}`}</p>
+                    </div>
                 </div>
-                <div>
-                    <h4 class="font-bold text-md ${isEarned ? 'text-white' : 'text-slate-500'}">${feat.name}</h4>
-                    <p class="text-[10px] uppercase tracking-wider text-slate-500">${isEarned ? 'Mastered' : `Progress: ${stats.completed} / ${feat.required_count}`}</p>
-                </div>
-            </div>
-        `);
-    });
+            `);
+        });
+    }
 }
 
 window.addEventListener('characterChanged', () => {

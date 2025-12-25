@@ -604,6 +604,13 @@ async function renderQuestsList() {
     }).forEach(category => {
         const isLocked = !unlockedCategories.has(category);
         const categoryQuests = groupedQuests[category];
+        
+        let displayTitle = category;
+        if (category.includes(':')) {
+            const parts = category.split(':');
+            displayTitle = parts.slice(1).join(':').trim();
+        }
+
         const visibleQuestsInCat = categoryQuests.filter(quest => {
             const reqCat = quest.unlock_prerequisite_category;
             const reqCount = quest.unlock_required_count || 0;
@@ -618,7 +625,7 @@ async function renderQuestsList() {
         categoryHeader.className = "category-header p-3 px-4 text-[12px] font-bold uppercase tracking-widest text-[#FFD700] border-b border-gray-700/50 sticky top-0 z-10 backdrop-blur-md cursor-pointer flex justify-between items-center hover:bg-white/5";
 
         const catTitle = document.createElement("span");
-        catTitle.innerText = `${category} (${categoryQuests.length})`;
+        catTitle.innerText = `${displayTitle} (${categoryQuests.length})`;
         categoryHeader.appendChild(catTitle);
 
         const catIconContainer = document.createElement("div");
