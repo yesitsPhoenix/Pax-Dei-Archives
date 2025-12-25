@@ -220,46 +220,48 @@ async function renderPage(allQuests, userClaims, allFeats, unlockedCategories, m
     });
 
     if (featsContainer && allFeats.length > 0) {
-        allFeats.forEach(feat => {
-            const stats = categoryProgress[feat.category] || { total: 0, completed: 0 };
-            const isEarned = stats.total > 0 && stats.completed === stats.total;
-            
-            let iconHtml = '';
-            if (isEarned) {
-                let matchedSignId = null;
-                const baseUrl = "https://paxdei-archives.com/frontend/www/assets/signs/";
-                const version = "v=1.0.4";
+            allFeats.forEach(feat => {
+                const targetCategory = feat.required_category || feat.category;
+                const stats = categoryProgress[targetCategory] || { total: 0, completed: 0 };
+                const totalToCompare = feat.required_count || stats.total;
+                const isEarned = totalToCompare > 0 && stats.completed >= totalToCompare;
+                
+                let iconHtml = '';
+                if (isEarned) {
+                    let matchedSignId = null;
+                    const baseUrl = "https://paxdei-archives.com/frontend/www/assets/signs/";
+                    const version = "v=1.0.4";
 
-                if (signsConfig.signs) {
-                    for (const [signId, signData] of Object.entries(signsConfig.signs)) {
-                        if (signData.name === feat.name) {
-                            matchedSignId = signId;
-                            break;
+                    if (signsConfig.signs) {
+                        for (const [signId, signData] of Object.entries(signsConfig.signs)) {
+                            if (signData.name === feat.name) {
+                                matchedSignId = signId;
+                                break;
+                            }
                         }
                     }
-                }
 
-                if (matchedSignId) {
-                    iconHtml = `<img src="${baseUrl}${matchedSignId}.webp?${version}" alt="${feat.name}" class="w-8 h-8 object-contain">`;
+                    if (matchedSignId) {
+                        iconHtml = `<img src="${baseUrl}${matchedSignId}.webp?${version}" alt="${feat.name}" class="w-8 h-8 object-contain">`;
+                    } else {
+                        iconHtml = `<i class="fa-solid fa-trophy text-[#FFD700] text-xl"></i>`;
+                    }
                 } else {
-                    iconHtml = `<i class="fa-solid fa-trophy text-[#FFD700] text-xl"></i>`;
+                    iconHtml = `<i class="fa-solid fa-lock text-slate-600 text-xl"></i>`;
                 }
-            } else {
-                iconHtml = `<i class="fa-solid fa-lock text-slate-600 text-xl"></i>`;
-            }
 
-            featsContainer.insertAdjacentHTML('beforeend', `
-                <div class="feat-card p-4 rounded-lg flex items-center gap-4 ${isEarned ? 'unlocked border-[#FFD700]' : 'border-slate-800'}">
-                    <div class="w-12 h-12 rounded-full flex items-center justify-center border ${isEarned ? 'border-[#FFD700] bg-[#FFD700]/10' : 'border-slate-700 bg-slate-900'}">
-                        ${iconHtml}
+                featsContainer.insertAdjacentHTML('beforeend', `
+                    <div class="feat-card p-4 rounded-lg flex items-center gap-4 ${isEarned ? 'unlocked border-[#FFD700]' : 'border-slate-800'}">
+                        <div class="w-12 h-12 rounded-full flex items-center justify-center border ${isEarned ? 'border-[#FFD700] bg-[#FFD700]/10' : 'border-slate-700 bg-slate-900'}">
+                            ${iconHtml}
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-md ${isEarned ? 'text-white' : 'text-slate-500'}">${feat.name}</h4>
+                            <p class="text-[10px] uppercase tracking-wider text-slate-500">${isEarned ? 'Mastered' : `Progress: ${stats.completed} / ${totalToCompare}`}</p>
+                        </div>
                     </div>
-                    <div>
-                        <h4 class="font-bold text-md ${isEarned ? 'text-white' : 'text-slate-500'}">${feat.name}</h4>
-                        <p class="text-[10px] uppercase tracking-wider text-slate-500">${isEarned ? 'Mastered' : `Progress: ${stats.completed} / ${feat.required_count || stats.total}`}</p>
-                    </div>
-                </div>
-            `);
-        });
+                `);
+            });
     }
 }
 
