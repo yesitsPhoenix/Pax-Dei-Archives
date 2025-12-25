@@ -117,6 +117,10 @@
             border-top: none;
             padding: 0;
         }
+        #character-select {
+            background-color: #1f2937;
+            color: white;
+        }
     </style>
 </head>
 
@@ -163,6 +167,14 @@
                 <div class="page-content">
                     <div class="content-body text-white">
                         <div class="mb-10">
+                                    <div id="character-container" class="hidden flex justify-start items-center gap-3 mb-4 bg-[#1f2937] border border-gray-700 rounded-lg px-4 py-2 w-fit">
+            <label class="text-[10px] uppercase tracking-widest text-[#FFD700] font-bold">Active Character:</label>
+            <select id="character-select" class="bg-transparent border-none text-white text-sm focus:outline-none focus:ring-0 min-w-[150px]">
+            </select>
+            <button id="showCreateCharacterModalBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded text-[10px] uppercase font-bold transition-colors">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
                             <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
                                 <i class="fas fa-book-open text-[#FFD700]"></i> Chronicles
                             </h2>
@@ -200,7 +212,27 @@
     <div id="quest-modal">
         <div class="quest-modal-container" id="quest-modal-content"></div>
     </div>
+    <script type="module">
+        import { supabase } from './frontend/www/js/supabaseClient.js';
+        import { initializeCharacterSystem } from './frontend/www/js/redemption/characterManager.js';
 
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+                if (session?.user) {
+                    const container = document.getElementById('character-container');
+                    if (container) {
+                        container.classList.remove('hidden');
+                    }
+                    initializeCharacterSystem(session.user.id);
+                }
+            } else if (event === 'SIGNED_OUT') {
+                const container = document.getElementById('character-container');
+                if (container) {
+                    container.classList.add('hidden');
+                }
+            }
+        });
+    </script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
     <script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
@@ -210,5 +242,6 @@
     <script type="module" src="frontend/www/js/popoutAuth.js"></script>
     <script type="module" src="frontend/www/js/redemption/chronicles.js"></script>
     <script type="module" src="frontend/www/js/small_sidebar.js"></script>
+    <script type="module" src="frontend/www/js/redemption/characterManager.js"></script>
 </body>
 </html>

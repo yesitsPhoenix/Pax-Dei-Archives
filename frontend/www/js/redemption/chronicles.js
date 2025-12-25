@@ -2,11 +2,20 @@ import { supabase } from "../supabaseClient.js";
 import { getUnlockedCategories } from "./unlocks.js";
 
 async function getActiveCharacterId() {
+    console.log("[Chronicles] Checking sessionStorage for active_character_id...");
     let sessionCharId = sessionStorage.getItem("active_character_id");
-    if (sessionCharId && sessionCharId !== "null") return sessionCharId;
+    
+    if (sessionCharId && sessionCharId !== "null") {
+        console.log("[Chronicles] Found character ID in session:", sessionCharId);
+        return sessionCharId;
+    }
 
+    console.log("[Chronicles] No ID in session, fetching from database...");
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) return null;
+    if (!session?.user) {
+        console.warn("[Chronicles] No active auth session found.");
+        return null;
+    }
 
     const { data: char } = await supabase.from("characters")
         .select("character_id")
@@ -15,6 +24,7 @@ async function getActiveCharacterId() {
         .maybeSingle();
 
     if (char) {
+        console.log("[Chronicles] Using default character from DB:", char.character_id);
         sessionStorage.setItem("active_character_id", char.character_id);
         return char.character_id;
     }
@@ -26,20 +36,26 @@ async function getActiveCharacterId() {
         .maybeSingle();
 
     if (anyChar) {
+        console.log("[Chronicles] No default found, using first available character:", anyChar.character_id);
         sessionStorage.setItem("active_character_id", anyChar.character_id);
         return anyChar.character_id;
     }
 
+    console.error("[Chronicles] No characters found for this user.");
     return null;
 }
 
 async function initChronicles() {
+    console.log("[Chronicles] Initializing Chronicles page...");
     const characterId = await getActiveCharacterId();
     
     if (!characterId) {
+        console.log("[Chronicles] Character ID not ready, retrying in 500ms...");
         setTimeout(initChronicles, 500);
         return;
     }
+
+    console.log("[Chronicles] Fetching data for Character:", characterId);
 
     const requests = [
         supabase.from("cipher_quests").select("*").eq("active", true).order("sort_order", { ascending: true }),
@@ -49,18 +65,31 @@ async function initChronicles() {
         fetch("frontend/www/assets/signs.json").then(res => res.json()).catch(() => ({}))
     ];
 
-    const results = await Promise.all(requests);
-    
-    const allQuests = results[0].data || [];
-    const allFeats = results[1].data || [];
-    const userClaims = results[2].data || [];
-    const manualUnlocks = new Set((results[3].data || []).map(u => u.category_name));
-    const signsConfig = results[4];
+    try {
+        const results = await Promise.all(requests);
+        
+        const allQuests = results[0].data || [];
+        const allFeats = results[1].data || [];
+        const userClaims = results[2].data || [];
+        const manualUnlocks = new Set((results[3].data || []).map(u => u.category_name));
+        const signsConfig = results[4];
 
-    const unlockedData = await getUnlockedCategories(characterId, allQuests, userClaims);
-    let unlockedCategories = new Set(unlockedData);
+        console.log("[Chronicles] Data Fetch Summary:", {
+            questsCount: allQuests.length,
+            featsCount: allFeats.length,
+            claimsCount: userClaims.length,
+            manualUnlocksCount: manualUnlocks.size
+        });
 
-    renderPage(allQuests, userClaims, allFeats, unlockedCategories, manualUnlocks, signsConfig);
+        const unlockedData = await getUnlockedCategories(characterId, allQuests, userClaims);
+        let unlockedCategories = new Set(unlockedData);
+        
+        console.log("[Chronicles] Final Unlocked Categories:", Array.from(unlockedCategories));
+
+        renderPage(allQuests, userClaims, allFeats, unlockedCategories, manualUnlocks, signsConfig);
+    } catch (error) {
+        console.error("[Chronicles] Error during data initialization:", error);
+    }
 }
 
 function showQuestModal(chapterName, quests, claims) {
@@ -108,11 +137,16 @@ function showQuestModal(chapterName, quests, claims) {
 }
 
 async function renderPage(allQuests, userClaims, allFeats, unlockedCategories, manualUnlocks, signsConfig) {
+    console.log("[Chronicles] Starting page render...");
     const chaptersContainer = document.getElementById('chapters-container');
     const firstStepsContainer = document.getElementById('first-steps-container');
     const featsContainer = document.getElementById('feats-container');
     
-    if (!chaptersContainer) return;
+    if (!chaptersContainer) {
+        console.error("[Chronicles] Container 'chapters-container' not found in DOM.");
+        return;
+    }
+
     chaptersContainer.innerHTML = '';
     if (firstStepsContainer) firstStepsContainer.innerHTML = ''; 
     if (featsContainer) featsContainer.innerHTML = '';
@@ -154,7 +188,6 @@ async function renderPage(allQuests, userClaims, allFeats, unlockedCategories, m
 
     sortedTaleNames.forEach(taleName => {
         const isFirstSteps = taleName === "The First Steps";
-        
         const taleWrapper = document.createElement('div');
         taleWrapper.className = isFirstSteps 
             ? "flex flex-col gap-4 mb-8 w-full" 
@@ -220,54 +253,58 @@ async function renderPage(allQuests, userClaims, allFeats, unlockedCategories, m
     });
 
     if (featsContainer && allFeats.length > 0) {
-            allFeats.forEach(feat => {
-                const targetCategory = feat.required_category || feat.category;
-                const stats = categoryProgress[targetCategory] || { total: 0, completed: 0 };
-                const totalToCompare = feat.required_count || stats.total;
-                const isEarned = totalToCompare > 0 && stats.completed >= totalToCompare;
-                
-                let iconHtml = '';
-                if (isEarned) {
-                    let matchedSignId = null;
-                    const baseUrl = "https://paxdei-archives.com/frontend/www/assets/signs/";
-                    const version = "v=1.0.4";
+        allFeats.forEach(feat => {
+            const targetCategory = feat.required_category || feat.category;
+            const stats = categoryProgress[targetCategory] || { total: 0, completed: 0 };
+            const totalToCompare = feat.required_count || stats.total;
+            const isEarned = totalToCompare > 0 && stats.completed >= totalToCompare;
+            
+            let iconHtml = '';
+            if (isEarned) {
+                let matchedSignId = null;
+                const baseUrl = "https://paxdei-archives.com/frontend/www/assets/signs/";
+                const version = "v=1.0.4";
 
-                    if (signsConfig.signs) {
-                        for (const [signId, signData] of Object.entries(signsConfig.signs)) {
-                            if (signData.name === feat.name) {
-                                matchedSignId = signId;
-                                break;
-                            }
+                if (signsConfig.signs) {
+                    for (const [signId, signData] of Object.entries(signsConfig.signs)) {
+                        if (signData.name === feat.name) {
+                            matchedSignId = signId;
+                            break;
                         }
                     }
-
-                    if (matchedSignId) {
-                        iconHtml = `<img src="${baseUrl}${matchedSignId}.webp?${version}" alt="${feat.name}" class="w-8 h-8 object-contain">`;
-                    } else {
-                        iconHtml = `<i class="fa-solid fa-trophy text-[#FFD700] text-xl"></i>`;
-                    }
-                } else {
-                    iconHtml = `<i class="fa-solid fa-lock text-slate-600 text-xl"></i>`;
                 }
 
-                featsContainer.insertAdjacentHTML('beforeend', `
-                    <div class="feat-card p-4 rounded-lg flex items-center gap-4 ${isEarned ? 'unlocked border-[#FFD700]' : 'border-slate-800'}">
-                        <div class="w-12 h-12 rounded-full flex items-center justify-center border ${isEarned ? 'border-[#FFD700] bg-[#FFD700]/10' : 'border-slate-700 bg-slate-900'}">
-                            ${iconHtml}
-                        </div>
-                        <div>
-                            <h4 class="font-bold text-md ${isEarned ? 'text-white' : 'text-slate-500'}">${feat.name}</h4>
-                            <p class="text-[10px] uppercase tracking-wider text-slate-500">${isEarned ? 'Mastered' : `Progress: ${stats.completed} / ${totalToCompare}`}</p>
-                        </div>
+                if (matchedSignId) {
+                    iconHtml = `<img src="${baseUrl}${matchedSignId}.webp?${version}" alt="${feat.name}" class="w-8 h-8 object-contain">`;
+                } else {
+                    iconHtml = `<i class="fa-solid fa-trophy text-[#FFD700] text-xl"></i>`;
+                }
+            } else {
+                iconHtml = `<i class="fa-solid fa-lock text-slate-600 text-xl"></i>`;
+            }
+
+            featsContainer.insertAdjacentHTML('beforeend', `
+                <div class="feat-card p-4 rounded-lg flex items-center gap-4 ${isEarned ? 'unlocked border-[#FFD700]' : 'border-slate-800'}">
+                    <div class="w-12 h-12 rounded-full flex items-center justify-center border ${isEarned ? 'border-[#FFD700] bg-[#FFD700]/10' : 'border-slate-700 bg-slate-900'}">
+                        ${iconHtml}
                     </div>
-                `);
-            });
+                    <div>
+                        <h4 class="font-bold text-md ${isEarned ? 'text-white' : 'text-slate-500'}">${feat.name}</h4>
+                        <p class="text-[10px] uppercase tracking-wider text-slate-500">${isEarned ? 'Mastered' : `Progress: ${stats.completed} / ${totalToCompare}`}</p>
+                    </div>
+                </div>
+            `);
+        });
     }
+    console.log("[Chronicles] Render complete.");
 }
 
-window.addEventListener('characterChanged', () => {
-    sessionStorage.removeItem("active_character_id");
+window.addEventListener('characterChanged', (e) => {
+    console.log("[Chronicles] characterChanged event received!", e.detail);
     initChronicles();
 });
 
-document.addEventListener('DOMContentLoaded', initChronicles);
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("[Chronicles] DOM Content Loaded.");
+    initChronicles();
+});
