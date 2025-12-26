@@ -231,26 +231,9 @@
             </div>
         </div>
     </div>
-        <script type="module">
-        import { supabase } from './frontend/www/js/supabaseClient.js';
-        import { initializeCharacterSystem } from './frontend/www/js/redemption/characterManager.js';
-
-        supabase.auth.onAuthStateChange((event, session) => {
-            if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-                if (session?.user) {
-                    document.getElementById('create-quest-nav')?.classList.remove('hidden');
-                    document.getElementById('edit-quest-nav')?.classList.remove('hidden');
-                    document.getElementById('character-container')?.classList.remove('hidden');
-                    document.getElementById('edit-features-nav')?.classList.remove('hidden');
-                    document.getElementById('quest-flow-nav')?.classList.remove('hidden');
-                    initializeCharacterSystem(session.user.id);
-                }
-            } else if (event === 'SIGNED_OUT') {
-                document.getElementById('create-quest-nav')?.classList.add('hidden');
-                document.getElementById('edit-quest-nav')?.classList.add('hidden');
-                document.getElementById('character-container')?.classList.add('hidden');
-            }
-        });
+    <script type="module">
+    import { setupAdminAuthListener } from './frontend/www/js/admin/adminManager.js';
+    setupAdminAuthListener();
     </script>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
