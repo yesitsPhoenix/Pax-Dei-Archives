@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pax Dei Archives - Features</title>
+    <title>Pax Dei Archives - Quest Flow</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="frontend/www/css/style.css">
     <link rel="stylesheet" href="frontend/www/css/popout.css">
@@ -11,7 +11,68 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <style>
+        .page-content { 
+            background-color: #1a1a1a; 
+            border-radius: 20px; 
+            padding: 30px; 
+            min-height: 600px; 
+            position: relative; 
+            width: 100% !important; 
+            max-width: 94vw !important;
+        }
+        #layout-wrapper { 
+            display: grid; 
+            grid-template-columns: 1fr 380px; 
+            gap: 20px; 
+            width: 100%;
+            transition: grid-template-columns 0.3s ease;
+            margin-left: 4rem;
+        }
+        #layout-wrapper.collapsed {
+            grid-template-columns: 1fr 45px;
+        }
+        #quest-diagram-container { 
+            width: 100%; 
+            height: 600px; 
+            overflow: hidden; 
+            background: #0d0d0d; 
+            border-radius: 12px; 
+            border: 1px solid #333; 
+            position: relative; 
+        }
+        #visualizer {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .node circle { stroke: #b8860b; stroke-width: 2.5px; cursor: pointer; }
+        .node text { font-size: 11px; fill: #ffffff; font-weight: 500; text-shadow: 0 1px 3px #000; pointer-events: none; }
+        .link { fill: none; stroke: #444; stroke-width: 2px; opacity: 0.3; }
+        .link.virtual { stroke: transparent; }
+        .inspector-panel { background: #111; border: 1px solid #333; border-radius: 12px; padding: 20px; height: 600px; overflow-y: auto; overflow-x: hidden; }
+        .inspector-panel.collapsed #trace-list { display: none; }
+        .inspector-panel.collapsed h2 span { display: none; }
+        .inspector-panel.collapsed h2 { writing-mode: vertical-lr; height: 100%; justify-content: start; padding-top: 10px; margin-bottom: 0; }
+        #details-panel { 
+            position: absolute; 
+            top: 20px; 
+            right: 20px; 
+            width: 280px; 
+            background: rgba(20, 20, 20, 0.95); 
+            border: 1px solid #FFD700; 
+            padding: 15px; 
+            border-radius: 8px; 
+            display: none; 
+            z-index: 30; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        .step-item { padding: 8px; border-left: 3px solid #3b82f6; background: #1e1e1e; margin-bottom: 8px; font-size: 0.8rem; color: #aaa; }
+        select { background: #2a2a2a; color: white; border: 1px solid #444; padding: 6px 12px; border-radius: 6px; font-size: 0.875rem; }
+        .btn-reset { background: #333; color: #ccc; border: 1px solid #444; padding: 6px 12px; border-radius: 6px; font-size: 0.875rem; transition: all 0.2s; }
+        .btn-reset:hover { background: #444; color: #fff; border-color: #FFD700; }
+        #diagram-legend { display: flex; align-items: center; gap: 1.5rem; padding: 0.5rem 1rem; background: rgba(255,255,255,0.05); border-radius: 0.5rem; border: 1px solid rgba(255,255,255,0.1); }
         #sidebar {
             transition: width 0.3s ease;
             height: auto !important;
@@ -82,18 +143,16 @@
             border-top: none;
             padding: 0;
         }
+        #character-select {
+            background-color: #1f2937;
+            color: white;
+        }
     </style>
 </head>
 <body>
     <div id="header-placeholder"></div>
-
-    <div class="mt-10 mb-6 text-center">
-        <h1 class="text-2xl font-bold text-white tracking-wide uppercase">Features</h1>
-        <div class="h-1 w-24 bg-[#FFD700] mx-auto mt-3 rounded-full"></div>
-    </div>
-
     <aside id="sidebar" class="bg-[#1c1c1c] border-r-4 border-amber-300 shadow-lg px-3 py-4 cursor-pointer fixed z-50 top-[220px] collapsed overflow-hidden">
-        <ul class="space-y-2 font-medium">
+    <ul class="space-y-2 font-medium">
         <li>
             <a href="quests.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
                 <i class="fas fa-scroll w-5 h-5 text-gray-400"></i>
@@ -101,7 +160,7 @@
             </a>
         </li>
         <li>
-            <a href="chronicles.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+            <a href="#" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
                 <i class="fas fa-trophy w-5 h-5 text-gray-400"></i>
                 <span class="ml-3 sidebar-text"> Chronicles & Feats</span>
             </a>
@@ -119,7 +178,7 @@
             </a>
         </li>
         <li id="edit-features-nav" class="hidden">
-            <a href="#" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+            <a href="features.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
                 <i class="fas fa-list w-5 h-5 text-gray-400"></i>
                 <span class="ml-3 sidebar-text"> Edit Features</span>
             </a>
@@ -130,66 +189,63 @@
                 <span class="ml-3 sidebar-text"> Quest Flow Architect</span>
             </a>
         </li>
-        </ul>
+    </ul>
     </aside>
-    <div class="container mx-auto px-6 max-w-8xl">
-        <div class="page-content bg-[#111827] rounded-xl border border-slate-800 shadow-2xl overflow-hidden">
-            
-            <div class="flex flex-col md:flex-row justify-between items-center bg-[#1f2937] px-6 py-4 border-b border-slate-700 gap-6">
-                <div class="flex space-x-8">
-                    <button id="tab-secret-unlock-configs" class="mgmt-tab py-2 font-bold text-slate-400 hover:text-white transition-all uppercase">
-                        Secret Unlocks
-                    </button>
-                    <button id="tab-heroic-feats" class="mgmt-tab py-2 font-bold text-slate-400 hover:text-white transition-all uppercase">
-                        Heroic Feats
-                    </button>
-                </div>
-                <button id="add-entry-btn" class="bg-[#FFD700] hover:bg-[#e6c200] text-black px-6 py-2.5 rounded-md font-black text-md uppercase tracking-widest shadow-lg transition-transform active:scale-95">
-                    <i class="fa-solid fa-plus mr-2"></i>Create New
-                </button>
-            </div>
+    <h1 class="text-xl font-semibold mt-6 mb-3 text-white text-center">Quest Flow Architect</h1>
+    <div class="h-1 w-24 bg-[#FFD700] mx-auto rounded-full"></div><br>
 
-            <div id="add-form-container" class="hidden bg-[#161b22] border-b border-[#FFD700]/20 p-8 animate-in fade-in slide-in-from-top-4 duration-300">
-                <div class="flex items-center mb-6">
-                    <div class="w-1 h-6 bg-[#FFD700] mr-3"></div>
-                    <h2 id="form-title" class="text-lg font-bold text-white uppercase tracking-wider">Add New Record</h2>
-                </div>
-                
-                <div id="dynamic-form-fields" class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 mb-8 text-white"></div>
-                
-                <div class="flex justify-end items-center space-x-6 border-t border-slate-800 pt-6">
-                    <button id="cancel-form" class="text-slate-400 hover:text-white font-semibold text-md uppercase tracking-widest transition-colors">Discard</button>
-                    <button id="save-entry" class="bg-[#FFD700] hover:bg-[#e6c200] text-black px-8 py-3 rounded font-black text-md uppercase tracking-widest shadow-md transition-all">
-                        Commit to Database
+    <div class="w-full px-4">
+        <div class="page-content">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex items-center gap-4">
+                    <div>
+                        <label class="text-lg font-medium text-gray-400 mr-2">Filter Root Branch:</label>
+                        <select id="root-filter"><option value="all">All Branches</option></select>
+                    </div>
+                    <button id="reset-view" class="btn-reset">
+                        <i class="fas fa-sync-alt mr-1"></i> Reset View
                     </button>
+                    <div id="diagram-legend">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-0.5 bg-[#dededeff]"></div>
+                            <span class="text-md text-gray-400 uppercase tracking-widest font-bold">Hard Lock</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-0 border-b border-dashed border-[#10b0dcff]"></div>
+                            <span class="text-md text-gray-400 uppercase tracking-widest font-bold">Soft Lock</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="content-body">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead id="mgmt-table-head" class="bg-[#111827] text-[11px] uppercase tracking-[0.2em] text-slate-500 border-b border-slate-800">
-                        </thead>
-                        <tbody id="mgmt-table-body" class="divide-y divide-slate-800/50">
-                        </tbody>
-                    </table>
+            <div id="layout-wrapper">
+                <div id="quest-diagram-container">
+                    <svg id="visualizer"></svg>
+                    <div id="details-panel">
+                        <h3 id="detail-name" class="text-[#FFD700] font-bold text-lg mb-2"></h3>
+                        <div class="text-md text-gray-400 space-y-2">
+                            <p>Prerequisite: <br><span id="detail-pre" class="text-white"></span></p>
+                            <p>Completions Needed: <br><span id="detail-count" class="text-white"></span></p>
+                            <p>Unique ID: <br><span id="detail-id" class="text-gray-500 font-mono"></span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="inspector-panel">
+                    <h2 class="text-lg font-bold text-white mb-4 flex items-center cursor-pointer">
+                        <i class="fas fa-project-diagram mr-2 text-[#FFD700]"></i>
+                        <span>LOGIC TRACE</span>
+                        <i class="fas fa-chevron-right ml-auto text-gray-500" id="trace-chevron"></i>
+                    </h2>
+                    <div id="trace-list">
+                        <p class="text-gray-500 text-lg italic">Calculating tree paths...</p>
+                    </div>
                 </div>
             </div>
-
         </div>
     </div>
 
-    <div class="mb-20"></div>
-
     <div id="footer-placeholder"></div>
-
-    <div id="floating-avatar-container">
-        <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar js-floating-avatar">
-    </div>
-
-    <div id="auth-modal">
-        <div class="modal-content-wrapper" id="modal-content-wrapper"></div>
-    </div>
     <script type="module">
         import { supabase } from './frontend/www/js/supabaseClient.js';
         import { initializeCharacterSystem } from './frontend/www/js/redemption/characterManager.js';
@@ -202,6 +258,7 @@
                     document.getElementById('character-container')?.classList.remove('hidden');
                     document.getElementById('edit-features-nav')?.classList.remove('hidden');
                     document.getElementById('quest-flow-nav')?.classList.remove('hidden');
+
                     initializeCharacterSystem(session.user.id);
                 }
             } else if (event === 'SIGNED_OUT') {
@@ -211,15 +268,11 @@
             }
         });
     </script>
-
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
     <script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
-    <script type="module" src="frontend/www/js/supabaseClient.js"></script>
-    <script type="module" src="frontend/www/js/utils.js"></script>
-    <script type="module" src="frontend/www/js/redemption/management.js"></script>
+    <script type="module" src="frontend/www/js/redemption/questFlowManager.js"></script>
     <script type="module" src="frontend/www/js/main.js"></script>
-    <script type="module" src="frontend/www/js/popoutAuth.js"></script>
     <script type="module" src="frontend/www/js/small_sidebar.js"></script>
 </body>
 </html>
