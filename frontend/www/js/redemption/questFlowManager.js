@@ -12,7 +12,8 @@ const colorScale = d3.scaleThreshold()
 async function initDiagram() {
     const { data, error } = await supabase
         .from('cipher_quests')
-        .select('id, category, unlock_prerequisite_category, unlock_required_count, quest_name, prerequisite_quest_ids');
+        .select('id, category, unlock_prerequisite_category, unlock_required_count, quest_name, prerequisite_quest_ids')
+        .order('unlock_required_count', { ascending: true });
 
     if (error) {
         console.error("Supabase Error:", error);
@@ -30,7 +31,7 @@ async function initDiagram() {
     if (traceList) traceList.innerHTML = '';
     
     const idMap = new Map(data.map(q => [q.id, q]));
-    const groupedData = d3.group(data, d => d.category);
+    const categoryGroups = d3.group(data, d => d.category);
 
     data.forEach((entry) => {
         nodes.push({
@@ -46,19 +47,21 @@ async function initDiagram() {
         let foundHardParent = false;
 
         if (entry.unlock_prerequisite_category && entry.unlock_prerequisite_category !== entry.category) {
-            const parentGroup = groupedData.get(entry.unlock_prerequisite_category);
+            const parentGroup = categoryGroups.get(entry.unlock_prerequisite_category);
             if (parentGroup) {
-                const sortedParent = parentGroup.sort((a, b) => a.unlock_required_count - b.unlock_required_count);
-                const targetIndex = entry.unlock_required_count - 1;
-                const targetParentNode = targetIndex >= 0 ? sortedParent[targetIndex] : sortedParent[sortedParent.length - 1];
+                const targetParentNode = parentGroup.find(q => q.unlock_required_count === entry.unlock_required_count);
                 
                 if (targetParentNode) {
                     primaryParent = targetParentNode.id;
                     foundHardParent = true;
+                } else {
+                    const lastInGroup = parentGroup[parentGroup.length - 1];
+                    primaryParent = lastInGroup.id;
+                    foundHardParent = true;
                 }
             }
         } else {
-            const sameCat = (groupedData.get(entry.category) || []).sort((a, b) => a.unlock_required_count - b.unlock_required_count);
+            const sameCat = categoryGroups.get(entry.category) || [];
             const idx = sameCat.findIndex(q => q.id === entry.id);
             if (idx > 0) {
                 primaryParent = sameCat[idx - 1].id;
@@ -66,13 +69,17 @@ async function initDiagram() {
             }
         }
 
-        hardLinks.push({ source: primaryParent, target: entry.id, type: foundHardParent ? 'hard' : 'virtual' });
+        hardLinks.push({ 
+            source: primaryParent, 
+            target: entry.id, 
+            type: foundHardParent ? 'hard' : 'virtual' 
+        });
 
         let explicitIds = [];
         try {
-            explicitIds = typeof entry.prerequisite_quest_ids === 'string' 
-                ? JSON.parse(entry.prerequisite_quest_ids) 
-                : (entry.prerequisite_quest_ids || []);
+            explicitIds = Array.isArray(entry.prerequisite_quest_ids) 
+                ? entry.prerequisite_quest_ids 
+                : JSON.parse(entry.prerequisite_quest_ids || "[]");
         } catch(e) { explicitIds = []; }
 
         explicitIds.forEach(pId => {
@@ -103,34 +110,12 @@ function injectStyles() {
     const style = document.createElement('style');
     style.id = 'diagram-custom-styles';
     style.innerHTML = `
-        .inspector-panel {
-            transition: width 0.3s ease, min-width 0.3s ease, padding 0.3s ease;
-            overflow: hidden;
-            position: relative;
-        }
-        .inspector-panel.collapsed {
-            width: 45px !important;
-            min-width: 45px !important;
-            padding-left: 10px !important;
-            padding-right: 10px !important;
-        }
-        .inspector-panel.collapsed h2 span, 
-        .inspector-panel.collapsed #trace-list {
-            display: none;
-        }
-        .inspector-panel.collapsed h2 {
-            writing-mode: vertical-lr;
-            margin-bottom: 0;
-            height: 100%;
-            justify-content: start;
-            padding-top: 15px;
-        }
-        #layout-wrapper {
-            transition: grid-template-columns 0.3s ease;
-        }
-        #layout-wrapper.collapsed-state {
-            grid-template-columns: 1fr 45px;
-        }
+        .inspector-panel { transition: width 0.3s ease, min-width 0.3s ease, padding 0.3s ease; overflow: hidden; position: relative; }
+        .inspector-panel.collapsed { width: 45px !important; min-width: 45px !important; padding-left: 10px !important; padding-right: 10px !important; }
+        .inspector-panel.collapsed h2 span, .inspector-panel.collapsed #trace-list { display: none; }
+        .inspector-panel.collapsed h2 { writing-mode: vertical-lr; margin-bottom: 0; height: 100%; justify-content: start; padding-top: 15px; }
+        #layout-wrapper { transition: grid-template-columns 0.3s ease; }
+        #layout-wrapper.collapsed-state { grid-template-columns: 1fr 45px; }
     `;
     document.head.appendChild(style);
 }
@@ -148,40 +133,29 @@ function setupTraceCollapsible() {
     const panel = document.querySelector('.inspector-panel');
     const wrapper = document.getElementById('layout-wrapper');
     if (!panel || !wrapper) return;
-    
     const header = panel.querySelector('h2');
     const chevron = document.getElementById('trace-chevron');
-
     header.onclick = () => {
         panel.classList.toggle('collapsed');
         wrapper.classList.toggle('collapsed-state');
-        
-        if (panel.classList.contains('collapsed')) {
-            chevron.className = 'fas fa-chevron-left text-gray-500';
-        } else {
-            chevron.className = 'fas fa-chevron-right ml-auto text-gray-500';
-        }
-        
-        setTimeout(() => {
-            render(fullNodes, fullLinks);
-        }, 310);
+        chevron.className = panel.classList.contains('collapsed') ? 'fas fa-chevron-left text-gray-500' : 'fas fa-chevron-right ml-auto text-gray-500';
+        setTimeout(() => render(fullNodes, fullLinks), 310);
     };
 }
 
 function addLegend() {
     const resetBtn = document.getElementById('reset-view');
     if (!resetBtn || document.getElementById('diagram-legend')) return;
-
     const legend = document.createElement('div');
     legend.id = 'diagram-legend';
     legend.className = 'flex items-center gap-6 px-4 py-2 bg-white/5 rounded-lg border border-white/10 ml-4';
     legend.innerHTML = `
         <div class="flex items-center gap-2">
-            <div class="w-8 h-0.5 bg-[#444]"></div>
+            <div class="w-8 h-0.5 bg-[#dededeff]"></div>
             <span class="text-md text-gray-400 uppercase tracking-widest font-bold">Hard Lock</span>
         </div>
         <div class="flex items-center gap-2">
-            <div class="w-8 h-0 border-b border-dashed border-[#3b82f6]"></div>
+            <div class="w-8 h-0 border-b border-dashed border-[#10b0dcff]"></div>
             <span class="text-md text-gray-400 uppercase tracking-widest font-bold">Soft Lock</span>
         </div>
     `;
@@ -227,7 +201,7 @@ function render(nodes, links) {
     zoomBehavior = d3.zoom().scaleExtent([0.05, 5]).on("zoom", (e) => g.attr("transform", e.transform));
     const svg = svgElement.attr("viewBox", `0 0 ${width} ${height}`).call(zoomBehavior).on("click", (event) => {
         if (event.target.tagName === "svg") hideDetails();
-    }).append("g");
+    });
     const g = svg.append("g");
 
     try {
@@ -240,7 +214,7 @@ function render(nodes, links) {
             });
 
         const root = stratifier(nodes);
-        const treeLayout = d3.tree().nodeSize([80, 500]);
+        const treeLayout = d3.tree().nodeSize([120, 450]);
         treeLayout(root);
 
         const nodeMap = new Map(root.descendants().map(d => [d.data.id, d]));
@@ -248,6 +222,7 @@ function render(nodes, links) {
         g.selectAll(".link-hard")
             .data(root.links().filter(d => d.source.id !== "VIRTUAL_ROOT"))
             .enter().append("path")
+            .attr("class", "link-hard")
             .attr("stroke", "#dededeff")
             .attr("stroke-width", 2)
             .attr("fill", "none")
@@ -256,28 +231,37 @@ function render(nodes, links) {
         g.selectAll(".link-soft")
             .data(links.soft)
             .enter().append("path")
+            .attr("class", "link-soft")
             .attr("stroke", "#10b0dcff")
-            .attr("stroke-width", 1.5)
-            .attr("stroke-dasharray", "4,4")
+            .attr("stroke-width", 2)
+            .attr("stroke-dasharray", "5,5")
             .attr("fill", "none")
             .attr("d", d => {
                 const s = nodeMap.get(d.source);
                 const t = nodeMap.get(d.target);
                 if (!s || !t) return null;
-                return d3.linkHorizontal().x(node => node.y).y(node => node.x + height / 2)({ source: s, target: t });
+                const path = d3.path();
+                path.moveTo(s.y, s.x + height / 2);
+                path.bezierCurveTo(
+                    (s.y + t.y) / 2, s.x + height / 2,
+                    (s.y + t.y) / 2, t.x + height / 2,
+                    t.y, t.x + height / 2
+                );
+                return path.toString();
             });
 
         const node = g.selectAll(".node").data(root.descendants()).enter().append("g")
             .attr("transform", d => `translate(${d.y},${d.x + height / 2})`)
             .style("display", d => d.data.isVirtual ? "none" : "block")
+            .style("cursor", "pointer")
             .on("click", (e, d) => { e.stopPropagation(); showDetails(d.data); });
 
-        node.append("circle").attr("r", 8).attr("fill", d => colorScale(d.data.count));
-        node.append("text").attr("dy", -18).attr("text-anchor", "middle").attr("fill", "white").style("font-size", "12px").text(d => d.data.name);
+        node.append("circle").attr("r", 10).attr("fill", d => colorScale(d.data.count)).attr("stroke", "#fff").attr("stroke-width", 1);
+        node.append("text").attr("dy", -20).attr("text-anchor", "middle").attr("fill", "white").style("font-size", "14px").style("font-weight", "600").text(d => d.data.name);
 
-        svgElement.call(zoomBehavior.transform, d3.zoomIdentity.translate(100, 0).scale(0.5));
+        svgElement.call(zoomBehavior.transform, d3.zoomIdentity.translate(150, 0).scale(0.4));
     } catch (err) {
-        console.error("D3 Error:", err);
+        console.error("D3 Layout Error:", err);
     }
 }
 
