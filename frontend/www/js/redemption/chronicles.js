@@ -126,7 +126,6 @@ async function renderPage(allQuests, userClaims, allFeats, unlockedCategories, m
     const featsContainer = document.getElementById('feats-container');
     
     if (!chaptersContainer) {
-        console.error("[Chronicles] Container 'chapters-container' not found in DOM.");
         return;
     }
 
@@ -244,21 +243,19 @@ async function renderPage(allQuests, userClaims, allFeats, unlockedCategories, m
             
             let iconHtml = '';
             if (isEarned) {
-                let matchedSignId = null;
-                const baseUrl = "https://paxdei-archives.com/frontend/www/assets/signs/";
-                const version = "v=1.0.4";
+                let fullIconUrl = null;
 
-                if (signsConfig.signs) {
-                    for (const [signId, signData] of Object.entries(signsConfig.signs)) {
-                        if (signData.name === feat.name) {
-                            matchedSignId = signId;
-                            break;
-                        }
+                if (signsConfig && signsConfig.categories && feat.icon) {
+                    const category = signsConfig.categories.find(cat => cat.items.includes(feat.icon));
+                    if (category) {
+                        const baseUrl = signsConfig.config.baseUrl;
+                        const version = signsConfig.config.version;
+                        fullIconUrl = `${baseUrl}${category.prefix}${feat.icon}.webp?v=${version}`;
                     }
                 }
 
-                if (matchedSignId) {
-                    iconHtml = `<img src="${baseUrl}${matchedSignId}.webp?${version}" alt="${feat.name}" class="w-8 h-8 object-contain">`;
+                if (fullIconUrl) {
+                    iconHtml = `<img src="${fullIconUrl}" alt="${feat.name}" class="w-8 h-8 object-contain">`;
                 } else {
                     iconHtml = `<i class="fa-solid fa-trophy text-[#FFD700] text-xl"></i>`;
                 }
