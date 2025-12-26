@@ -207,11 +207,27 @@ async function claimQuestDirectly(quest) {
             successModal.classList.add('flex');
         }
 
+        const nextQuest = findNextAvailableQuest();
+
         const updatedClaims = await fetchUserClaims(charId);
         userClaims = updatedClaims;
-        window.userClaims = updatedClaims;
+        window.userClaims = userClaims;
         
         await renderQuestsList();
+
+        if (nextQuest) {
+            showQuestDetails(nextQuest, false);
+        } else {
+            activeQuestKey = null;
+            window.activeQuestKey = null;
+            const emptyState = document.getElementById('empty-state');
+            const content = document.getElementById('details-content');
+            if (emptyState) emptyState.classList.remove('hidden');
+            if (content) content.classList.add('hidden');
+            const url = new URL(window.location);
+            url.searchParams.delete('quest');
+            window.history.replaceState({}, '', url);
+        }
     } else {
         showToast(`Error: ${error.message}`, "error");
     }
@@ -241,6 +257,34 @@ function isQuestLocked(quest, claims, quests) {
 
     return false;
 }
+
+function findNextAvailableQuest() {
+    const listContainer = document.getElementById("quest-titles-list");
+    if (!listContainer) return null;
+
+    const questItems = Array.from(listContainer.querySelectorAll('.quest-item'));
+    const activeIndex = questItems.findIndex(item => item.dataset.key === activeQuestKey);
+
+    if (activeIndex !== -1 && activeIndex + 1 < questItems.length) {
+        const currentQuest = allQuests.find(q => q.quest_key === activeQuestKey);
+        const nextItem = questItems[activeIndex + 1];
+        const nextQuest = allQuests.find(q => q.quest_key === nextItem.dataset.key);
+
+        if (currentQuest && nextQuest && currentQuest.category === nextQuest.category) {
+            if (!nextItem.classList.contains('cursor-not-allowed')) {
+                return nextQuest;
+            }
+        }
+    }
+
+    const firstAvailable = questItems.find(item => !item.classList.contains('cursor-not-allowed'));
+    if (firstAvailable) {
+        return allQuests.find(q => q.quest_key === firstAvailable.dataset.key);
+    }
+
+    return null;
+}
+
 
 async function showQuestDetails(quest, userClaimed) {
     activeQuestKey = quest.quest_key;
@@ -630,13 +674,22 @@ async function renderQuestsList() {
 
         categoryHeader.onclick = (e) => {
             e.preventDefault();
-            if (isCollapsed) {
-                collapsedCategories.delete(category);
-                contentWrapper.classList.remove('collapsed');
-            } else {
+            
+            const isNowCollapsed = !contentWrapper.classList.contains('collapsed');
+            
+            if (isNowCollapsed) {
                 collapsedCategories.add(category);
                 contentWrapper.classList.add('collapsed');
+                catIconContainer.innerHTML = `<i class="fa-solid fa-chevron-right text-gray-500"></i>`;
+            } else {
+                collapsedCategories.delete(category);
+                contentWrapper.classList.remove('collapsed');
+                catIconContainer.innerHTML = `<i class="fa-solid fa-chevron-down text-gray-500"></i>`;
             }
+
+            setTimeout(() => {
+                renderQuestsList();
+            }, 300);
         };
 
         categoryQuests.forEach(quest => {
@@ -690,15 +743,37 @@ async function renderQuestsList() {
     });
 
     document.getElementById('expand-all-btn').onclick = () => {
-        collapsedCategories.clear();
-        renderQuestsList();
-    };
+            const wrappers = document.querySelectorAll('.category-content-wrapper');
+            const icons = document.querySelectorAll('.category-header i');
+            
+            wrappers.forEach(w => w.classList.remove('collapsed'));
+            icons.forEach(i => {
+                i.classList.remove('fa-chevron-right');
+                i.classList.add('fa-chevron-down');
+            });
 
-    document.getElementById('collapse-all-btn').onclick = () => {
-        sortedCategories.forEach(cat => collapsedCategories.add(cat));
-        renderQuestsList();
-    };
-}
+            collapsedCategories.clear();
+            setTimeout(() => {
+                renderQuestsList();
+            }, 300);
+        };
+
+        document.getElementById('collapse-all-btn').onclick = () => {
+            const wrappers = document.querySelectorAll('.category-content-wrapper');
+            const icons = document.querySelectorAll('.category-header i');
+            
+            wrappers.forEach(w => w.classList.add('collapsed'));
+            icons.forEach(i => {
+                i.classList.remove('fa-chevron-down');
+                i.classList.add('fa-chevron-right');
+            });
+
+            sortedCategories.forEach(cat => collapsedCategories.add(cat));
+            setTimeout(() => {
+                renderQuestsList();
+            }, 300);
+        };
+    }
 
 
 async function init() {
@@ -764,6 +839,8 @@ async function init() {
         const activeCharId = character_id || sessionStorage.getItem("active_character_id");
         if (!activeCharId) return;
 
+        const nextQuest = findNextAvailableQuest();
+
         const { data: updatedClaims } = await supabase
             .from("user_claims")
             .select("*")
@@ -773,6 +850,20 @@ async function init() {
             userClaims = updatedClaims;
             window.userClaims = userClaims;
             await renderQuestsList();
+
+            if (nextQuest) {
+                showQuestDetails(nextQuest, false);
+            } else {
+                activeQuestKey = null;
+                window.activeQuestKey = null;
+                const emptyState = document.getElementById('empty-state');
+                const content = document.getElementById('details-content');
+                if (emptyState) emptyState.classList.remove('hidden');
+                if (content) content.classList.add('hidden');
+                const url = new URL(window.location);
+                url.searchParams.delete('quest');
+                window.history.replaceState({}, '', url);
+            }
         }
     });
 
