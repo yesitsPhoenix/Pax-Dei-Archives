@@ -1,5 +1,5 @@
 import { supabase } from "../supabaseClient.js";
-import { getUnlockedCategories, applyLockStyles } from "./unlocks.js";
+import { getUnlockedCategories, applyLockStyles, } from "./unlocks.js";
 import { enableSignTooltip } from '../ui/signTooltip.js';
 import { initQuestModal } from './questModal.js';
 
@@ -473,7 +473,8 @@ async function showQuestDetails(quest, userClaimed) {
 
             if (quest.signs && Array.isArray(quest.signs) && quest.signs.length > 0) {
                 const modal = document.getElementById('sign-redemption-modal');
-                document.getElementById('modal-target-quest-name').innerText = quest.quest_name;
+                const modalTitle = document.getElementById('modal-target-quest-name');
+                if (modalTitle) modalTitle.innerText = quest.quest_name;
                 modal.classList.remove('hidden');
                 modal.classList.add('flex');
             } else {
@@ -514,7 +515,7 @@ async function showQuestDetails(quest, userClaimed) {
     url.searchParams.set('quest', quest.quest_key);
     window.history.replaceState({}, '', url);
 
-        requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
         const scrollEl = document.getElementById('quest-details-scroll');
         if (scrollEl) scrollEl.scrollTop = 0;
     });
@@ -528,12 +529,20 @@ async function renderQuestsList() {
     if (!listContainer) return;
 
     const charId = await getActiveCharacterId();
-    const filterStatus = document.getElementById('filter-status')?.value;
+    const filterStatus = document.getElementById('filter-status')?.value || "all";
 
     if (charId) {
         userClaims = await fetchUserClaims(charId);
         window.userClaims = userClaims;
     }
+
+    const { data: categoriesData } = await supabase
+        .from("quest_categories")
+        .select("name, is_secret");
+    
+    const secretCategoryNames = new Set(
+        categoriesData?.filter(c => c.is_secret).map(c => c.name) || []
+    );
 
     const unlockedCategoriesList = await getUnlockedCategories(charId, allQuests, userClaims);
     const unlockedCategories = new Set(unlockedCategoriesList);
@@ -549,46 +558,29 @@ async function renderQuestsList() {
     listContainer.innerHTML = "";
 
     const filteredQuests = allQuests.filter(quest => {
+        const category = quest.category || "Uncategorized";
+        const isSecret = secretCategoryNames.has(category);
+        const isUnlocked = unlockedCategories.has(category);
+
+        if (isSecret && !isUnlocked) {
+            return false;
+        }
+
         const userClaimed = userClaims.some(c => c.quest_id === quest.id);
-        const reqCat = quest.unlock_prerequisite_category;
-        const reqCount = quest.unlock_required_count || 0;
-        const questIsLocked = reqCat && reqCat !== "" && (categoryProgress[reqCat] || 0) < reqCount;
 
-        if (questIsLocked) return false;
-
-        let matchesStatus = true;
-        if (filterStatus === "completed") matchesStatus = userClaimed;
-        if (filterStatus === "incomplete") matchesStatus = !userClaimed;
-        return matchesStatus;
-    });
-
-    if (activeQuestKey && !filteredQuests.some(q => q.quest_key === activeQuestKey)) {
-        const previousIndex = allQuests.findIndex(q => q.quest_key === activeQuestKey);
-        
-        let nextQuest = filteredQuests.find(q => {
-            const originalIndex = allQuests.findIndex(orig => orig.quest_key === q.quest_key);
-            return originalIndex >= previousIndex;
-        });
-
-        if (!nextQuest && filteredQuests.length > 0) {
-            nextQuest = filteredQuests[filteredQuests.length - 1];
-        }
-
-        if (nextQuest) {
-            activeQuestKey = nextQuest.quest_key;
-            showQuestDetails(nextQuest, userClaims.some(c => c.quest_id === nextQuest.id));
-        } else {
-            activeQuestKey = null;
-            const emptyState = document.getElementById('empty-state');
-            const content = document.getElementById('details-content');
-            if (content) content.classList.add('hidden');
-            if (emptyState) emptyState.classList.remove('hidden');
+        if (filterStatus === "all") return true;
+        if (filterStatus === "completed") return userClaimed;
+        if (filterStatus === "incomplete") {
+            if (userClaimed) return false;
             
-            const url = new URL(window.location);
-            url.searchParams.delete('quest');
-            window.history.replaceState({}, '', url.pathname);
+            const reqCat = quest.unlock_prerequisite_category;
+            const reqCount = quest.unlock_required_count || 0;
+            const categoryRequirementMet = !(reqCat && reqCat !== "" && (categoryProgress[reqCat] || 0) < reqCount);
+
+            return categoryRequirementMet;
         }
-    }
+        return true;
+    });
 
     const groupedQuests = filteredQuests.reduce((acc, quest) => {
         const cat = quest.category || "Uncategorized";
@@ -597,32 +589,25 @@ async function renderQuestsList() {
         return acc;
     }, {});
 
-    Object.keys(groupedQuests).sort((a, b) => {
+    const sortedCategories = Object.keys(groupedQuests).sort((a, b) => {
         if (a === "The First Steps: Beginner's Guide") return -1;
         if (b === "The First Steps: Beginner's Guide") return 1;
         return a.localeCompare(b);
-    }).forEach(category => {
-        const isLocked = !unlockedCategories.has(category);
+    });
+
+    sortedCategories.forEach(category => {
         const categoryQuests = groupedQuests[category];
+        const isActuallyUnlocked = unlockedCategories.has(category);
+        const isCollapsed = collapsedCategories.has(category);
         
+        const categoryHeader = document.createElement("div");
+        categoryHeader.className = "category-header p-3 px-4 text-[12px] font-bold uppercase tracking-widest text-[#FFD700] border-b border-gray-700/50 sticky top-0 z-10 backdrop-blur-md cursor-pointer flex justify-between items-center hover:bg-white/5";
+
         let displayTitle = category;
         if (category.includes(':')) {
             const parts = category.split(':');
             displayTitle = parts.slice(1).join(':').trim();
         }
-
-        const visibleQuestsInCat = categoryQuests.filter(quest => {
-            const reqCat = quest.unlock_prerequisite_category;
-            const reqCount = quest.unlock_required_count || 0;
-            const questIsLocked = reqCat && reqCat !== "" && (categoryProgress[reqCat] || 0) < reqCount;
-            return !questIsLocked;
-        });
-
-        if (visibleQuestsInCat.length === 0 && isLocked) return;
-
-        const isCollapsed = collapsedCategories.has(category);
-        const categoryHeader = document.createElement("div");
-        categoryHeader.className = "category-header p-3 px-4 text-[12px] font-bold uppercase tracking-widest text-[#FFD700] border-b border-gray-700/50 sticky top-0 z-10 backdrop-blur-md cursor-pointer flex justify-between items-center hover:bg-white/5";
 
         const catTitle = document.createElement("span");
         catTitle.innerText = `${displayTitle} (${categoryQuests.length})`;
@@ -630,46 +615,91 @@ async function renderQuestsList() {
 
         const catIconContainer = document.createElement("div");
         catIconContainer.className = "flex items-center gap-3";
-        catIconContainer.innerHTML = `<i class="fa-solid ${isCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'} text-gray-500"></i>`;
+        catIconContainer.innerHTML = `<i class="fa-solid fa-chevron-down text-gray-500"></i>`;
         categoryHeader.appendChild(catIconContainer);
 
-        if (isLocked) {
+        const contentWrapper = document.createElement("div");
+        contentWrapper.className = `category-content-wrapper ${isCollapsed ? 'collapsed' : ''}`;
+        
+        const innerContainer = document.createElement("div");
+        innerContainer.className = "category-inner";
+
+        if (!isActuallyUnlocked) {
             applyLockStyles(categoryHeader, catIconContainer);
-        } else {
-            categoryHeader.onclick = () => {
-                if (isCollapsed) collapsedCategories.delete(category);
-                else collapsedCategories.add(category);
-                renderQuestsList();
-            };
         }
 
-        listContainer.appendChild(categoryHeader);
+        categoryHeader.onclick = (e) => {
+            e.preventDefault();
+            if (isCollapsed) {
+                collapsedCategories.delete(category);
+                contentWrapper.classList.remove('collapsed');
+            } else {
+                collapsedCategories.add(category);
+                contentWrapper.classList.add('collapsed');
+            }
+        };
 
-        if (!isCollapsed && !isLocked) {
-            categoryQuests.forEach(quest => {
-                const userClaimed = userClaims.some(c => c.quest_id === quest.id);
-                const item = document.createElement("div");
-                item.dataset.key = quest.quest_key;
-                item.className = `quest-item p-4 border-b border-gray-700/50 cursor-pointer text-md transition-all hover:bg-white/5 ${activeQuestKey === quest.quest_key ? 'bg-white/10 border-l-4 border-[#FFD700]' : ''}`;
+        categoryQuests.forEach(quest => {
+            const userClaimed = userClaims.some(c => c.quest_id === quest.id);
+            const reqCat = quest.unlock_prerequisite_category;
+            const reqCount = quest.unlock_required_count || 0;
+            const categoryRequirementMet = !(reqCat && reqCat !== "" && (categoryProgress[reqCat] || 0) < reqCount);
+            const claimedIds = userClaims.map(c => c.quest_id);
+            const prerequisites = quest.prerequisite_quest_ids || [];
+            const prerequisitesMet = prerequisites.every(id => claimedIds.includes(id));
+            const isHardLocked = !categoryRequirementMet;
+            const isSoftLocked = categoryRequirementMet && !prerequisitesMet;
 
-                const itemFlex = document.createElement("div");
-                itemFlex.className = "flex justify-between items-center pointer-events-none";
-                itemFlex.innerHTML = `<div><div class="font-bold text-white text-md">${quest.quest_name}</div></div>`;
+            const item = document.createElement("div");
+            item.dataset.key = quest.quest_key;
+            item.className = isHardLocked 
+                ? "quest-item p-4 border-b border-gray-700/50 cursor-not-allowed text-md opacity-50 grayscale bg-black/20"
+                : `quest-item p-4 border-b border-gray-700/50 cursor-pointer text-md transition-all hover:bg-white/5 ${activeQuestKey === quest.quest_key ? 'bg-white/10 border-l-4 border-[#FFD700]' : ''}`;
 
-                const statusIconContainer = document.createElement("div");
-                statusIconContainer.innerHTML = userClaimed 
-                    ? '<i class="fa-solid fa-circle-check text-green-500 text-md"></i>' 
-                    : '<i class="fa-solid fa-circle text-gray-700 text-[8px]"></i>';
+            const itemFlex = document.createElement("div");
+            itemFlex.className = "flex justify-between items-center pointer-events-none";
+            
+            let titleMarkup;
+            if (isHardLocked) {
+                titleMarkup = `<div class="font-bold text-gray-500 text-md flex items-center gap-2"><i class="fa-solid fa-lock text-[10px]"></i>${quest.quest_name} <span class="text-[10px] uppercase tracking-tighter opacity-70">(Locked)</span></div>`;
+            } else if (isSoftLocked) {
+                titleMarkup = `<div class="font-bold text-white text-md flex items-center gap-2"><i class="fa-solid fa-circle-exclamation text-[10px] text-[#FFD700]/50"></i>${quest.quest_name}</div>`;
+            } else {
+                titleMarkup = `<div class="font-bold text-white text-md">${quest.quest_name}</div>`;
+            }
 
-                itemFlex.appendChild(statusIconContainer);
-                item.appendChild(itemFlex);
+            itemFlex.innerHTML = `<div>${titleMarkup}</div>`;
+            const statusIconContainer = document.createElement("div");
+            if (isHardLocked) statusIconContainer.innerHTML = '<i class="fa-solid fa-lock text-gray-800 text-xs"></i>';
+            else if (userClaimed) statusIconContainer.innerHTML = '<i class="fa-solid fa-circle-check text-green-500 text-md"></i>';
+            else if (isSoftLocked) statusIconContainer.innerHTML = '<i class="fa-solid fa-circle-dot text-gray-600 text-[10px]"></i>';
+            else statusIconContainer.innerHTML = '<i class="fa-solid fa-circle text-gray-700 text-[8px]"></i>';
 
+            itemFlex.appendChild(statusIconContainer);
+            item.appendChild(itemFlex);
+
+            if (!isHardLocked) {
                 item.onclick = () => showQuestDetails(quest, userClaimed);
-                listContainer.appendChild(item);
-            });
-        }
+            }
+            innerContainer.appendChild(item);
+        });
+
+        contentWrapper.appendChild(innerContainer);
+        listContainer.appendChild(categoryHeader);
+        listContainer.appendChild(contentWrapper);
     });
+
+    document.getElementById('expand-all-btn').onclick = () => {
+        collapsedCategories.clear();
+        renderQuestsList();
+    };
+
+    document.getElementById('collapse-all-btn').onclick = () => {
+        sortedCategories.forEach(cat => collapsedCategories.add(cat));
+        renderQuestsList();
+    };
 }
+
 
 async function init() {
     enableSignTooltip();
@@ -751,31 +781,7 @@ async function init() {
     if (targetQuestKey && allQuests.length > 0) {
         const targetQuest = allQuests.find(q => q.quest_key === targetQuestKey);
         if (targetQuest) {
-            const categoryProgress = {};
-            userClaims.forEach(claim => {
-                const q = allQuests.find(item => item.id === claim.quest_id);
-                if (q && q.category) {
-                    categoryProgress[q.category] = (categoryProgress[q.category] || 0) + 1;
-                }
-            });
-
-            const reqCat = targetQuest.unlock_prerequisite_category;
-            const reqCount = targetQuest.unlock_required_count || 0;
-            const questIsLocked = reqCat && reqCat !== "" && (categoryProgress[reqCat] || 0) < reqCount;
-
-            if (!questIsLocked) {
-                showQuestDetails(targetQuest, userClaims.some(c => c.quest_id === targetQuest.id));
-            } else {
-                const emptyState = document.getElementById('empty-state');
-                if (emptyState) {
-                    emptyState.innerHTML = `
-                        <div class="text-center">
-                            <i class="fa-solid fa-lock text-4xl mb-4 text-[#FFD700]/50"></i>
-                            <p class="text-xl font-bold text-white mb-2">Quest Locked</p>
-                            <p class="text-gray-400 italic">This chapter is currently hidden from your records.</p>
-                        </div>`;
-                }
-            }
+            showQuestDetails(targetQuest, userClaims.some(c => c.quest_id === targetQuest.id));
         }
     }
 }

@@ -5,6 +5,27 @@ export async function getUnlockedCategories(characterId, allQuests, userClaims) 
     const categoryProgress = {};
     const claimedCategories = new Set();
 
+    const { data: categories } = await supabase
+        .from("quest_categories")
+        .select("name, is_secret");
+    
+    const secretCategoryNames = new Set(
+        categories?.filter(c => c.is_secret).map(c => c.name) || []
+    );
+
+    if (characterId) {
+        const { data: dbUnlocks } = await supabase
+            .from("user_unlocked_categories")
+            .select("category_name")
+            .eq("character_id", characterId);
+        
+        if (dbUnlocks) {
+            dbUnlocks.forEach(u => {
+                unlocked.add(u.category_name);
+            });
+        }
+    }
+
     const questMap = new Map(allQuests.map(q => [q.id, q]));
 
     if (characterId && userClaims) {
@@ -19,6 +40,15 @@ export async function getUnlockedCategories(characterId, allQuests, userClaims) 
 
     allQuests.forEach(q => {
         const cat = q.category || "Uncategorized";
+        
+        if (secretCategoryNames.has(cat)) {
+            if (unlocked.has(cat)) {
+                return;
+            } else {
+                return;
+            }
+        }
+
         const reqCat = q.unlock_prerequisite_category;
         const reqCount = q.unlock_required_count || 0;
 
@@ -31,48 +61,38 @@ export async function getUnlockedCategories(characterId, allQuests, userClaims) 
 
     claimedCategories.forEach(cat => unlocked.add(cat));
 
-    if (characterId) {
-        const { data: dbUnlocks } = await supabase
-            .from("user_unlocked_categories")
-            .select("category_name")
-            .eq("character_id", characterId);
-        
-        if (dbUnlocks) {
-            dbUnlocks.forEach(u => unlocked.add(u.category_name));
-        }
-    }
-
     return Array.from(unlocked);
 }
 
-export async function processSecretUnlock(fullIds, userId, characterId) {
-    const SECRET_CODES = {
-        "CROWN-WEAPONS-SHIELD": {
-            target: "Legendary Armaments",
-            message: "You have discovered the records of the Ancient Kings."
-        }
-    };
+export async function processSecretUnlock(selectedSigns, userId, characterId) {
+    const { data: secretConfigs } = await supabase
+        .from("secret_unlock_configs")
+        .select("*");
 
-    const signNames = fullIds.map(id => id.split('_').slice(1).join('_').toUpperCase());
-    const sequenceKey = signNames.join("-");
-    
-    const unlock = SECRET_CODES[sequenceKey];
+    const sequenceKey = selectedSigns.join("-").toLowerCase();
+    const unlock = secretConfigs?.find(c => c.unlock_sequence === sequenceKey);
+
     if (unlock && userId && characterId) {
-        await supabase
+        const { error } = await supabase
             .from("user_unlocked_categories")
             .upsert({ 
                 user_id: userId,
                 character_id: characterId, 
-                category_name: unlock.target 
-            });
-        return unlock;
+                category_name: unlock.category_name 
+            }, { onConflict: 'character_id, category_name' });
+            
+        if (error) throw error;
+        return {
+            target: unlock.category_name,
+            message: unlock.discovery_message
+        };
     }
     return null;
 }
 
 export function applyLockStyles(element, statusContainer = null) {
-    element.classList.add("opacity-40", "cursor-not-allowed", "bg-black/40", "grayscale-[0.5]");
-    element.classList.remove("hover:bg-white/5", "cursor-pointer");
+    element.classList.add("opacity-40", "cursor-pointer", "bg-black/40", "grayscale-[0.5]");
+    element.classList.remove("hover:bg-white/5");
     element.onclick = (e) => {
         e.stopPropagation();
     };

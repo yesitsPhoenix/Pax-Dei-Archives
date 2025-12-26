@@ -96,6 +96,28 @@
             background-color: #1f2937;
             color: white;
         }
+        .category-content-wrapper {
+            display: grid;
+            grid-template-rows: 1fr;
+            transition: grid-template-rows 0.3s ease-out;
+            overflow: hidden;
+        }
+
+        .category-content-wrapper.collapsed {
+            grid-template-rows: 0fr;
+        }
+
+        .category-inner {
+            min-height: 0;
+        }
+
+        .fa-chevron-down {
+            transition: transform 0.3s ease;
+        }
+
+        .collapsed .fa-chevron-down {
+            transform: rotate(-90deg);
+        }
     </style>
     <meta property="og:title" content="Pax Dei Archives - Quests">
     <meta property="og:description" content="The Archives hold more than mere ink and parchment; they preserve the echoes of those who dared to wander. Sift through the unwritten tales below to discover and explore our world.">
@@ -140,6 +162,12 @@
                 <span class="ml-3 sidebar-text"> Edit Existing Quests</span>
             </a>
         </li>
+        <li id="edit-features-nav" class="hidden">
+            <a href="features.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                <i class="fas fa-list w-5 h-5 text-gray-400"></i>
+                <span class="ml-3 sidebar-text"> Edit Features</span>
+            </a>
+        </li>
     </ul>
 
     <div class="filter-container mt-2 pt-4 border-t border-gray-700 px-0">
@@ -179,21 +207,30 @@
         Sift through the unwritten tales below to discover and explore our world."
     </p>
 
-    <div class="container mx-auto px-4 max-w-8xl mb-6">
-        <div id="character-container" class="hidden flex justify-start items-center gap-3 mb-4 bg-[#1f2937] border border-gray-700 rounded-lg px-4 py-2 w-fit">
-            <label class="text-[10px] uppercase tracking-widest text-[#FFD700] font-bold">Active Character:</label>
-            <select id="character-select" class="bg-transparent border-none text-white text-sm focus:outline-none focus:ring-0 min-w-[150px]">
-            </select>
-            <button id="showCreateCharacterModalBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded text-[10px] uppercase font-bold transition-colors">
-                <i class="fas fa-plus"></i>
+<div class="container mx-auto px-4 max-w-8xl mb-6">
+    <div class="w-full flex items-center justify-between bg-[#0a1120] border border-gray-700 rounded-t-lg px-4 py-2 shadow-2xl">
+        <div class="flex items-center gap-2">
+            <button id="expand-all-btn" class="text-[12px] uppercase tracking-widest font-bold text-gray-400 hover:text-[#FFD700] transition-colors border border-gray-700 px-3 py-1.5 rounded bg-black/20">
+                <i class="fa-solid fa-maximize mr-1"></i> Expand All
+            </button>
+            <button id="collapse-all-btn" class="text-[12px] uppercase tracking-widest font-bold text-gray-400 hover:text-[#FFD700] transition-colors border border-gray-700 px-3 py-1.5 rounded bg-black/20">
+                <i class="fa-solid fa-minimize mr-1"></i> Collapse All
             </button>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-0 bg-[#1f2937] rounded-2xl border border-gray-700 shadow-2xl overflow-hidden quest-log-container min-h-[500px]">
-            <div class="md:col-span-3 border-r border-gray-700 flex flex-col bg-black/20 h-full overflow-hidden">
-                <div class="p-4 border-b border-gray-700 bg-black/40 text-[#FFD700] font-bold uppercase text-md tracking-widest shrink-0">
-                    Chapters
-                </div>
+        <div id="character-container" class="hidden items-center gap-3">
+            <label class="text-[12px] uppercase tracking-widest text-[#FFD700] font-bold">Active Character:</label>
+            <select id="character-select" class="bg-transparent border-none text-white text-sm focus:outline-none focus:ring-0 min-w-[150px] rounded-lg px-2 py-1">
+                </select>
+            <button id="showCreateCharacterModalBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded-lg text-[10px] uppercase font-bold transition-colors">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-0 bg-[#1f2937] rounded-b-2xl border-x border-b border-gray-700 shadow-2xl overflow-hidden quest-log-container min-h-[500px]">
+
+            <div id="quest-list-pane" class="md:col-span-3 border-r border-gray-700 bg-black/20 flex flex-col h-full overflow-hidden">
                 <div id="quest-titles-list" class="flex-1 overflow-y-auto quest-list-scroll custom-scrollbar">
                 </div>
             </div>
@@ -399,6 +436,7 @@
                 document.getElementById('create-quest-nav')?.classList.remove('hidden');
                 document.getElementById('edit-quest-nav')?.classList.remove('hidden');
                 document.getElementById('character-container')?.classList.remove('hidden');
+                document.getElementById('edit-features-nav')?.classList.remove('hidden');
                 initializeCharacterSystem(session.user.id);
             }
         } else if (event === 'SIGNED_OUT') {

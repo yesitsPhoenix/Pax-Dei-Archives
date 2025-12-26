@@ -129,7 +129,7 @@
 <body>
     <div id="header-placeholder"></div>
 
-<aside id="sidebar" class="bg-[#1c1c1c] border-r-4 border-amber-300 shadow-lg px-3 py-4 cursor-pointer fixed z-50 top-[220px] collapsed overflow-hidden">
+    <aside id="sidebar" class="bg-[#1c1c1c] border-r-4 border-amber-300 shadow-lg px-3 py-4 cursor-pointer fixed z-50 top-[220px] collapsed overflow-hidden">
     <ul class="space-y-2 font-medium">
         <li>
             <a href="quests.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
@@ -155,8 +155,14 @@
                 <span class="ml-3 sidebar-text"> Edit Existing Quests</span>
             </a>
         </li>
+        <li id="edit-features-nav" class="hidden">
+            <a href="features.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                <i class="fas fa-list w-5 h-5 text-gray-400"></i>
+                <span class="ml-3 sidebar-text"> Edit Features</span>
+            </a>
+        </li>
     </ul>
-</aside>
+    </aside>
 
     <h1 class="text-xl font-semibold mt-6 mb-3 text-white text-center uppercase tracking-widest">Chronicles & Feats</h1>
     <div class="h-1 w-24 bg-[#FFD700] mx-auto rounded-full"></div><br>
@@ -219,17 +225,16 @@
         supabase.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
                 if (session?.user) {
-                    const container = document.getElementById('character-container');
-                    if (container) {
-                        container.classList.remove('hidden');
-                    }
+                    document.getElementById('create-quest-nav')?.classList.remove('hidden');
+                    document.getElementById('edit-quest-nav')?.classList.remove('hidden');
+                    document.getElementById('character-container')?.classList.remove('hidden');
+                    document.getElementById('edit-features-nav')?.classList.remove('hidden');
                     initializeCharacterSystem(session.user.id);
                 }
             } else if (event === 'SIGNED_OUT') {
-                const container = document.getElementById('character-container');
-                if (container) {
-                    container.classList.add('hidden');
-                }
+                document.getElementById('create-quest-nav')?.classList.add('hidden');
+                document.getElementById('edit-quest-nav')?.classList.add('hidden');
+                document.getElementById('character-container')?.classList.add('hidden');
             }
         });
     </script>

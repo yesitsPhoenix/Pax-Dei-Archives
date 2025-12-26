@@ -9,6 +9,12 @@
     <link rel="stylesheet" href="frontend/www/css/popout.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+    <style>
+                #character-select {
+            background-color: #1f2937;
+            color: white;
+        }
+    </style>
 </head>
 <body>
     <div id="header-placeholder"></div>
@@ -20,12 +26,19 @@
         <div class="row">
             <div class="max-w-6xl mx-auto mt-8">
                 <div id="input-section" class="bg-gray-800 p-8 rounded-2xl border border-[#333]">
-                    
+            <div id="character-container" class="hidden flex justify-start items-center gap-3 mb-4 bg-[#1f2937] border border-gray-700 rounded-lg px-4 py-2 w-fit">
+                <label class="text-[10px] uppercase tracking-widest text-[#FFD700] font-bold">Active Character:</label>
+                <select id="character-select" class="bg-transparent border-none text-white text-sm focus:outline-none focus:ring-0 min-w-[150px]">
+                </select>
+            <button id="showCreateCharacterModalBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded text-[10px] uppercase font-bold transition-colors">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
                     <div class="mb-8 max-w">
                         <label class="block text-gray-400 text-lg font-bold uppercase tracking-widest mb-2">Cipher Keyword</label>
                         <select id="cipher-keyword-select" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#72e0cc] transition-colors">
                             <option value="" disabled selected>Select a Cipher</option>
-                            <option value="paxdei"> Pax dei</option>
+                            <option value="paxdei"> Pax Dei</option>
                             <option value="thelonius"> Thelonius</option>
                             <option value="badgers"> Badgers</option>
                             <option value="zebian"> Zebian</option>
@@ -81,6 +94,6 @@
     <script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
     <script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
     <script type="module" src="frontend/www/js/popoutAuth.js"></script>
-    <script type="module" src="frontend/www/js/redemption/redeem.js"></script>
+    <script type="module" src="frontend/www/js/redemption/redeemQuests.js"></script>
 </body>
 </html>

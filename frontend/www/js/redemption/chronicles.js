@@ -2,15 +2,12 @@ import { supabase } from "../supabaseClient.js";
 import { getUnlockedCategories } from "./unlocks.js";
 
 async function getActiveCharacterId() {
-    console.log("[Chronicles] Checking sessionStorage for active_character_id...");
     let sessionCharId = sessionStorage.getItem("active_character_id");
     
     if (sessionCharId && sessionCharId !== "null") {
-        console.log("[Chronicles] Found character ID in session:", sessionCharId);
         return sessionCharId;
     }
 
-    console.log("[Chronicles] No ID in session, fetching from database...");
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) {
         console.warn("[Chronicles] No active auth session found.");
@@ -24,7 +21,6 @@ async function getActiveCharacterId() {
         .maybeSingle();
 
     if (char) {
-        console.log("[Chronicles] Using default character from DB:", char.character_id);
         sessionStorage.setItem("active_character_id", char.character_id);
         return char.character_id;
     }
@@ -36,7 +32,6 @@ async function getActiveCharacterId() {
         .maybeSingle();
 
     if (anyChar) {
-        console.log("[Chronicles] No default found, using first available character:", anyChar.character_id);
         sessionStorage.setItem("active_character_id", anyChar.character_id);
         return anyChar.character_id;
     }
@@ -46,16 +41,13 @@ async function getActiveCharacterId() {
 }
 
 async function initChronicles() {
-    console.log("[Chronicles] Initializing Chronicles page...");
     const characterId = await getActiveCharacterId();
     
     if (!characterId) {
-        console.log("[Chronicles] Character ID not ready, retrying in 500ms...");
         setTimeout(initChronicles, 500);
         return;
     }
 
-    console.log("[Chronicles] Fetching data for Character:", characterId);
 
     const requests = [
         supabase.from("cipher_quests").select("*").eq("active", true).order("sort_order", { ascending: true }),
@@ -74,17 +66,9 @@ async function initChronicles() {
         const manualUnlocks = new Set((results[3].data || []).map(u => u.category_name));
         const signsConfig = results[4];
 
-        console.log("[Chronicles] Data Fetch Summary:", {
-            questsCount: allQuests.length,
-            featsCount: allFeats.length,
-            claimsCount: userClaims.length,
-            manualUnlocksCount: manualUnlocks.size
-        });
-
         const unlockedData = await getUnlockedCategories(characterId, allQuests, userClaims);
         let unlockedCategories = new Set(unlockedData);
         
-        console.log("[Chronicles] Final Unlocked Categories:", Array.from(unlockedCategories));
 
         renderPage(allQuests, userClaims, allFeats, unlockedCategories, manualUnlocks, signsConfig);
     } catch (error) {
@@ -137,7 +121,6 @@ function showQuestModal(chapterName, quests, claims) {
 }
 
 async function renderPage(allQuests, userClaims, allFeats, unlockedCategories, manualUnlocks, signsConfig) {
-    console.log("[Chronicles] Starting page render...");
     const chaptersContainer = document.getElementById('chapters-container');
     const firstStepsContainer = document.getElementById('first-steps-container');
     const featsContainer = document.getElementById('feats-container');
@@ -296,15 +279,12 @@ async function renderPage(allQuests, userClaims, allFeats, unlockedCategories, m
             `);
         });
     }
-    console.log("[Chronicles] Render complete.");
 }
 
 window.addEventListener('characterChanged', (e) => {
-    console.log("[Chronicles] characterChanged event received!", e.detail);
     initChronicles();
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("[Chronicles] DOM Content Loaded.");
     initChronicles();
 });

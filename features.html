@@ -3,32 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pax Dei Archives - Database Management</title>
+    <title>Pax Dei Archives - Features</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="frontend/www/css/style.css">
     <link rel="stylesheet" href="frontend/www/css/popout.css">
+    <link rel="stylesheet" href="frontend/www/css/sidebar.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        #sidebar {
+            transition: width 0.3s ease;
+            height: auto !important;
+            min-height: min-content;
+        }
+
+        #sidebar.collapsed {
+            width: 4rem;
+        }
+
+        #sidebar:not(.collapsed) {
+            width: 16rem;
+        }
+
+        .sidebar-text {
+            white-space: nowrap;
+            opacity: 1;
+            transition: opacity 0.2s ease;
+        }
+
+        #sidebar.collapsed .sidebar-text {
+            display: none;
+            opacity: 0;
+        }
+
+        #sidebar.collapsed .filter-container, #sidebar.collapsed .character-container {
+            display: block;
+            padding-left: 0;
+            padding-right: 0;
+        }
+
+        #sidebar.collapsed .sidebar-filter-btn {
+            justify-content: center;
+            padding-left: 0;
+            padding-right: 0;
+        }
+
+        #sidebar.collapsed .sidebar-filter-btn i {
+            margin: 0;
+            width: 100%;
+            text-align: center;
+        }
+
+        .sidebar-filter-btn.active {
+            background-color: #FFD700 !important;
+            color: #000 !important;
+        }
+
+        .sidebar-filter-btn.active i {
+            color: #000 !important;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .toast-animate {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        #sidebar.collapsed .character-container h3,
+        #sidebar.collapsed .character-container .mb-4,
+        #sidebar.collapsed .character-container button {
+            display: none;
+        }
+
+        #sidebar.collapsed .character-container {
+            border-top: none;
+            padding: 0;
+        }
+    </style>
 </head>
 <body>
     <div id="header-placeholder"></div>
 
     <div class="mt-10 mb-6 text-center">
-        <h1 class="text-2xl font-bold text-white tracking-wide uppercase">Database Management</h1>
+        <h1 class="text-2xl font-bold text-white tracking-wide uppercase">Features</h1>
         <div class="h-1 w-24 bg-[#FFD700] mx-auto mt-3 rounded-full"></div>
     </div>
 
+    <aside id="sidebar" class="bg-[#1c1c1c] border-r-4 border-amber-300 shadow-lg px-3 py-4 cursor-pointer fixed z-50 top-[220px] collapsed overflow-hidden">
+        <ul class="space-y-2 font-medium">
+            <li>
+                <a href="quests.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                    <i class="fas fa-scroll w-5 h-5 text-gray-400"></i>
+                    <span class="ml-3 sidebar-text"> Quest Log</span>
+                </a>
+            </li>
+            <li>
+                <a href="chronicles.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                    <i class="fas fa-trophy w-5 h-5 text-gray-400"></i>
+                    <span class="ml-3 sidebar-text"> Chronicles & Feats</span>
+                </a>
+            </li>
+            <li id="create-quest-nav" class="hidden">
+                <a href="panel.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                    <i class="fas fa-table-columns w-5 h-5 text-gray-400"></i>
+                    <span class="ml-3 sidebar-text"> Create New Quest</span>
+                </a>
+            </li>
+            <li id="edit-quest-nav" class="hidden">
+                <a href="edit_quest.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                    <i class="fas fa-tags w-5 h-5 text-gray-400"></i>
+                    <span class="ml-3 sidebar-text"> Edit Existing Quests</span>
+                </a>
+            </li>
+            <li id="edit-features-nav" class="hidden">
+                <a href="#" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                    <i class="fas fa-list w-5 h-5 text-gray-400"></i>
+                    <span class="ml-3 sidebar-text"> Edit Features</span>
+                </a>
+            </li>
+        </ul>
+    </aside>
     <div class="container mx-auto px-6 max-w-8xl">
         <div class="page-content bg-[#111827] rounded-xl border border-slate-800 shadow-2xl overflow-hidden">
             
             <div class="flex flex-col md:flex-row justify-between items-center bg-[#1f2937] px-6 py-4 border-b border-slate-700 gap-6">
                 <div class="flex space-x-8">
-                    <button id="tab-categories" class="mgmt-tab active relative py-2 font-bold text-[#FFD700] transition-all">
-                        CATEGORIES
+                    <button id="tab-secret-unlock-configs" class="mgmt-tab py-2 font-bold text-slate-400 hover:text-white transition-all uppercase">
+                        Secret Unlocks
                     </button>
-                    <button id="tab-feats" class="mgmt-tab py-2 font-bold text-slate-400 hover:text-white transition-all uppercase tracking-tight">
-                        HEROIC FEATS
+                    <button id="tab-heroic-feats" class="mgmt-tab py-2 font-bold text-slate-400 hover:text-white transition-all uppercase">
+                        Heroic Feats
                     </button>
                 </div>
                 <button id="add-entry-btn" class="bg-[#FFD700] hover:bg-[#e6c200] text-black px-6 py-2.5 rounded-md font-black text-md uppercase tracking-widest shadow-lg transition-transform active:scale-95">
@@ -77,6 +184,26 @@
     <div id="auth-modal">
         <div class="modal-content-wrapper" id="modal-content-wrapper"></div>
     </div>
+    <script type="module">
+        import { supabase } from './frontend/www/js/supabaseClient.js';
+        import { initializeCharacterSystem } from './frontend/www/js/redemption/characterManager.js';
+
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+                if (session?.user) {
+                    document.getElementById('create-quest-nav')?.classList.remove('hidden');
+                    document.getElementById('edit-quest-nav')?.classList.remove('hidden');
+                    document.getElementById('character-container')?.classList.remove('hidden');
+                    document.getElementById('edit-features-nav')?.classList.remove('hidden');
+                    initializeCharacterSystem(session.user.id);
+                }
+            } else if (event === 'SIGNED_OUT') {
+                document.getElementById('create-quest-nav')?.classList.add('hidden');
+                document.getElementById('edit-quest-nav')?.classList.add('hidden');
+                document.getElementById('character-container')?.classList.add('hidden');
+            }
+        });
+    </script>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
@@ -86,5 +213,6 @@
     <script type="module" src="frontend/www/js/redemption/management.js"></script>
     <script type="module" src="frontend/www/js/main.js"></script>
     <script type="module" src="frontend/www/js/popoutAuth.js"></script>
+    <script type="module" src="frontend/www/js/small_sidebar.js"></script>
 </body>
 </html>

@@ -25,13 +25,40 @@
 <body>
 <div id="header-placeholder"></div>
 
-<aside id="sidebar" class="w-64 bg-[#1c1c1c] border-r-4 border-amber-300 shadow-lg transition-all duration-300 hover:bg-slate-700 px-3 py-4 cursor-pointer fixed h-[50vh] z-50 top-[220px] collapsed">
-    <ul class="space-y-2 font-medium">
-        <li><a href="quests.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900"><i class="fas fa-book w-5 h-5 text-gray-400"></i><span class="ml-3">View Quests</span></a></li>
-        <li><a href="panel.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900"><i class="fas fa-table-columns w-5 h-5 text-gray-400"></i><span class="ml-3">Create New Quest</span></a></li>
-        <li><a href="edit_quest.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900"><i class="fas fa-tags w-5 h-5 text-gray-400"></i><span class="ml-3">Edit Existing Quests</span></a></li>
-    </ul>
-</aside>
+    <aside id="sidebar" class="bg-[#1c1c1c] border-r-4 border-amber-300 shadow-lg px-3 py-4 cursor-pointer fixed z-50 top-[220px] collapsed overflow-hidden">
+        <ul class="space-y-2 font-medium">
+            <li>
+                <a href="quests.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                    <i class="fas fa-scroll w-5 h-5 text-gray-400"></i>
+                    <span class="ml-3 sidebar-text"> Quest Log</span>
+                </a>
+            </li>
+            <li>
+                <a href="chronicles.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                    <i class="fas fa-trophy w-5 h-5 text-gray-400"></i>
+                    <span class="ml-3 sidebar-text"> Chronicles & Feats</span>
+                </a>
+            </li>
+            <li id="create-quest-nav" class="hidden">
+                <a href="panel.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                    <i class="fas fa-table-columns w-5 h-5 text-gray-400"></i>
+                    <span class="ml-3 sidebar-text"> Create New Quest</span>
+                </a>
+            </li>
+            <li id="edit-quest-nav" class="hidden">
+                <a href="#" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                    <i class="fas fa-tags w-5 h-5 text-gray-400"></i>
+                    <span class="ml-3 sidebar-text"> Edit Existing Quests</span>
+                </a>
+            </li>
+            <li id="edit-features-nav" class="hidden">
+                <a href="features.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                    <i class="fas fa-list w-5 h-5 text-gray-400"></i>
+                    <span class="ml-3 sidebar-text"> Edit Features</span>
+                </a>
+            </li>
+        </ul>
+    </aside>
 
     <h1 class="text-xl font-semibold mt-6 mb-3 text-white text-center">Quest Panel</h1>
     <div class="h-1 w-32 bg-[#FFD700] mx-auto rounded-full"></div><br>
@@ -58,7 +85,7 @@
 
             <div class="space-y-6">
                 <div>
-                    <label class="block text-gray-400 text-xs font-bold mb-2 uppercase tracking-widest">Quest Category (Chapter)</label>
+                    <label class="block text-gray-400 text-xs font-bold mb-2 uppercase tracking-widest">Quest Tale: Chapter</label>
                     <div class="flex flex-col gap-4">
                         <select id="quest-category-select" class="w-full bg-[#1f2937] border border-gray-700 rounded-lg p-3 text-white focus:border-[#FFD700] outline-none transition-all cursor-pointer">
                             <option value="" disabled selected>Select Category</option>
@@ -112,7 +139,7 @@
 
         <div class="lg:col-span-2 flex flex-col gap-4">
             <div class="space-y-4">
-                <h2 class="font-bold text-[#FFD700] uppercase text-sm tracking-widest border-b border-gray-800 pb-2">Rewards</h2>
+                <h2 class="font-bold text-[#FFD700] uppercase text-sm tracking-widest border-b border-gray-800 pb-2">Rewards & Configuration</h2>
                 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
@@ -198,6 +225,26 @@
             </div>
         </div>
     </div>
+        <script type="module">
+        import { supabase } from './frontend/www/js/supabaseClient.js';
+        import { initializeCharacterSystem } from './frontend/www/js/redemption/characterManager.js';
+
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+                if (session?.user) {
+                    document.getElementById('create-quest-nav')?.classList.remove('hidden');
+                    document.getElementById('edit-quest-nav')?.classList.remove('hidden');
+                    document.getElementById('character-container')?.classList.remove('hidden');
+                    document.getElementById('edit-features-nav')?.classList.remove('hidden');
+                    initializeCharacterSystem(session.user.id);
+                }
+            } else if (event === 'SIGNED_OUT') {
+                document.getElementById('create-quest-nav')?.classList.add('hidden');
+                document.getElementById('edit-quest-nav')?.classList.add('hidden');
+                document.getElementById('character-container')?.classList.add('hidden');
+            }
+        });
+    </script>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script type="module" src="frontend/www/js/redemption/questPanel.js"></script>
