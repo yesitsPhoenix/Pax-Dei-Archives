@@ -4,13 +4,21 @@ export let currentCharacterId = null;
 let currentUserId = null;
 
 const showToast = (message, isError = false) => {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'fixed bottom-5 right-5 z-[300] flex flex-col items-end';
+        document.body.appendChild(container);
+    }
 
     const toast = document.createElement('div');
-    toast.className = `toast-animate mb-3 px-6 py-3 rounded-lg shadow-xl border font-bold uppercase text-sm flex items-center gap-3 ${
-        isError ? 'bg-red-900/90 border-red-500 text-white' : 'bg-gray-800/90 border-[#FFD700] text-[#FFD700]'
-    }`;
+    
+    const bgClass = isError ? 'bg-[#1a0f0f]' : 'bg-[#111827]';
+    const borderClass = isError ? 'border-red-900/50' : 'border-[#FFD700]/50';
+    const textClass = isError ? 'text-red-300' : 'text-[#FFD700]';
+
+    toast.className = `mb-3 px-6 py-3 rounded-lg shadow-2xl border font-bold uppercase text-xs flex items-center gap-3 transition-all duration-500 opacity-0 translate-y-2 ${bgClass} ${borderClass} ${textClass}`;
     
     toast.innerHTML = `
         <i class="fa-solid ${isError ? 'fa-circle-exclamation' : 'fa-check-circle'}"></i>
@@ -18,9 +26,13 @@ const showToast = (message, isError = false) => {
     `;
 
     container.appendChild(toast);
+
     setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transition = 'opacity 0.5s ease';
+        toast.classList.remove('opacity-0', 'translate-y-2');
+    }, 10);
+
+    setTimeout(() => {
+        toast.classList.add('opacity-0');
         setTimeout(() => toast.remove(), 500);
     }, 4000);
 };
@@ -121,18 +133,19 @@ const setupCharacterFormListener = () => {
         
         submitBtn.disabled = true;
         submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        const originalText = submitBtn.textContent;
         submitBtn.textContent = 'Creating...';
 
         if (!currentUserId) {
             showToast("User not logged in", true);
             submitBtn.disabled = false;
             submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-            submitBtn.textContent = 'Create Character';
+            submitBtn.textContent = originalText;
             return;
         }
 
         try {
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(resolve => setTimeout(resolve, 600));
 
             const { data, error } = await supabase
                 .from('characters')
@@ -144,7 +157,7 @@ const setupCharacterFormListener = () => {
 
             if (error) {
                 if (error.code === '23505') {
-                    throw new Error('This character name is already taken');
+                    throw new Error('Name already exists');
                 }
                 throw error;
             }
@@ -172,7 +185,7 @@ const setupCharacterFormListener = () => {
         } finally {
             submitBtn.disabled = false;
             submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-            submitBtn.textContent = 'Create Character';
+            submitBtn.textContent = originalText;
         }
     });
 };

@@ -45,22 +45,37 @@ async function getActiveCharacterId() {
 }
 
 function showToast(message, type = 'error') {
-    const container = document.getElementById('toast-container') || createToastContainer();
-    const toast = document.createElement('div');
-    const bgColor = type === 'success' ? 'bg-green-600' : 'bg-red-600';
-    const icon = type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation';
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'fixed bottom-5 right-5 z-[300] flex flex-col items-end pointer-events-none';
+        document.body.appendChild(container);
+    }
 
-    toast.className = `${bgColor} text-white px-6 py-4 rounded-lg shadow-2xl mb-4 flex items-center gap-3 min-w-[300px] toast-animate border border-white/20`;
+    const toast = document.createElement('div');
+    
+    const isError = type === 'error';
+    const bgClass = isError ? 'bg-[#1a0f0f]' : 'bg-[#0f1a11]';
+    const borderClass = isError ? 'border-red-900/40' : 'border-green-900/40';
+    const textClass = isError ? 'text-red-300' : 'text-green-300';
+    const icon = isError ? 'fa-triangle-exclamation' : 'fa-circle-check';
+
+    toast.className = `pointer-events-auto mb-3 px-6 py-4 rounded-lg shadow-2xl border font-bold uppercase text-[11px] tracking-widest flex items-center gap-3 transition-all duration-500 opacity-0 translate-y-2 ${bgClass} ${borderClass} ${textClass}`;
+    
     toast.innerHTML = `
-        <i class="fa-solid ${icon} text-xl"></i>
-        <span class="font-bold uppercase tracking-wide text-sm">${message}</span>
+        <i class="fa-solid ${icon} text-base"></i>
+        <span>${message}</span>
     `;
 
     container.appendChild(toast);
+
     setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(100%)';
-        toast.style.transition = 'all 0.5s ease-in';
+        toast.classList.remove('opacity-0', 'translate-y-2');
+    }, 10);
+
+    setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-x-4');
         setTimeout(() => toast.remove(), 500);
     }, 4000);
 }
@@ -517,7 +532,7 @@ async function showQuestDetails(quest, userClaimed) {
             }
 
             if (!charId) {
-                showToast("Please select or create a character in the sidebar first.", "error");
+                showToast("Please select or create a character before claiming a quest.", "error");
                 return;
             }
 
