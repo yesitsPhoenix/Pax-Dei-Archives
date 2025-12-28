@@ -11,10 +11,9 @@ export async function handleAdminAccess(user) {
         const { data, error } = await supabase
             .from('admin_users')
             .select('quest_role')
-            .eq('user_id', user.id)
-            .single();
+            .eq('user_id', user.id);
 
-        const isAdmin = !error && data?.quest_role === 'quest_adder';
+        const isAdmin = !error && data && data.length > 0 && data[0].quest_role === 'quest_adder';
 
         if (isAdmin) {
             const adminElements = [
@@ -29,14 +28,16 @@ export async function handleAdminAccess(user) {
                 const el = document.getElementById(id);
                 if (el) el.classList.remove('hidden');
             });
-
-            initializeCharacterSystem(user.id);
         } else {
             if (!publicPages.includes(currentPage)) {
                 window.location.href = 'quests.html';
             }
         }
+
+        await initializeCharacterSystem(user.id);
+        
     } catch (err) {
+        await initializeCharacterSystem(user.id);
         if (!publicPages.includes(currentPage)) {
             window.location.href = 'quests.html';
         }

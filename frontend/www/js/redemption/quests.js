@@ -23,18 +23,23 @@ async function getActiveCharacterId() {
     const sessionCharId = sessionStorage.getItem("active_character_id");
     if (sessionCharId) return sessionCharId;
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentUser();
     if (!user) return null;
 
-    const { data: character } = await supabase
-        .from("characters")
-        .select("character_id")
-        .eq("is_default_character", true)
-        .maybeSingle();
+    try {
+        const { data: character } = await supabase
+            .from("characters")
+            .select("character_id")
+            .eq("user_id", user.id)
+            .eq("is_default_character", true)
+            .maybeSingle();
 
-    if (character) {
-        sessionStorage.setItem("active_character_id", character.character_id);
-        return character.character_id;
+        if (character) {
+            sessionStorage.setItem("active_character_id", character.character_id);
+            return character.character_id;
+        }
+    } catch (e) {
+        return null;
     }
     return null;
 }
@@ -74,34 +79,36 @@ async function updateSidebarPermissions() {
 
     if (!createBtn || !editBtn) return;
 
-    const cachedRole = sessionStorage.getItem("user_quest_role");
-    if (cachedRole === "quest_adder") {
-        createBtn.classList.remove("hidden");
-        editBtn.classList.remove("hidden");
-        return;
-    }
+    createBtn.classList.add("hidden");
+    editBtn.classList.add("hidden");
 
-    const user = await getCurrentUser();
-    if (!user) {
-        createBtn.classList.add("hidden");
-        editBtn.classList.add("hidden");
-        return;
-    }
+    try {
+        const user = await getCurrentUser();
+        if (!user) {
+            sessionStorage.removeItem("user_quest_role");
+            return;
+        }
 
-    const { data } = await supabase
-        .from("admin_users")
-        .select("quest_role")
-        .eq("user_id", user.id)
-        .maybeSingle();
+        const { data, error } = await supabase
+            .from("admin_users")
+            .select("quest_role")
+            .eq("user_id", user.id)
+            .maybeSingle();
 
-    if (data?.quest_role === "quest_adder") {
-        sessionStorage.setItem("user_quest_role", "quest_adder");
-        createBtn.classList.remove("hidden");
-        editBtn.classList.remove("hidden");
-    } else {
+        if (error || !data) {
+            sessionStorage.removeItem("user_quest_role");
+            return;
+        }
+
+        if (data.quest_role === "quest_adder") {
+            sessionStorage.setItem("user_quest_role", "quest_adder");
+            createBtn.classList.remove("hidden");
+            editBtn.classList.remove("hidden");
+        } else {
+            sessionStorage.removeItem("user_quest_role");
+        }
+    } catch (err) {
         sessionStorage.removeItem("user_quest_role");
-        createBtn.classList.add("hidden");
-        editBtn.classList.add("hidden");
     }
 }
 
@@ -111,13 +118,13 @@ async function fetchQuests() {
         .select(`*, regions:region_id (*)`)
         .eq("active", true)
         .order("sort_order", { ascending: true });
-    if (error) console.error("Error fetching quests:", error);
+    if (error) return [];
     return data || [];
 }
 
 async function fetchRegions() {
     const { data, error } = await supabase.from("regions").select("*");
-    if (error) console.error("Error fetching regions:", error);
+    if (error) return [];
     return data || [];
 }
 
@@ -284,7 +291,6 @@ function findNextAvailableQuest() {
 
     return null;
 }
-
 
 async function showQuestDetails(quest, userClaimed) {
     activeQuestKey = quest.quest_key;
@@ -742,7 +748,9 @@ async function renderQuestsList() {
         listContainer.appendChild(contentWrapper);
     });
 
-    document.getElementById('expand-all-btn').onclick = () => {
+    const expandBtn = document.getElementById('expand-all-btn');
+    if (expandBtn) {
+        expandBtn.onclick = () => {
             const wrappers = document.querySelectorAll('.category-content-wrapper');
             const icons = document.querySelectorAll('.category-header i');
             
@@ -757,8 +765,11 @@ async function renderQuestsList() {
                 renderQuestsList();
             }, 300);
         };
+    }
 
-        document.getElementById('collapse-all-btn').onclick = () => {
+    const collapseBtn = document.getElementById('collapse-all-btn');
+    if (collapseBtn) {
+        collapseBtn.onclick = () => {
             const wrappers = document.querySelectorAll('.category-content-wrapper');
             const icons = document.querySelectorAll('.category-header i');
             
@@ -774,17 +785,20 @@ async function renderQuestsList() {
             }, 300);
         };
     }
-
+}
 
 async function init() {
     enableSignTooltip();
+    
     updateSidebarPermissions();
+
     allQuests = await fetchQuests();
     window.allQuests = allQuests;
     regionsData = await fetchRegions();
     populateFilters(regionsData);
     initQuestModal();
-    const characterId = sessionStorage.getItem("active_character_id");
+    
+    const characterId = await getActiveCharacterId();
     if (characterId) {
         userClaims = await fetchUserClaims(characterId);
         window.userClaims = userClaims;
@@ -881,7 +895,7 @@ supabase.auth.onAuthStateChange((event) => {
     if (event === "SIGNED_OUT") {
         sessionStorage.removeItem("user_quest_role");
     }
-    updateSidebarPermissions();
+    updateSidebarPermissions().catch(() => {});
     renderQuestsList();
 });
 

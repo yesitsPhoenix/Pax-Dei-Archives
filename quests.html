@@ -82,12 +82,6 @@
             animation: slideIn 0.3s ease-out;
         }
 
-        #sidebar.collapsed .character-container h3,
-        #sidebar.collapsed .character-container .mb-4,
-        #sidebar.collapsed .character-container button {
-            display: none;
-        }
-
         #sidebar.collapsed .character-container {
             border-top: none;
             padding: 0;
@@ -224,7 +218,7 @@
             </button>
         </div>
 
-        <div id="character-container" class="hidden items-center gap-3">
+        <div id="character-container" class="flex items-center gap-3">
             <label class="text-[12px] uppercase tracking-widest text-[#FFD700] font-bold">Active Character:</label>
             <select id="character-select" class="bg-transparent border-none text-white text-sm focus:outline-none focus:ring-0 min-w-[150px] rounded-lg px-2 py-1">
                 </select>
