@@ -1,5 +1,6 @@
 import { supabase } from "../supabaseClient.js";
 import { mouseTooltip } from "../ui/signTooltip.js";
+import { loadArchetypeBanner } from "../archetypes/archetypesUI.js";
 
 const selected = [];
 const grid = document.getElementById("sign-grid");
@@ -159,6 +160,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             }]);
 
         if (!error) {
+            await loadArchetypeBanner(characterId);
+
             const modal = document.getElementById("sign-redemption-modal");
             const successModal = document.getElementById("success-state");
             

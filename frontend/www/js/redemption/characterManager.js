@@ -52,7 +52,7 @@ export const initializeCharacterSystem = async (characterId = null) => {
     setupCharacterFormListener();
 };
 
-export const fetchCharacters = async () => {
+export const fetchCharacters = async (selectedId = null) => {
     const characterSelect = document.getElementById('character-select');
     if (!characterSelect || !currentUserId) return;
 
@@ -72,28 +72,35 @@ export const fetchCharacters = async () => {
         characterSelect.appendChild(option);
     });
 
-    const savedId = sessionStorage.getItem('active_character_id');
+    const savedId = selectedId || sessionStorage.getItem('active_character_id');
+    
     if (savedId && data.some(c => c.character_id === savedId)) {
         characterSelect.value = savedId;
         currentCharacterId = savedId;
     } else if (data.length > 0) {
         currentCharacterId = data[0].character_id;
         characterSelect.value = currentCharacterId;
+    }
+
+    if (currentCharacterId) {
         sessionStorage.setItem('active_character_id', currentCharacterId);
     }
 
-    characterSelect.addEventListener('change', (e) => {
-        currentCharacterId = e.target.value;
-        sessionStorage.setItem('active_character_id', currentCharacterId);
+    if (!characterSelect.hasAttribute('data-listener-set')) {
+        characterSelect.addEventListener('change', (e) => {
+            currentCharacterId = e.target.value;
+            sessionStorage.setItem('active_character_id', currentCharacterId);
 
-        const url = new URL(window.location);
-        url.searchParams.delete('quest');
-        window.history.replaceState({}, '', url.pathname);
-        
-        window.dispatchEvent(new CustomEvent('characterChanged', { 
-            detail: { characterId: currentCharacterId } 
-        }));
-    });
+            const url = new URL(window.location);
+            url.searchParams.delete('quest');
+            window.history.replaceState({}, '', url.pathname);
+            
+            window.dispatchEvent(new CustomEvent('characterChanged', { 
+                detail: { characterId: currentCharacterId } 
+            }));
+        });
+        characterSelect.setAttribute('data-listener-set', 'true');
+    }
 };
 
 const setupNewCharacterButton = () => {
@@ -145,15 +152,14 @@ const setupCharacterFormListener = () => {
         }
 
         try {
-            await new Promise(resolve => setTimeout(resolve, 600));
-
             const { data, error } = await supabase
                 .from('characters')
                 .insert([{
                     user_id: currentUserId,
                     character_name: characterName
                 }])
-                .select();
+                .select()
+                .single();
 
             if (error) {
                 if (error.code === '23505') {
@@ -171,12 +177,18 @@ const setupCharacterFormListener = () => {
             }
             createCharacterForm.reset();
 
-            await fetchCharacters();
-            
-            if (data && data[0]) {
-                const characterSelect = document.getElementById('character-select');
-                characterSelect.value = data[0].character_id;
-                characterSelect.dispatchEvent(new Event('change'));
+            if (data) {
+                await fetchCharacters(data.character_id);
+                
+                window.dispatchEvent(new CustomEvent('characterChanged', { 
+                    detail: { characterId: data.character_id } 
+                }));
+
+                const pathOverlay = document.getElementById('archetype-selection-overlay');
+                if (pathOverlay) {
+                    pathOverlay.classList.remove('hidden');
+                    pathOverlay.style.display = 'flex';
+                }
             }
 
         } catch (e) {

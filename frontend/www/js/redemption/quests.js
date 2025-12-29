@@ -1,7 +1,9 @@
 import { supabase } from "../supabaseClient.js";
 import { getUnlockedCategories, applyLockStyles, } from "./unlocks.js";
 import { enableSignTooltip } from '../ui/signTooltip.js';
+import { loadArchetypeBanner, initArchetypeSelection } from "../archetypes/archetypesUI.js";
 import { initQuestModal } from './questModal.js';
+
 
 let allQuests = [];
 let regionsData = [];
@@ -802,27 +804,74 @@ async function renderQuestsList() {
     }
 }
 
+async function checkCharacterArchetype(characterId) {
+    const { data: char } = await supabase.from('characters').select('archetype').eq('character_id', characterId).single();
+    
+    if (char && !char.archetype) {
+        const overlay = document.getElementById('archetype-selection-overlay');
+        if (overlay) {
+            overlay.classList.remove('hidden');
+            overlay.classList.add('flex');
+            await initArchetypeSelection('archetype-node-container');
+        }
+    }
+}
+
+async function fetchAllowedQuests() {
+    const characterId = sessionStorage.getItem('active_character_id');
+    if (!characterId) return;
+
+    const { data: character } = await supabase
+        .from('characters')
+        .select('archetype')
+        .eq('character_id', characterId)
+        .single();
+
+    const { data: categories } = await supabase
+        .from('quest_categories')
+        .select('name, is_secret');
+
+    const activeArchetypeCategory = `Archetype: ${character.archetype}`;
+
+    const allowedCategoryNames = categories
+        .filter(cat => !cat.is_secret || cat.name === activeArchetypeCategory)
+        .map(cat => cat.name);
+
+    const { data: quests, error } = await supabase
+        .from('cipher_quests')
+        .select('*')
+        .in('category', allowedCategoryNames)
+        .eq('active', true);
+
+    if (!error) {
+        renderQuests(quests);
+    }
+}
+
+
 async function init() {
     enableSignTooltip();
+    const characterId = await getActiveCharacterId();
     
-    updateSidebarPermissions();
+    if (characterId) {
+        await checkCharacterArchetype(characterId);
+        await loadArchetypeBanner(characterId);
+        userClaims = await fetchUserClaims(characterId);
+        window.userClaims = userClaims;
+    }
 
+    updateSidebarPermissions();
     allQuests = await fetchQuests();
     window.allQuests = allQuests;
     regionsData = await fetchRegions();
     populateFilters(regionsData);
     initQuestModal();
     
-    const characterId = await getActiveCharacterId();
-    if (characterId) {
-        userClaims = await fetchUserClaims(characterId);
-        window.userClaims = userClaims;
-    }
-
     await renderQuestsList();
 
     window.addEventListener('characterChanged', async (e) => {
         const newCharacterId = e.detail.characterId;
+        initArchetypeSelection('archetype-node-container');
         activeQuestKey = null; 
         window.activeQuestKey = null;
         
@@ -905,6 +954,110 @@ async function init() {
         }
     }
 }
+
+// async function init() {
+//     enableSignTooltip();
+//     updateSidebarPermissions();
+
+//     allQuests = await fetchQuests();
+//     window.allQuests = allQuests;
+//     regionsData = await fetchRegions();
+//     populateFilters(regionsData);
+//     initQuestModal();
+    
+//     const characterId = await getActiveCharacterId();
+//     if (characterId) {
+//         userClaims = await fetchUserClaims(characterId);
+//         window.userClaims = userClaims;
+//     }
+
+//     await renderQuestsList();
+//     loadArchetypeBanner(await getActiveCharacterId());
+
+//     window.addEventListener('characterChanged', async (e) => {
+//         const newCharacterId = e.detail.characterId;
+//         activeQuestKey = null; 
+//         window.activeQuestKey = null;
+        
+//         const url = new URL(window.location);
+//         url.searchParams.delete('quest');
+//         window.history.replaceState({}, '', url.pathname);
+
+//         const emptyState = document.getElementById('empty-state');
+//         const content = document.getElementById('details-content');
+        
+//         if (content) content.classList.add('hidden');
+//         if (emptyState) {
+//             emptyState.classList.remove('hidden');
+//             emptyState.innerHTML = `
+//                 <div class="text-center text-gray-400">
+//                     <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2"></i>
+//                     <p>Updating records...</p>
+//                 </div>`;
+//         }
+
+//         const { data: claims, error } = await supabase
+//             .from("user_claims")
+//             .select("*")
+//             .eq("character_id", newCharacterId);
+
+//         if (!error) {
+//             userClaims = claims;
+//             window.userClaims = userClaims;
+//             await renderQuestsList();
+            
+//             if (emptyState) {
+//                 emptyState.innerHTML = `
+//                     <div class="text-center text-gray-400">
+//                         <i class="fa-solid fa-scroll text-4xl mb-4 opacity-20"></i>
+//                         <p>Select a chronicle from the list to view details</p>
+//                     </div>`;
+//             }
+//         }
+//     });
+
+//     window.addEventListener("questClaimed", async (e) => {
+//         const { character_id } = e.detail;
+//         const activeCharId = character_id || sessionStorage.getItem("active_character_id");
+//         if (!activeCharId) return;
+
+//         const nextQuest = findNextAvailableQuest();
+
+//         const { data: updatedClaims } = await supabase
+//             .from("user_claims")
+//             .select("*")
+//             .eq("character_id", activeCharId);
+
+//         if (updatedClaims) {
+//             userClaims = updatedClaims;
+//             window.userClaims = userClaims;
+//             await renderQuestsList();
+
+//             if (nextQuest) {
+//                 showQuestDetails(nextQuest, false);
+//             } else {
+//                 activeQuestKey = null;
+//                 window.activeQuestKey = null;
+//                 const emptyState = document.getElementById('empty-state');
+//                 const content = document.getElementById('details-content');
+//                 if (emptyState) emptyState.classList.remove('hidden');
+//                 if (content) content.classList.add('hidden');
+//                 const url = new URL(window.location);
+//                 url.searchParams.delete('quest');
+//                 window.history.replaceState({}, '', url);
+//             }
+//         }
+//     });
+
+//     const urlParams = new URLSearchParams(window.location.search);
+//     const targetQuestKey = urlParams.get('quest');
+//     if (targetQuestKey && allQuests.length > 0) {
+//         const targetQuest = allQuests.find(q => q.quest_key === targetQuestKey);
+//         if (targetQuest) {
+//             showQuestDetails(targetQuest, userClaims.some(c => c.quest_id === targetQuest.id));
+//         }
+//     }
+// }
 
 supabase.auth.onAuthStateChange((event) => {
     if (event === "SIGNED_OUT") {

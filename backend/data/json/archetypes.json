@@ -1,0 +1,62 @@
+[
+  {
+    "name": "The Armorer",
+    "icon": "fa-solid fa-shield-halved",
+    "skills": ["Mining", "Armorsmithing"],
+    "desc": "A master of the forge who shapes metal into protective gear."
+  },
+  {
+    "name": "The Ranger",
+    "icon": "fa-solid fa-paw",
+    "skills": ["Skinning", "Leatherworking"],
+    "desc": "A master of the wild who respects the kill, using toughened hides to forge unbreakable protection."
+  },
+  {
+    "name": "The Alchemist",
+    "icon": "fa-solid fa-flask",
+    "skills": ["Foraging", "Alchemy"],
+    "desc": "Seeker of the unseen properties of flora, brewing potent draughts that mend the flesh and sharpen the mind."
+  },
+  {
+    "name": "The Architect",
+    "icon": "fa-solid fa-archway",
+    "skills": ["Woodchopping", "Carpentry"],
+    "desc": "Shaper of the Archives’ physical presence, turning raw timber into the grand structures of our civilization."
+  },
+  {
+    "name": "The Weaponsmith",
+    "icon": "fa-solid fa-shield-halved",
+    "skills": ["Mining", "Weaponsmithing"],
+    "desc": "The thunder of the forge follows you. You turn cold iron into the heat of battle-ready steel."
+  },
+  {
+    "name": "The Weaver",
+    "icon": "fa-solid fa-hat-wizard",
+    "skills": ["Foraging", "Tailoring"],
+    "desc": "Master of delicate fibers and resilient threads, weaving the very fabric of identity for the Archive members."
+  },
+  {
+    "name": "The Chef",
+    "icon": "bx bx-bowl-hot",
+    "skills": ["Skinning", "Cooking"],
+    "desc": "Culinary artist who transforms simple ingredients into feasts that nourish both body and spirit."
+  },
+  {
+    "name": "The Enchanter",
+    "icon": "fa-solid fa-wand-magic-sparkles",
+    "skills": ["Mining", "Jewelcrafting"],
+    "desc": "Infuser of magic into the mundane, creating enchanted items that empower and protect."
+  },
+  {
+    "name": "The Herbalist",
+    "icon": "fa-solid fa-leaf",
+    "skills": ["Foraging", "Alchemy"],
+    "desc": "Expert in the identification and use of plants, creating remedies and potions that heal and enhance."
+  },
+  {
+    "name": "The Blacksmith",
+    "icon": "fa-solid fa-hammer",
+    "skills": ["Mining", "Blacksmithing"],
+    "desc": "Forging the tools of war and peace, shaping metal into weapons and armor that stand the test of time."
+  }
+]

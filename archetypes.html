@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pax Dei Archives - Archetypes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="frontend/www/css/popout.css">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .archetype-circle-container {
+            position: relative;
+            width: 800px;
+            height: 800px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .archetype-node {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+            cursor: pointer;
+            z-index: 20;
+        }
+        .archetype-node.active-pos {
+            left: calc(50% + (var(--x) * 320px));
+            top: calc(50% + (var(--y) * 320px));
+        }
+        .archetype-node.center-focus {
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%) scale(1.6);
+            z-index: 100;
+        }
+        .node-inner {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+            border: 2px solid rgba(255, 215, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.4s ease;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        .node-inner i, #modal-icon-display i {
+            color: #FFD700;
+            font-size: 2.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.4));
+        }
+        #modal-icon-display i {
+            font-size: 4rem;
+        }
+        .archetype-node:hover .node-inner {
+            border-color: #FFD700;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.2);
+            transform: translateY(-5px);
+        }
+        .hidden-node {
+            opacity: 0;
+            pointer-events: none;
+            transform: translate(-50%, -50%) scale(0.2);
+        }
+        .text-shadow-gold {
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+        .monogram-glow {
+            filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.1));
+            animation: pulse 8s infinite ease-in-out;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.05); }
+        }
+    </style>
+</head>
+<body class="text-white">
+
+    <div id="header-placeholder"></div>
+
+    <div class="container mx-auto px-4 max-w-7xl">
+        <div class="row">
+            <div class="col-lg-12">
+                <h1 class="text-xl font-semibold mt-4 mb-2 text-white text-center">Archetypes</h1>
+                <div class="h-1 w-24 bg-[#FFD700] mx-auto rounded-full mb-4"></div>
+                <div class="page-content min-h-[850px] flex flex-col items-center justify-center relative">
+                    <p class="text-center text-gray-400 italic text-lg mb-4 max-w-4xl mx-auto px-6">
+                        "One does not simply wander into Creation. An adventurer must choose their discipline and fate, for the path ahead is shaped by communities made, tools carried and secrets kept."
+                    </p>
+
+                    <div class="archetype-circle-container">
+                        <div class="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+                            <img src="https://d3tyjtqxpxwenc.cloudfront.net/uRpNp6/Pax_Dei_Monogram_4k_light_b1efe6e9f1.png" 
+                                 alt="Pax Dei Monogram" 
+                                 class="w-64 h-64 object-contain monogram-glow mix-blend-lighten">
+                        </div>
+                        <div id="archetype-container" class="absolute inset-0"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="archetype-modal" class="fixed inset-0 z-[150] hidden items-center justify-center bg-black/90 backdrop-blur-md opacity-0 transition-opacity duration-300 p-4">
+        <div class="bg-gradient-to-br from-[#1f2937] to-[#111827] border border-gray-700 w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden relative transform scale-95 transition-transform duration-300" id="modal-box">
+            <div class="relative shrink-0 h-28 bg-gradient-to-r from-[#72e0cc]/10 to-[#FFD700]/10 flex items-center px-10 border-b border-gray-700">
+                <div class="flex justify-between items-center w-full">
+                    <div>
+                        <h2 id="modal-title" class="text-3xl font-bold text-white mb-0 tracking-tight uppercase"></h2>
+                        <span class="text-[#FFD700] text-md font-bold uppercase tracking-widest text-shadow-gold">Primary Archetype</span>
+                    </div>
+                    <button id="close-modal" class="text-gray-400 hover:text-white transition-all text-4xl font-light focus:outline-none">&times;</button>
+                </div>
+            </div>
+
+            <div class="p-10">
+                <div class="flex items-start gap-8 mb-8">
+                    <div id="modal-icon-display" class="shrink-0 w-28 h-28 rounded-full bg-black/40 border border-gray-600 flex items-center justify-center text-5xl shadow-inner"></div>
+                    <div class="flex-1 pt-2">
+                        <h4 class="text-md uppercase tracking-[0.2em] text-gray-500 font-black mb-3 text-md">The Calling</h4>
+                        <p id="modal-desc" class="text-gray-300 leading-relaxed text-lg italic font-medium"></p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-10 mb-10">
+                    <section>
+                        <h4 class="text-md uppercase tracking-[0.2em] text-gray-500 font-black mb-4">Core Disciplines</h4>
+                        <div id="modal-skills" class="flex flex-wrap gap-y-3"></div>
+                    </section>
+                    
+                    <section>
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 class="text-md uppercase tracking-[0.2em] text-gray-500 font-black">Archetype Quests</h4>
+                            <span class="text-[12px] bg-[#FFD700]/10 text-[#FFD700] px-2 py-0.5 rounded border border-[#FFD700]/20 uppercase font-black">Locked</span>
+                        </div>
+                        <div class="bg-black/30 p-5 rounded-xl border border-gray-700/50 min-h-[120px]">
+                            <div id="modal-feats" class="text-md text-gray-400 space-y-2">
+                                Select this path to begin unlocking unique progression quests.
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="flex flex-col md:flex-row gap-4 pt-8 border-t border-gray-800">
+                    <button id="commit-path-btn" class="flex-1 py-4 bg-[#FFD700] hover:bg-yellow-400 text-black font-black uppercase tracking-widest transition-all rounded-lg text-md shadow-lg shadow-yellow-900/20">
+                        Begin Your Journey
+                    </button>
+                    <button id="cancel-btn" class="px-8 py-4 bg-gray-800 hover:bg-gray-700 text-white font-bold uppercase tracking-widest transition-all rounded-lg text-md border border-gray-600">
+                        Return
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="footer-placeholder"></div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
+    <script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
+    <script type="module" src="frontend/www/js/archetypes/archetypes.js"></script>
+</body>
+</html>
