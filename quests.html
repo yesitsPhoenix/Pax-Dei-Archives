@@ -192,6 +192,21 @@
                 </div>
             </div>
 
+        <div id="archetype-banner-empty" class="hidden mb-6 overflow-hidden rounded-xl border border-gray-700 bg-[#1c1c1c] shadow-2xl w-full p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-6">
+                <div class="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center text-gray-500 text-3xl border border-gray-700 shadow-inner">
+                    <i class="fa-solid fa-scroll"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-amber-500 uppercase tracking-widest">No Character Found</h3>
+                    <p class="text-gray-400 text-sm">Please select a character to view your quest log.</p>
+                </div>
+            </div>
+            <button id="showCreateCharacterModalBtn" class="px-8 py-3 bg-[#FFD700] hover:bg-yellow-400 text-black font-black uppercase tracking-widest rounded-lg transition-all shadow-lg shrink-0">
+                Create Character
+            </button>
+        </div>
+
             <div class="flex items-center gap-8 bg-black/20 p-4 rounded-lg border border-white/5">
                 <div class="min-w-[160px]">
                     <div class="flex justify-between items-end mb-2">
@@ -210,21 +225,6 @@
         </div>
     </div>
 
-        <div id="archetype-banner-empty" class="hidden mb-6 overflow-hidden rounded-xl border border-gray-700 bg-[#1c1c1c] shadow-2xl w-full p-6 flex flex-col md:flex-row items-center justify-between gap-6">
-            <div class="flex items-center gap-6">
-                <div class="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center text-gray-500 text-3xl border border-gray-700 shadow-inner">
-                    <i class="fa-solid fa-scroll"></i>
-                </div>
-                <div>
-                    <h3 class="text-xl font-bold text-amber-500 uppercase tracking-widest">No Character Found</h3>
-                    <p class="text-gray-400 text-sm">Please select a character to view your quest log.</p>
-                </div>
-            </div>
-            <button id="showCreateCharacterModalBtn" class="px-8 py-3 bg-[#FFD700] hover:bg-yellow-400 text-black font-black uppercase tracking-widest rounded-lg transition-all shadow-lg shrink-0">
-                Create Character
-            </button>
-        </div>
-
 
         <div class="w-full flex items-center justify-between bg-[#0a1120] border border-gray-700 rounded-t-lg px-4 py-2 shadow-2xl">
             <div class="flex items-center gap-2">
@@ -240,7 +240,7 @@
                 <label class="text-[12px] uppercase tracking-widest text-[#FFD700] font-bold">Switch Character:</label>
                 <select id="character-select" class="bg-transparent border-none text-white text-sm focus:outline-none focus:ring-0 min-w-[150px] rounded-lg px-2 py-1">
                 </select>
-                <button id="showCreateCharacterModalBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded-lg text-md uppercase font-bold transition-colors">
+                <button id="showCreateCharacterModalBtn2" class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded-lg text-md uppercase font-bold transition-colors">
                     <i class="fas fa-plus"></i>
                 </button>
             </div>

@@ -143,10 +143,30 @@
                     <button id="tab-heroic-feats" class="mgmt-tab py-2 font-bold text-slate-400 hover:text-white transition-all uppercase">
                         Heroic Feats
                     </button>
+                    <button id="tab-quest-categories" class="mgmt-tab py-2 font-bold text-slate-400 hover:text-white transition-all uppercase">
+                        Quest Categories
+                    </button>
                 </div>
                 <button id="add-entry-btn" class="bg-[#FFD700] hover:bg-[#e6c200] text-black px-6 py-2.5 rounded-md font-black text-md uppercase tracking-widest shadow-lg transition-transform active:scale-95">
                     <i class="fa-solid fa-plus mr-2"></i>Create New
                 </button>
+            </div>
+            
+            <div class="bg-[#0f1419] px-6 py-4 border-b border-slate-800 flex flex-col md:flex-row gap-4 items-center">
+                <div class="flex-1 relative">
+                    <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                    <input type="text" id="search-input" placeholder="Search records..." class="w-full bg-[#161b22] border border-slate-700 rounded-lg pl-12 pr-4 py-2.5 text-white placeholder-slate-500 focus:border-[#FFD700] focus:outline-none transition-colors">
+                </div>
+                <div class="flex gap-3">
+                    <select id="filter-status" class="bg-[#161b22] border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-[#FFD700] focus:outline-none transition-colors">
+                        <option value="all">All Records</option>
+                        <option value="active">Active Only</option>
+                        <option value="inactive">Inactive Only</option>
+                    </select>
+                    <button id="clear-filters-btn" class="px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold text-sm uppercase transition-colors">
+                        <i class="fa-solid fa-filter-circle-xmark mr-2"></i>Clear
+                    </button>
+                </div>
             </div>
 
             <div id="add-form-container" class="hidden bg-[#161b22] border-b border-[#FFD700]/20 p-8 animate-in fade-in slide-in-from-top-4 duration-300">

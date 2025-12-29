@@ -1,4 +1,4 @@
-import { supabase } from '../supabaseClient.js';
+import { questState } from './questStateManager.js';
 
 let fullNodes = [];
 let fullLinks = [];
@@ -10,13 +10,14 @@ const colorScale = d3.scaleThreshold()
     .range(["#FFD700", "#f59e0b", "#d97706", "#b45309", "#78350f", "#451a03"]);
 
 async function initDiagram() {
-    const { data, error } = await supabase
-        .from('cipher_quests')
-        .select('id, category, unlock_prerequisite_category, unlock_required_count, quest_name, prerequisite_quest_ids')
-        .order('unlock_required_count', { ascending: true });
-
-    if (error) {
-        console.error("Supabase Error:", error);
+    if (!questState.isReady()) {
+        await questState.initialize();
+    }
+    
+    const data = questState.getAllQuests();
+    
+    if (!data || data.length === 0) {
+        console.error("No quest data available");
         return;
     }
 

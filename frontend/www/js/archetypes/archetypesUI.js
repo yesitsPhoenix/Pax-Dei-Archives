@@ -1,4 +1,4 @@
-import { supabase } from "../supabaseClient.js";
+import { questState } from "../redemption/questStateManager.js";
 
 const ARCHETYPE_STYLES = `
     .archetype-circle-container { position: relative; width: 800px; height: 800px; margin: 0 auto; display: flex; align-items: center; justify-content: center; }
@@ -18,13 +18,9 @@ export async function loadArchetypeBanner(characterId) {
     if (!banner || !bannerEmpty) return;
 
     try {
-        const { data: character, error: charError } = await supabase
-            .from('characters')
-            .select('character_name, archetype')
-            .eq('character_id', characterId)
-            .single();
+        const character = questState.getActiveCharacter();
 
-        if (charError || !character || !character.archetype) {
+        if (!character || !character.archetype) {
             banner.classList.add('hidden');
             bannerEmpty.classList.remove('hidden');
             return;
@@ -34,28 +30,18 @@ export async function loadArchetypeBanner(characterId) {
         const archetypes = await response.json();
         const archData = archetypes.find(a => a.name === character.archetype);
 
-        const [claimsRes, categoriesRes] = await Promise.all([
-            supabase.from('user_claims').select('quest_id').eq('character_id', characterId),
-            supabase.from('quest_categories').select('name, is_secret')
-        ]);
+        const claims = questState.getUserClaims();
+        const categories = questState.getCategories();
 
-        const claimIds = (claimsRes.data || []).map(c => c.quest_id);
         let categoryActiveMap = {};
+        claims.forEach(claim => {
+            const quest = questState.getQuestById(claim.quest_id);
+            if (quest?.category) {
+                categoryActiveMap[quest.category] = true;
+            }
+        });
 
-        if (claimIds.length > 0) {
-            const { data: quests } = await supabase
-                .from('cipher_quests')
-                .select('category')
-                .in('id', claimIds);
-            
-            quests?.forEach(q => {
-                if (q.category) {
-                    categoryActiveMap[q.category] = true;
-                }
-            });
-        }
-
-        const standardCategories = categoriesRes.data?.filter(c => !c.is_secret).map(c => c.name) || [];
+        const standardCategories = categories.filter(c => !c.is_secret).map(c => c.name);
         const activeCategoryCount = standardCategories.filter(catName => categoryActiveMap[catName]).length;
 
         document.getElementById('banner-character-name').innerText = character.character_name;
@@ -109,7 +95,7 @@ export async function initArchetypeSelection(containerId) {
             container.appendChild(node);
         });
     } catch (err) {
-        console.error("Arch load error:", err);
+        console.error("[ArchetypeUI] Arch load error:", err);
     }
 }
 
@@ -175,36 +161,35 @@ function openDetail(selectedNode, data) {
         const commitBtn = document.getElementById('commit-path-btn');
         if (commitBtn) {
             commitBtn.onclick = async () => {
-                const charId = sessionStorage.getItem('active_character_id');
-                const { data: { user } } = await supabase.auth.getUser();
+                const charId = questState.getActiveCharacterId();
+                const user = questState.getUser();
                 if (!user || !charId) return;
 
                 const newArchetype = data.name;
                 const newCategory = `Archetype: ${newArchetype}`;
 
-                const { error: updateError } = await supabase
-                    .from('characters')
-                    .update({ archetype: newArchetype })
-                    .eq('character_id', charId);
+                try {
+                    await questState.setCharacterArchetype(newArchetype, charId);
 
-                if (updateError) return;
+                    const { supabase } = await import("../supabaseClient.js");
+                    
+                    await supabase
+                        .from('user_unlocked_categories')
+                        .delete()
+                        .eq('character_id', charId)
+                        .ilike('category_name', 'Archetype: %');
 
-                await supabase
-                    .from('user_unlocked_categories')
-                    .delete()
-                    .eq('character_id', charId)
-                    .ilike('category_name', 'Archetype: %');
+                    await supabase
+                        .from('user_unlocked_categories')
+                        .insert([{
+                            user_id: user.id,
+                            character_id: charId,
+                            category_name: newCategory
+                        }]);
 
-                const { error: unlockError } = await supabase
-                    .from('user_unlocked_categories')
-                    .insert([{
-                        user_id: user.id,
-                        character_id: charId,
-                        category_name: newCategory
-                    }]);
-
-                if (!unlockError) {
                     window.location.href = 'quests.html';
+                } catch (error) {
+                    console.error('Error setting archetype:', error);
                 }
             };
         }

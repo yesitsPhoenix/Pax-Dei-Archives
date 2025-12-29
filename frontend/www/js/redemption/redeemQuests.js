@@ -1,4 +1,4 @@
-import { supabase } from "../supabaseClient.js";
+import { questState } from "./questStateManager.js";
 import { mouseTooltip } from "../ui/signTooltip.js";
 import { initializeCharacterSystem } from "../redemption/characterManager.js";
 
@@ -97,11 +97,18 @@ function showSuccess(title, message) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    if (!questState.isReady()) {
+        await questState.initialize();
+    }
+    
+    const user = questState.getUser();
     if (user) {
-        await initializeCharacterSystem(user.id);
+        await initializeCharacterSystem();
         const charContainer = document.getElementById("character-container");
-        if (charContainer) charContainer.classList.remove("hidden");
+        if (charContainer) {
+            charContainer.classList.remove("hidden");
+            charContainer.classList.add("flex");
+        }
     }
 
     const { baseUrl, version } = await loadSigns();
@@ -113,7 +120,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     document.getElementById("verify-btn").onclick = async () => {
-        const characterId = sessionStorage.getItem('active_character_id');
+        const characterId = questState.getActiveCharacterId();
         if (!characterId) return showError("Select a character first.");
         if (selected.length === 0) return showError("Select a sequence.");
 
@@ -121,7 +128,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const rawKeyword = document.getElementById("cipher-keyword-select").value || "";
         const keyword = rawKeyword.toLowerCase().trim();
 
-        const { data: secretConfigs } = await supabase.from("secret_unlock_configs").select("*");
+        const secretConfigs = questState.getSecretUnlockConfigs();
         const secretMatch = secretConfigs?.find(c => {
             const dbSeq = (c.unlock_sequence || "").trim();
             const dbKey = (c.cipher_keyword || "").toLowerCase().trim();
@@ -129,31 +136,20 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
 
         if (secretMatch) {
-            const { data: alreadyUnlocked } = await supabase
-                .from("user_unlocked_categories")
-                .select("id")
-                .eq("character_id", characterId)
-                .eq("category_name", secretMatch.category_name)
-                .maybeSingle();
-
-            if (alreadyUnlocked) {
+            const unlockedCategories = questState.getUnlockedCategories();
+            if (unlockedCategories.includes(secretMatch.category_name)) {
                 return showSuccess("Already Unlocked", "This character has already gained access to this category.");
             }
 
-            const { error: unlockError } = await supabase.from("user_unlocked_categories").insert({
-                user_id: user.id,
-                character_id: characterId,
-                category_name: secretMatch.category_name
-            });
-
-            if (!unlockError) {
+            try {
+                await questState.unlockSecretCategory(secretMatch.category_name);
                 return showSuccess("Secret Archive Accessed", secretMatch.discovery_message || "You have unlocked a new category.");
-            } else {
-                return showError(unlockError.message);
+            } catch (error) {
+                return showError(error.message);
             }
         }
 
-        const { data: quests } = await supabase.from("cipher_quests").select("*").eq("active", true);
+        const quests = questState.getAllQuests();
         const questMatch = quests?.find(q => {
             const dbKey = (q.reward_key || "").trim();
             const dbKeyWord = (q.cipher_keyword || "").toLowerCase().trim();
@@ -161,24 +157,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
 
         if (questMatch) {
-            const { data: existingClaim } = await supabase.from("user_claims")
-                .select("id")
-                .eq("character_id", characterId)
-                .eq("quest_id", questMatch.id)
-                .maybeSingle();
+            if (questState.isQuestClaimed(questMatch.id)) {
+                return showError("This character has already redeemed this quest.");
+            }
 
-            if (existingClaim) return showError("This character has already redeemed this quest.");
-
-            const { error: claimError } = await supabase.from("user_claims").insert([{
-                user_id: user.id,
-                quest_id: questMatch.id,
-                character_id: characterId
-            }]);
-
-            if (!claimError) {
+            try {
+                await questState.addClaim(questMatch.id);
                 return showSuccess("Quest Deciphered", `You have successfully completed: ${questMatch.quest_name}`);
-            } else {
-                return showError(claimError.message);
+            } catch (error) {
+                return showError(error.message);
             }
         }
 

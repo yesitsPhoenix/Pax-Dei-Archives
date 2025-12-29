@@ -1,4 +1,4 @@
-import { supabase } from '../supabaseClient.js';
+import { questState } from './questStateManager.js';
 
 export let currentCharacterId = null;
 let currentUserId = null;
@@ -38,15 +38,11 @@ const showToast = (message, isError = false) => {
 };
 
 export const initializeCharacterSystem = async (characterId = null) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-        currentUserId = session.user.id;
+    const user = questState.getUser();
+    if (user) {
+        currentUserId = user.id;
     }
 
-    if (!characterId && session?.user) {
-        characterId = session.user.id;
-    }
-    
     await fetchCharacters();
     setupNewCharacterButton();
     setupCharacterFormListener();
@@ -54,66 +50,71 @@ export const initializeCharacterSystem = async (characterId = null) => {
 
 export const fetchCharacters = async (selectedId = null) => {
     const characterSelect = document.getElementById('character-select');
-    if (!characterSelect || !currentUserId) return;
+    if (!characterSelect) return;
 
-    const { data, error } = await supabase
-        .from('characters')
-        .select('character_id, character_name')
-        .eq('user_id', currentUserId);
-
-    if (error || !data) return;
-
+    const characters = questState.getCharacters();
+    
+    if (!characters || characters.length === 0) {
+        return;
+    }
+    
     characterSelect.innerHTML = '';
 
-    data.forEach(char => {
+    characters.forEach(char => {
         const option = document.createElement('option');
         option.value = char.character_id;
         option.textContent = char.character_name;
         characterSelect.appendChild(option);
     });
 
-    const savedId = selectedId || sessionStorage.getItem('active_character_id');
+    const currentCharId = selectedId || questState.getActiveCharacterId();
     
-    if (savedId && data.some(c => c.character_id === savedId)) {
-        characterSelect.value = savedId;
-        currentCharacterId = savedId;
-    } else if (data.length > 0) {
-        currentCharacterId = data[0].character_id;
+    if (currentCharId && characters.some(c => c.character_id === currentCharId)) {
+        characterSelect.value = currentCharId;
+        currentCharacterId = currentCharId;
+    } else if (characters.length > 0) {
+        currentCharacterId = characters[0].character_id;
         characterSelect.value = currentCharacterId;
     }
 
-    if (currentCharacterId) {
-        sessionStorage.setItem('active_character_id', currentCharacterId);
-    }
-
     if (!characterSelect.hasAttribute('data-listener-set')) {
-        characterSelect.addEventListener('change', (e) => {
-            currentCharacterId = e.target.value;
-            sessionStorage.setItem('active_character_id', currentCharacterId);
+        characterSelect.addEventListener('change', async (e) => {
+            const newCharId = e.target.value;
+            await questState.setActiveCharacter(newCharId);
+            currentCharacterId = newCharId;
 
             const url = new URL(window.location);
             url.searchParams.delete('quest');
             window.history.replaceState({}, '', url.pathname);
             
             window.dispatchEvent(new CustomEvent('characterChanged', { 
-                detail: { characterId: currentCharacterId } 
+                detail: { characterId: newCharId } 
             }));
         });
         characterSelect.setAttribute('data-listener-set', 'true');
     }
+    
+    setupNewCharacterButton();
 };
 
 const setupNewCharacterButton = () => {
-    const btn = document.getElementById('showCreateCharacterModalBtn');
+    const btn1 = document.getElementById('showCreateCharacterModalBtn');
+    const btn2 = document.getElementById('showCreateCharacterModalBtn2');
     const modal = document.getElementById('createCharacterModal');
     const closeBtn = document.getElementById('closeCreateCharacterModalBtn');
 
-    if (btn && modal) {
-        btn.onclick = (e) => {
-            e.preventDefault();
-            modal.classList.remove('hidden');
-            modal.style.display = 'flex';
-        };
+    const openModal = (e) => {
+        e.preventDefault();
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+    };
+
+    if (btn1 && modal) {
+        btn1.onclick = openModal;
+    }
+    
+    if (btn2 && modal) {
+        btn2.onclick = openModal;
     }
 
     if (closeBtn && modal) {
@@ -152,21 +153,7 @@ const setupCharacterFormListener = () => {
         }
 
         try {
-            const { data, error } = await supabase
-                .from('characters')
-                .insert([{
-                    user_id: currentUserId,
-                    character_name: characterName
-                }])
-                .select()
-                .single();
-
-            if (error) {
-                if (error.code === '23505') {
-                    throw new Error('Name already exists');
-                }
-                throw error;
-            }
+            const data = await questState.addCharacter(characterName);
 
             showToast(`Character "${characterName}" created!`);
 
@@ -177,18 +164,18 @@ const setupCharacterFormListener = () => {
             }
             createCharacterForm.reset();
 
-            if (data) {
-                await fetchCharacters(data.character_id);
-                
-                window.dispatchEvent(new CustomEvent('characterChanged', { 
-                    detail: { characterId: data.character_id } 
-                }));
+            await questState.setActiveCharacter(data.character_id);
 
-                const pathOverlay = document.getElementById('archetype-selection-overlay');
-                if (pathOverlay) {
-                    pathOverlay.classList.remove('hidden');
-                    pathOverlay.style.display = 'flex';
-                }
+            await fetchCharacters(data.character_id);
+            
+            window.dispatchEvent(new CustomEvent('characterChanged', { 
+                detail: { characterId: data.character_id } 
+            }));
+
+            const pathOverlay = document.getElementById('archetype-selection-overlay');
+            if (pathOverlay) {
+                pathOverlay.classList.remove('hidden');
+                pathOverlay.style.display = 'flex';
             }
 
         } catch (e) {

@@ -1,80 +1,77 @@
-import { supabase } from "../supabaseClient.js";
+import { questState } from "../redemption/questStateManager.js";
 import { getUnlockedCategories } from "./unlocks.js";
+import { initializeCharacterSystem, fetchCharacters } from './characterManager.js';
 
-async function getActiveCharacterId() {
-    let sessionCharId = sessionStorage.getItem("active_character_id");
-    
-    if (sessionCharId && sessionCharId !== "null") {
-        return sessionCharId;
-    }
-
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) {
-        console.warn("[Chronicles] No active auth session found.");
-        return null;
-    }
-
-    const { data: char } = await supabase.from("characters")
-        .select("character_id")
-        .eq("user_id", session.user.id)
-        .eq("is_default_character", true)
-        .maybeSingle();
-
-    if (char) {
-        sessionStorage.setItem("active_character_id", char.character_id);
-        return char.character_id;
-    }
-
-    const { data: anyChar } = await supabase.from("characters")
-        .select("character_id")
-        .eq("user_id", session.user.id)
-        .limit(1)
-        .maybeSingle();
-
-    if (anyChar) {
-        sessionStorage.setItem("active_character_id", anyChar.character_id);
-        return anyChar.character_id;
-    }
-
-    console.error("[Chronicles] No characters found for this user.");
-    return null;
-}
+let allQuests = [];
+let userClaims = [];
+let allFeats = [];
+let signsConfig = {};
 
 async function initChronicles() {
-    const characterId = await getActiveCharacterId();
+    if (!questState.isReady()) {
+        await questState.initialize();
+    }
+    
+    const characterId = questState.getActiveCharacterId();
     
     if (!characterId) {
+        console.warn("[Chronicles] No active character found");
         setTimeout(initChronicles, 500);
         return;
     }
 
-
-    const requests = [
-        supabase.from("cipher_quests").select("*").eq("active", true).order("sort_order", { ascending: true }),
-        supabase.from("heroic_feats").select("*").eq("active", true).order("sort_order", { ascending: true }),
-        supabase.from("user_claims").select("*").eq("character_id", characterId),
-        supabase.from("user_unlocked_categories").select("category_name").eq("character_id", characterId),
-        fetch("frontend/www/assets/signs.json").then(res => res.json()).catch(() => ({}))
-    ];
-
     try {
-        const results = await Promise.all(requests);
+        allQuests = questState.getAllQuests();
+        userClaims = questState.getUserClaims();
+        allFeats = questState.getHeroicFeats();
         
-        const allQuests = results[0].data || [];
-        const allFeats = results[1].data || [];
-        const userClaims = results[2].data || [];
-        const manualUnlocks = new Set((results[3].data || []).map(u => u.category_name));
-        const signsConfig = results[4];
+        try {
+            const response = await fetch("frontend/www/assets/signs.json");
+            signsConfig = await response.json();
+        } catch (error) {
+            console.error("[Chronicles] Failed to load signs config:", error);
+            signsConfig = {};
+        }
 
-        const unlockedData = await getUnlockedCategories(characterId, allQuests, userClaims);
-        let unlockedCategories = new Set(unlockedData);
-        
+        const unlockedCategoriesList = questState.getUnlockedCategories();
+        const unlockedCategories = new Set(unlockedCategoriesList);
 
-        renderPage(allQuests, userClaims, allFeats, unlockedCategories, manualUnlocks, signsConfig);
+        renderPage(allQuests, userClaims, allFeats, unlockedCategories, signsConfig);
     } catch (error) {
         console.error("[Chronicles] Error during data initialization:", error);
     }
 }
+
+window.addEventListener('characterChanged', async (e) => {
+    console.log('[Chronicles] Character changed event received:', e.detail);
+    
+    allQuests = questState.getAllQuests();
+    userClaims = questState.getUserClaims();
+    allFeats = questState.getHeroicFeats();
+    
+    const unlockedCategoriesList = questState.getUnlockedCategories();
+    const unlockedCategories = new Set(unlockedCategoriesList);
+    
+    renderPage(allQuests, userClaims, allFeats, unlockedCategories, signsConfig);
+});
+
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('[Chronicles] DOM loaded, initializing...');
+    
+    if (!questState.isReady()) {
+        await questState.initialize();
+    }
+    
+    await initializeCharacterSystem();
+    
+    const characterContainer = document.getElementById('character-container');
+    if (characterContainer) {
+        characterContainer.classList.remove('hidden');
+        characterContainer.classList.add('flex');
+    }
+    
+    await initChronicles();
+});
 
 function showQuestModal(chapterName, quests, claims) {
     const modal = document.getElementById("quest-modal");
@@ -120,7 +117,7 @@ function showQuestModal(chapterName, quests, claims) {
     modal.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
 }
 
-async function renderPage(allQuests, userClaims, allFeats, unlockedCategories, manualUnlocks, signsConfig) {
+async function renderPage(allQuests, userClaims, allFeats, unlockedCategories, signsConfig) {
     const chaptersContainer = document.getElementById('chapters-container');
     const firstStepsContainer = document.getElementById('first-steps-container');
     const featsContainer = document.getElementById('feats-container');
@@ -132,6 +129,9 @@ async function renderPage(allQuests, userClaims, allFeats, unlockedCategories, m
     chaptersContainer.innerHTML = '';
     if (firstStepsContainer) firstStepsContainer.innerHTML = ''; 
     if (featsContainer) featsContainer.innerHTML = '';
+    
+    const character = questState.getActiveCharacter();
+    const userArchetype = character?.archetype;
 
     const categoryProgress = {};
     allQuests.forEach(q => {
@@ -147,6 +147,14 @@ async function renderPage(allQuests, userClaims, allFeats, unlockedCategories, m
     const tales = {};
     allQuests.forEach(q => {
         const cat = q.category || "Uncategorized";
+        
+        if (cat.startsWith('Archetype: ')) {
+            const archetypeName = cat.replace('Archetype: ', '').trim();
+            if (userArchetype !== archetypeName) {
+                return; // Skip quests from other archetypes
+            }
+        }
+        
         let taleName = "Uncategorized";
         let chapterName = cat;
 
@@ -277,11 +285,3 @@ async function renderPage(allQuests, userClaims, allFeats, unlockedCategories, m
         });
     }
 }
-
-window.addEventListener('characterChanged', (e) => {
-    initChronicles();
-});
-
-document.addEventListener('DOMContentLoaded', () => {
-    initChronicles();
-});

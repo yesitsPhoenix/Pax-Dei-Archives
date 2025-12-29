@@ -1,4 +1,4 @@
-import { supabase } from "../supabaseClient.js";
+import { questState } from "./questStateManager.js";
 import { mouseTooltip } from "../ui/signTooltip.js";
 import { loadArchetypeBanner } from "../archetypes/archetypesUI.js";
 
@@ -66,11 +66,6 @@ function updateSelected(baseUrl, version) {
     });
 }
 
-async function fetchQuests() {
-    const { data, error } = await supabase.from("cipher_quests").select("*").eq("active", true);
-    if (error) return [];
-    return data;
-}
 
 const closeRedemption = document.getElementById('close-sign-redemption');
 if (closeRedemption) {
@@ -102,7 +97,6 @@ if (cancelDirect) {
 document.addEventListener("DOMContentLoaded", async () => {
     const { baseUrl, version } = await loadSigns();
     const verifyBtn = document.getElementById("verify-btn");
-    const quests = await fetchQuests();
     const errorDisplay = document.getElementById("modal-error-msg");
 
     const showError = (msg) => {
@@ -129,11 +123,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     verifyBtn.addEventListener("click", async () => {
-        const characterId = sessionStorage.getItem('active_character_id');
+        const characterId = questState.getActiveCharacterId();
         if (!characterId) return;
 
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = questState.getUser();
         if (!user) return;
+        
+        const quests = questState.getAllQuests();
+        if (!quests || quests.length === 0) {
+            showError("Quest data not loaded. Please refresh the page.");
+            return;
+        }
 
         const playerKey = selected.join(",").toLowerCase();
         const selectedKeyword = document.getElementById("cipher-keyword-select").value.toLowerCase().trim();
@@ -143,7 +143,12 @@ document.addEventListener("DOMContentLoaded", async () => {
             const dbName = (q.quest_name ?? "").toLowerCase().trim();
             const dbKey = (Array.isArray(q.signs) ? q.signs.join(',') : "").toLowerCase().trim();
             const dbKeyword = q.cipher_keyword?.toLowerCase().trim() ?? "";
-            return dbName === targetQuestName && (dbKey === "" || dbKey === playerKey) && (dbKeyword === "" || dbKeyword === selectedKeyword);
+            
+            const nameMatch = dbName === targetQuestName;
+            const keyMatch = dbKey === "" || dbKey === playerKey;
+            const keywordMatch = dbKeyword === "" || dbKeyword === selectedKeyword;
+            
+            return nameMatch && keyMatch && keywordMatch;
         });
 
         if (!matchedQuest) {
@@ -151,15 +156,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             return;
         }
 
-        const { error } = await supabase
-            .from("user_claims")
-            .insert([{ 
-                user_id: user.id, 
-                quest_id: matchedQuest.id,
-                character_id: characterId 
-            }]);
-
-        if (!error) {
+        try {
+            await questState.addClaim(matchedQuest.id, user.id, characterId);
+            
             await loadArchetypeBanner(characterId);
 
             const modal = document.getElementById("sign-redemption-modal");
@@ -181,7 +180,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             window.dispatchEvent(new CustomEvent("questClaimed", { 
                 detail: { quest: matchedQuest, character_id: characterId } 
             }));
-        } else {
+        } catch (error) {
             showError(error.message);
         }
     });

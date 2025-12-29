@@ -1,87 +1,19 @@
-import { supabase } from "../supabaseClient.js";
+import { questState } from "./questStateManager.js";
+
 
 export async function getUnlockedCategories(characterId, allQuests, userClaims) {
-    const unlocked = new Set(["Uncategorized", "The First Steps: Beginner's Guide"]);
-    const categoryProgress = {};
-    const claimedCategories = new Set();
-
-    const { data: categories } = await supabase
-        .from("quest_categories")
-        .select("name, is_secret");
-    
-    const secretCategoryNames = new Set(
-        categories?.filter(c => c.is_secret).map(c => c.name) || []
-    );
-
-    if (characterId) {
-        const { data: dbUnlocks } = await supabase
-            .from("user_unlocked_categories")
-            .select("category_name")
-            .eq("character_id", characterId);
-        
-        if (dbUnlocks) {
-            dbUnlocks.forEach(u => {
-                unlocked.add(u.category_name);
-            });
-        }
-    }
-
-    const questMap = new Map(allQuests.map(q => [q.id, q]));
-
-    if (characterId && userClaims) {
-        userClaims.forEach(claim => {
-            const quest = questMap.get(claim.quest_id);
-            if (quest && quest.category) {
-                categoryProgress[quest.category] = (categoryProgress[quest.category] || 0) + 1;
-                claimedCategories.add(quest.category);
-            }
-        });
-    }
-
-    allQuests.forEach(q => {
-        const cat = q.category || "Uncategorized";
-        
-        if (secretCategoryNames.has(cat)) {
-            if (unlocked.has(cat)) {
-                return;
-            } else {
-                return;
-            }
-        }
-
-        const reqCat = q.unlock_prerequisite_category;
-        const reqCount = q.unlock_required_count || 0;
-
-        if (!reqCat || reqCat === "") {
-            unlocked.add(cat);
-        } else if (categoryProgress[reqCat] >= reqCount) {
-            unlocked.add(cat);
-        }
-    });
-
-    claimedCategories.forEach(cat => unlocked.add(cat));
-
-    return Array.from(unlocked);
+    return questState.getUnlockedCategories();
 }
 
-export async function processSecretUnlock(selectedSigns, userId, characterId) {
-    const { data: secretConfigs } = await supabase
-        .from("secret_unlock_configs")
-        .select("*");
 
+export async function processSecretUnlock(selectedSigns, userId, characterId) {
+    const secretConfigs = questState.getSecretUnlockConfigs();
     const sequenceKey = selectedSigns.join("-").toLowerCase();
     const unlock = secretConfigs?.find(c => c.unlock_sequence === sequenceKey);
 
     if (unlock && userId && characterId) {
-        const { error } = await supabase
-            .from("user_unlocked_categories")
-            .upsert({ 
-                user_id: userId,
-                character_id: characterId, 
-                category_name: unlock.category_name 
-            }, { onConflict: 'character_id, category_name' });
-            
-        if (error) throw error;
+        await questState.unlockSecretCategory(unlock.category_name, userId, characterId);
+        
         return {
             target: unlock.category_name,
             message: unlock.discovery_message
@@ -89,6 +21,7 @@ export async function processSecretUnlock(selectedSigns, userId, characterId) {
     }
     return null;
 }
+
 
 export function applyLockStyles(element, statusContainer = null) {
     element.classList.add("opacity-40", "cursor-pointer", "bg-black/40", "grayscale-[0.5]");

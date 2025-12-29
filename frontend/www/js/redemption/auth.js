@@ -1,7 +1,12 @@
 import { supabase } from '../supabaseClient.js';
+import { questState } from './questStateManager.js';
 
 export const initializePageAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+    if (!questState.isReady()) {
+        await questState.initialize();
+    }
+    
+    const user = questState.getUser();
     
     const loginContainer = document.getElementById('traderLoginContainer');
     const questContent = document.getElementById('quest-log-main-content');
@@ -35,7 +40,14 @@ export const initializePageAuth = async () => {
         }
     };
 
-    updateUI(!!session);
+    updateUI(!!user);
+
+    questState.subscribe((event, data) => {
+        if (event === 'initialized' || event === 'reset') {
+            const currentUser = questState.getUser();
+            updateUI(!!currentUser);
+        }
+    });
 
     if (discordBtn) {
         discordBtn.onclick = async () => {
@@ -53,10 +65,18 @@ export const initializePageAuth = async () => {
         };
     }
 
+    let authTimeout;
     supabase.auth.onAuthStateChange((event, newSession) => {
-        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-            updateUI(!!newSession);
-        }
+        clearTimeout(authTimeout);
+        authTimeout = setTimeout(async () => {
+            if (event === 'SIGNED_IN') {
+                await questState.initialize();
+                updateUI(true);
+            } else if (event === 'SIGNED_OUT') {
+                questState.reset();
+                updateUI(false);
+            }
+        }, 300);
     });
 };
 

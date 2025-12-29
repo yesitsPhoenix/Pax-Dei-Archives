@@ -1,4 +1,5 @@
 import { supabase } from '../supabaseClient.js';
+import { questState } from './questStateManager.js';
 import { enableSignTooltip } from '../ui/signTooltip.js';
 
 let currentTable = 'secret_unlock_configs';
@@ -6,6 +7,9 @@ let selectedSignsForForm = [];
 let allSignIds = [];
 let signsConfig = null;
 const alphabet = "abcdefghijklmnopqrstuvwxyz";
+let allTableData = [];
+let isEditMode = false;
+let editingRecordId = null;
 
 const tableConfigs = {
     secret_unlock_configs: {
@@ -21,6 +25,13 @@ const tableConfigs = {
         labels: ['Record ID', 'Title', 'Category', 'Target', 'Status', 'Sign'],
         sort: 'created_at',
         insertable: ['name', 'category', 'description', 'required_count', 'required_category', 'icon']
+    },
+    quest_categories: {
+        display: 'Quest Category',
+        columns: ['name', 'is_secret', 'created_at'],
+        labels: ['Category Name', 'Secret Category', 'Created Date'],
+        sort: 'name',
+        insertable: ['name', 'is_secret']
     }
 };
 
@@ -132,37 +143,88 @@ async function renderSignPicker(targetId) {
     return pickerContainer;
 }
 
-async function showAddForm() {
+async function showAddForm(recordToEdit = null) {
     selectedSignsForForm = [];
+    isEditMode = !!recordToEdit;
+    editingRecordId = recordToEdit ? (recordToEdit.id || recordToEdit.name) : null;
+    
     const config = tableConfigs[currentTable];
     const container = document.getElementById('add-form-container');
     const fields = document.getElementById('dynamic-form-fields');
-    document.getElementById('form-title').innerText = `Register ${config.display}`;
+    const saveBtn = document.getElementById('save-entry');
+    
+    document.getElementById('form-title').innerText = isEditMode ? `Edit ${config.display}` : `Register ${config.display}`;
+    saveBtn.innerHTML = isEditMode ? '<i class="fa-solid fa-save mr-2"></i>Update Record' : 'Commit to Database';
 
     fields.innerHTML = config.insertable.map(field => {
+        const value = recordToEdit ? (recordToEdit[field] ?? '') : '';
+        
         if (field === 'cipher_keyword') {
             return `
                 <div class="flex flex-col space-y-2">
                     <label class="text-[12px] font-black uppercase tracking-[0.15em] text-[#FFD700]">${field.replace(/_/g, ' ')}</label>
                     <select id="field-${field}" class="w-full bg-[#0b0e14] border border-slate-700 p-4 rounded-lg text-white outline-none focus:border-[#FFD700] transition-colors">
-                        <option value="" disabled selected>Select a Category</option>
-                        <option value="paxdei">paxdei</option>
-                        <option value="thelonius">thelonius</option>
-                        <option value="badgers">badgers</option>
-                        <option value="zebian">zebian</option>
-                        <option value="demira">demira</option>
-                        <option value="armozel">armozel</option>
+                        <option value="" ${value === '' ? 'selected' : ''}>Select a Category</option>
+                        <option value="paxdei" ${value === 'paxdei' ? 'selected' : ''}>paxdei</option>
+                        <option value="thelonius" ${value === 'thelonius' ? 'selected' : ''}>thelonius</option>
+                        <option value="badgers" ${value === 'badgers' ? 'selected' : ''}>badgers</option>
+                        <option value="zebian" ${value === 'zebian' ? 'selected' : ''}>zebian</option>
+                        <option value="demira" ${value === 'demira' ? 'selected' : ''}>demira</option>
+                        <option value="armozel" ${value === 'armozel' ? 'selected' : ''}>armozel</option>
                     </select>
                 </div>
             `;
         }
+        if (field === 'is_secret') {
+            const boolValue = value === true || value === 'true';
+            return `
+                <div class="flex flex-col space-y-2">
+                    <label class="text-[12px] font-black uppercase tracking-[0.15em] text-[#FFD700]">${field.replace(/_/g, ' ')}</label>
+                    <select id="field-${field}" class="w-full bg-[#0b0e14] border border-slate-700 p-4 rounded-lg text-white outline-none focus:border-[#FFD700] transition-colors">
+                        <option value="false" ${!boolValue ? 'selected' : ''}>No (Regular Category)</option>
+                        <option value="true" ${boolValue ? 'selected' : ''}>Yes (Secret Category)</option>
+                    </select>
+                </div>
+            `;
+        }
+        if (field === 'active') {
+            const boolValue = value === true || value === 'true';
+            return `
+                <div class="flex flex-col space-y-2">
+                    <label class="text-[12px] font-black uppercase tracking-[0.15em] text-[#FFD700]">${field.replace(/_/g, ' ')}</label>
+                    <select id="field-${field}" class="w-full bg-[#0b0e14] border border-slate-700 p-4 rounded-lg text-white outline-none focus:border-[#FFD700] transition-colors">
+                        <option value="true" ${boolValue ? 'selected' : ''}>Active</option>
+                        <option value="false" ${!boolValue ? 'selected' : ''}>Inactive</option>
+                    </select>
+                </div>
+            `;
+        }
+        
         return `
             <div class="flex flex-col space-y-2">
                 <label class="text-[12px] font-black uppercase tracking-[0.15em] text-[#FFD700]">${field.replace(/_/g, ' ')}</label>
-                <input type="text" id="field-${field}" class="w-full bg-[#0b0e14] border border-slate-700 p-4 rounded-lg text-white outline-none focus:border-[#FFD700] transition-colors" ${field === 'unlock_sequence' || field === 'signs' ? 'readonly placeholder="Sequence will be generated via picker below..."' : ''}>
+                <input type="text" id="field-${field}" value="${value}" class="w-full bg-[#0b0e14] border border-slate-700 p-4 rounded-lg text-white outline-none focus:border-[#FFD700] transition-colors" ${field === 'unlock_sequence' || field === 'signs' ? 'readonly placeholder="Sequence will be generated via picker below..."' : ''}>
             </div>
         `;
     }).join('');
+    
+    if (recordToEdit && (recordToEdit.unlock_sequence || recordToEdit.signs)) {
+        const signField = recordToEdit.unlock_sequence ? 'unlock_sequence' : 'signs';
+        let signArray = [];
+        const val = recordToEdit[signField];
+        
+        if (Array.isArray(val)) {
+            signArray = val;
+        } else if (typeof val === 'string') {
+            try {
+                signArray = JSON.parse(val);
+            } catch (e) {
+                signArray = val.split(',').map(s => s.trim()).filter(s => s !== "");
+            }
+        }
+        
+        selectedSignsForForm = signArray;
+    }
 
     if (config.insertable.includes('unlock_sequence') || config.insertable.includes('signs')) {
         const target = config.insertable.includes('unlock_sequence') ? 'unlock_sequence' : 'signs';
@@ -177,7 +239,46 @@ async function showAddForm() {
 async function fetchTableData() {
     const config = tableConfigs[currentTable];
     const { data, error } = await supabase.from(currentTable).select('*').order(config.sort, { ascending: true });
-    if (!error) renderTable(data, config);
+    if (!error) {
+        allTableData = data || [];
+        applyFilters();
+    }
+}
+
+function applyFilters() {
+    const searchTerm = document.getElementById('search-input')?.value.toLowerCase() || '';
+    const statusFilter = document.getElementById('filter-status')?.value || 'all';
+    const config = tableConfigs[currentTable];
+    
+    let filtered = [...allTableData];
+    
+    if (searchTerm) {
+        filtered = filtered.filter(row => {
+            return config.columns.some(col => {
+                const val = row[col];
+                if (val === null || val === undefined) return false;
+                return String(val).toLowerCase().includes(searchTerm);
+            });
+        });
+    }
+    
+    if (statusFilter !== 'all') {
+        if (currentTable === 'quest_categories') {
+            if (statusFilter === 'active') {
+                filtered = filtered.filter(row => row.is_secret === true);
+            } else if (statusFilter === 'inactive') {
+                filtered = filtered.filter(row => row.is_secret === false);
+            }
+        } else if (config.columns.includes('active')) {
+            if (statusFilter === 'active') {
+                filtered = filtered.filter(row => row.active === true);
+            } else if (statusFilter === 'inactive') {
+                filtered = filtered.filter(row => row.active === false);
+            }
+        }
+    }
+    
+    renderTable(filtered, config);
 }
 
 function renderTable(data, config) {
@@ -190,8 +291,14 @@ function renderTable(data, config) {
             ${config.columns.map(col => {
                 let val = row[col];
                 
-                if (col === 'active') {
-                    return `<td class="px-6 py-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-black ${val ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">${val ? 'ACTIVE' : 'INACTIVE'}</span></td>`;
+                if (col === 'active' || col === 'is_secret') {
+                    const isActive = val === true;
+                    return `<td class="px-6 py-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-black ${isActive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">${isActive ? (col === 'is_secret' ? 'SECRET' : 'ACTIVE') : (col === 'is_secret' ? 'REGULAR' : 'INACTIVE')}</span></td>`;
+                }
+                
+                if (col === 'created_at') {
+                    const date = new Date(val);
+                    return `<td class="px-6 py-4 text-slate-400 text-sm">${date.toLocaleDateString()} ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>`;
                 }
 
                 if (col === 'unlock_sequence' || col === 'signs') {
@@ -221,10 +328,25 @@ function renderTable(data, config) {
 
                 return `<td class="px-6 py-4 text-slate-300 font-medium">${val ?? '—'}</td>`;
             }).join('')}
-            <td class="px-6 py-4 text-right"><button class="db-delete-btn text-slate-500 hover:text-red-500" data-id="${row.id}"><i class="fa-solid fa-trash-can"></i></button></td>
+            <td class="px-6 py-4 text-right">
+                <div class="flex items-center justify-end gap-2">
+                    <button class="db-edit-btn text-slate-500 hover:text-[#FFD700] transition-colors" data-record='${JSON.stringify(row).replace(/'/g, "&apos;")}' title="Edit">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </button>
+                    <button class="db-delete-btn text-slate-500 hover:text-red-500 transition-colors" data-id="${row.id || row.name}" title="Delete">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            </td>
         </tr>`).join('');
     
     document.querySelectorAll('.db-delete-btn').forEach(btn => btn.onclick = () => deleteRecord(btn.dataset.id));
+    document.querySelectorAll('.db-edit-btn').forEach(btn => {
+        btn.onclick = () => {
+            const record = JSON.parse(btn.dataset.record.replace(/&apos;/g, "'"));
+            showAddForm(record);
+        };
+    });
     enableSignTooltip();
 }
 
@@ -240,6 +362,8 @@ async function saveRecord() {
         
         if (['sort_order', 'gold', 'required_count'].includes(field)) {
             payload[field] = parseInt(val) || 0;
+        } else if (field === 'is_secret' || field === 'active') {
+            payload[field] = val === 'true';
         } else {
             payload[field] = (val === "none" || val === "") ? null : val;
         }
@@ -249,18 +373,51 @@ async function saveRecord() {
         payload.unlock_sequence = payload.unlock_sequence ? payload.unlock_sequence : null;
     }
 
-    const { error } = await supabase.from(currentTable).insert([payload]);
+    let error;
+    
+    if (isEditMode) {
+        if (currentTable === 'quest_categories') {
+            ({ error } = await supabase.from(currentTable).update(payload).eq('name', editingRecordId));
+        } else {
+            ({ error } = await supabase.from(currentTable).update(payload).eq('id', editingRecordId));
+        }
+    } else {
+        ({ error } = await supabase.from(currentTable).insert([payload]));
+    }
+    
     if (error) {
         alert(error.message);
     } else { 
-        document.getElementById('add-form-container').classList.add('hidden'); 
+        document.getElementById('add-form-container').classList.add('hidden');
+        
+        isEditMode = false;
+        editingRecordId = null;
+        
+        if (currentTable === 'secret_unlock_configs' || currentTable === 'heroic_feats' || currentTable === 'quest_categories') {
+            if (questState.isReady()) {
+                await questState.invalidate(['quests']);
+            }
+        }
+        
         fetchTableData(); 
     }
 }
 
-async function deleteRecord(id) {
+async function deleteRecord(identifier) {
     if (!confirm('Delete record?')) return;
-    await supabase.from(currentTable).delete().eq('id', id);
+    
+    if (currentTable === 'quest_categories') {
+        await supabase.from(currentTable).delete().eq('name', identifier);
+    } else {
+        await supabase.from(currentTable).delete().eq('id', identifier);
+    }
+    
+    if (currentTable === 'secret_unlock_configs' || currentTable === 'heroic_feats' || currentTable === 'quest_categories') {
+        if (questState.isReady()) {
+            await questState.invalidate(['quests']);
+        }
+    }
+    
     fetchTableData();
 }
 
@@ -276,18 +433,58 @@ function setActiveTab(tableId) {
         activeTab.classList.remove('text-slate-400');
     }
     document.getElementById('add-form-container').classList.add('hidden');
+    
+    const searchInput = document.getElementById('search-input');
+    const statusFilter = document.getElementById('filter-status');
+    if (searchInput) searchInput.value = '';
+    if (statusFilter) statusFilter.value = 'all';
+    
+    isEditMode = false;
+    editingRecordId = null;
+    
     fetchTableData();
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    if (!questState.isReady()) {
+        await questState.initialize();
+    }
+    
     await loadSignsMetadata();
     enableSignTooltip();
-    ['secret_unlock_configs', 'heroic_feats'].forEach(id => {
+    
+    ['secret_unlock_configs', 'heroic_feats', 'quest_categories'].forEach(id => {
         const tab = document.getElementById(`tab-${id.replace(/_/g, '-')}`);
         if (tab) tab.onclick = () => setActiveTab(id);
     });
+    
     document.getElementById('add-entry-btn').onclick = showAddForm;
-    document.getElementById('cancel-form').onclick = () => document.getElementById('add-form-container').classList.add('hidden');
+    document.getElementById('cancel-form').onclick = () => {
+        document.getElementById('add-form-container').classList.add('hidden');
+        isEditMode = false;
+        editingRecordId = null;
+    };
     document.getElementById('save-entry').onclick = saveRecord;
+    
+    const searchInput = document.getElementById('search-input');
+    const statusFilter = document.getElementById('filter-status');
+    const clearBtn = document.getElementById('clear-filters-btn');
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', applyFilters);
+    }
+    
+    if (statusFilter) {
+        statusFilter.addEventListener('change', applyFilters);
+    }
+    
+    if (clearBtn) {
+        clearBtn.onclick = () => {
+            if (searchInput) searchInput.value = '';
+            if (statusFilter) statusFilter.value = 'all';
+            applyFilters();
+        };
+    }
+    
     fetchTableData();
 });
