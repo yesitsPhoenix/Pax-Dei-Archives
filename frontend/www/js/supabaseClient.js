@@ -17,8 +17,6 @@ const loggedSupabase = new Proxy(rawSupabase, {
                 const callId = dbCallCount;
                 const timestamp = new Date().toISOString();
                 
-                console.log(`%c[Supabase #${callId}] from('${tableName}')`, 'color: #3b82f6; font-weight: bold');
-                
                 const builder = target.from(tableName);
                 
                 return wrapQueryBuilder(builder, tableName, callId, timestamp);
@@ -31,7 +29,6 @@ const loggedSupabase = new Proxy(rawSupabase, {
                     if (typeof authTarget[authProp] === 'function') {
                         return (...args) => {
                             dbCallCount++;
-                            console.log(`%c[Supabase #${dbCallCount}] auth.${authProp}()`, 'color: #8b5cf6; font-weight: bold');
                             return authTarget[authProp](...args);
                         };
                     }
@@ -61,8 +58,6 @@ function wrapQueryBuilder(builder, tableName, callId, timestamp) {
                             }
                             return op.method;
                         }).join('.');
-                        
-                        console.log(`%c[Supabase #${callId}] ${tableName}.${queryStr}`, 'color: #10b981');
                         
                         dbCallLog.push({
                             id: callId,
@@ -95,7 +90,6 @@ export function getDbCallLog() {
 export function resetDbCallCount() {
     dbCallCount = 0;
     dbCallLog.length = 0;
-    console.log('%c[Supabase] Call counter reset', 'color: #ef4444; font-weight: bold');
 }
 
 export function printDbCallSummary() {
