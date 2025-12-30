@@ -161,7 +161,7 @@ function generateSignHtml(quest, baseUrl, version) {
 }
 
 function clearQuestDetails() {
-    console.log('[QUESTS] Clearing quest details and showing empty state');
+   //console.log('[QUESTS] Clearing quest details and showing empty state');
     
     activeQuestKey = null;
     window.activeQuestKey = null;
@@ -207,18 +207,20 @@ async function claimQuestDirectly(quest) {
             successModal.classList.add('flex');
         }
 
-        const nextQuest = findNextAvailableQuest();
-
+        // CRITICAL: Update userClaims BEFORE finding next quest
         userClaims = questState.getUserClaims();
         window.userClaims = userClaims;
+       //console.log('[QUESTS] Updated userClaims after completing quest:', userClaims.length);
+        
+        const nextQuest = findNextAvailableQuest();
         
         await renderQuestsList();
 
         if (nextQuest) {
-            console.log('[QUESTS] Next quest found, showing details:', nextQuest.quest_name);
+           //console.log('[QUESTS] Next quest found, showing details:', nextQuest.quest_name);
             showQuestDetails(nextQuest, false);
         } else {
-            console.log('[QUESTS] No next quest available, clearing details');
+           //console.log('[QUESTS] No next quest available, clearing details');
             clearQuestDetails();
         }
     } catch (error) {
@@ -252,46 +254,59 @@ function isQuestLocked(quest, claims, quests) {
 }
 
 function findNextAvailableQuest() {
-    const listContainer = document.getElementById("quest-titles-list");
-    if (!listContainer) return null;
-
-    const questItems = Array.from(listContainer.querySelectorAll('.quest-item'));
+   //console.log('[QUESTS] findNextAvailableQuest called with activeQuestKey:', activeQuestKey);
     
-    // Filter out locked and not-allowed items
-    const availableItems = questItems.filter(item => !item.classList.contains('cursor-not-allowed'));
-    
-    console.log('[QUESTS] findNextAvailableQuest - Total quest items:', questItems.length);
-    console.log('[QUESTS] findNextAvailableQuest - Available items:', availableItems.length);
-    
-    if (availableItems.length === 0) {
-        console.log('[QUESTS] No available quests found');
+    if (!activeQuestKey) {
+       //console.log('[QUESTS] No active quest key, cannot find next');
         return null;
     }
     
-    const activeIndex = questItems.findIndex(item => item.dataset.key === activeQuestKey);
-    console.log('[QUESTS] findNextAvailableQuest - Active index:', activeIndex);
-
-    if (activeIndex !== -1 && activeIndex + 1 < questItems.length) {
-        const currentQuest = allQuests.find(q => q.quest_key === activeQuestKey);
-        const nextItem = questItems[activeIndex + 1];
-        const nextQuest = allQuests.find(q => q.quest_key === nextItem.dataset.key);
-
-        if (currentQuest && nextQuest && currentQuest.category === nextQuest.category) {
-            if (!nextItem.classList.contains('cursor-not-allowed')) {
-                console.log('[QUESTS] Found next quest in same category:', nextQuest.quest_name);
-                return nextQuest;
+    const currentQuest = allQuests.find(q => q.quest_key === activeQuestKey);
+    if (!currentQuest) {
+       //console.log('[QUESTS] Current quest not found in allQuests');
+        return null;
+    }
+    
+   //console.log('[QUESTS] Current quest:', currentQuest.quest_name, '| Category:', currentQuest.category);
+    
+    // Get all quests in the same category as the current quest
+    const sameCategory = allQuests.filter(q => q.category === currentQuest.category);
+   //console.log('[QUESTS] Quests in same category:', sameCategory.length);
+    
+    // Find the index of the current quest within its category
+    const currentIndexInCategory = sameCategory.findIndex(q => q.quest_key === activeQuestKey);
+   //console.log('[QUESTS] Current index in category:', currentIndexInCategory);
+    
+    // Try to find the next unclaimed quest in the same category
+    if (currentIndexInCategory !== -1) {
+        for (let i = currentIndexInCategory + 1; i < sameCategory.length; i++) {
+            const candidateQuest = sameCategory[i];
+            const isClaimed = userClaims.some(c => c.quest_id === candidateQuest.id);
+            const isLocked = isQuestLocked(candidateQuest, userClaims, allQuests);
+            
+           //console.log('[QUESTS] Checking candidate:', candidateQuest.quest_name, '| Claimed:', isClaimed, '| Locked:', isLocked);
+            
+            if (!isClaimed && !isLocked) {
+               //console.log('[QUESTS] Found next quest in same category:', candidateQuest.quest_name);
+                return candidateQuest;
             }
         }
     }
-
-    const firstAvailable = availableItems[0];
-    if (firstAvailable) {
-        const quest = allQuests.find(q => q.quest_key === firstAvailable.dataset.key);
-        console.log('[QUESTS] Found first available quest:', quest?.quest_name);
-        return quest;
+    
+   //console.log('[QUESTS] No next quest in same category, looking for any available quest');
+    
+    // If no next quest in the same category, find the first available quest in any category
+    for (const quest of allQuests) {
+        const isClaimed = userClaims.some(c => c.quest_id === quest.id);
+        const isLocked = isQuestLocked(quest, userClaims, allQuests);
+        
+        if (!isClaimed && !isLocked) {
+           //console.log('[QUESTS] Found first available quest in any category:', quest.quest_name);
+            return quest;
+        }
     }
-
-    console.log('[QUESTS] No next quest found');
+    
+   //console.log('[QUESTS] No next quest found');
     return null;
 }
 
@@ -881,19 +896,22 @@ window.addEventListener('characterChanged', async (e) => {
 });
 
 window.addEventListener("questClaimed", async (e) => {
-    console.log('[QUESTS] questClaimed event fired');
+   //console.log('[QUESTS] questClaimed event fired');
     
-    const nextQuest = findNextAvailableQuest();
-
+    // CRITICAL: Update userClaims BEFORE finding next quest
     userClaims = questState.getUserClaims();
     window.userClaims = userClaims;
+   //console.log('[QUESTS] Updated userClaims after questClaimed event:', userClaims.length);
+    
+    const nextQuest = findNextAvailableQuest();
+    
     await renderQuestsList();
 
     if (nextQuest) {
-        console.log('[QUESTS] Next quest found after claim, showing details:', nextQuest.quest_name);
+       //console.log('[QUESTS] Next quest found after claim, showing details:', nextQuest.quest_name);
         showQuestDetails(nextQuest, false);
     } else {
-        console.log('[QUESTS] No next quest available after claim, clearing details');
+       //console.log('[QUESTS] No next quest available after claim, clearing details');
         clearQuestDetails();
     }
 });
