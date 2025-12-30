@@ -13,18 +13,30 @@ const ARCHETYPE_STYLES = `
 `;
 
 export async function loadArchetypeBanner(characterId) {
+    //console.log('[ARCHETYPES] loadArchetypeBanner called for character:', characterId);
+    
     const banner = document.getElementById('archetype-banner');
     const bannerEmpty = document.getElementById('archetype-banner-empty');
     if (!banner || !bannerEmpty) return;
 
     try {
+        // Initialize state manager if needed
+        if (!questState.isReady()) {
+            //console.log('[ARCHETYPES] State manager not ready, initializing...');
+            await questState.initialize();
+        }
+
         const character = questState.getActiveCharacter();
+        //console.log('[ARCHETYPES] Active character:', character);
 
         if (!character || !character.archetype) {
+            //console.log('[ARCHETYPES] No character or archetype set, showing empty banner');
             banner.classList.add('hidden');
             bannerEmpty.classList.remove('hidden');
             return;
         }
+
+        //console.log('[ARCHETYPES] Character has archetype:', character.archetype);
 
         const response = await fetch(`backend/data/json/archetypes.json?v=${new Date().getTime()}`);
         const archetypes = await response.json();
@@ -44,6 +56,8 @@ export async function loadArchetypeBanner(characterId) {
         const standardCategories = categories.filter(c => !c.is_secret).map(c => c.name);
         const activeCategoryCount = standardCategories.filter(catName => categoryActiveMap[catName]).length;
 
+        //console.log('[ARCHETYPES] Banner stats - Active categories:', activeCategoryCount, '/', standardCategories.length);
+
         document.getElementById('banner-character-name').innerText = character.character_name;
         document.getElementById('display-archetype-name').innerText = character.archetype;
         document.getElementById('display-archetype-icon').className = archData?.icon || 'fas fa-shield-alt';
@@ -61,11 +75,19 @@ export async function loadArchetypeBanner(characterId) {
         bannerEmpty.classList.add('hidden');
 
     } catch (err) {
-        console.error("Banner Logic Exception:", err);
+        console.error("[ARCHETYPES] Banner Logic Exception:", err);
     }
 }
 
 export async function initArchetypeSelection(containerId) {
+    //console.log('[ARCHETYPES] initArchetypeSelection called');
+    
+    // Initialize state manager if needed
+    if (!questState.isReady()) {
+        //console.log('[ARCHETYPES] State manager not ready, initializing...');
+        await questState.initialize();
+    }
+    
     if (!document.getElementById('arch-shared-styles')) {
         const styleSheet = document.createElement("style");
         styleSheet.id = 'arch-shared-styles';
@@ -79,6 +101,7 @@ export async function initArchetypeSelection(containerId) {
     try {
         const response = await fetch(`backend/data/json/archetypes.json?v=${new Date().getTime()}`);
         const archetypes = await response.json();
+        //console.log('[ARCHETYPES] Loaded', archetypes.length, 'archetypes');
 
         container.innerHTML = '';
         archetypes.forEach((arch, i) => {
@@ -95,11 +118,13 @@ export async function initArchetypeSelection(containerId) {
             container.appendChild(node);
         });
     } catch (err) {
-        console.error("[ArchetypeUI] Arch load error:", err);
+        console.error("[ARCHETYPES] Arch load error:", err);
     }
 }
 
 function openDetail(selectedNode, data) {
+    //console.log('[ARCHETYPES] Opening detail for archetype:', data.name);
+    
     const modal = document.getElementById('archetype-modal');
     const modalBox = document.getElementById('modal-box');
     const instructionText = document.getElementById('selection-instruction');
@@ -161,25 +186,52 @@ function openDetail(selectedNode, data) {
         const commitBtn = document.getElementById('commit-path-btn');
         if (commitBtn) {
             commitBtn.onclick = async () => {
+                //console.log('[ARCHETYPES] Commit button clicked for archetype:', data.name);
+                
                 const charId = questState.getActiveCharacterId();
                 const user = questState.getUser();
-                if (!user || !charId) return;
+                const currentCharacter = questState.getActiveCharacter();
+                
+                if (!user || !charId) {
+                    console.error('[ARCHETYPES] No user or character ID found');
+                    return;
+                }
 
                 const newArchetype = data.name;
+                const previousArchetype = currentCharacter?.archetype;
                 const newCategory = `Archetype: ${newArchetype}`;
+                const previousCategory = previousArchetype ? `Archetype: ${previousArchetype}` : null;
+
+                //console.log('[ARCHETYPES] Current archetype:', previousArchetype);
+                //console.log('[ARCHETYPES] New archetype:', newArchetype);
+                //console.log('[ARCHETYPES] Previous category to remove:', previousCategory);
+                //console.log('[ARCHETYPES] New category to add:', newCategory);
 
                 try {
+                    // Step 1: Update the character's archetype in the database using state manager
+                    //console.log('[ARCHETYPES] Step 1: Setting archetype in character record...');
                     await questState.setCharacterArchetype(newArchetype, charId);
+                    //console.log('[ARCHETYPES] Archetype set successfully in character record');
 
                     const { supabase } = await import("../supabaseClient.js");
                     
-                    await supabase
+                    // Step 2: Remove ALL archetype categories from user_unlocked_categories (ensures only one at a time)
+                    //console.log('[ARCHETYPES] Step 2: Removing all archetype categories from unlocked categories...');
+                    const { error: deleteError } = await supabase
                         .from('user_unlocked_categories')
                         .delete()
                         .eq('character_id', charId)
                         .ilike('category_name', 'Archetype: %');
 
-                    await supabase
+                    if (deleteError) {
+                        console.error('[ARCHETYPES] Error removing old archetype categories:', deleteError);
+                        throw deleteError;
+                    }
+                    //console.log('[ARCHETYPES] All archetype categories removed successfully');
+
+                    // Step 3: Add the new archetype category
+                    //console.log('[ARCHETYPES] Step 3: Adding new archetype category:', newCategory);
+                    const { error: insertError } = await supabase
                         .from('user_unlocked_categories')
                         .insert([{
                             user_id: user.id,
@@ -187,9 +239,22 @@ function openDetail(selectedNode, data) {
                             category_name: newCategory
                         }]);
 
+                    if (insertError) {
+                        console.error('[ARCHETYPES] Error adding new archetype category:', insertError);
+                        throw insertError;
+                    }
+                    //console.log('[ARCHETYPES] New archetype category added successfully');
+
+                    // Step 4: Invalidate the state manager cache to pick up changes
+                    //console.log('[ARCHETYPES] Step 4: Invalidating state manager cache...');
+                    await questState.invalidate(['characterData', 'unlockedCategories']);
+                    //console.log('[ARCHETYPES] Cache invalidated successfully');
+
+                    //console.log('[ARCHETYPES] Archetype change complete! Redirecting to quests page...');
                     window.location.href = 'quests.html';
                 } catch (error) {
-                    console.error('Error setting archetype:', error);
+                    console.error('[ARCHETYPES] Error setting archetype:', error);
+                    alert('Error setting archetype. Please try again.');
                 }
             };
         }
@@ -214,6 +279,8 @@ function openDetail(selectedNode, data) {
 }
 
 export function closeModal() {
+    //console.log('[ARCHETYPES] Closing modal');
+    
     const modal = document.getElementById('archetype-modal');
     const modalBox = document.getElementById('modal-box');
     const instructionText = document.getElementById('selection-instruction');

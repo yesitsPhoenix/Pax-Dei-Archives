@@ -160,6 +160,30 @@ function generateSignHtml(quest, baseUrl, version) {
     return `<span class="text-white font-medium mb-1 text-gray-500 italic">No sign sequence found for this quest.</span>`;
 }
 
+function clearQuestDetails() {
+    console.log('[QUESTS] Clearing quest details and showing empty state');
+    
+    activeQuestKey = null;
+    window.activeQuestKey = null;
+    
+    const emptyState = document.getElementById('empty-state');
+    const content = document.getElementById('details-content');
+    
+    if (content) content.classList.add('hidden');
+    if (emptyState) {
+        emptyState.classList.remove('hidden');
+        emptyState.innerHTML = `
+            <div class="text-center text-gray-400">
+                <i class="fa-solid fa-scroll text-4xl mb-4 opacity-20"></i>
+                <p>Select a chronicle from the list to view details</p>
+            </div>`;
+    }
+    
+    const url = new URL(window.location);
+    url.searchParams.delete('quest');
+    window.history.replaceState({}, '', url);
+}
+
 async function claimQuestDirectly(quest) {
     const charId = questState.getActiveCharacterId();
     if (!charId) {
@@ -191,17 +215,11 @@ async function claimQuestDirectly(quest) {
         await renderQuestsList();
 
         if (nextQuest) {
+            console.log('[QUESTS] Next quest found, showing details:', nextQuest.quest_name);
             showQuestDetails(nextQuest, false);
         } else {
-            activeQuestKey = null;
-            window.activeQuestKey = null;
-            const emptyState = document.getElementById('empty-state');
-            const content = document.getElementById('details-content');
-            if (emptyState) emptyState.classList.remove('hidden');
-            if (content) content.classList.add('hidden');
-            const url = new URL(window.location);
-            url.searchParams.delete('quest');
-            window.history.replaceState({}, '', url);
+            console.log('[QUESTS] No next quest available, clearing details');
+            clearQuestDetails();
         }
     } catch (error) {
         showToast(`Error: ${error.message}`, "error");
@@ -238,7 +256,20 @@ function findNextAvailableQuest() {
     if (!listContainer) return null;
 
     const questItems = Array.from(listContainer.querySelectorAll('.quest-item'));
+    
+    // Filter out locked and not-allowed items
+    const availableItems = questItems.filter(item => !item.classList.contains('cursor-not-allowed'));
+    
+    console.log('[QUESTS] findNextAvailableQuest - Total quest items:', questItems.length);
+    console.log('[QUESTS] findNextAvailableQuest - Available items:', availableItems.length);
+    
+    if (availableItems.length === 0) {
+        console.log('[QUESTS] No available quests found');
+        return null;
+    }
+    
     const activeIndex = questItems.findIndex(item => item.dataset.key === activeQuestKey);
+    console.log('[QUESTS] findNextAvailableQuest - Active index:', activeIndex);
 
     if (activeIndex !== -1 && activeIndex + 1 < questItems.length) {
         const currentQuest = allQuests.find(q => q.quest_key === activeQuestKey);
@@ -247,16 +278,20 @@ function findNextAvailableQuest() {
 
         if (currentQuest && nextQuest && currentQuest.category === nextQuest.category) {
             if (!nextItem.classList.contains('cursor-not-allowed')) {
+                console.log('[QUESTS] Found next quest in same category:', nextQuest.quest_name);
                 return nextQuest;
             }
         }
     }
 
-    const firstAvailable = questItems.find(item => !item.classList.contains('cursor-not-allowed'));
+    const firstAvailable = availableItems[0];
     if (firstAvailable) {
-        return allQuests.find(q => q.quest_key === firstAvailable.dataset.key);
+        const quest = allQuests.find(q => q.quest_key === firstAvailable.dataset.key);
+        console.log('[QUESTS] Found first available quest:', quest?.quest_name);
+        return quest;
     }
 
+    console.log('[QUESTS] No next quest found');
     return null;
 }
 
@@ -601,6 +636,7 @@ async function renderQuestsList() {
             
             if (!isQuestCategoryUnlocked) return false;
             
+            // Check hard-lock (category-level requirements)
             const reqCat = quest.unlock_prerequisite_category;
             const reqCount = quest.unlock_required_count;
             
@@ -609,18 +645,15 @@ async function renderQuestsList() {
                 
                 if (reqCount && reqCount > 0) {
                     const categoryRequirementMet = isPrereqCategoryUnlocked && (categoryProgress[reqCat] || 0) >= reqCount;
-                    if (!categoryRequirementMet) return false;
+                    if (!categoryRequirementMet) return false; // Hard-locked, hide it
                 } else {
-                    if (!isPrereqCategoryUnlocked) return false;
+                    if (!isPrereqCategoryUnlocked) return false; // Hard-locked, hide it
                 }
             }
 
-            const prerequisites = quest.prerequisite_quest_ids || [];
-            if (prerequisites.length > 0) {
-                const claimedIds = userClaims.map(c => c.quest_id);
-                const prerequisitesMet = prerequisites.every(id => claimedIds.includes(id));
-                if (!prerequisitesMet) return false;
-            }
+            // Soft-locked quests (prerequisite quests not met) should STILL show
+            // They're visible but not completable
+            // So we don't filter them out here
             
             return true;
         }
@@ -848,6 +881,8 @@ window.addEventListener('characterChanged', async (e) => {
 });
 
 window.addEventListener("questClaimed", async (e) => {
+    console.log('[QUESTS] questClaimed event fired');
+    
     const nextQuest = findNextAvailableQuest();
 
     userClaims = questState.getUserClaims();
@@ -855,17 +890,11 @@ window.addEventListener("questClaimed", async (e) => {
     await renderQuestsList();
 
     if (nextQuest) {
+        console.log('[QUESTS] Next quest found after claim, showing details:', nextQuest.quest_name);
         showQuestDetails(nextQuest, false);
     } else {
-        activeQuestKey = null;
-        window.activeQuestKey = null;
-        const emptyState = document.getElementById('empty-state');
-        const content = document.getElementById('details-content');
-        if (emptyState) emptyState.classList.remove('hidden');
-        if (content) content.classList.add('hidden');
-        const url = new URL(window.location);
-        url.searchParams.delete('quest');
-        window.history.replaceState({}, '', url);
+        console.log('[QUESTS] No next quest available after claim, clearing details');
+        clearQuestDetails();
     }
 });
 

@@ -1,5 +1,6 @@
 import { supabase } from "../supabaseClient.js";
 import { enableSignTooltip, mouseTooltip } from '../ui/signTooltip.js';
+import { questState } from './questStateManager.js';
 
 const alphabet = "abcdefghijklmnopqrstuvwxyz";
 
@@ -25,6 +26,13 @@ async function init() {
         window.location.href = "quests.html";
         return;
     }
+
+    // Initialize quest state manager
+    //console.log('[EDIT_QUEST.HTML] Initializing quest state manager...');
+    if (!questState.isReady()) {
+        await questState.initialize();
+    }
+    //console.log('[EDIT_QUEST.HTML] Quest state manager initialized');
 
     const signRes = await fetch('frontend/www/assets/signs.json');
     const signData = await signRes.json();
@@ -111,13 +119,23 @@ async function renderQuestManager(userId, config) {
         return;
     }
 
-    const categories = [...new Set(quests.map(q => q.category).filter(Boolean))];
-    categories.forEach(cat => {
+    // Load categories from state manager for the filter dropdown
+    //console.log('[EDIT_QUEST.HTML] Loading categories for manager filter dropdown...');
+    if (!questState.isReady()) {
+        await questState.initialize();
+    }
+    
+    const allCategories = questState.getCategories();
+    //console.log('[EDIT_QUEST.HTML] Categories from state manager for filter:', allCategories);
+    //console.log('[EDIT_QUEST.HTML] Total categories for filter:', allCategories.length);
+    
+    allCategories.forEach(cat => {
         const opt = document.createElement('option');
-        opt.value = cat;
-        opt.textContent = cat;
+        opt.value = cat.name;
+        opt.textContent = cat.name;
         filterSelect.appendChild(opt);
     });
+    //console.log('[EDIT_QUEST.HTML] Manager filter dropdown populated with', allCategories.length, 'categories');
 
     const attachTooltip = (el, name) => {
         el.onmouseenter = () => {
@@ -228,6 +246,73 @@ async function renderQuestManager(userId, config) {
     renderRows();
 }
 
+async function loadCategories() {
+    //console.log('[EDIT_QUEST.HTML] loadCategories called');
+    
+    // Wait for state manager to be ready
+    if (!questState.isReady()) {
+        //console.log('[EDIT_QUEST.HTML] State manager not ready, initializing...');
+        await questState.initialize();
+    }
+
+    const categories = questState.getCategories();
+    //console.log('[EDIT_QUEST.HTML] Categories from state manager:', categories);
+    //console.log('[EDIT_QUEST.HTML] Total categories:', categories.length);
+    //console.log('[EDIT_QUEST.HTML] Category names:', categories.map(c => c.name));
+    
+    const catSelect = document.getElementById("quest-category-select");
+    const preCatSelect = document.getElementById("unlock-pre-cat");
+
+    if (catSelect) {
+        catSelect.innerHTML = '<option value="" disabled selected>Select Category</option><option value="NEW">+ Add New Category</option>';
+        categories.forEach(cat => {
+            const opt = new Option(cat.name, cat.name);
+            catSelect.add(opt);
+        });
+        //console.log('[EDIT_QUEST.HTML] Quest category dropdown populated with', catSelect.options.length - 2, 'categories');
+    }
+
+    if (preCatSelect) {
+        preCatSelect.innerHTML = '<option value="">None (Always Unlocked)</option>';
+        categories.forEach(cat => {
+            const opt = new Option(cat.name, cat.name);
+            preCatSelect.add(opt);
+        });
+        //console.log('[EDIT_QUEST.HTML] Prerequisite category dropdown populated with', preCatSelect.options.length - 1, 'categories');
+    }
+}
+
+async function loadRegions() {
+    //console.log('[EDIT_QUEST.HTML] loadRegions called');
+    
+    // Wait for state manager to be ready
+    if (!questState.isReady()) {
+        await questState.initialize();
+    }
+
+    const regions = questState.getRegions();
+    //console.log('[EDIT_QUEST.HTML] Regions from state manager:', regions.length);
+
+    const select = document.getElementById("region-selection");
+    if (!select) return;
+
+    select.innerHTML = '<option value="" disabled selected>Select Location...</option>';
+
+    const globalOption = document.createElement("option");
+    globalOption.value = "global";
+    globalOption.textContent = "Global | All Shards | All Provinces | All Valleys";
+    select.appendChild(globalOption);
+
+    regions.forEach(reg => {
+        const option = document.createElement("option");
+        option.value = reg.id;
+        option.textContent = `${reg.region_name} | ${reg.shard} | ${reg.province} | ${reg.home_valley}`;
+        select.appendChild(option);
+    });
+    
+    //console.log('[EDIT_QUEST.HTML] Region dropdown populated with', regions.length, 'regions');
+}
+
 async function loadEditor(userId, signData) {
     const { baseUrl, version } = signData.config;
 
@@ -246,44 +331,11 @@ async function loadEditor(userId, signData) {
         return;
     }
 
-    const { data: allQuests } = await supabase
-        .from("cipher_quests")
-        .select("category");
-
-    const categories = [...new Set(allQuests.map(q => q.category).filter(Boolean))];
-    const catSelect = document.getElementById("quest-category-select");
-    const unlockPreCat = document.getElementById("unlock-pre-cat");
+    //console.log('[EDIT_QUEST.HTML] Loading categories for editor...');
+    await loadCategories();
     
-    catSelect.innerHTML = '<option value="" disabled selected>Select Category</option><option value="NEW">+ Add New Category</option>';
-    unlockPreCat.innerHTML = '<option value="">None (Always Unlocked)</option>';
-    
-    categories.forEach(cat => {
-        const opt = document.createElement("option");
-        opt.value = cat;
-        opt.textContent = cat;
-        catSelect.appendChild(opt.cloneNode(true));
-        unlockPreCat.appendChild(opt.cloneNode(true));
-    });
-
-    const { data: regions } = await supabase
-        .from("regions")
-        .select("*")
-        .order("region_name", { ascending: true })
-        .order("shard", { ascending: true });
-
-    const select = document.getElementById("region-selection");
-    select.innerHTML = '<option value="">Select Location...</option>';
-    const globalOption = document.createElement("option");
-    globalOption.value = "global";
-    globalOption.textContent = "Global | All Shards | All Provinces | All Valleys";
-    select.appendChild(globalOption);
-
-    regions.forEach(reg => {
-        const option = document.createElement("option");
-        option.value = reg.id;
-        option.textContent = `${reg.region_name} | ${reg.shard} | ${reg.province} | ${reg.home_valley}`;
-        select.appendChild(option);
-    });
+    //console.log('[EDIT_QUEST.HTML] Loading regions for editor...');
+    await loadRegions();
 
     grid.innerHTML = "";
     allSignIds.forEach(fullId => {
@@ -347,14 +399,27 @@ async function loadEditor(userId, signData) {
 }
 
 async function loadPrerequisiteOptionsForEdit(containerId, existingIds = []) {
-    const { data: quests, error } = await supabase
-        .from('cipher_quests')
-        .select('id, quest_name, category')
-        .neq('id', questId)
-        .order('category', { ascending: true });
+    //console.log('[EDIT_QUEST.HTML] Loading prerequisite options...');
+    
+    // Use state manager to get quests
+    if (!questState.isReady()) {
+        await questState.initialize();
+    }
+
+    const allQuests = questState.getAllQuests();
+    const quests = allQuests
+        .filter(q => q.id !== questId)
+        .map(q => ({
+            id: q.id,
+            quest_name: q.quest_name,
+            category: q.category || 'Uncategorized'
+        }))
+        .sort((a, b) => a.category.localeCompare(b.category));
+    
+    //console.log('[EDIT_QUEST.HTML] Loaded', quests.length, 'quests for prerequisites');
 
     const parent = document.getElementById(containerId);
-    if (error || !parent) return;
+    if (!parent) return;
 
     parent.innerHTML = `
         <div class="mb-3">
@@ -390,6 +455,7 @@ async function loadPrerequisiteOptionsForEdit(containerId, existingIds = []) {
     });
 
     renderPrereqs();
+    //console.log('[EDIT_QUEST.HTML] Prerequisite container populated');
 }
 
 function updateSelected(baseUrl, version) {
@@ -505,6 +571,24 @@ function setupEditorEvents(baseUrl, version) {
         let finalCategory = categorySelect.value;
         if (finalCategory === "NEW") {
             finalCategory = newCategoryInput.value.trim();
+            
+            if (!finalCategory) {
+                alert("Please enter a name for the new category.");
+                return;
+            }
+            
+            // Add new category to database
+            const { error: catError } = await supabase
+                .from("quest_categories")
+                .upsert({ name: finalCategory, is_secret: false }, { onConflict: 'name' });
+            
+            if (catError) {
+                alert("Error saving new category: " + catError.message);
+                return;
+            }
+            
+            // Invalidate the categories cache to pick up the new category
+            await questState.invalidate(['categories']);
         }
 
         const reward_keys = selected.map(placedId => {
@@ -541,6 +625,8 @@ function setupEditorEvents(baseUrl, version) {
         if (error) {
             alert(error.message);
         } else {
+            // Invalidate quests cache after updating
+            await questState.invalidate(['quests']);
             window.location.href = 'edit_quest.html';
         }
     };
