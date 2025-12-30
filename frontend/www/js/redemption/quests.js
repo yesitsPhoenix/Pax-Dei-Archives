@@ -254,28 +254,66 @@ function isQuestLocked(quest, claims, quests) {
 }
 
 function findNextAvailableQuest() {
-   //console.log('[QUESTS] findNextAvailableQuest called with activeQuestKey:', activeQuestKey);
-    
-    if (!activeQuestKey) {
-       //console.log('[QUESTS] No active quest key, cannot find next');
-        return null;
+//console.log('[QUESTS] findNextAvailableQuest called with activeQuestKey:', activeQuestKey);
+
+if (!activeQuestKey) {
+//console.log('[QUESTS] No active quest key, cannot find next');
+return null;
+}
+
+const currentQuest = allQuests.find(q => q.quest_key === activeQuestKey);
+if (!currentQuest) {
+//console.log('[QUESTS] Current quest not found in allQuests');
+return null;
+}
+
+//console.log('[QUESTS] Current quest:', currentQuest.quest_name, '| Category:', currentQuest.category);
+
+// Get user's archetype
+const character = questState.getActiveCharacter();
+const userArchetype = character?.archetype;
+//console.log('[QUESTS] User archetype:', userArchetype || 'none');
+
+// Get unlocked categories
+const unlockedCategoriesList = questState.getUnlockedCategories();
+const unlockedCategories = new Set(unlockedCategoriesList);
+
+// Get secret categories
+const categoriesData = questState.getCategories();
+const secretCategoryNames = new Set(
+categoriesData.filter(c => c.is_secret).map(c => c.name)
+);
+
+// Helper function to check if a quest is available to the user
+const isQuestAvailableToUser = (quest) => {
+// Check archetype restrictions
+const category = quest.category || "Uncategorized";
+if (category.startsWith('Archetype: ')) {
+const archetypeName = category.replace('Archetype: ', '').trim();
+    if (userArchetype !== archetypeName) {
+            //console.log('[QUESTS] Quest', quest.quest_name, 'filtered: wrong archetype (needs', archetypeName, ', user has', userArchetype || 'none', ')');
+            return false;
+        }
     }
     
-    const currentQuest = allQuests.find(q => q.quest_key === activeQuestKey);
-    if (!currentQuest) {
-       //console.log('[QUESTS] Current quest not found in allQuests');
-        return null;
-    }
-    
-   //console.log('[QUESTS] Current quest:', currentQuest.quest_name, '| Category:', currentQuest.category);
-    
-    // Get all quests in the same category as the current quest
+    // Check if category is secret and unlocked
+const isSecret = secretCategoryNames.has(category);
+const isUnlocked = unlockedCategories.has(category);
+if (isSecret && !isUnlocked) {
+    //console.log('[QUESTS] Quest', quest.quest_name, 'filtered: secret category not unlocked');
+return false;
+}
+
+    return true;
+};
+
+// Get all quests in the same category as the current quest
     const sameCategory = allQuests.filter(q => q.category === currentQuest.category);
-   //console.log('[QUESTS] Quests in same category:', sameCategory.length);
+    //console.log('[QUESTS] Quests in same category:', sameCategory.length);
     
     // Find the index of the current quest within its category
     const currentIndexInCategory = sameCategory.findIndex(q => q.quest_key === activeQuestKey);
-   //console.log('[QUESTS] Current index in category:', currentIndexInCategory);
+    //console.log('[QUESTS] Current index in category:', currentIndexInCategory);
     
     // Try to find the next unclaimed quest in the same category
     if (currentIndexInCategory !== -1) {
@@ -284,29 +322,29 @@ function findNextAvailableQuest() {
             const isClaimed = userClaims.some(c => c.quest_id === candidateQuest.id);
             const isLocked = isQuestLocked(candidateQuest, userClaims, allQuests);
             
-           //console.log('[QUESTS] Checking candidate:', candidateQuest.quest_name, '| Claimed:', isClaimed, '| Locked:', isLocked);
+            //console.log('[QUESTS] Checking candidate:', candidateQuest.quest_name, '| Claimed:', isClaimed, '| Locked:', isLocked);
             
-            if (!isClaimed && !isLocked) {
-               //console.log('[QUESTS] Found next quest in same category:', candidateQuest.quest_name);
+            if (!isClaimed && !isLocked && isQuestAvailableToUser(candidateQuest)) {
+                //console.log('[QUESTS] Found next quest in same category:', candidateQuest.quest_name);
                 return candidateQuest;
             }
         }
     }
     
-   //console.log('[QUESTS] No next quest in same category, looking for any available quest');
+    //console.log('[QUESTS] No next quest in same category, looking for any available quest');
     
     // If no next quest in the same category, find the first available quest in any category
     for (const quest of allQuests) {
         const isClaimed = userClaims.some(c => c.quest_id === quest.id);
         const isLocked = isQuestLocked(quest, userClaims, allQuests);
         
-        if (!isClaimed && !isLocked) {
-           //console.log('[QUESTS] Found first available quest in any category:', quest.quest_name);
+        if (!isClaimed && !isLocked && isQuestAvailableToUser(quest)) {
+            //console.log('[QUESTS] Found first available quest in any category:', quest.quest_name);
             return quest;
         }
     }
     
-   //console.log('[QUESTS] No next quest found');
+    //console.log('[QUESTS] No next quest found');
     return null;
 }
 
