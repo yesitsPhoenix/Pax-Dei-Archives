@@ -145,8 +145,17 @@ async function renderSignPicker(targetId) {
 
 async function showAddForm(recordToEdit = null) {
     selectedSignsForForm = [];
-    isEditMode = !!recordToEdit;
-    editingRecordId = recordToEdit ? (recordToEdit.id || recordToEdit.name) : null;
+    
+    // Ensure we only enter edit mode if there's actually a record to edit
+    if (recordToEdit && (recordToEdit.id || recordToEdit.name)) {
+        isEditMode = true;
+        editingRecordId = recordToEdit.id || recordToEdit.name;
+        //console.log('Edit mode activated for:', editingRecordId);
+    } else {
+        isEditMode = false;
+        editingRecordId = null;
+        //console.log('Create mode activated');
+    }
     
     const config = tableConfigs[currentTable];
     const container = document.getElementById('add-form-container');
@@ -354,6 +363,15 @@ async function saveRecord() {
     const config = tableConfigs[currentTable];
     const payload = {};
     
+    // Validation for quest categories
+    if (currentTable === 'quest_categories') {
+        const nameField = document.getElementById('field-name');
+        if (!nameField || !nameField.value.trim()) {
+            alert('Category name is required!');
+            return;
+        }
+    }
+    
     config.insertable.forEach(field => {
         const el = document.getElementById(`field-${field}`);
         if (!el) return;
@@ -373,21 +391,32 @@ async function saveRecord() {
         payload.unlock_sequence = payload.unlock_sequence ? payload.unlock_sequence : null;
     }
 
-    let error;
+    //console.log('Attempting to save record:', payload);
+    //console.log('Current table:', currentTable);
+    //console.log('Edit mode:', isEditMode);
+
+    let error, data;
     
     if (isEditMode) {
         if (currentTable === 'quest_categories') {
-            ({ error } = await supabase.from(currentTable).update(payload).eq('name', editingRecordId));
+            ({ error, data } = await supabase.from(currentTable).update(payload).eq('name', editingRecordId).select());
         } else {
-            ({ error } = await supabase.from(currentTable).update(payload).eq('id', editingRecordId));
+            ({ error, data } = await supabase.from(currentTable).update(payload).eq('id', editingRecordId).select());
         }
     } else {
-        ({ error } = await supabase.from(currentTable).insert([payload]));
+        ({ error, data } = await supabase.from(currentTable).insert([payload]).select());
     }
     
+    //console.log('Save result - Error:', error);
+    //console.log('Save result - Data:', data);
+    
     if (error) {
-        alert(error.message);
-    } else { 
+        console.error('Database error:', error);
+        alert(`Error: ${error.message}\nDetails: ${error.details || 'No additional details'}\nHint: ${error.hint || 'No hint available'}`);
+    } else {
+        //console.log('Record saved successfully:', data);
+        showToast(isEditMode ? 'Record updated successfully!' : 'Record created successfully!', 'success');
+        
         document.getElementById('add-form-container').classList.add('hidden');
         
         isEditMode = false;
@@ -399,8 +428,25 @@ async function saveRecord() {
             }
         }
         
-        fetchTableData(); 
+        await fetchTableData();
     }
+}
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `fixed top-24 right-6 px-6 py-4 rounded-lg shadow-2xl toast-animate z-50 ${type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600'} text-white font-semibold`;
+    toast.innerHTML = `
+        <div class="flex items-center gap-3">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} text-xl"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
 
 async function deleteRecord(identifier) {
@@ -458,7 +504,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (tab) tab.onclick = () => setActiveTab(id);
     });
     
-    document.getElementById('add-entry-btn').onclick = showAddForm;
+    document.getElementById('add-entry-btn').onclick = () => {
+        // Explicitly reset edit mode when clicking "Create New"
+        isEditMode = false;
+        editingRecordId = null;
+        //console.log('Create New button clicked - Reset edit mode');
+        showAddForm();
+    };
     document.getElementById('cancel-form').onclick = () => {
         document.getElementById('add-form-container').classList.add('hidden');
         isEditMode = false;
