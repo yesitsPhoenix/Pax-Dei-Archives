@@ -7,7 +7,7 @@
   },
   {
     "name": "The Ranger",
-    "icon": "fa-solid fa-paw",
+    "icon": "bx bx-bow",
     "skills": ["Skinning", "Leatherworking"],
     "desc": "A master of the wild who respects the kill, using toughened hides to forge unbreakable protection."
   },
@@ -25,7 +25,7 @@
   },
   {
     "name": "The Weaponsmith",
-    "icon": "fa-solid fa-shield-halved",
+    "icon": "bx bx-sword-alt",
     "skills": ["Mining", "Weaponsmithing"],
     "desc": "The thunder of the forge follows you. You turn cold iron into the heat of battle-ready steel."
   },
