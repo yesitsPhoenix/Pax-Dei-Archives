@@ -1,6 +1,23 @@
+/**
+ * market_listings.js - Modified for State Manager Integration
+ * 
+ * WEEK 2: listings.html migration
+ * 
+ * This file now has dual code paths:
+ * - OLD PATH: Direct Supabase queries (fallback)
+ * - NEW PATH: State manager (enabled via feature flags)
+ * 
+ * Test with: listings.html?features=listings.useStateManager,listings.enabled
+ */
+
 import { supabase } from './supabaseClient.js';
+import { marketState } from './marketStateManager.js';
+import { features, initFeatureFlags, shouldUseStateManager } from './featureFlags.js';
 import { openImportModal } from './import_data.js';
 import { isLoggedIn, logout, getUserProfile } from './utils.js';
+
+// Initialize feature flags
+initFeatureFlags();
 
 const REGION_SHARD_MAP = {
     'EU': ['Arcadia', 'Demeter', 'Tyr', 'Fenrir'],
@@ -139,22 +156,94 @@ const updateRegionOptions = (selectedShard, initialLoad = false) => {
     }
 };
 
-export const populateFilters = async () => {
+// ===== NEW: State Manager Version =====
+async function populateFiltersFromState() {
+    //console.log('[Listings] Using state manager for filters');
+    
+    // Get cached data (instant - no database queries!)
+    const items = marketState.getAllItems();
+    const categories = marketState.getItemCategories();
+    
+    // Populate region/shard/province/valley (same as before)
+    updateRegionOptions('', true);
+    updateShardOptions('', true);
+    
+    filterProvinceInput.innerHTML = '<option value="">All Provinces</option>';
+    ['Kerys', 'Ancien', 'Merrie', 'Inis Gallia'].forEach(p => 
+        filterProvinceInput.appendChild(createOption(p, p))
+    );
+    
+    filterHomeValleyInput.innerHTML = '<option value="">All Valleys</option>';
+    ["Aras","Ardbog","Ardennes","Armanhac","Astarac","Atigny","Aven","Bearm","Bronyr","Caster",
+     "Dolovan","Down","Dreger","Ewyas","Gael","Gravas","Javerdus","Jura","Langres","Lavedan",
+     "Libornes","Llydaw","Maremna","Morvan","Nene","Nones","Pladenn","Retz","Salias","Shire",
+     "Tolosa","Trecassis","Tremen","Tursan","Ulaid","Vanes","Vitry","Volvestre","Wiht","Yarborn"]
+        .forEach(v => filterHomeValleyInput.appendChild(createOption(v, v)));
+    
+    // Populate categories from cache
+    filterCategoryInput.innerHTML = '<option value="">All Categories</option>';
+    categories
+        .sort((a, b) => a.category_name.localeCompare(b.category_name))
+        .forEach(cat => 
+            filterCategoryInput.appendChild(createOption(cat.category_id, cat.category_name))
+        );
+    
+    // Populate items from cache
+    filterItemNameInput.innerHTML = '<option value="">All Items</option>';
+    items
+        .sort((a, b) => a.item_name.localeCompare(b.item_name))
+        .forEach(item => 
+            filterItemNameInput.appendChild(createOption(item.item_id, item.item_name))
+        );
+    
+    //console.log(`[Listings] ✓ Populated filters: ${items.length} items, ${categories.length} categories`);
+}
+
+// ===== KEEP: Original Version =====
+async function populateFiltersOriginal() {
     updateRegionOptions('', true);
     updateShardOptions('', true);
 
     filterProvinceInput.innerHTML = '<option value="">All Provinces</option>';
-    ['Kerys', 'Ancien', 'Merrie', 'Inis Gallia'].forEach(p => filterProvinceInput.appendChild(createOption(p, p)));
+    ['Kerys', 'Ancien', 'Merrie', 'Inis Gallia'].forEach(p => 
+        filterProvinceInput.appendChild(createOption(p, p))
+    );
+    
     filterHomeValleyInput.innerHTML = '<option value="">All Valleys</option>';
-    ["Aras","Ardbog","Ardennes","Armanhac","Astarac","Atigny","Aven","Bearm","Bronyr","Caster","Dolovan","Down","Dreger","Ewyas","Gael","Gravas","Javerdus","Jura","Langres","Lavedan","Libornes","Llydaw","Maremna","Morvan","Nene","Nones","Pladenn","Retz","Salias","Shire","Tolosa","Trecassis","Tremen","Tursan","Ulaid","Vanes","Vitry","Volvestre","Wiht","Yarborn"].forEach(v => filterHomeValleyInput.appendChild(createOption(v, v)));
+    ["Aras","Ardbog","Ardennes","Armanhac","Astarac","Atigny","Aven","Bearm","Bronyr","Caster",
+     "Dolovan","Down","Dreger","Ewyas","Gael","Gravas","Javerdus","Jura","Langres","Lavedan",
+     "Libornes","Llydaw","Maremna","Morvan","Nene","Nones","Pladenn","Retz","Salias","Shire",
+     "Tolosa","Trecassis","Tremen","Tursan","Ulaid","Vanes","Vitry","Volvestre","Wiht","Yarborn"]
+        .forEach(v => filterHomeValleyInput.appendChild(createOption(v, v)));
 
-    const { data: categories } = await supabase.from('item_categories').select('*').order('category_name', { ascending: true });
+    const { data: categories } = await supabase
+        .from('item_categories')
+        .select('*')
+        .order('category_name', { ascending: true });
+    
     filterCategoryInput.innerHTML = '<option value="">All Categories</option>';
-    categories?.forEach(cat => filterCategoryInput.appendChild(createOption(cat.category_id, cat.category_name)));
+    categories?.forEach(cat => 
+        filterCategoryInput.appendChild(createOption(cat.category_id, cat.category_name))
+    );
 
-    const { data: items } = await supabase.from('items').select('item_name, item_id').order('item_name', { ascending: true });
+    const { data: items } = await supabase
+        .from('items')
+        .select('item_name, item_id')
+        .order('item_name', { ascending: true });
+    
     filterItemNameInput.innerHTML = '<option value="">All Items</option>';
-    items?.forEach(item => filterItemNameInput.appendChild(createOption(item.item_id, item.item_name)));
+    items?.forEach(item => 
+        filterItemNameInput.appendChild(createOption(item.item_id, item.item_name))
+    );
+}
+
+// ===== ROUTER: Choose which version to use =====
+export const populateFilters = async () => {
+    if (shouldUseStateManager('listings')) {
+        return await populateFiltersFromState();
+    } else {
+        return await populateFiltersOriginal();
+    }
 };
 
 const formatDate = (dateString) => {
@@ -305,7 +394,46 @@ const renderPagination = (totalCount, currentPage) => {
     paginationContainer.append(makeBtn('Last', totalPages, currentPage === totalPages));
 };
 
-export const fetchActiveListings = async (page, filters = {}) => {
+// ===== NEW: State Manager Version =====
+async function fetchActiveListingsFromState(page, filters = {}) {
+    //console.log(`[Listings] Using state manager (page ${page})`);
+    //console.time('[Listings] Fetch time');
+    
+    listingResultsBody.style.opacity = '0.5';
+    listingResultsBody.style.pointerEvents = 'none';
+
+    try {
+        // Single call to state manager (handles caching internally)
+        const result = await marketState.getPublicListings(filters, page);
+        const { listings, pagination } = result;
+        
+        //console.log(`[Listings] ✓ Got ${listings.length} listings from state manager`);
+        //console.timeEnd('[Listings] Fetch time');
+        
+        // Render summary cards
+        renderMarketSummary(listings);
+        
+        // Sort listings
+        const sorted = sortListings([...listings], currentSortColumn, currentSortDirection);
+        
+        // Render listings
+        renderListings(sorted);
+        
+        // Render pagination
+        renderPagination(pagination.totalCount, pagination.currentPage);
+        
+    } catch (error) {
+        console.error('[Listings] Error fetching from state manager:', error);
+        listingResultsBody.innerHTML = `<tr><td colspan="8" class="text-red-400 text-center py-4">Error: ${error.message}</td></tr>`;
+        renderMarketSummary([]);
+    } finally {
+        listingResultsBody.style.opacity = '1';
+        listingResultsBody.style.pointerEvents = 'auto';
+    }
+}
+
+// ===== KEEP: Original Version =====
+async function fetchActiveListingsOriginal(page, filters = {}) {
     listingResultsBody.style.opacity = '0.5';
     listingResultsBody.style.pointerEvents = 'none';
 
@@ -351,7 +479,6 @@ export const fetchActiveListings = async (page, filters = {}) => {
         
         renderMarketSummary(filtered);
 
-
         const alphabeticallySorted = filtered.sort((a, b) =>
             (a.items?.item_name?.toLowerCase() || '').localeCompare(b.items?.item_name?.toLowerCase() || '')
         );
@@ -361,7 +488,7 @@ export const fetchActiveListings = async (page, filters = {}) => {
         const pageSlice = finalSorted.slice(from, to + 1);
 
         renderListings(pageSlice);
-        renderPagination(finalSorted.length, page);
+        renderPagination(filtered.length, page);
     } catch (err) {
         console.error('fetchActiveListings error:', err);
         listingResultsBody.innerHTML = `<tr><td colspan="8" class="text-red-400 text-center py-4">Error loading listings.</td></tr>`;
@@ -370,8 +497,16 @@ export const fetchActiveListings = async (page, filters = {}) => {
         listingResultsBody.style.opacity = '1';
         listingResultsBody.style.pointerEvents = 'auto';
     }
-};
+}
 
+// ===== ROUTER: Choose which version to use =====
+export const fetchActiveListings = async (page, filters = {}) => {
+    if (shouldUseStateManager('listings')) {
+        return await fetchActiveListingsFromState(page, filters);
+    } else {
+        return await fetchActiveListingsOriginal(page, filters);
+    }
+};
 
 const attachSortingHandlers = () => {
     const headers = document.querySelectorAll(".sortable-header");
@@ -424,21 +559,66 @@ const clearFilters = () => {
     fetchActiveListings(currentPage, {});
 };
 
+// ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', async () => {
     const isAdmin = await checkAdminAuth();
     
     if (isAdmin) {
-        const traderLoginContainer = document.getElementById('traderLoginContainer');
-        
-        await populateFilters();
-        
-        applyFiltersBtn.addEventListener('click', applyFilters);
-        clearFiltersBtn.addEventListener('click', clearFilters);
-        
-        filterRegionInput.addEventListener('change', handleRegionFilterChange);
-        filterShardInput.addEventListener('change', handleShardFilterChange);
-        
-        attachSortingHandlers();
-        fetchActiveListings(currentPage);
+        // Check if we should use state manager
+        if (shouldUseStateManager('listings')) {
+            //console.log('[Listings] 🚀 State manager enabled!');
+            
+            try {
+                // Initialize state manager (skip character data - not needed for listings)
+                //console.time('[Listings] State manager init');
+                await marketState.initialize({ skipCharacterData: true });
+                //console.timeEnd('[Listings] State manager init');
+                
+                //console.log('[Listings] Cache stats:', marketState.getCacheStats());
+                
+                // Use state manager path
+                await populateFilters();
+                
+                // Event listeners
+                applyFiltersBtn.addEventListener('click', applyFilters);
+                clearFiltersBtn.addEventListener('click', clearFilters);
+                filterRegionInput.addEventListener('change', handleRegionFilterChange);
+                filterShardInput.addEventListener('change', handleShardFilterChange);
+                
+                attachSortingHandlers();
+                
+                // Initial load
+                await fetchActiveListings(currentPage);
+                
+            } catch (error) {
+                console.error('[Listings] State manager failed, falling back to original code:', error);
+                
+                // Automatic fallback to original code
+                features.pages.listings.useStateManager = false;
+                
+                // Use original initialization
+                await populateFiltersOriginal();
+                applyFiltersBtn.addEventListener('click', applyFilters);
+                clearFiltersBtn.addEventListener('click', clearFilters);
+                filterRegionInput.addEventListener('change', handleRegionFilterChange);
+                filterShardInput.addEventListener('change', handleShardFilterChange);
+                attachSortingHandlers();
+                await fetchActiveListingsOriginal(currentPage);
+            }
+        } else {
+            //console.log('[Listings] Using original code path (state manager disabled)');
+            
+            // Original initialization
+            await populateFilters();
+            
+            applyFiltersBtn.addEventListener('click', applyFilters);
+            clearFiltersBtn.addEventListener('click', clearFilters);
+            
+            filterRegionInput.addEventListener('change', handleRegionFilterChange);
+            filterShardInput.addEventListener('change', handleShardFilterChange);
+            
+            attachSortingHandlers();
+            fetchActiveListings(currentPage);
+        }
     }
 });

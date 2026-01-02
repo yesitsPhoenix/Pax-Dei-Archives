@@ -7,7 +7,7 @@
   },
   {
     "name": "The Ranger",
-    "icon": "bx bx-bow",
+    "icon": "fa-solid fa-person-hiking",
     "skills": ["Skinning", "Leatherworking"],
     "desc": "A master of the wild who respects the kill, using toughened hides to forge unbreakable protection."
   },
@@ -25,7 +25,7 @@
   },
   {
     "name": "The Weaponsmith",
-    "icon": "bx bx-sword-alt",
+    "icon": "fa-solid fa-gavel",
     "skills": ["Mining", "Weaponsmithing"],
     "desc": "The thunder of the forge follows you. You turn cold iron into the heat of battle-ready steel."
   },
@@ -37,7 +37,7 @@
   },
   {
     "name": "The Chef",
-    "icon": "bx bx-bowl-hot",
+    "icon": "fa-solid fa-kitchen-set",
     "skills": ["Skinning", "Cooking"],
     "desc": "Culinary artist who transforms simple ingredients into feasts that nourish both body and spirit."
   },
