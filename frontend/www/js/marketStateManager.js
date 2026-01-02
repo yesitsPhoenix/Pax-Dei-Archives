@@ -562,7 +562,7 @@ async loadAllCharactersData() {
       query = query.eq('market_stalls.region', filters.region);
     }
     if (filters.shard) {
-      query = query.eq('market_stalls.shard', filters.shard);
+      query = query.eq('characters.shard', filters.shard);
     }
     if (filters.province) {
       query = query.eq('market_stalls.province', filters.province);
@@ -571,10 +571,11 @@ async loadAllCharactersData() {
       query = query.eq('market_stalls.home_valley', filters.homeValley);
     }
     if (filters.category) {
-      query = query.eq('items.category_id', filters.category);
+      query = query.eq('items.category_id', parseInt(filters.category));
     }
     if (filters.itemName) {
-      query = query.eq('items.item_name', filters.itemName);
+      // itemName filter actually contains item_id from the dropdown
+      query = query.eq('item_id', parseInt(filters.itemName));
     }
     
     // Pagination

@@ -304,8 +304,9 @@ export const sortListings = (listings, column, direction) => {
     });
 };
 
-const renderMarketSummary = (listings) => {
-    totalListingsCount.textContent = listings.length;
+const renderMarketSummary = (listings, totalCount = null) => {
+    // Use provided totalCount if available, otherwise use listings.length
+    totalListingsCount.textContent = totalCount !== null ? totalCount : listings.length;
 
     const activeListings = listings.filter(l => !(l.is_fully_sold || l.is_cancelled));
     
@@ -410,8 +411,8 @@ async function fetchActiveListingsFromState(page, filters = {}) {
         //console.log(`[Listings] ✓ Got ${listings.length} listings from state manager`);
         //console.timeEnd('[Listings] Fetch time');
         
-        // Render summary cards
-        renderMarketSummary(listings);
+        // Render summary cards with total count
+        renderMarketSummary(listings, pagination.totalCount);
         
         // Sort listings
         const sorted = sortListings([...listings], currentSortColumn, currentSortDirection);
