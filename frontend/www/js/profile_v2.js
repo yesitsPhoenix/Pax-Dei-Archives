@@ -795,7 +795,41 @@ async function handleDeleteCharacter() {
 
         if (!confirmed) return;
 
-        // Delete character
+        // Delete related records first to avoid foreign key constraint violations
+        // 1. Delete user_unlocked_categories (chronicles/quests)
+        const { error: unlocksError } = await supabase
+            .from('user_unlocked_categories')
+            .delete()
+            .eq('character_id', currentCharacterId);
+
+        if (unlocksError) {
+            console.warn('Error deleting unlocked categories:', unlocksError);
+            // Continue anyway - this is non-critical
+        }
+
+        // 2. Delete user_claims (quest claims)
+        const { error: claimsError } = await supabase
+            .from('user_claims')
+            .delete()
+            .eq('character_id', currentCharacterId);
+
+        if (claimsError) {
+            console.warn('Error deleting user claims:', claimsError);
+            // Continue anyway - this is non-critical
+        }
+
+        // 3. Delete PVE transactions
+        const { error: pveError } = await supabase
+            .from('pve_transactions')
+            .delete()
+            .eq('character_id', currentCharacterId);
+
+        if (pveError) {
+            console.warn('Error deleting PVE transactions:', pveError);
+            // Continue anyway - this is non-critical
+        }
+
+        // Now delete the character
         const { error: deleteError } = await supabase
             .from('characters')
             .delete()
