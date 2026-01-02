@@ -171,16 +171,67 @@ async function loadArchetype(characterId) {
  */
 async function loadFeatsSummary(characterId) {
     try {
-        // This would require a heroic_feats_claims or similar table
-        // For now, show a placeholder
+        // Fetch heroic feats from database
+        const { data: allFeats, error: featsError } = await supabase
+            .from('heroic_feats')
+            .select('*')
+            .eq('active', true)
+            .order('sort_order', { ascending: true });
+
+        if (featsError) throw featsError;
+
+        // Fetch user's quest claims for this character
+        const { data: userClaims, error: claimsError } = await supabase
+            .from('user_claims')
+            .select('quest_id')
+            .eq('character_id', characterId);
+
+        if (claimsError) throw claimsError;
+
+        // Fetch all quests to calculate category progress
+        const { data: allQuests, error: questsError } = await supabase
+            .from('cipher_quests')
+            .select('id, category')
+            .eq('active', true);
+
+        if (questsError) throw questsError;
+
+        // Calculate category progress
+        const categoryProgress = {};
+        allQuests.forEach(q => {
+            const cat = q.category || 'Uncategorized';
+            if (!categoryProgress[cat]) {
+                categoryProgress[cat] = { total: 0, completed: 0 };
+            }
+            categoryProgress[cat].total++;
+            if (userClaims.some(c => c.quest_id === q.id)) {
+                categoryProgress[cat].completed++;
+            }
+        });
+
+        // Count how many feats are earned
+        let earned = 0;
+        allFeats.forEach(feat => {
+            const targetCategory = feat.required_category || feat.category;
+            const stats = categoryProgress[targetCategory] || { total: 0, completed: 0 };
+            const totalToCompare = feat.required_count || stats.total;
+            
+            if (totalToCompare > 0 && stats.completed >= totalToCompare) {
+                earned++;
+            }
+        });
+
+        const total = allFeats.length;
+        const percentage = total > 0 ? (earned / total * 100).toFixed(1) : 0;
+
         featsSummary.innerHTML = `
             <div class="text-center py-4">
-                <div class="text-3xl font-bold text-white mb-1">0<span class="text-gray-500">/0</span></div>
+                <div class="text-3xl font-bold text-white mb-1">${earned}<span class="text-gray-500">/${total}</span></div>
                 <p class="text-gray-400 text-sm">Completed</p>
                 <div class="mt-3 bg-gray-800 rounded-full h-2 overflow-hidden">
-                    <div class="bg-gradient-to-r from-yellow-500 to-orange-500 h-full transition-all duration-500" style="width: 0%"></div>
+                    <div class="bg-gradient-to-r from-yellow-500 to-orange-500 h-full transition-all duration-500" style="width: ${percentage}%"></div>
                 </div>
-                <p class="text-xs text-gray-500 mt-2">0%</p>
+                <p class="text-xs text-gray-500 mt-2">${percentage}%</p>
             </div>
         `;
 
