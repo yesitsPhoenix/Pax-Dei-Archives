@@ -11,7 +11,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dagre/0.8.5/dagre.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cytoscape-dagre@2.5.0/cytoscape-dagre.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cytoscape-cola@2.5.1/cytoscape-cola.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/webcola@3.4.0/WebCola/cola.min.js"></script>
     <style>
         .page-content { 
             background-color: #1a1a1a; 
@@ -30,7 +34,7 @@
             transition: grid-template-columns 0.3s ease;
             margin-left: 4rem;
         }
-        #layout-wrapper.collapsed {
+        #layout-wrapper.collapsed-state {
             grid-template-columns: 1fr 45px;
         }
         #quest-diagram-container { 
@@ -46,11 +50,54 @@
             width: 100%;
             height: 100%;
             display: block;
+            background: #0d0d0d;
         }
-        .node circle { stroke: #b8860b; stroke-width: 2.5px; cursor: pointer; }
-        .node text { font-size: 11px; fill: #ffffff; font-weight: 500; text-shadow: 0 1px 3px #000; pointer-events: none; }
-        .link { fill: none; stroke: #444; stroke-width: 2px; opacity: 0.3; }
-        .link.virtual { stroke: transparent; }
+        .cy-node-label {
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            text-shadow: 0 1px 3px #000;
+        }
+        .validation-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        .validation-error {
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 3px solid #ef4444;
+            color: #fca5a5;
+        }
+        .validation-warning {
+            background: rgba(251, 191, 36, 0.1);
+            border-left: 3px solid #fbbf24;
+            color: #fde68a;
+        }
+        .validation-success {
+            background: rgba(34, 197, 94, 0.1);
+            border-left: 3px solid #22c55e;
+            color: #86efac;
+        }
+        .metric-card {
+            background: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+        .metric-label {
+            color: #888;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .metric-value {
+            color: #FFD700;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-top: 4px;
+        }
         .inspector-panel { background: #111; border: 1px solid #333; border-radius: 12px; padding: 20px; height: 70vh; overflow-y: auto; overflow-x: hidden; }
         .inspector-panel.collapsed #trace-list { display: none; }
         .inspector-panel.collapsed h2 span { display: none; }
@@ -68,9 +115,9 @@
             z-index: 30; 
             box-shadow: 0 4px 20px rgba(0,0,0,0.5);
         }
-        .step-item { padding: 8px; border-left: 3px solid #3b82f6; background: #1e1e1e; margin-bottom: 8px; font-size: 0.8rem; color: #aaa; }
-        select { background: #2a2a2a; color: white; border: 1px solid #444; padding: 6px 12px; border-radius: 6px; font-size: 0.875rem; }
-        .btn-reset { background: #333; color: #ccc; border: 1px solid #444; padding: 6px 12px; border-radius: 6px; font-size: 0.875rem; transition: all 0.2s; }
+        .step-item { padding: 10px; border-left: 3px solid #3b82f6; background: #1e1e1e; margin-bottom: 8px; font-size: 1rem; color: #ccc; border-radius: 4px; }
+        select { background: #2a2a2a; color: white; border: 1px solid #444; padding: 6px 12px; border-radius: 6px; font-size: 1rem; }
+        .btn-reset { background: #333; color: #ccc; border: 1px solid #444; padding: 8px 16px; border-radius: 6px; font-size: 1rem; transition: all 0.2s; }
         .btn-reset:hover { background: #444; color: #fff; border-color: #FFD700; }
         #diagram-legend { display: flex; align-items: center; gap: 1.5rem; padding: 0.5rem 1rem; background: rgba(255,255,255,0.05); border-radius: 0.5rem; border: 1px solid rgba(255,255,255,0.1); }
         #sidebar {
@@ -198,21 +245,34 @@
         <div class="page-content">
             <div class="flex justify-between items-center mb-6">
                 <div class="flex items-center gap-4">
-                    <div>
-                        <label class="text-lg font-medium text-gray-400 mr-2">Filter Root Branch:</label>
-                        <select id="root-filter"><option value="all">All Branches</option></select>
+                    <div id="toggle-container">
+                        <label class="text-lg font-medium text-gray-400 mr-2">Quest Flow Display:</label>
+                        <select id="root-filter"><option value="all">All Quests</option></select>
                     </div>
                     <button id="reset-view" class="btn-reset">
-                        <i class="fas fa-sync-alt mr-1"></i> Reset View
+                        <i class="fas fa-sync-alt mr-1"></i> Reset Zoom
                     </button>
                     <div id="diagram-legend">
+                        <!-- Node Colors -->
                         <div class="flex items-center gap-2">
-                            <div class="w-8 h-0.5 bg-[#dededeff]"></div>
-                            <span class="text-md text-gray-400 uppercase tracking-widest font-bold">Hard Lock</span>
+                            <div class="w-4 h-4 rounded-full" style="background-color: #FFD700;"></div>
+                            <span class="text-base text-gray-400">Entry (0)</span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <div class="w-8 h-0 border-b border-dashed border-[#10b0dcff]"></div>
-                            <span class="text-md text-gray-400 uppercase tracking-widest font-bold">Soft Lock</span>
+                            <div class="w-4 h-4 rounded-full" style="background-color: #10B981;"></div>
+                            <span class="text-base text-gray-400">Early (1-2)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-4 h-4 rounded-full" style="background-color: #06B6D4;"></div>
+                            <span class="text-base text-gray-400">Mid (3-5)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-4 h-4 rounded-full" style="background-color: #F59E0B;"></div>
+                            <span class="text-base text-gray-400">Late (6-8)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-4 h-4 rounded-full" style="background-color: #EF4444;"></div>
+                            <span class="text-base text-gray-400">Advanced (9+)</span>
                         </div>
                     </div>
                 </div>
@@ -220,13 +280,25 @@
 
             <div id="layout-wrapper">
                 <div id="quest-diagram-container">
-                    <svg id="visualizer"></svg>
+                    <div id="visualizer"></div>
                     <div id="details-panel">
-                        <h3 id="detail-name" class="text-[#FFD700] font-bold text-lg mb-2"></h3>
-                        <div class="text-md text-gray-400 space-y-2">
-                            <p>Prerequisite: <br><span id="detail-pre" class="text-white"></span></p>
-                            <p>Completions Needed: <br><span id="detail-count" class="text-white"></span></p>
-                            <p>Unique ID: <br><span id="detail-id" class="text-gray-500 font-mono"></span></p>
+                        <h3 id="detail-name" class="text-[#FFD700] font-bold text-xl mb-3"></h3>
+                        <div class="text-base text-gray-400 space-y-3">
+                            <div>
+                                <p class="text-sm uppercase tracking-wider text-gray-500 mb-1">Category Prerequisite</p>
+                                <p id="detail-pre" class="text-white text-base"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm uppercase tracking-wider text-gray-500 mb-1">Completions Required</p>
+                                <p id="detail-count" class="text-white text-base"></p>
+                            </div>
+                            <div id="detail-soft-prereqs" style="display: none;">
+                                <!-- Soft prerequisites will be inserted here -->
+                            </div>
+                            <div>
+                                <p class="text-sm uppercase tracking-wider text-gray-500 mb-1">Quest ID</p>
+                                <p id="detail-id" class="text-gray-500 font-mono text-sm break-all"></p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -234,11 +306,31 @@
                 <div class="inspector-panel">
                     <h2 class="text-lg font-bold text-white mb-4 flex items-center cursor-pointer">
                         <i class="fas fa-project-diagram mr-2 text-[#FFD700]"></i>
-                        <span>LOGIC TRACE</span>
+                        <span>VALIDATION & METRICS</span>
                         <i class="fas fa-chevron-right ml-auto text-gray-500" id="trace-chevron"></i>
                     </h2>
                     <div id="trace-list">
-                        <p class="text-gray-500 text-lg italic">Calculating tree paths...</p>
+                        <!-- Metrics Section -->
+                        <div id="metrics-section" class="mb-6">
+                            <h3 class="text-md font-semibold text-white mb-3 flex items-center">
+                                <i class="fas fa-chart-line mr-2 text-blue-400"></i>
+                                Quest Metrics
+                            </h3>
+                            <div id="metrics-container">
+                                <p class="text-gray-500 text-sm italic">Calculating metrics...</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Validation Section -->
+                        <div id="validation-section">
+                            <h3 class="text-md font-semibold text-white mb-3 flex items-center">
+                                <i class="fas fa-shield-alt mr-2 text-green-400"></i>
+                                Validation Results
+                            </h3>
+                            <div id="validation-container">
+                                <p class="text-gray-500 text-sm italic">Running validation...</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
