@@ -2,9 +2,13 @@ import { questState } from './questStateManager.js';
 
 let cy = null;
 let allQuests = [];
+let activeFilters = new Set(); // Track which categories are being highlighted
 
-// Color scale for quest depth/importance - highly vibrant and distinct colors
-const getNodeColor = (count) => {
+// Enhanced color scale based on unlock_required_count
+const getNodeColor = (quest) => {
+    const count = quest.unlock_required_count || 0;
+    
+    // Color based on unlock_required_count (matches the legend)
     if (count === 0) return '#FFD700';      // Gold - Entry points
     if (count <= 2) return '#10B981';       // Emerald Green - Early
     if (count <= 5) return '#06B6D4';       // Cyan - Mid
@@ -25,7 +29,7 @@ async function initDiagram() {
             return;
         }
 
-        console.log(`Loaded ${allQuests.length} quests`);
+        //console.log(`Loaded ${allQuests.length} quests`);
 
         setupUI();
         initCytoscape();
@@ -45,6 +49,8 @@ async function initDiagram() {
 function setupUI() {
     setupTraceCollapsible();
     setupResetButton();
+    setupMainPathToggle();
+    setupCategoryFilters();
 }
 
 function initCytoscape() {
@@ -80,6 +86,15 @@ function initCytoscape() {
                 }
             },
             {
+                selector: 'node.main-path',
+                style: {
+                    'width': 35,
+                    'height': 35,
+                    'border-width': 3,
+                    'border-color': '#FFD700'
+                }
+            },
+            {
                 selector: 'node[!color]',
                 style: {
                     'background-color': '#666'
@@ -107,13 +122,21 @@ function initCytoscape() {
                 }
             },
             {
+                selector: 'edge.main-path',
+                style: {
+                    'width': 3,
+                    'line-color': '#FFD700',
+                    'target-arrow-color': '#FFD700'
+                }
+            },
+            {
                 selector: 'node.highlighted',
                 style: {
-                    'background-color': '#FFD700',
                     'border-color': '#FFD700',
                     'border-width': 4,
                     'width': 40,
-                    'height': 40
+                    'height': 40,
+                    'background-color': 'data(color)' // Keep original color
                 }
             },
             {
@@ -179,10 +202,9 @@ function renderGraph() {
         const edges = [];
         const categoryGroups = new Map();
         
-        // Show all quests (removed filtering)
         let filteredQuests = allQuests;
 
-        console.log(`Rendering ${filteredQuests.length} quests`);
+        //console.log(`Rendering ${filteredQuests.length} quests`);
 
         // Group quests by category and sort by sort_order
         filteredQuests.forEach(quest => {
@@ -210,7 +232,7 @@ function renderGraph() {
         );
         
         if (rootQuest) {
-            console.log(`✓ ROOT QUEST FOUND: "${rootQuest.quest_name}" (id: ${rootQuest.id})`);
+            //console.log(`✓ ROOT QUEST FOUND: "${rootQuest.quest_name}" (id: ${rootQuest.id})`);
         }
 
         // Create virtual root (invisible)
@@ -225,26 +247,32 @@ function renderGraph() {
 
         // Create nodes for each quest
         filteredQuests.forEach(quest => {
+            const isMainPath = quest.category === "The First Steps: Beginner's Guide";
+            const nodeColor = getNodeColor(quest);
+            
             nodes.push({
                 data: {
                     id: quest.id,
                     label: truncateLabel(quest.quest_name, 20),
                     fullName: quest.quest_name,
-                    color: getNodeColor(quest.unlock_required_count || 0),
+                    color: nodeColor,
                     category: quest.category,
                     count: quest.unlock_required_count || 0,
                     prereqCategory: quest.unlock_prerequisite_category,
-                    prereqIds: quest.prerequisite_quest_ids || []
-                }
+                    prereqIds: quest.prerequisite_quest_ids || [],
+                    isMainPath: isMainPath
+                },
+                classes: isMainPath ? 'main-path' : ''
             });
         });
 
         // Build hard edges (category-based chain)
         const questIdMap = new Map(filteredQuests.map(q => [q.id, q]));
-        const hardEdgeTargets = new Set(); // Track which nodes have hard edges
+        const hardEdgeTargets = new Set();
         
         filteredQuests.forEach(quest => {
             let parentId = null;
+            let isMainPathEdge = false;
 
             // Special case: If this is the root quest, skip (no parent)
             if (rootQuest && quest.id === rootQuest.id) {
@@ -275,6 +303,8 @@ function renderGraph() {
                     const idx = sameCategoryQuests.findIndex(q => q.id === quest.id);
                     if (idx > 0) {
                         parentId = sameCategoryQuests[idx - 1].id;
+                        // Check if this edge is part of the main path
+                        isMainPathEdge = quest.category === "The First Steps: Beginner's Guide";
                     }
                 }
             }
@@ -287,7 +317,7 @@ function renderGraph() {
                         target: quest.id,
                         id: `hard-${parentId}-${quest.id}`
                     },
-                    classes: 'hard'
+                    classes: isMainPathEdge ? 'hard main-path' : 'hard'
                 });
                 hardEdgeTargets.add(quest.id);
             } else if (!parentId && !rootQuest) {
@@ -302,11 +332,7 @@ function renderGraph() {
             }
         });
 
-        // Skip creating soft edges - we'll show this info in the details panel instead
-        // This keeps the graph clean and uncluttered
-        console.log('Skipping soft edge creation - requirements shown in details panel');
-
-        console.log(`Adding ${nodes.length} nodes and ${edges.length} edges`);
+        //console.log(`Adding ${nodes.length} nodes and ${edges.length} edges`);
 
         // Add all elements to graph
         cy.add([...nodes, ...edges]);
@@ -321,23 +347,125 @@ function renderGraph() {
 
 function applyLayout() {
     try {
+        const mainPathNodes = cy.nodes().filter(n => n.data('isMainPath'));
+        
+        // Run dagre layout
         const layout = cy.layout({
             name: 'dagre',
-            rankDir: 'LR',              // Left to right flow (like D3)
-            nodeSep: 120,               // Vertical spacing between nodes at same rank
-            rankSep: 250,               // Horizontal spacing between ranks (progression levels)
-            edgeSep: 30,                // Spacing between edges
-            ranker: 'network-simplex',  // Algorithm for minimizing edge crossings
-            align: undefined,           // Let it auto-align for better vertical spread
+            rankDir: 'LR',
+            nodeSep: 120,
+            rankSep: 250,
+            edgeSep: 30,
+            ranker: 'network-simplex',
+            align: undefined,
             animate: false,
             fit: true,
             padding: 50
         });
 
+        const promise = layout.promiseOn('layoutstop');
         layout.run();
+        
+        // Use promise instead of event listener
+        promise.then(() => {
+            straightenMainPath();
+            cy.fit(50);
+        }).catch((err) => {
+            console.error('Layout promise error:', err);
+            straightenMainPath();
+        });
+        
+        // Fallback timeout
+        setTimeout(() => {
+            straightenMainPath();
+            cy.fit(50);
+        }, 500);
+        
     } catch (error) {
         console.error("Layout error:", error);
     }
+}
+
+function straightenMainPath() {
+    try {
+        const mainPathNodes = cy.nodes('.main-path').sort((a, b) => {
+            return a.position('x') - b.position('x');
+        });
+        
+        if (mainPathNodes.length === 0) {
+            console.warn('No main path nodes found!');
+            return;
+        }
+        
+        // Calculate the center Y position of all main path nodes
+        let totalY = 0;
+        mainPathNodes.forEach(node => {
+            totalY += node.position('y');
+        });
+        const centerY = totalY / mainPathNodes.length;
+        
+        // Force all main path nodes to the center Y position
+        mainPathNodes.forEach((node, index) => {
+            const oldPos = node.position();
+            node.position({
+                x: oldPos.x,
+                y: centerY
+            });
+        });
+        
+        // Resolve overlapping nodes
+        resolveOverlaps();
+        
+    } catch (error) {
+        console.error("Error straightening main path:", error);
+    }
+}
+
+function resolveOverlaps() {
+    const MIN_DISTANCE = 100;
+    const allNodes = cy.nodes().not('[virtual="true"]');
+    
+    // Check all pairs of nodes for overlaps
+    allNodes.forEach((node1, i) => {
+        allNodes.slice(i + 1).forEach(node2 => {
+            const pos1 = node1.position();
+            const pos2 = node2.position();
+            
+            const dx = pos2.x - pos1.x;
+            const dy = pos2.y - pos1.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // If nodes are too close, push them apart
+            if (distance < MIN_DISTANCE && distance > 0) {
+                const angle = Math.atan2(dy, dx);
+                const pushDistance = (MIN_DISTANCE - distance) / 2;
+                
+                const isNode1MainPath = node1.hasClass('main-path');
+                const isNode2MainPath = node2.hasClass('main-path');
+                
+                if (isNode1MainPath && !isNode2MainPath) {
+                    // Only push node2 away from main path
+                    const newX2 = pos2.x + Math.cos(angle) * (MIN_DISTANCE - distance);
+                    const newY2 = pos2.y + Math.sin(angle) * (MIN_DISTANCE - distance);
+                    node2.position({ x: newX2, y: newY2 });
+                } else if (isNode2MainPath && !isNode1MainPath) {
+                    // Only push node1 away from main path
+                    const newX1 = pos1.x - Math.cos(angle) * (MIN_DISTANCE - distance);
+                    const newY1 = pos1.y - Math.sin(angle) * (MIN_DISTANCE - distance);
+                    node1.position({ x: newX1, y: newY1 });
+                } else if (!isNode1MainPath && !isNode2MainPath) {
+                    // Push both nodes apart equally
+                    const newX1 = pos1.x - Math.cos(angle) * pushDistance;
+                    const newY1 = pos1.y - Math.sin(angle) * pushDistance;
+                    const newX2 = pos2.x + Math.cos(angle) * pushDistance;
+                    const newY2 = pos2.y + Math.sin(angle) * pushDistance;
+                    
+                    node1.position({ x: newX1, y: newY1 });
+                    node2.position({ x: newX2, y: newY2 });
+                }
+            }
+        });
+    });
 }
 
 function highlightPaths(node) {
@@ -362,7 +490,7 @@ function highlightPaths(node) {
 
 function clearHighlights() {
     if (cy) {
-        cy.elements().removeClass('highlighted dimmed');
+        cy.elements().removeClass('highlighted dimmed category-filter');
     }
 }
 
@@ -430,12 +558,112 @@ function hideDetails() {
 }
 
 function populateFilter() {
-    // No filter needed - removed for cleaner interface
-    const filterContainer = document.getElementById('root-filter');
-    if (filterContainer) {
-        const parent = filterContainer.parentElement;
-        parent.remove(); // Remove the entire filter container
+    const filterContainer = document.getElementById('toggle-container');
+    if (!filterContainer) return;
+    
+    // Get unique categories
+    const categories = [...new Set(allQuests.map(q => q.category).filter(Boolean))];
+    
+    // Create dropdown options
+    const categoryOptions = categories.map(cat => 
+        `<option value="${cat}">${cat}</option>`
+    ).join('');
+    
+    filterContainer.innerHTML = `
+        <div class="flex items-center gap-3">
+            <label class="text-lg font-medium text-gray-400">Filter by Category:</label>
+            <select id="category-filter" class="bg-[#2a2a2a] text-white border border-[#444] px-3 py-2 rounded-lg text-sm">
+                <option value="all">All Categories</option>
+                ${categoryOptions}
+            </select>
+        </div>
+    `;
+    
+    // Add change handler
+    const dropdown = document.getElementById('category-filter');
+    if (dropdown) {
+        dropdown.addEventListener('change', (e) => {
+            const selectedCategory = e.target.value;
+            applyCategoryFilter(selectedCategory);
+        });
     }
+}
+
+function applyCategoryFilter(category) {
+    if (category === 'all') {
+        // No filter - show everything normally
+        cy.elements().removeClass('dimmed category-filter');
+    } else {
+        // Dim everything except selected category
+        cy.nodes().forEach(node => {
+            if (node.data('virtual')) return;
+            
+            if (node.data('category') === category) {
+                node.removeClass('dimmed');
+                node.addClass('category-filter');
+            } else {
+                node.addClass('dimmed');
+                node.removeClass('category-filter');
+            }
+        });
+        
+        // Handle edges - show if either source or target is in selected category
+        cy.edges().forEach(edge => {
+            const source = edge.source();
+            const target = edge.target();
+            
+            if (source.data('category') === category || target.data('category') === category) {
+                edge.removeClass('dimmed');
+            } else {
+                edge.addClass('dimmed');
+            }
+        });
+    }
+}
+
+function setupMainPathToggle() {
+    const resetBtn = document.getElementById('reset-view');
+    if (!resetBtn) return;
+    
+    // Add "Trace Main Path" button next to reset
+    const traceBtn = document.createElement('button');
+    traceBtn.id = 'trace-main-path';
+    traceBtn.className = 'btn-reset';
+    traceBtn.innerHTML = '<i class="fas fa-route mr-1"></i> Trace Main Path';
+    resetBtn.parentElement.insertBefore(traceBtn, resetBtn.nextSibling);
+    
+    let mainPathActive = false;
+    
+    traceBtn.addEventListener('click', () => {
+        if (mainPathActive) {
+            // Clear trace
+            clearHighlights();
+            traceBtn.innerHTML = '<i class="fas fa-route mr-1"></i> Trace Main Path';
+            traceBtn.style.background = '#333';
+            mainPathActive = false;
+        } else {
+            // Highlight main path
+            clearHighlights();
+            
+            const mainPathNodes = cy.nodes('.main-path');
+            const mainPathEdges = cy.edges('.main-path');
+            
+            mainPathNodes.addClass('highlighted');
+            mainPathEdges.addClass('highlighted');
+            
+            // Dim everything else
+            cy.elements().not('.main-path').addClass('dimmed');
+            
+            traceBtn.innerHTML = '<i class="fas fa-times mr-1"></i> Clear Trace';
+            traceBtn.style.background = '#FFD700';
+            traceBtn.style.color = '#000';
+            mainPathActive = true;
+        }
+    });
+}
+
+function setupCategoryFilters() {
+    // Category filtering is now handled by populateFilter()
 }
 
 function setupResetButton() {
@@ -444,6 +672,21 @@ function setupResetButton() {
         resetBtn.onclick = () => {
             hideDetails();
             clearHighlights();
+            activeFilters.clear();
+            
+            // Reset category filter dropdown
+            const dropdown = document.getElementById('category-filter');
+            if (dropdown) {
+                dropdown.value = 'all';
+            }
+            
+            // Reset main path toggle if it exists
+            const traceBtn = document.getElementById('trace-main-path');
+            if (traceBtn) {
+                traceBtn.innerHTML = '<i class="fas fa-route mr-1"></i> Trace Main Path';
+                traceBtn.style.background = '#333';
+                traceBtn.style.color = '#ccc';
+            }
             
             // Reset zoom
             cy.fit(50);
@@ -690,6 +933,17 @@ function calculateMetrics() {
         const totalQuests = visibleQuests.length;
         const totalCategories = new Set(visibleQuests.map(q => q.category).filter(Boolean)).size;
         
+        // Count main path quests
+        const mainPathQuests = visibleQuests.filter(q => q.category === "The First Steps: Beginner's Guide");
+        
+        // Count branch points (quests that have archetype quests depending on them)
+        const branchPoints = mainPathQuests.filter(quest => {
+            return visibleQuests.some(q => 
+                q.unlock_prerequisite_category === "The First Steps: Beginner's Guide" &&
+                q.category !== "The First Steps: Beginner's Guide"
+            );
+        });
+        
         // Calculate actual max depth using proper algorithm
         let maxDepth = 0;
         if (cy && cy.nodes().length > 1) {
@@ -731,21 +985,6 @@ function calculateMetrics() {
             }
         }
         
-        // Find entry points
-        const entryPoints = visibleQuests.filter(q => {
-            const hasCategory = q.unlock_prerequisite_category && 
-                               q.unlock_prerequisite_category !== q.category;
-            let prereqIds = [];
-            try {
-                prereqIds = Array.isArray(q.prerequisite_quest_ids)
-                    ? q.prerequisite_quest_ids
-                    : (q.prerequisite_quest_ids ? JSON.parse(q.prerequisite_quest_ids) : []);
-            } catch (e) {
-                prereqIds = [];
-            }
-            return !hasCategory && prereqIds.length === 0;
-        });
-        
         metricsContainer.innerHTML = `
             <div class="metric-card">
                 <div class="metric-label">Total Quests</div>
@@ -753,20 +992,21 @@ function calculateMetrics() {
             </div>
             
             <div class="metric-card">
-                <div class="metric-label">Categories</div>
+                <div class="metric-label">Main Path Length</div>
+                <div class="metric-value">${mainPathQuests.length}</div>
+                <p class="text-xs text-gray-500 mt-1">Beginner's Guide quests</p>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-label">Total Categories</div>
                 <div class="metric-value">${totalCategories}</div>
+                <p class="text-xs text-gray-500 mt-1">Including archetypes</p>
             </div>
             
             <div class="metric-card">
                 <div class="metric-label">Max Chain Depth</div>
                 <div class="metric-value">${maxDepth}</div>
                 <p class="text-xs text-gray-500 mt-1">Longest dependency chain</p>
-            </div>
-            
-            <div class="metric-card">
-                <div class="metric-label">Entry Points</div>
-                <div class="metric-value">${entryPoints.length}</div>
-                <p class="text-xs text-gray-500 mt-1">Quests with no prerequisites</p>
             </div>
         `;
     } catch (error) {
@@ -777,6 +1017,6 @@ function calculateMetrics() {
 
 // Initialize on page load
 window.addEventListener('load', () => {
-    console.log("Initializing Quest Flow Architect...");
+    //console.log("Initializing Quest Flow Architect...");
     initDiagram();
 });
