@@ -118,8 +118,16 @@
                     </div>
             </div>
             <div class="space-y-2">
-                <label class="block text-sm font-bold text-[#FFD700] uppercase tracking-wider">Completion Prerequisites</label>
-                <p class="text-xs text-gray-400 italic mb-2">The quest will be visible, but the "Complete" button will stay locked until these are finished.</p>
+                <label class="block text-sm font-bold text-[#FFD700] uppercase tracking-wider">Hard Lock Prerequisites (Quest Won't Appear)</label>
+                <p class="text-xs text-gray-400 italic mb-2">Quest will be hidden until ALL of these are completed. Combine with category unlock for complex gating.</p>
+                <div id="hard-lock-container" class="bg-black/20 border border-gray-700 rounded-xl p-4 max-h-48 overflow-y-auto custom-scrollbar space-y-2">
+                    <div class="text-gray-500 text-xs italic">Loading quests...</div>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="block text-sm font-bold text-[#FFD700] uppercase tracking-wider">Soft Lock Prerequisites (Required to Complete)</label>
+                <p class="text-xs text-gray-400 italic mb-2">Quest will be visible, but the "Complete" button will stay locked until these are finished.</p>
                 <div id="prerequisite-container" class="bg-black/20 border border-gray-700 rounded-xl p-4 max-h-48 overflow-y-auto custom-scrollbar space-y-2">
                     <div class="text-gray-500 text-xs italic">Loading quests...</div>
                 </div>

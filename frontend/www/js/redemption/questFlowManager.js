@@ -122,6 +122,30 @@ function initCytoscape() {
                 }
             },
             {
+                selector: 'edge.hard-lock',
+                style: {
+                    'width': 3,
+                    'line-color': '#EF4444',
+                    'target-arrow-color': '#EF4444',
+                    'target-arrow-shape': 'triangle',
+                    'curve-style': 'bezier',
+                    'arrow-scale': 1.5,
+                    'line-style': 'solid'
+                }
+            },
+            {
+                selector: 'edge.soft-lock',
+                style: {
+                    'width': 2,
+                    'line-color': '#F59E0B',
+                    'target-arrow-color': '#F59E0B',
+                    'target-arrow-shape': 'triangle',
+                    'curve-style': 'bezier',
+                    'arrow-scale': 1.2,
+                    'line-style': 'dashed'
+                }
+            },
+            {
                 selector: 'edge.main-path',
                 style: {
                     'width': 3,
@@ -334,6 +358,40 @@ function renderGraph() {
 
         //console.log(`Adding ${nodes.length} nodes and ${edges.length} edges`);
 
+        // Add hard lock edges (quest-level dependencies)
+        filteredQuests.forEach(quest => {
+            const hardLocks = quest.hard_lock_quest_ids || [];
+            hardLocks.forEach(hardLockId => {
+                if (questIdMap.has(hardLockId)) {
+                    edges.push({
+                        data: {
+                            source: hardLockId,
+                            target: quest.id,
+                            id: `hard-lock-${hardLockId}-${quest.id}`
+                        },
+                        classes: 'hard-lock'
+                    });
+                }
+            });
+        });
+
+        // Add soft lock edges (prerequisite dependencies)
+        filteredQuests.forEach(quest => {
+            const softLocks = quest.prerequisite_quest_ids || [];
+            softLocks.forEach(softLockId => {
+                if (questIdMap.has(softLockId)) {
+                    edges.push({
+                        data: {
+                            source: softLockId,
+                            target: quest.id,
+                            id: `soft-lock-${softLockId}-${quest.id}`
+                        },
+                        classes: 'soft-lock'
+                    });
+                }
+            });
+        });
+
         // Add all elements to graph
         cy.add([...nodes, ...edges]);
 
@@ -531,13 +589,13 @@ function showDetails(data) {
             
             if (prereqQuests.length > 0) {
                 const prereqList = prereqQuests
-                    .map(q => `<div class="text-sm px-2 py-1 bg-blue-500/20 rounded hover:bg-blue-500/30 cursor-pointer" onclick="window.highlightQuest('${q.id}')">
+                    .map(q => `<div class="text-sm px-2 py-1 bg-amber-500/20 rounded hover:bg-amber-500/30 cursor-pointer" onclick="window.highlightQuest('${q.id}')">
                         <i class="fas fa-arrow-right mr-1"></i>${q.quest_name}
                     </div>`)
                     .join('');
                 
                 prereqContainer.innerHTML = `
-                    <p class="text-sm uppercase tracking-wider text-gray-500 mb-1">Soft Prerequisites:</p>
+                    <p class="text-sm uppercase tracking-wider text-gray-500 mb-1">Soft Prerequisites (Required to Complete):</p>
                     <div class="space-y-1">${prereqList}</div>
                 `;
                 prereqContainer.style.display = 'block';
@@ -546,6 +604,43 @@ function showDetails(data) {
             }
         } else {
             prereqContainer.style.display = 'none';
+        }
+    }
+
+    // Build hard lock prerequisites list
+    const hardLockContainer = document.getElementById('detail-hard-locks');
+    if (hardLockContainer && quest) {
+        let hardLockIds = [];
+        try {
+            hardLockIds = Array.isArray(quest.hard_lock_quest_ids)
+                ? quest.hard_lock_quest_ids
+                : (quest.hard_lock_quest_ids ? JSON.parse(quest.hard_lock_quest_ids) : []);
+        } catch (e) {
+            hardLockIds = [];
+        }
+        
+        if (hardLockIds.length > 0) {
+            const hardLockQuests = hardLockIds
+                .map(id => allQuests.find(q => q.id === id))
+                .filter(q => q); // Remove nulls
+            
+            if (hardLockQuests.length > 0) {
+                const hardLockList = hardLockQuests
+                    .map(q => `<div class="text-sm px-2 py-1 bg-red-500/20 rounded hover:bg-red-500/30 cursor-pointer" onclick="window.highlightQuest('${q.id}')">
+                        <i class="fas fa-arrow-right mr-1"></i>${q.quest_name}
+                    </div>`)
+                    .join('');
+                
+                hardLockContainer.innerHTML = `
+                    <p class="text-sm uppercase tracking-wider text-gray-500 mb-1">Hard Locks (Required to Unlock):</p>
+                    <div class="space-y-1">${hardLockList}</div>
+                `;
+                hardLockContainer.style.display = 'block';
+            } else {
+                hardLockContainer.style.display = 'none';
+            }
+        } else {
+            hardLockContainer.style.display = 'none';
         }
     }
     

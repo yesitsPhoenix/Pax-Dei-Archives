@@ -274,6 +274,32 @@
                             <div class="w-4 h-4 rounded-full" style="background-color: #EF4444;"></div>
                             <span class="text-base text-gray-400">Advanced (9+)</span>
                         </div>
+                        
+                        <!-- Separator -->
+                        <div class="h-6 w-px bg-gray-600"></div>
+                        
+                        <!-- Edge Types -->
+                        <div class="flex items-center gap-2">
+                            <svg width="30" height="12">
+                                <line x1="0" y1="6" x2="30" y2="6" stroke="#dedede" stroke-width="2"/>
+                                <polygon points="30,6 25,3 25,9" fill="#dedede"/>
+                            </svg>
+                            <span class="text-sm text-gray-400">Category Flow</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <svg width="30" height="12">
+                                <line x1="0" y1="6" x2="30" y2="6" stroke="#EF4444" stroke-width="3"/>
+                                <polygon points="30,6 25,3 25,9" fill="#EF4444"/>
+                            </svg>
+                            <span class="text-sm text-gray-400">Hard Lock</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <svg width="30" height="12">
+                                <line x1="0" y1="6" x2="30" y2="6" stroke="#F59E0B" stroke-width="2" stroke-dasharray="4,2"/>
+                                <polygon points="30,6 25,3 25,9" fill="#F59E0B"/>
+                            </svg>
+                            <span class="text-sm text-gray-400">Soft Lock</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -291,6 +317,9 @@
                             <div>
                                 <p class="text-sm uppercase tracking-wider text-gray-500 mb-1">Completions Required</p>
                                 <p id="detail-count" class="text-white text-base"></p>
+                            </div>
+                            <div id="detail-hard-locks" style="display: none;">
+                                <!-- Hard lock prerequisites will be inserted here -->
                             </div>
                             <div id="detail-soft-prereqs" style="display: none;">
                                 <!-- Soft prerequisites will be inserted here -->

@@ -239,12 +239,20 @@ function isQuestLocked(quest, claims, quests) {
         }
     });
 
+    // Category-based hard lock
     const reqCat = quest.unlock_prerequisite_category;
     const reqCount = quest.unlock_required_count || 0;
     if (reqCat && reqCat !== "" && (categoryProgress[reqCat] || 0) < reqCount) {
         return true;
     }
 
+    // Quest-level hard locks (controls visibility)
+    const hardLocks = quest.hard_lock_quest_ids || [];
+    if (hardLocks.length > 0 && !hardLocks.every(id => claimedIds.includes(id))) {
+        return true;
+    }
+
+    // Soft locks (controls completion)
     const prerequisites = quest.prerequisite_quest_ids || [];
     if (prerequisites.length > 0 && !prerequisites.every(id => claimedIds.includes(id))) {
         return true;
@@ -476,6 +484,56 @@ async function showQuestDetails(quest, userClaimed) {
         document.getElementById('detail-signs').innerHTML = `<span class="text-gray-500 italic text-md">No sign sequence found.</span>`;
     }
 
+    // Hard Lock Prerequisites Display
+    const hardLockContainer = document.getElementById('detail-hard-locks');
+    if (hardLockContainer) {
+        const hardLocks = quest.hard_lock_quest_ids || [];
+        if (hardLocks.length > 0) {
+            const hardLockList = hardLocks.map(id => {
+                const q = allQuests.find(item => item.id === id);
+                const name = q ? q.quest_name : "Unknown Quest";
+                const isDone = completedQuestIds.includes(id);
+                const colorClass = isDone ? "text-green-400" : "text-red-400";
+                const icon = isDone ? "fa-circle-check" : "fa-circle-xmark";
+                
+                const locked = q ? isQuestLocked(q, userClaims, allQuests) : true;
+
+                let actionButton = '';
+                if (q && !locked) {
+                    actionButton = `<button data-quest-id="${id}" class="hard-lock-link text-[10px] text-gray-500 hover:text-[#FFD700] uppercase tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity">View <i class="fa-solid fa-arrow-right ml-1"></i></button>`;
+                } else {
+                    actionButton = `<span class="text-[10px] text-gray-600 uppercase tracking-tighter cursor-not-allowed opacity-0 group-hover:opacity-100 transition-opacity"><i class="fa-solid fa-lock mr-1"></i>Locked</span>`;
+                }
+
+                return `<div class="flex items-center justify-between gap-2 p-1 hover:bg-white/5 rounded transition-colors group">
+                            <div class="flex items-center gap-2 ${colorClass} text-sm font-medium">
+                                <i class="fa-solid ${icon}"></i>
+                                <span>${name}</span>
+                            </div>
+                            ${actionButton}
+                        </div>`;
+            }).join("");
+            
+            hardLockContainer.innerHTML = hardLockList;
+
+            hardLockContainer.querySelectorAll('.hard-lock-link').forEach(btn => {
+                btn.onclick = (e) => {
+                    const targetId = btn.getAttribute('data-quest-id');
+                    const targetQuest = allQuests.find(q => q.id === targetId);
+                    if (targetQuest) {
+                        const isClaimed = userClaims.some(c => c.quest_id === targetQuest.id);
+                        showQuestDetails(targetQuest, isClaimed);
+                        const detailsPanel = document.getElementById('details-content');
+                        if (detailsPanel) detailsPanel.scrollTop = 0;
+                    }
+                };
+            });
+        } else {
+            hardLockContainer.innerHTML = `<span class="text-gray-500 italic text-sm">None</span>`;
+        }
+    }
+
+    // Soft Lock Prerequisites Display (Required to Complete)
     const prereqContainer = document.getElementById('detail-prerequisites');
     if (prereqContainer) {
         if (prerequisites.length > 0) {
@@ -673,6 +731,7 @@ async function renderQuestsList() {
             }
         }
 
+        // Secret quests are always hidden unless unlocked
         if (isSecret && !isUnlocked) {
             return false;
         }
@@ -702,6 +761,13 @@ async function renderQuestsList() {
                 } else {
                     if (!isPrereqCategoryUnlocked) return false; // Hard-locked, hide it
                 }
+            }
+
+            // Check quest-level hard locks
+            const hardLocks = quest.hard_lock_quest_ids || [];
+            const claimedIds = userClaims.map(c => c.quest_id);
+            if (hardLocks.length > 0 && !hardLocks.every(id => claimedIds.includes(id))) {
+                return false; // Hard-locked by specific quests, hide it
             }
 
             // Soft-locked quests (prerequisite quests not met) should STILL show
