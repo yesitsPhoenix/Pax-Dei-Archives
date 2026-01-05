@@ -341,6 +341,14 @@ const archetypeName = category.replace('Archetype: ', '').trim();
         }
     }
     
+    // Check if quest has allowed_archetypes restriction
+    if (quest.allowed_archetypes && Array.isArray(quest.allowed_archetypes) && quest.allowed_archetypes.length > 0) {
+        if (!userArchetype || !quest.allowed_archetypes.includes(userArchetype)) {
+            //console.log('[QUESTS] Quest', quest.quest_name, 'filtered: archetype not in allowed list (needs one of', quest.allowed_archetypes, ', user has', userArchetype || 'none', ')');
+            return false;
+        }
+    }
+    
     // Check if category is secret and unlocked
 const isSecret = secretCategoryNames.has(category);
 const isUnlocked = unlockedCategories.has(category);
@@ -766,6 +774,13 @@ async function renderQuestsList() {
         if (category.startsWith('Archetype: ')) {
             const archetypeName = category.replace('Archetype: ', '').trim();
             if (userArchetype !== archetypeName) {
+                return false;
+            }
+        }
+        
+        // Check if quest has allowed_archetypes restriction
+        if (quest.allowed_archetypes && Array.isArray(quest.allowed_archetypes) && quest.allowed_archetypes.length > 0) {
+            if (!userArchetype || !quest.allowed_archetypes.includes(userArchetype)) {
                 return false;
             }
         }
