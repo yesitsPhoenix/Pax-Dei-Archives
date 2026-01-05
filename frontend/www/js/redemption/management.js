@@ -10,6 +10,8 @@ const alphabet = "abcdefghijklmnopqrstuvwxyz";
 let allTableData = [];
 let isEditMode = false;
 let editingRecordId = null;
+let sortColumn = null;
+let sortDirection = 'asc';
 
 const tableConfigs = {
     secret_unlock_configs: {
@@ -32,6 +34,15 @@ const tableConfigs = {
         labels: ['Category Name', 'Secret Category', 'Created Date'],
         sort: 'name',
         insertable: ['name', 'is_secret']
+    },
+    user_claims: {
+        display: 'User Quest Claim',
+        columns: ['username', 'character_name', 'quest_name', 'claimed_at'],
+        labels: ['Username', 'Character', 'Quest Name', 'Claimed Date'],
+        sort: 'claimed_at',
+        insertable: [], // No creation for user claims
+        searchable: true,
+        sortableColumns: ['quest_name', 'claimed_at'] // Enable sorting on these columns
     }
 };
 
@@ -144,6 +155,11 @@ async function renderSignPicker(targetId) {
 }
 
 async function showAddForm(recordToEdit = null) {
+    // User claims cannot be created, only deleted
+    if (currentTable === 'user_claims') {
+        return;
+    }
+    
     selectedSignsForForm = [];
     
     // Ensure we only enter edit mode if there's actually a record to edit
@@ -246,12 +262,72 @@ async function showAddForm(recordToEdit = null) {
 }
 
 async function fetchTableData() {
+    const tbody = document.getElementById('mgmt-table-body');
+    const thead = document.getElementById('mgmt-table-head');
+    tbody.innerHTML = '<tr><td colspan="99" class="text-center py-8 text-slate-500"><i class="fas fa-spinner fa-spin mr-2"></i>Loading...</td></tr>';
+
     const config = tableConfigs[currentTable];
-    const { data, error } = await supabase.from(currentTable).select('*').order(config.sort, { ascending: true });
-    if (!error) {
-        allTableData = data || [];
-        applyFilters();
+    if (!config) return;
+
+    let data = [];
+    
+    if (currentTable === 'user_claims') {
+        // Load all user claims at once (no pagination) - ADMIN VIEW
+        console.log('Fetching ALL user claims for admin panel...');
+        const { data: claimsData, error, count } = await supabase
+            .from('user_claims')
+            .select('id, user_id, quest_id, character_id, claimed_at', { count: 'exact' })
+            .order(config.sort, { ascending: false });
+        
+        console.log('Claims fetched:', claimsData?.length, 'Total count:', count);
+        
+        if (error) {
+            console.error('Error fetching user claims:', error);
+            tbody.innerHTML = '<tr><td colspan="99" class="text-center py-8 text-red-500">Error loading data</td></tr>';
+            return;
+        }
+        
+        // Fetch related data separately
+        const userIds = [...new Set(claimsData.map(c => c.user_id))];
+        const questIds = [...new Set(claimsData.map(c => c.quest_id))];
+        const characterIds = [...new Set(claimsData.map(c => c.character_id))];
+        
+        const { data: users } = await supabase.from('users').select('id, username').in('id', userIds);
+        const { data: quests } = await supabase.from('cipher_quests').select('id, quest_name, quest_key').in('id', questIds);
+        const { data: characters } = await supabase.from('characters').select('character_id, character_name').in('character_id', characterIds);
+        
+        const userMap = new Map(users?.map(u => [u.id, u]) || []);
+        const questMap = new Map(quests?.map(q => [q.id, q]) || []);
+        const characterMap = new Map(characters?.map(c => [c.character_id, c]) || []);
+        
+        // Transform the data to match our column structure
+        data = claimsData.map(claim => ({
+            id: claim.id,
+            user_id: claim.user_id,
+            quest_id: claim.quest_id,
+            character_id: claim.character_id,
+            username: userMap.get(claim.user_id)?.username || 'Unknown',
+            character_name: characterMap.get(claim.character_id)?.character_name || 'Unknown',
+            quest_name: questMap.get(claim.quest_id)?.quest_name || 'Unknown',
+            quest_key: questMap.get(claim.quest_id)?.quest_key || 'unknown',
+            claimed_at: claim.claimed_at
+        }));
+    } else {
+        const { data: fetchedData, error } = await supabase
+            .from(currentTable)
+            .select('*')
+            .order(config.sort, { ascending: false });
+        
+        if (error) {
+            console.error('Error:', error);
+            tbody.innerHTML = '<tr><td colspan="99" class="text-center py-8 text-red-500">Error loading data</td></tr>';
+            return;
+        }
+        data = fetchedData;
     }
+
+    allTableData = data;
+    applyFilters();
 }
 
 function applyFilters() {
@@ -261,7 +337,26 @@ function applyFilters() {
     
     let filtered = [...allTableData];
     
-    if (searchTerm) {
+    // User claims specific filtering
+    if (currentTable === 'user_claims') {
+        const usernameSearch = document.getElementById('search-username')?.value.toLowerCase() || '';
+        const questSearch = document.getElementById('search-quest')?.value.toLowerCase() || '';
+        
+        if (usernameSearch) {
+            filtered = filtered.filter(row => {
+                const username = (row.username || '').toLowerCase();
+                const characterName = (row.character_name || '').toLowerCase();
+                return username.includes(usernameSearch) || characterName.includes(usernameSearch);
+            });
+        }
+        
+        if (questSearch) {
+            filtered = filtered.filter(row => {
+                const questName = (row.quest_name || '').toLowerCase();
+                return questName.includes(questSearch);
+            });
+        }
+    } else if (searchTerm) {
         filtered = filtered.filter(row => {
             return config.columns.some(col => {
                 const val = row[col];
@@ -287,13 +382,68 @@ function applyFilters() {
         }
     }
     
+    // Apply sorting if a column is selected
+    if (sortColumn) {
+        filtered.sort((a, b) => {
+            let aVal = a[sortColumn];
+            let bVal = b[sortColumn];
+            
+            // Handle dates
+            if (sortColumn === 'claimed_at' || sortColumn === 'created_at') {
+                aVal = new Date(aVal).getTime();
+                bVal = new Date(bVal).getTime();
+            }
+            // Handle strings (case insensitive)
+            else if (typeof aVal === 'string') {
+                aVal = aVal.toLowerCase();
+                bVal = (bVal || '').toLowerCase();
+            }
+            
+            if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+            if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+    
     renderTable(filtered, config);
 }
 
 function renderTable(data, config) {
     const head = document.getElementById('mgmt-table-head');
     const body = document.getElementById('mgmt-table-body');
-    head.innerHTML = `<tr>${config.labels.map(label => `<th class="px-6 py-5 font-bold">${label}</th>`).join('')}<th class="px-6 py-5 text-right">Actions</th></tr>`;
+    
+    // Create table headers with sorting indicators
+    const sortableColumns = config.sortableColumns || [];
+    const headerCells = config.labels.map((label, index) => {
+        const columnName = config.columns[index];
+        const isSortable = sortableColumns.includes(columnName);
+        
+        if (isSortable) {
+            const isActive = sortColumn === columnName;
+            const sortIcon = isActive 
+                ? (sortDirection === 'asc' ? '<i class="fa-solid fa-sort-up ml-2"></i>' : '<i class="fa-solid fa-sort-down ml-2"></i>')
+                : '<i class="fa-solid fa-sort ml-2 opacity-30"></i>';
+            
+            return `<th class="px-6 py-5 font-bold cursor-pointer hover:text-[#FFD700] transition-colors ${isActive ? 'text-[#FFD700]' : ''}" data-column="${columnName}">${label}${sortIcon}</th>`;
+        }
+        return `<th class="px-6 py-5 font-bold">${label}</th>`;
+    }).join('');
+    
+    head.innerHTML = `<tr>${headerCells}<th class="px-6 py-5 text-right">Actions</th></tr>`;
+    
+    // Add click handlers for sortable columns
+    head.querySelectorAll('th[data-column]').forEach(th => {
+        th.onclick = () => {
+            const column = th.getAttribute('data-column');
+            if (sortColumn === column) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = column;
+                sortDirection = 'asc';
+            }
+            applyFilters();
+        };
+    });
     
     body.innerHTML = data.map(row => `
         <tr class="hover:bg-slate-800/40 transition-colors">
@@ -305,7 +455,7 @@ function renderTable(data, config) {
                     return `<td class="px-6 py-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-black ${isActive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">${isActive ? (col === 'is_secret' ? 'SECRET' : 'ACTIVE') : (col === 'is_secret' ? 'REGULAR' : 'INACTIVE')}</span></td>`;
                 }
                 
-                if (col === 'created_at') {
+                if (col === 'created_at' || col === 'claimed_at') {
                     const date = new Date(val);
                     return `<td class="px-6 py-4 text-slate-400 text-sm">${date.toLocaleDateString()} ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>`;
                 }
@@ -339,9 +489,9 @@ function renderTable(data, config) {
             }).join('')}
             <td class="px-6 py-4 text-right">
                 <div class="flex items-center justify-end gap-2">
-                    <button class="db-edit-btn text-slate-500 hover:text-[#FFD700] transition-colors" data-record='${JSON.stringify(row).replace(/'/g, "&apos;")}' title="Edit">
+                    ${currentTable !== 'user_claims' ? `<button class="db-edit-btn text-slate-500 hover:text-[#FFD700] transition-colors" data-record='${JSON.stringify(row).replace(/'/g, "&apos;")}' title="Edit">
                         <i class="fa-solid fa-pen-to-square"></i>
-                    </button>
+                    </button>` : ''}
                     <button class="db-delete-btn text-slate-500 hover:text-red-500 transition-colors" data-id="${row.id || row.name}" title="Delete">
                         <i class="fa-solid fa-trash-can"></i>
                     </button>
@@ -450,7 +600,14 @@ function showToast(message, type = 'info') {
 }
 
 async function deleteRecord(identifier) {
-    if (!confirm('Delete record?')) return;
+    if (currentTable === 'user_claims') {
+        const record = allTableData.find(r => r.id === identifier);
+        if (record && !confirm(`Delete claim for user "${record.username}" (${record.character_name}) on quest "${record.quest_name}"?\n\nThis action cannot be undone!`)) {
+            return;
+        }
+    } else if (!confirm('Delete record?')) {
+        return;
+    }
     
     if (currentTable === 'quest_categories') {
         await supabase.from(currentTable).delete().eq('name', identifier);
@@ -469,6 +626,9 @@ async function deleteRecord(identifier) {
 
 function setActiveTab(tableId) {
     currentTable = tableId;
+    sortColumn = null;
+    sortDirection = 'asc';
+    
     document.querySelectorAll('.mgmt-tab').forEach(tab => {
         tab.classList.remove('active', 'text-[#FFD700]');
         tab.classList.add('text-slate-400');
@@ -480,8 +640,32 @@ function setActiveTab(tableId) {
     }
     document.getElementById('add-form-container').classList.add('hidden');
     
-    const searchInput = document.getElementById('search-input');
+    // Hide/show Create New button based on table
+    const addBtn = document.getElementById('add-entry-btn');
+    if (addBtn) {
+        if (currentTable === 'user_claims') {
+            addBtn.style.display = 'none';
+        } else {
+            addBtn.style.display = 'block';
+        }
+    }
+    
+    // Hide/show status filter and user claims filters
     const statusFilter = document.getElementById('filter-status');
+    const userClaimsFilters = document.getElementById('user-claims-filters');
+    const mainSearchInput = document.getElementById('search-input');
+    
+    if (currentTable === 'user_claims') {
+        if (statusFilter) statusFilter.style.display = 'none';
+        if (userClaimsFilters) userClaimsFilters.classList.remove('hidden');
+        if (mainSearchInput) mainSearchInput.style.display = 'none';
+    } else {
+        if (statusFilter) statusFilter.style.display = 'block';
+        if (userClaimsFilters) userClaimsFilters.classList.add('hidden');
+        if (mainSearchInput) mainSearchInput.style.display = 'block';
+    }
+    
+    const searchInput = document.getElementById('search-input');
     if (searchInput) searchInput.value = '';
     if (statusFilter) statusFilter.value = 'all';
     
@@ -499,7 +683,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadSignsMetadata();
     enableSignTooltip();
     
-    ['secret_unlock_configs', 'heroic_feats', 'quest_categories'].forEach(id => {
+    ['secret_unlock_configs', 'heroic_feats', 'quest_categories', 'user_claims'].forEach(id => {
         const tab = document.getElementById(`tab-${id.replace(/_/g, '-')}`);
         if (tab) tab.onclick = () => setActiveTab(id);
     });
@@ -534,8 +718,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         clearBtn.onclick = () => {
             if (searchInput) searchInput.value = '';
             if (statusFilter) statusFilter.value = 'all';
+            
+            const usernameSearch = document.getElementById('search-username');
+            const questSearch = document.getElementById('search-quest');
+            if (usernameSearch) usernameSearch.value = '';
+            if (questSearch) questSearch.value = '';
+            
             applyFilters();
         };
+    }
+    
+    // Add event listeners for user claims search fields
+    const usernameSearch = document.getElementById('search-username');
+    const questSearch = document.getElementById('search-quest');
+    
+    if (usernameSearch) {
+        usernameSearch.addEventListener('input', applyFilters);
+    }
+    
+    if (questSearch) {
+        questSearch.addEventListener('input', applyFilters);
     }
     
     fetchTableData();
