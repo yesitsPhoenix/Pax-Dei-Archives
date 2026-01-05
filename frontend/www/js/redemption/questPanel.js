@@ -2,6 +2,7 @@ import { supabase } from "../supabaseClient.js";
 import { enableSignTooltip, mouseTooltip } from '../ui/signTooltip.js';
 import { initializeCharacterSystem } from "./characterManager.js";
 import { questState } from './questStateManager.js';
+import { initializeMarkdownToolbar } from '../ui/markdownToolbar.js';
 
 const alphabet = "abcdefghijklmnopqrstuvwxyz";
 
@@ -437,6 +438,7 @@ function init() {
     loadSigns();
     loadPrerequisiteOptions('hard-lock-container', 'hard-lock-quest', 'hard-lock-search', 'hard-lock-list');
     loadPrerequisiteOptions('prerequisite-container', 'prereq-quest', 'prereq-search', 'prereq-list');
+    initializeMarkdownToolbar();
 }
 
 checkAccess();
