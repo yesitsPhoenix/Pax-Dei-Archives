@@ -273,13 +273,10 @@ async function fetchTableData() {
     
     if (currentTable === 'user_claims') {
         // Load all user claims at once (no pagination) - ADMIN VIEW
-        console.log('Fetching ALL user claims for admin panel...');
         const { data: claimsData, error, count } = await supabase
             .from('user_claims')
             .select('id, user_id, quest_id, character_id, claimed_at', { count: 'exact' })
             .order(config.sort, { ascending: false });
-        
-        console.log('Claims fetched:', claimsData?.length, 'Total count:', count);
         
         if (error) {
             console.error('Error fetching user claims:', error);
@@ -600,28 +597,75 @@ function showToast(message, type = 'info') {
 }
 
 async function deleteRecord(identifier) {
-    if (currentTable === 'user_claims') {
-        const record = allTableData.find(r => r.id === identifier);
-        if (record && !confirm(`Delete claim for user "${record.username}" (${record.character_name}) on quest "${record.quest_name}"?\n\nThis action cannot be undone!`)) {
-            return;
-        }
-    } else if (!confirm('Delete record?')) {
-        return;
-    }
+    const record = allTableData.find(r => (r.id || r.name) === identifier);
     
-    if (currentTable === 'quest_categories') {
-        await supabase.from(currentTable).delete().eq('name', identifier);
+    // Show custom modal instead of browser confirm
+    const modal = document.getElementById('delete-confirm-modal');
+    const message = document.getElementById('delete-confirm-message');
+    const confirmBtn = document.getElementById('delete-confirm-btn');
+    const cancelBtn = document.getElementById('delete-cancel-btn');
+    
+    // Set the message based on table type
+    if (currentTable === 'user_claims' && record) {
+        message.innerHTML = `Delete claim for user <span class="text-[#FFD700] font-bold">"${record.username}"</span> (${record.character_name}) on quest <span class="text-[#FFD700] font-bold">"${record.quest_name}"</span>?`;
     } else {
-        await supabase.from(currentTable).delete().eq('id', identifier);
+        message.textContent = 'Are you sure you want to delete this record?';
     }
     
-    if (currentTable === 'secret_unlock_configs' || currentTable === 'heroic_feats' || currentTable === 'quest_categories') {
-        if (questState.isReady()) {
-            await questState.invalidate(['quests']);
+    // Show modal
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    
+    // Set up one-time event handlers
+    const handleConfirm = async () => {
+        // Hide modal
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        
+        // Perform deletion
+        let result;
+        if (currentTable === 'quest_categories') {
+            result = await supabase.from(currentTable).delete().eq('name', identifier);
+        } else {
+            result = await supabase.from(currentTable).delete().eq('id', identifier);
         }
-    }
+        
+        if (result.error) {
+            console.error('Delete failed:', result.error);
+            showToast(`Delete failed: ${result.error.message}`, 'error');
+        } else {
+            showToast('Record deleted successfully', 'success');
+        }
+        
+        if (currentTable === 'secret_unlock_configs' || currentTable === 'heroic_feats' || currentTable === 'quest_categories') {
+            if (questState.isReady()) {
+                await questState.invalidate(['quests']);
+            }
+        }
+        
+        await fetchTableData();
+        
+        // Clean up listeners
+        confirmBtn.removeEventListener('click', handleConfirm);
+        cancelBtn.removeEventListener('click', handleCancel);
+    };
     
-    fetchTableData();
+    const handleCancel = () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        confirmBtn.removeEventListener('click', handleConfirm);
+        cancelBtn.removeEventListener('click', handleCancel);
+    };
+    
+    confirmBtn.addEventListener('click', handleConfirm);
+    cancelBtn.addEventListener('click', handleCancel);
+    
+    // Also close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            handleCancel();
+        }
+    });
 }
 
 function setActiveTab(tableId) {

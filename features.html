@@ -226,6 +226,33 @@
 
     <div id="footer-placeholder"></div>
 
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-confirm-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <div class="bg-[#1a1a1a] border-2 border-red-600/50 rounded-xl shadow-2xl max-w-md w-full animate-in fade-in zoom-in-95 duration-200">
+            <div class="bg-gradient-to-r from-red-900/30 to-red-800/30 px-6 py-4 border-b border-red-600/30">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-red-600/20 flex items-center justify-center">
+                        <i class="fa-solid fa-triangle-exclamation text-red-500 text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white uppercase tracking-wider">Confirm Deletion</h3>
+                </div>
+            </div>
+            <div class="px-6 py-6">
+                <p id="delete-confirm-message" class="text-gray-300 text-base leading-relaxed mb-2"></p>
+                <p class="text-red-400 text-sm font-semibold">This action cannot be undone!</p>
+            </div>
+            <div class="px-6 py-4 bg-[#0f0f0f] border-t border-slate-800 flex justify-end gap-3">
+                <button id="delete-cancel-btn" class="px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold text-sm uppercase transition-colors">
+                    Cancel
+                </button>
+                <button id="delete-confirm-btn" class="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-sm uppercase transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-trash-can"></i>
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="floating-avatar-container">
         <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar js-floating-avatar">
     </div>
