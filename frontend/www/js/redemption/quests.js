@@ -261,6 +261,43 @@ function isQuestLocked(quest, claims, quests) {
     return false;
 }
 
+// New helper function to determine if a prerequisite quest should be clickable
+// Returns true if the quest is viewable (not hidden by category locks or secrets)
+function isPrerequisiteViewable(quest, currentQuest, claims, quests) {
+    if (!quest) return false;
+    
+    // Get unlocked categories and secret categories
+    const unlockedCategoriesList = questState.getUnlockedCategories();
+    const unlockedCategories = new Set(unlockedCategoriesList);
+    
+    const categoriesData = questState.getCategories();
+    const secretCategoryNames = new Set(
+        categoriesData.filter(c => c.is_secret).map(c => c.name)
+    );
+    
+    const questCategory = quest.category || "Uncategorized";
+    const currentCategory = currentQuest?.category || "Uncategorized";
+    
+    // If the prerequisite is in a secret category that's not unlocked, it's not viewable
+    if (secretCategoryNames.has(questCategory) && !unlockedCategories.has(questCategory)) {
+        return false;
+    }
+    
+    // If the prerequisite is in the same category as the current quest, it's viewable
+    if (questCategory === currentCategory) {
+        return true;
+    }
+    
+    // Check if the prerequisite's category is unlocked
+    // If it's unlocked, the user can view it even if it has its own prerequisites
+    if (unlockedCategories.has(questCategory)) {
+        return true;
+    }
+    
+    // If we get here, the quest is not viewable
+    return false;
+}
+
 function findNextAvailableQuest() {
 //console.log('[QUESTS] findNextAvailableQuest called with activeQuestKey:', activeQuestKey);
 
@@ -496,10 +533,11 @@ async function showQuestDetails(quest, userClaimed) {
                 const colorClass = isDone ? "text-green-400" : "text-red-400";
                 const icon = isDone ? "fa-circle-check" : "fa-circle-xmark";
                 
-                const locked = q ? isQuestLocked(q, userClaims, allQuests) : true;
+                // Use the new isPrerequisiteViewable function instead of isQuestLocked
+                const isViewable = q ? isPrerequisiteViewable(q, quest, userClaims, allQuests) : false;
 
                 let actionButton = '';
-                if (q && !locked) {
+                if (q && isViewable) {
                     actionButton = `<button data-quest-id="${id}" class="hard-lock-link text-[10px] text-gray-500 hover:text-[#FFD700] uppercase tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity">View <i class="fa-solid fa-arrow-right ml-1"></i></button>`;
                 } else {
                     actionButton = `<span class="text-[10px] text-gray-600 uppercase tracking-tighter cursor-not-allowed opacity-0 group-hover:opacity-100 transition-opacity"><i class="fa-solid fa-lock mr-1"></i>Locked</span>`;
@@ -544,10 +582,11 @@ async function showQuestDetails(quest, userClaimed) {
                 const colorClass = isDone ? "text-green-400" : "text-red-400";
                 const icon = isDone ? "fa-circle-check" : "fa-circle-xmark";
                 
-                const locked = q ? isQuestLocked(q, userClaims, allQuests) : true;
+                // Use the new isPrerequisiteViewable function instead of isQuestLocked
+                const isViewable = q ? isPrerequisiteViewable(q, quest, userClaims, allQuests) : false;
 
                 let actionButton = '';
-                if (q && !locked) {
+                if (q && isViewable) {
                     actionButton = `<button data-quest-id="${id}" class="prereq-link text-[10px] text-gray-500 hover:text-[#FFD700] uppercase tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity">View <i class="fa-solid fa-arrow-right ml-1"></i></button>`;
                 } else {
                     actionButton = `<span class="text-[10px] text-gray-600 uppercase tracking-tighter cursor-not-allowed opacity-0 group-hover:opacity-100 transition-opacity"><i class="fa-solid fa-lock mr-1"></i>Locked</span>`;
