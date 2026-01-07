@@ -6,16 +6,10 @@
     "desc": "A master of the forge who shapes metal into protective gear."
   },
   {
-    "name": "The Hunstman",
-    "icon": "bx bx-bow",
+    "name": "The Tanner",
+    "icon": "fa-solid fa-paw",
     "skills": ["Skinning", "Leatherworking"],
     "desc": "A master of the wild who respects the kill, using toughened hides to forge unbreakable protection."
-  },
-  {
-    "name": "The Alchemist",
-    "icon": "fa-solid fa-flask",
-    "skills": ["Foraging", "Alchemy"],
-    "desc": "Seeker of the unseen properties of flora, brewing potent draughts that mend the flesh and sharpen the mind."
   },
   {
     "name": "The Architect",
@@ -36,22 +30,10 @@
     "desc": "Master of delicate fibers and resilient threads, weaving the very fabric of identity for the Archive members."
   },
   {
-    "name": "The Chef",
-    "icon": "bx bx-bowl-hot",
-    "skills": ["Skinning", "Cooking"],
-    "desc": "Culinary artist who transforms simple ingredients into feasts that nourish both body and spirit."
-  },
-  {
-    "name": "The Enchanter",
-    "icon": "fa-solid fa-wand-magic-sparkles",
-    "skills": ["Mining", "Jewelcrafting"],
-    "desc": "Infuser of magic into the mundane, creating enchanted items that empower and protect."
-  },
-  {
-    "name": "The Carpenter",
-    "icon": "fa-solid fa-tree",
-    "skills": ["Woodchopping", "Carpentry"],
-    "desc": "Craftsman of wood, turning nature's bounty into sturdy furniture and intricate structures."
+    "name": "The Butcher",
+    "icon": "bx bx-meat",
+    "skills": ["Skinning", "Butchering"],
+    "desc": "A master butcher, capable of various cuts to create the finest meat products."
   },
   {
     "name": "The Blacksmith",
