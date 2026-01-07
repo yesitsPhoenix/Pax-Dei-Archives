@@ -1,4 +1,3 @@
-
 import { supabase } from '../supabaseClient.js';
 
 class QuestStateManager {
@@ -62,8 +61,17 @@ class QuestStateManager {
     async _performInitialization() {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
         
-        if (userError && userError.status !== 401) {
-            throw new Error(`Failed to fetch user: ${userError.message}`);
+        // Missing auth session is expected for non-logged-in users, not an error
+        // Only throw on actual unexpected errors (network issues, etc.)
+        if (userError) {
+            // Don't throw for missing auth session or 401 errors - these are expected
+            if (userError.message?.includes('Auth session missing') || userError.status === 401) {
+                // This is expected - user is not logged in
+                this.log('No authenticated user - this is expected for initial page load');
+            } else {
+                // This is an unexpected error
+                throw new Error(`Failed to fetch user: ${userError.message}`);
+            }
         }
 
         this.cache.user = user;
