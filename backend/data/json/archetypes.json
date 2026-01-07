@@ -6,7 +6,7 @@
     "desc": "A master of the forge who shapes metal into protective gear."
   },
   {
-    "name": "The Ranger",
+    "name": "The Hunstman",
     "icon": "bx bx-bow",
     "skills": ["Skinning", "Leatherworking"],
     "desc": "A master of the wild who respects the kill, using toughened hides to forge unbreakable protection."
@@ -48,10 +48,10 @@
     "desc": "Infuser of magic into the mundane, creating enchanted items that empower and protect."
   },
   {
-    "name": "The Herbalist",
-    "icon": "fa-solid fa-leaf",
-    "skills": ["Foraging", "Alchemy"],
-    "desc": "Expert in the identification and use of plants, creating remedies and potions that heal and enhance."
+    "name": "The Carpenter",
+    "icon": "fa-solid fa-tree",
+    "skills": ["Woodchopping", "Carpentry"],
+    "desc": "Craftsman of wood, turning nature's bounty into sturdy furniture and intricate structures."
   },
   {
     "name": "The Blacksmith",
