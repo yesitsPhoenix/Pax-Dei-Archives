@@ -11,6 +11,7 @@ let regionsData = [];
 let userClaims = [];
 let activeQuestKey = null;
 let collapsedCategories = new Set();
+let questCounters = {}; // Stores counter state: { questId: [{ id: 0, current: 0, target: 10, type: 'kill', name: 'goats' }, ...] }
 
 function showToast(message, type = 'error') {
     let container = document.getElementById('toast-container');
@@ -55,6 +56,107 @@ function createToastContainer() {
     document.body.appendChild(container);
     return container;
 }
+
+// Quest Counter System - Disabled for now
+function parseQuestCounters(quest) {
+    return null; // Counters temporarily disabled
+}
+
+function loadQuestCounters() {
+    const stored = localStorage.getItem('questCounters');
+    if (stored) {
+        try {
+            questCounters = JSON.parse(stored);
+        } catch (e) {
+            questCounters = {};
+        }
+    }
+}
+
+function saveQuestCounters() {
+    localStorage.setItem('questCounters', JSON.stringify(questCounters));
+}
+
+function updateQuestCounter(questId, counterId, value) {
+    if (!questCounters[questId] || !questCounters[questId][counterId]) return;
+    questCounters[questId][counterId].current = Math.min(Math.max(0, value), questCounters[questId][counterId].target);
+    saveQuestCounters();
+    
+    // Update all instances of the counter (both in detail pane and modal)
+    const counterWidgets = document.querySelectorAll(`.quest-counter-widget[data-quest-id="${questId}"]`);
+    counterWidgets.forEach(widget => {
+        const newHTML = renderCountersUI(questId);
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = newHTML;
+        widget.replaceWith(tempDiv.firstElementChild);
+    });
+}
+
+function renderCountersUI(questId) {
+    const counters = questCounters[questId];
+    if (!counters || counters.length === 0) return '';
+    
+    const allComplete = counters.every(c => c.current >= c.target);
+    
+    const countersHTML = counters.map(counter => {
+        const isComplete = counter.current >= counter.target;
+        const percentage = (counter.current / counter.target) * 100;
+        
+        const actionVerb = {
+            'kill': 'Slain',
+            'collect': 'Collected',
+            'gather': 'Gathered',
+            'craft': 'Crafted',
+            'refine': 'Refined'
+        }[counter.type] || 'Progress';
+        
+        return `
+            <div class="bg-black/20 border ${isComplete ? 'border-green-500/30' : 'border-gray-700/50'} rounded-lg p-2.5 mb-2">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-[10px] uppercase tracking-widest font-bold ${isComplete ? 'text-green-400' : 'text-gray-400'}">
+                        ${actionVerb}: ${counter.name}
+                    </span>
+                    <span class="text-sm font-bold ${isComplete ? 'text-green-400' : 'text-[#FFD700]'}">
+                        ${counter.current} / ${counter.target}
+                    </span>
+                </div>
+                <div class="w-full bg-gray-800 rounded-full h-1.5 overflow-hidden">
+                    <div class="${isComplete ? 'bg-green-500' : 'bg-[#FFD700]'} h-full transition-all duration-300" style="width: ${percentage}%"></div>
+                </div>
+                <div class="flex gap-1.5 mt-2">
+                    <button onclick="window.updateQuestCounter('${questId}', ${counter.id}, ${counter.current - 1})" 
+                            class="flex-1 bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold py-1 rounded transition-colors ${counter.current <= 0 ? 'opacity-50 cursor-not-allowed' : ''}" 
+                            ${counter.current <= 0 ? 'disabled' : ''}>
+                        <i class="fa-solid fa-minus text-[10px]"></i>
+                    </button>
+                    <button onclick="window.updateQuestCounter('${questId}', ${counter.id}, ${counter.current + 1})" 
+                            class="flex-1 bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold py-1 rounded transition-colors ${isComplete ? 'opacity-50 cursor-not-allowed' : ''}" 
+                            ${isComplete ? 'disabled' : ''}>
+                        <i class="fa-solid fa-plus text-[10px]"></i>
+                    </button>
+                    <button onclick="window.updateQuestCounter('${questId}', ${counter.id}, ${counter.target})" 
+                            class="flex-1 bg-[#FFD700] hover:bg-yellow-400 text-black text-xs font-bold py-1 rounded transition-colors">
+                        <i class="fa-solid fa-check text-[10px]"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    return `
+        <div class="quest-counter-widget bg-black/40 border ${allComplete ? 'border-green-500/30' : 'border-gray-700'} rounded-xl p-3 mb-4" data-quest-id="${questId}">
+            <h5 class="text-[11px] uppercase tracking-widest text-gray-500 font-bold mb-3 flex items-center gap-2">
+                <i class="fa-solid fa-list-check"></i>
+                Quest Progress Tracker
+            </h5>
+            ${countersHTML}
+        </div>
+    `;
+}
+
+// Expose functions globally
+window.updateQuestCounter = updateQuestCounter;
+window.renderCountersUI = renderCountersUI;
 
 async function updateSidebarPermissions() {
     const createBtn = document.getElementById("create-quest-nav");
@@ -419,6 +521,10 @@ async function showQuestDetails(quest, userClaimed) {
     const prerequisites = quest.prerequisite_quest_ids || [];
     const prerequisitesMet = prerequisites.every(id => completedQuestIds.includes(id));
 
+    // Initialize or load quest counters - DISABLED
+    // const countersData = parseQuestCounters(quest);
+    // Counter system temporarily disabled
+
     document.querySelectorAll('.quest-item').forEach(el => {
         el.classList.remove('active', 'bg-white/10', 'border-l-4', 'border-[#FFD700]');
         if(el.dataset.key === quest.quest_key) {
@@ -505,28 +611,51 @@ async function showQuestDetails(quest, userClaimed) {
     formatMarkdownContainer('detail-lore', quest.lore, "No lore available.");
     formatMarkdownContainer('detail-location', quest.location, "No location details exist for this quest.");
 
+    // Quest counters temporarily disabled
+    // Counter insertion code removed
+
     const itemEl = document.getElementById('detail-items');
     const goldEl = document.getElementById('detail-gold');
+    const rewardsSection = document.querySelector('section:has(#detail-rewards-section)');
     const hasGold = quest.gold && Number(quest.gold) > 0;
     const hasItems = quest.items && (Array.isArray(quest.items) ? quest.items.length > 0 : (quest.items !== 'None' && quest.items !== ''));
 
     if (!hasGold && !hasItems) {
-        itemEl.innerText = "No reward(s) found for this quest";
-        itemEl.classList.add('text-gray-500', 'italic');
-        goldEl.innerText = "";
+        // Hide entire rewards section
+        if (rewardsSection) {
+            rewardsSection.style.display = 'none';
+        }
     } else {
+        // Show rewards section
+        if (rewardsSection) {
+            rewardsSection.style.display = 'block';
+        }
         itemEl.classList.remove('text-gray-500', 'italic');
         itemEl.innerText = hasItems ? (Array.isArray(quest.items) ? quest.items.join(', ') : quest.items) : '';
         goldEl.innerText = hasGold ? `${quest.gold} Gold` : '';
     }
 
-    try {
-        const response = await fetch('frontend/www/assets/signs.json');
-        const signConfig = await response.json();
-        const { baseUrl, version } = signConfig.config;
-        document.getElementById('detail-signs').innerHTML = generateSignHtml(quest, baseUrl, version);
-    } catch (e) {
-        document.getElementById('detail-signs').innerHTML = `<span class="text-gray-500 italic text-md">No sign sequence found.</span>`;
+    const signSection = document.querySelector('section:has(#detail-signs)');
+    const hasSignSequence = quest.signs && Array.isArray(quest.signs) && quest.signs.length > 0;
+
+    if (!hasSignSequence) {
+        // Hide entire sign sequence section
+        if (signSection) {
+            signSection.style.display = 'none';
+        }
+    } else {
+        // Show sign sequence section
+        if (signSection) {
+            signSection.style.display = 'block';
+        }
+        try {
+            const response = await fetch('frontend/www/assets/signs.json');
+            const signConfig = await response.json();
+            const { baseUrl, version } = signConfig.config;
+            document.getElementById('detail-signs').innerHTML = generateSignHtml(quest, baseUrl, version);
+        } catch (e) {
+            document.getElementById('detail-signs').innerHTML = `<span class="text-gray-500 italic text-md">No sign sequence found.</span>`;
+        }
     }
 
     // Hard Lock Prerequisites Display
@@ -1087,6 +1216,9 @@ async function init() {
     regionsData = questState.getRegions();
     userClaims = questState.getUserClaims();
     window.userClaims = userClaims;
+    
+    // Quest counter system temporarily disabled
+    // loadQuestCounters() and initialization removed
     
     await initializeCharacterSystem();
     
