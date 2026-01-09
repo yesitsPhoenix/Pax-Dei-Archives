@@ -61,14 +61,14 @@ export function initQuestModal() {
                         ${lore}
                     </div>
                 </section>
+            </div>
+            <div class="lg:col-span-1 space-y-6">
                 <section>
-                    <h4 class="text-md uppercase tracking-widest text-gray-500 font-bold mb-2">Quest Location / Detail</h4>
-                    <div class="text-gray-300 text-md">
+                    <h4 class="text-md uppercase tracking-widest text-gray-500 font-bold mb-2">Quest Fulfillment</h4>
+                    <div class="bg-black/20 p-4 rounded-xl border border-gray-700/50 text-gray-300 text-md">
                         ${location}
                     </div>
                 </section>
-            </div>
-            <div class="lg:col-span-1 space-y-6">
                 ${hasSignSequence ? `
                 <section>
                     <h4 class="text-md uppercase tracking-widest text-gray-500 font-bold mb-2">Sign Sequence</h4>

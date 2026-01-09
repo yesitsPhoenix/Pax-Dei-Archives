@@ -172,12 +172,6 @@ const setupCharacterFormListener = () => {
                 detail: { characterId: data.character_id } 
             }));
 
-            const pathOverlay = document.getElementById('archetype-selection-overlay');
-            if (pathOverlay) {
-                pathOverlay.classList.remove('hidden');
-                pathOverlay.style.display = 'flex';
-            }
-
         } catch (e) {
             console.error('Error creating character:', e.message);
             showToast(e.message, true);

@@ -1,7 +1,6 @@
 import { questState } from "./questStateManager.js";
 import { getUnlockedCategories, applyLockStyles } from "./unlocks.js";
 import { enableSignTooltip } from '../ui/signTooltip.js';
-import { loadArchetypeBanner, initArchetypeSelection } from "../archetypes/archetypesUI.js";
 import { initQuestModal } from './questModal.js';
 import { initializeCharacterSystem, fetchCharacters } from './characterManager.js';
 
@@ -11,7 +10,7 @@ let regionsData = [];
 let userClaims = [];
 let activeQuestKey = null;
 let collapsedCategories = new Set();
-let questCounters = {}; // Stores counter state: { questId: [{ id: 0, current: 0, target: 10, type: 'kill', name: 'goats' }, ...] }
+let questCounters = {};
 
 function showToast(message, type = 'error') {
     let container = document.getElementById('toast-container');
@@ -462,6 +461,35 @@ return false;
     return true;
 };
 
+// Helper function to check if a quest is viewable (not hard-locked)
+// A quest is viewable if it's unlocked OR soft-locked (visible but not completable)
+const isQuestViewable = (quest) => {
+    const claimedIds = userClaims.map(c => c.quest_id);
+    const categoryProgress = {};
+    userClaims.forEach(claim => {
+        const q = allQuests.find(item => item.id === claim.quest_id);
+        if (q && q.category) {
+            categoryProgress[q.category] = (categoryProgress[q.category] || 0) + 1;
+        }
+    });
+
+    // Check category-based hard lock
+    const reqCat = quest.unlock_prerequisite_category;
+    const reqCount = quest.unlock_required_count || 0;
+    if (reqCat && reqCat !== "" && (categoryProgress[reqCat] || 0) < reqCount) {
+        return false; // Hard-locked by category requirement
+    }
+
+    // Check quest-level hard locks (controls visibility)
+    const hardLocks = quest.hard_lock_quest_ids || [];
+    if (hardLocks.length > 0 && !hardLocks.every(id => claimedIds.includes(id))) {
+        return false; // Hard-locked by specific quests
+    }
+
+    // If we get here, the quest is viewable (may be soft-locked but still visible)
+    return true;
+};
+
 // Get all quests in the same category as the current quest
     const sameCategory = allQuests.filter(q => q.category === currentQuest.category);
     //console.log('[QUESTS] Quests in same category:', sameCategory.length);
@@ -470,36 +498,88 @@ return false;
     const currentIndexInCategory = sameCategory.findIndex(q => q.quest_key === activeQuestKey);
     //console.log('[QUESTS] Current index in category:', currentIndexInCategory);
     
-    // Try to find the next unclaimed quest in the same category
+    // Try to find the next viewable quest in the same category (unlocked OR soft-locked)
     if (currentIndexInCategory !== -1) {
         for (let i = currentIndexInCategory + 1; i < sameCategory.length; i++) {
             const candidateQuest = sameCategory[i];
             const isClaimed = userClaims.some(c => c.quest_id === candidateQuest.id);
-            const isLocked = isQuestLocked(candidateQuest, userClaims, allQuests);
+            const isViewable = isQuestViewable(candidateQuest);
             
-            //console.log('[QUESTS] Checking candidate:', candidateQuest.quest_name, '| Claimed:', isClaimed, '| Locked:', isLocked);
+            //console.log('[QUESTS] Checking candidate:', candidateQuest.quest_name, '| Claimed:', isClaimed, '| Viewable:', isViewable);
             
-            if (!isClaimed && !isLocked && isQuestAvailableToUser(candidateQuest)) {
-                //console.log('[QUESTS] Found next quest in same category:', candidateQuest.quest_name);
+            if (!isClaimed && isViewable && isQuestAvailableToUser(candidateQuest)) {
+                //console.log('[QUESTS] Found next viewable quest in same category:', candidateQuest.quest_name);
                 return candidateQuest;
             }
         }
     }
     
-    //console.log('[QUESTS] No next quest in same category, looking for any available quest');
+    //console.log('[QUESTS] No next viewable quest in same category, looking for first viewable quest at top of list');
     
-    // If no next quest in the same category, find the first available quest in any category
-    for (const quest of allQuests) {
-        const isClaimed = userClaims.some(c => c.quest_id === quest.id);
-        const isLocked = isQuestLocked(quest, userClaims, allQuests);
+    // If no next quest in same category, find the first viewable quest at the top of the entire list
+    // This needs to match EXACTLY what the user sees in the rendered list, respecting filters
+    
+    // Get the current filter status
+    const filterStatus = document.getElementById('filter-status')?.value || 'incomplete';
+    
+    // Step 1: Filter quests exactly like renderQuestsList does
+    const filteredQuests = allQuests.filter(quest => {
+        const category = quest.category || "Uncategorized";
+        const isSecret = secretCategoryNames.has(category);
+        const isUnlocked = unlockedCategories.has(category);
         
-        if (!isClaimed && !isLocked && isQuestAvailableToUser(quest)) {
-            //console.log('[QUESTS] Found first available quest in any category:', quest.quest_name);
+        // Filter by archetype (already handled in isQuestAvailableToUser, but double-check)
+        if (!isQuestAvailableToUser(quest)) return false;
+        
+        // Secret quests are hidden unless unlocked
+        if (isSecret && !isUnlocked) return false;
+        
+        const isClaimed = userClaims.some(c => c.quest_id === quest.id);
+        
+        // Apply the same filter logic as renderQuestsList
+        if (filterStatus === "all") return true;
+        if (filterStatus === "completed") return isClaimed;
+        if (filterStatus === "incomplete") {
+            if (isClaimed) return false;
+            
+            const questCategory = quest.category || "Uncategorized";
+            const isQuestCategoryUnlocked = unlockedCategories.has(questCategory);
+            if (!isQuestCategoryUnlocked) return false;
+            
+            // Check if quest is viewable (not hard-locked)
+            if (!isQuestViewable(quest)) return false;
+            
+            return true;
+        }
+        return true;
+    });
+    
+    // Step 2: Group by category
+    const grouped = filteredQuests.reduce((acc, quest) => {
+        const cat = quest.category || "Uncategorized";
+        if (!acc[cat]) acc[cat] = [];
+        acc[cat].push(quest);
+        return acc;
+    }, {});
+    
+    // Step 3: Sort categories (matching renderQuestsList logic)
+    const sortedCats = Object.keys(grouped).sort((a, b) => {
+        if (a === "The First Steps: Beginner's Guide") return -1;
+        if (b === "The First Steps: Beginner's Guide") return 1;
+        return a.localeCompare(b);
+    });
+    
+    // Step 4: Iterate through categories in UI order and find first viewable quest
+    for (const category of sortedCats) {
+        const categoryQuests = grouped[category];
+        // Quests within category are already in database order (same as allQuests)
+        for (const quest of categoryQuests) {
+            //console.log('[QUESTS] Found first viewable quest at top of rendered list:', quest.quest_name, 'in category:', category);
             return quest;
         }
     }
     
-    //console.log('[QUESTS] No next quest found');
+    //console.log('[QUESTS] No viewable quests found anywhere');
     return null;
 }
 
@@ -609,7 +689,7 @@ async function showQuestDetails(quest, userClaimed) {
     };
 
     formatMarkdownContainer('detail-lore', quest.lore, "No lore available.");
-    formatMarkdownContainer('detail-location', quest.location, "No location details exist for this quest.");
+    formatMarkdownContainer('detail-location', quest.location, "No quest fulfillment details exist for this quest.");
 
     // Quest counters temporarily disabled
     // Counter insertion code removed
@@ -1117,28 +1197,64 @@ async function renderQuestsList() {
     }
 }
 
-async function checkCharacterArchetype(characterId) {
-    const char = questState.getActiveCharacter();
-    
-    if (char && !char.archetype) {
-        const overlay = document.getElementById('archetype-selection-overlay');
-        if (overlay) {
-            overlay.classList.remove('hidden');
-            overlay.classList.add('flex');
-            await initArchetypeSelection('archetype-node-container');
+// Character archetype check removed - archetypes feature discontinued
+
+async function loadCharacterBanner(characterId) {
+    const banner = document.getElementById('character-banner');
+    const bannerEmpty = document.getElementById('character-banner-empty');
+    if (!banner || !bannerEmpty) return;
+
+    try {
+        if (!questState.isReady()) {
+            await questState.initialize();
         }
+
+        const character = questState.getActiveCharacter();
+
+        if (!character) {
+            banner.classList.add('hidden');
+            bannerEmpty.classList.remove('hidden');
+            return;
+        }
+
+        const claims = questState.getUserClaims();
+        const categories = questState.getCategories();
+
+        let categoryActiveMap = {};
+        claims.forEach(claim => {
+            const quest = questState.getQuestById(claim.quest_id);
+            if (quest?.category) {
+                categoryActiveMap[quest.category] = true;
+            }
+        });
+
+        const standardCategories = categories.filter(c => !c.is_secret).map(c => c.name);
+        const activeCategoryCount = standardCategories.filter(catName => categoryActiveMap[catName]).length;
+
+        document.getElementById('banner-character-name').innerText = character.character_name;
+        
+        document.getElementById('chapters-count-text').innerText = activeCategoryCount;
+        document.getElementById('chapters-total-text').innerText = standardCategories.length;
+        
+        const chaptersBar = document.getElementById('chapters-progress-bar');
+        if (chaptersBar) {
+            const chapPerc = standardCategories.length > 0 ? (activeCategoryCount / standardCategories.length) * 100 : 0;
+            chaptersBar.style.width = `${chapPerc}%`;
+        }
+
+        banner.classList.remove('hidden');
+        bannerEmpty.classList.add('hidden');
+
+    } catch (err) {
+        console.error("[QUESTS] Banner Logic Exception:", err);
     }
 }
-
 
 window.addEventListener('characterChanged', async (e) => {
     const newCharacterId = e.detail.characterId;
     
-    await loadArchetypeBanner(newCharacterId);
+    await loadCharacterBanner(newCharacterId);
     
-    await checkCharacterArchetype(newCharacterId);
-    
-    initArchetypeSelection('archetype-node-container');
     activeQuestKey = null;
     window.activeQuestKey = null;
     
@@ -1236,8 +1352,7 @@ async function init() {
     
     const characterId = questState.getActiveCharacterId();
     if (characterId) {
-        await checkCharacterArchetype(characterId);
-        await loadArchetypeBanner(characterId);
+        await loadCharacterBanner(characterId);
     }
 
     updateSidebarPermissions();
