@@ -296,17 +296,15 @@ async function claimQuestDirectly(quest) {
         await questState.addClaim(quest.id);
         
         const directModal = document.getElementById('direct-confirm-modal');
-        const successModal = document.getElementById('success-state');
         
         if (directModal) {
             directModal.classList.add('hidden');
             directModal.classList.remove('flex');
         }
 
-        if (successModal) {
-            successModal.classList.remove('hidden');
-            successModal.classList.add('flex');
-        }
+        // Skip showing success modal - let quest claimed event handle UI updates
+        // Show a toast notification instead
+        showToast(`Quest "${quest.quest_name}" completed!`, 'success');
 
         // CRITICAL: Update userClaims BEFORE finding next quest
         userClaims = questState.getUserClaims();

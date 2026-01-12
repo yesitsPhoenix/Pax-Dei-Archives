@@ -149,6 +149,9 @@
                     <button id="tab-user-claims" class="mgmt-tab py-2 font-bold text-slate-400 hover:text-white transition-all uppercase">
                         User Quest Claims
                     </button>
+                    <button id="tab-character-progression" class="mgmt-tab py-2 font-bold text-slate-400 hover:text-white transition-all uppercase">
+                        Character Progression
+                    </button>
                 </div>
                 <button id="add-entry-btn" class="bg-[#FFD700] hover:bg-[#e6c200] text-black px-6 py-2.5 rounded-md font-black text-md uppercase tracking-widest shadow-lg transition-transform active:scale-95">
                     <i class="fa-solid fa-plus mr-2"></i>Create New
@@ -190,6 +193,18 @@
                         </div>
                     </div>
                 </div>
+                <div id="character-progression-info" class="hidden">
+                    <div class="bg-blue-900/20 border border-blue-600/30 rounded-lg px-4 py-3 flex items-start gap-3">
+                        <i class="fa-solid fa-chart-line text-blue-400 text-lg mt-0.5"></i>
+                        <div class="flex-1 text-sm text-blue-200">
+                            <div class="mb-2"><span class="font-semibold">Character Progression Analytics:</span> This page shows chronicle completion statistics per character, sorted by total completions. Use this data to understand player engagement patterns and identify where players may get stuck or stop progressing.</div>
+                            <div class="text-xs text-blue-300/80"><i class="fas fa-info-circle mr-1"></i>Tip: Click on milestone badges (5+ completions) to view the milestone legend.</div>
+                        </div>
+                        <button id="toggle-leaderboard" class="px-4 py-2 bg-[#FFD700] hover:bg-[#e6c200] text-black rounded-lg font-bold text-xs uppercase tracking-wider transition-colors whitespace-nowrap">
+                            <i class="fas fa-trophy mr-2"></i>Leaderboard Mode
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div id="add-form-container" class="hidden bg-[#161b22] border-b border-[#FFD700]/20 p-8 animate-in fade-in slide-in-from-top-4 duration-300">
@@ -217,8 +232,127 @@
                         </tbody>
                     </table>
                 </div>
+                
+                <!-- Quest Drop-off Analysis Section -->
+                <div id="quest-dropoff-section" class="hidden bg-[#0f1419] border-t-2 border-[#FFD700]/30 mt-8">
+                    <button id="toggle-dropoff" class="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-[#161b22] transition-colors">
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-chart-line text-[#FFD700] text-xl"></i>
+                            <div>
+                                <h3 class="text-lg font-bold text-white uppercase tracking-wider">Quest Drop-off Analysis</h3>
+                                <p class="text-sm text-slate-400 mt-1">Identify completion patterns and where players tend to stop</p>
+                            </div>
+                        </div>
+                        <i id="dropoff-chevron" class="fas fa-chevron-down text-slate-500 text-xl transition-transform"></i>
+                    </button>
+                    <div id="dropoff-content" class="hidden px-6 pb-6">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+                            <!-- Least Completed Quests -->
+                            <div class="bg-[#161b22] rounded-lg border border-slate-800 p-6">
+                                <div class="flex items-center gap-3 mb-6">
+                                    <div class="w-10 h-10 rounded-full bg-red-600/20 flex items-center justify-center">
+                                        <i class="fas fa-exclamation-triangle text-red-400"></i>
+                                    </div>
+                                    <h4 class="text-md font-bold text-white uppercase tracking-wider">Least Completed Quests</h4>
+                                </div>
+                                <div id="least-completed-quests" class="space-y-3">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+                            
+                            <!-- Most Common Last Quests (Where Players Stop) -->
+                            <div class="bg-[#161b22] rounded-lg border border-slate-800 p-6">
+                                <div class="flex items-center gap-3 mb-6">
+                                    <div class="w-10 h-10 rounded-full bg-orange-600/20 flex items-center justify-center">
+                                        <i class="fas fa-stop-circle text-orange-400"></i>
+                                    </div>
+                                    <h4 class="text-md font-bold text-white uppercase tracking-wider">Common Stopping Points</h4>
+                                </div>
+                                <div id="stopping-points" class="space-y-3">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Engagement Insights -->
+                        <div class="bg-[#161b22] rounded-lg border border-slate-800 p-6 mt-6">
+                            <div class="flex items-center gap-3 mb-6">
+                                <div class="w-10 h-10 rounded-full bg-blue-600/20 flex items-center justify-center">
+                                    <i class="fas fa-lightbulb text-blue-400"></i>
+                                </div>
+                                <h4 class="text-md font-bold text-white uppercase tracking-wider">Engagement Insights</h4>
+                            </div>
+                            <div id="engagement-insights" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
+        </div>
+    </div>
+
+    <!-- Milestone Legend Modal -->
+    <div id="milestone-legend-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <div class="bg-[#1a1a1a] border-2 border-[#FFD700]/50 rounded-xl shadow-2xl max-w-2xl w-full animate-in fade-in zoom-in-95 duration-200">
+            <div class="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 px-6 py-4 border-b border-[#FFD700]/30">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-[#FFD700]/20 flex items-center justify-center">
+                            <i class="fas fa-trophy text-[#FFD700] text-xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white uppercase tracking-wider">Milestone Legend</h3>
+                    </div>
+                    <button id="close-milestone-modal" class="text-slate-400 hover:text-white transition-colors">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="px-6 py-6 space-y-4">
+                <div class="flex items-center gap-4 p-4 bg-gradient-to-r from-yellow-600/10 to-orange-600/10 rounded-lg border border-yellow-500/30">
+                    <i class="fas fa-crown text-yellow-400 text-2xl"></i>
+                    <div class="flex-1">
+                        <span class="font-bold text-yellow-300">Legendary Champion</span>
+                        <p class="text-sm text-slate-400 mt-1">100+ Chronicles Completed</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 p-4 bg-purple-600/10 rounded-lg border border-purple-600/30">
+                    <i class="fas fa-gem text-purple-400 text-2xl"></i>
+                    <div class="flex-1">
+                        <span class="font-bold text-purple-400">Master Explorer</span>
+                        <p class="text-sm text-slate-400 mt-1">50-99 Chronicles Completed</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 p-4 bg-blue-600/10 rounded-lg border border-blue-600/30">
+                    <i class="fas fa-star text-blue-400 text-2xl"></i>
+                    <div class="flex-1">
+                        <span class="font-bold text-blue-400">Veteran Adventurer</span>
+                        <p class="text-sm text-slate-400 mt-1">25-49 Chronicles Completed</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 p-4 bg-green-600/10 rounded-lg border border-green-600/30">
+                    <i class="fas fa-medal text-green-400 text-2xl"></i>
+                    <div class="flex-1">
+                        <span class="font-bold text-green-400">Seasoned Seeker</span>
+                        <p class="text-sm text-slate-400 mt-1">10-24 Chronicles Completed</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 p-4 bg-yellow-600/10 rounded-lg border border-yellow-600/30">
+                    <i class="fas fa-trophy text-yellow-400 text-2xl"></i>
+                    <div class="flex-1">
+                        <span class="font-bold text-yellow-400">Rising Champion</span>
+                        <p class="text-sm text-slate-400 mt-1">5-9 Chronicles Completed</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 p-4 bg-slate-700/20 rounded-lg border border-slate-700">
+                    <i class="fas fa-circle text-slate-400 text-2xl"></i>
+                    <div class="flex-1">
+                        <span class="font-bold text-slate-300">Novice Explorer</span>
+                        <p class="text-sm text-slate-400 mt-1">1-4 Chronicles Completed</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

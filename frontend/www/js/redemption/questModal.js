@@ -2,28 +2,8 @@ export function initQuestModal() {
     const modal = document.getElementById('quest-modal');
     const closeBtn = document.getElementById('close-quest-modal');
     const expandBtn = document.getElementById('expand-quest-details');
-    const successModal = document.getElementById('success-state');
-    const closeSuccessBtn = document.getElementById('close-success-modal');
 
     if (!expandBtn || !modal) return;
-    
-    // Handle success modal close button
-    if (closeSuccessBtn) {
-        closeSuccessBtn.onclick = () => {
-            // Close success modal
-            if (successModal) {
-                successModal.classList.add('hidden');
-                successModal.classList.remove('flex');
-            }
-            
-            // Close quest modal
-            if (modal) {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-                document.body.style.overflow = 'auto';
-            }
-        };
-    }
 
     expandBtn.onclick = () => {
         const title = document.getElementById('detail-name').innerText;
