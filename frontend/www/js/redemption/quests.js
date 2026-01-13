@@ -912,7 +912,8 @@ async function showQuestDetails(quest, userClaimed) {
     if (shareBtn) {
         shareBtn.onclick = async () => {
             try {
-                await navigator.clipboard.writeText(window.location.href);
+                const questPageUrl = `https://yesitsphoenix.github.io/Pax-Dei-Archives/quests/${quest.quest_key}.html`;
+                await navigator.clipboard.writeText(questPageUrl);
                 const span = shareBtn.querySelector('span');
                 const icon = shareBtn.querySelector('i');
                 const originalText = span.innerText;
