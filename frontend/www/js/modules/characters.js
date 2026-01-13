@@ -181,6 +181,7 @@ export const loadCharacters = async (onCharacterSelectedCallback) => {
         currentCharacterId = null;
         _currentCharacter = null; 
         setCurrentCharacterGold(0);
+        sessionStorage.removeItem('active_character_id');
         if (deleteCharacterBtn) deleteCharacterBtn.style.display = 'none';
         if (setGoldBtn) setGoldBtn.style.display = 'none';
         if (pveBtn) pveBtn.style.display = 'none';
@@ -197,9 +198,16 @@ export const loadCharacters = async (onCharacterSelectedCallback) => {
             characterSelect.appendChild(option);
         });
 
-        if (!currentCharacterId || !characters.some(char => char.character_id === currentCharacterId)) {
+        // Check sessionStorage first to maintain consistency across pages
+        const sessionCharId = sessionStorage.getItem('active_character_id');
+        
+        if (sessionCharId && characters.some(char => char.character_id === sessionCharId)) {
+            currentCharacterId = sessionCharId;
+        } else if (!currentCharacterId || !characters.some(char => char.character_id === currentCharacterId)) {
             currentCharacterId = characters[0].character_id;
+            sessionStorage.setItem('active_character_id', currentCharacterId);
         }
+        
         characterSelect.value = currentCharacterId;
         _currentCharacter = characters.find(char => char.character_id === currentCharacterId);
         setCurrentCharacterGold(_currentCharacter ? _currentCharacter.gold : 0);
@@ -231,6 +239,7 @@ const hideAddPveTransactionModal = () => {
 
 const handleCharacterSelection = async (event) => {
     currentCharacterId = event.target.value;
+    sessionStorage.setItem('active_character_id', currentCharacterId);
     _currentCharacter = cachedUserCharacters.find(char => char.character_id === currentCharacterId);
     if (_currentCharacter) {
         setCurrentCharacterGold(_currentCharacter.gold);
@@ -437,6 +446,7 @@ const handleCreateCharacter = async (e) => {
 
   const newCharacter = data[0];
   currentCharacterId = newCharacter.character_id;
+  sessionStorage.setItem('active_character_id', newCharacter.character_id);
   _currentCharacter = newCharacter;
   setCurrentCharacterGold(newCharacter.gold);
   cachedUserCharacters.push(newCharacter);
@@ -562,7 +572,12 @@ export const handleDeleteCharacter = async (characterIdParam = null) => {
         await showCustomModal('Success', 'Character deleted successfully!', [{ text: 'OK', value: true }]);
 
         cachedUserCharacters = cachedUserCharacters.filter(char => char.character_id !== characterId);
-        _currentCharacter = null; 
+        _currentCharacter = null;
+        
+        // Clear sessionStorage if we deleted the active character
+        if (sessionStorage.getItem('active_character_id') === characterId) {
+            sessionStorage.removeItem('active_character_id');
+        }
 
         await loadCharacters(loadTraderPageData);
         if (document.getElementById('listingsContainer')) {
