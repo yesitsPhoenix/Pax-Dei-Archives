@@ -6,22 +6,16 @@
     "desc": "A master of the forge who shapes metal into protective gear."
   },
   {
-    "name": "The Ranger",
-    "icon": "bx bx-bow",
+    "name": "The Tanner",
+    "icon": "fa-solid fa-paw",
     "skills": ["Skinning", "Leatherworking"],
     "desc": "A master of the wild who respects the kill, using toughened hides to forge unbreakable protection."
-  },
-  {
-    "name": "The Alchemist",
-    "icon": "fa-solid fa-flask",
-    "skills": ["Foraging", "Alchemy"],
-    "desc": "Seeker of the unseen properties of flora, brewing potent draughts that mend the flesh and sharpen the mind."
   },
   {
     "name": "The Architect",
     "icon": "fa-solid fa-archway",
     "skills": ["Woodchopping", "Carpentry"],
-    "desc": "Shaper of the Archives’ physical presence, turning raw timber into the grand structures of our civilization."
+    "desc": "Shaper of the Archives' physical presence, turning raw timber into the grand structures of our civilization."
   },
   {
     "name": "The Weaponsmith",
@@ -36,22 +30,10 @@
     "desc": "Master of delicate fibers and resilient threads, weaving the very fabric of identity for the Archive members."
   },
   {
-    "name": "The Chef",
-    "icon": "bx bx-bowl-hot",
-    "skills": ["Skinning", "Cooking"],
-    "desc": "Culinary artist who transforms simple ingredients into feasts that nourish both body and spirit."
-  },
-  {
-    "name": "The Enchanter",
-    "icon": "fa-solid fa-wand-magic-sparkles",
-    "skills": ["Mining", "Jewelcrafting"],
-    "desc": "Infuser of magic into the mundane, creating enchanted items that empower and protect."
-  },
-  {
-    "name": "The Herbalist",
-    "icon": "fa-solid fa-leaf",
-    "skills": ["Foraging", "Alchemy"],
-    "desc": "Expert in the identification and use of plants, creating remedies and potions that heal and enhance."
+    "name": "The Butcher",
+    "icon": "bx bx-meat",
+    "skills": ["Skinning", "Butchering"],
+    "desc": "A master butcher, capable of various cuts to create the finest meat products."
   },
   {
     "name": "The Blacksmith",

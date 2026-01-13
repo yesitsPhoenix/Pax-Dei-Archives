@@ -10,6 +10,12 @@ const alphabet = "abcdefghijklmnopqrstuvwxyz";
 let allTableData = [];
 let isEditMode = false;
 let editingRecordId = null;
+let sortColumn = null;
+let sortDirection = 'asc';
+let leaderboardMode = false;
+let dropoffData = null;
+let currentPage = 1;
+const itemsPerPage = 15;
 
 const tableConfigs = {
     secret_unlock_configs: {
@@ -32,6 +38,24 @@ const tableConfigs = {
         labels: ['Category Name', 'Secret Category', 'Created Date'],
         sort: 'name',
         insertable: ['name', 'is_secret']
+    },
+    user_claims: {
+        display: 'User Quest Claim',
+        columns: ['username', 'character_name', 'quest_name', 'claimed_at'],
+        labels: ['Username', 'Character', 'Quest Name', 'Claimed Date'],
+        sort: 'claimed_at',
+        insertable: [], // No creation for user claims
+        searchable: true,
+        sortableColumns: ['quest_name', 'claimed_at'] // Enable sorting on these columns
+    },
+    character_progression: {
+        display: 'Character Progression',
+        columns: ['username', 'character_name', 'region', 'shard', 'chronicles_completed', 'avg_days_between', 'days_inactive', 'completion_rate', 'last_quest'],
+        labels: ['Username', 'Character Name', 'Region', 'Shard', 'Chronicles', 'Avg. Days Between', 'Days Inactive', 'Completion Rate', 'Last Quest'],
+        sort: 'chronicles_completed',
+        insertable: [], // Read-only view
+        searchable: true,
+        sortableColumns: ['username', 'character_name', 'chronicles_completed', 'avg_days_between', 'days_inactive', 'completion_rate']
     }
 };
 
@@ -144,6 +168,11 @@ async function renderSignPicker(targetId) {
 }
 
 async function showAddForm(recordToEdit = null) {
+    // User claims and progression cannot be created, only deleted/viewed
+    if (currentTable === 'user_claims' || currentTable === 'character_progression') {
+        return;
+    }
+    
     selectedSignsForForm = [];
     
     // Ensure we only enter edit mode if there's actually a record to edit
@@ -246,11 +275,196 @@ async function showAddForm(recordToEdit = null) {
 }
 
 async function fetchTableData() {
+    const tbody = document.getElementById('mgmt-table-body');
+    const thead = document.getElementById('mgmt-table-head');
+    tbody.innerHTML = '<tr><td colspan="99" class="text-center py-8 text-slate-500"><i class="fas fa-spinner fa-spin mr-2"></i>Loading...</td></tr>';
+
     const config = tableConfigs[currentTable];
-    const { data, error } = await supabase.from(currentTable).select('*').order(config.sort, { ascending: true });
-    if (!error) {
-        allTableData = data || [];
-        applyFilters();
+    if (!config) return;
+
+    let data = [];
+    
+    if (currentTable === 'user_claims') {
+        // Load all user claims at once (no pagination) - ADMIN VIEW
+        const { data: claimsData, error, count } = await supabase
+            .from('user_claims')
+            .select('id, user_id, quest_id, character_id, claimed_at', { count: 'exact' })
+            .order(config.sort, { ascending: false });
+        
+        if (error) {
+            console.error('Error fetching user claims:', error);
+            tbody.innerHTML = '<tr><td colspan="99" class="text-center py-8 text-red-500">Error loading data</td></tr>';
+            return;
+        }
+        
+        // Fetch related data separately
+        const userIds = [...new Set(claimsData.map(c => c.user_id))];
+        const questIds = [...new Set(claimsData.map(c => c.quest_id))];
+        const characterIds = [...new Set(claimsData.map(c => c.character_id))];
+        
+        const { data: users } = await supabase.from('users').select('id, username').in('id', userIds);
+        const { data: quests } = await supabase.from('cipher_quests').select('id, quest_name, quest_key').in('id', questIds);
+        const { data: characters } = await supabase.from('characters').select('character_id, character_name').in('character_id', characterIds);
+        
+        const userMap = new Map(users?.map(u => [u.id, u]) || []);
+        const questMap = new Map(quests?.map(q => [q.id, q]) || []);
+        const characterMap = new Map(characters?.map(c => [c.character_id, c]) || []);
+        
+        // Transform the data to match our column structure
+        data = claimsData.map(claim => ({
+            id: claim.id,
+            user_id: claim.user_id,
+            quest_id: claim.quest_id,
+            character_id: claim.character_id,
+            username: userMap.get(claim.user_id)?.username || 'Unknown',
+            character_name: characterMap.get(claim.character_id)?.character_name || 'Unknown',
+            quest_name: questMap.get(claim.quest_id)?.quest_name || 'Unknown',
+            quest_key: questMap.get(claim.quest_id)?.quest_key || 'unknown',
+            claimed_at: claim.claimed_at
+        }));
+    } else if (currentTable === 'character_progression') {
+        // Aggregate progression data per character
+        const { data: claimsData, error } = await supabase
+            .from('user_claims')
+            .select('user_id, character_id, quest_id, claimed_at')
+            .order('claimed_at', { ascending: true });
+        
+        if (error) {
+            console.error('Error fetching progression data:', error);
+            tbody.innerHTML = '<tr><td colspan="99" class="text-center py-8 text-red-500">Error loading data</td></tr>';
+            return;
+        }
+        
+        // Get total quest count for completion rate
+        const { count: totalQuests } = await supabase
+            .from('cipher_quests')
+            .select('*', { count: 'exact', head: true });
+        
+        // Get unique character IDs and user IDs
+        const characterIds = [...new Set(claimsData.map(c => c.character_id))];
+        const userIds = [...new Set(claimsData.map(c => c.user_id))];
+        const questIds = [...new Set(claimsData.map(c => c.quest_id))];
+        
+        // Fetch character, user, and quest data
+        const { data: characters } = await supabase
+            .from('characters')
+            .select('character_id, character_name, user_id, region, shard')
+            .in('character_id', characterIds);
+        
+        const { data: users } = await supabase
+            .from('users')
+            .select('id, username')
+            .in('id', userIds);
+        
+        const { data: quests } = await supabase
+            .from('cipher_quests')
+            .select('id, quest_name')
+            .in('id', questIds);
+        
+        const userMap = new Map(users?.map(u => [u.id, u.username]) || []);
+        const questMap = new Map(quests?.map(q => [q.id, q.quest_name]) || []);
+        
+        // Aggregate claims per character with detailed metrics
+        const progressionMap = new Map();
+        const now = new Date();
+        
+        claimsData.forEach(claim => {
+            const charId = claim.character_id;
+            if (!progressionMap.has(charId)) {
+                progressionMap.set(charId, {
+                    character_id: charId,
+                    chronicles_completed: 0,
+                    claim_dates: [],
+                    last_quest_id: null,
+                    last_claim_date: null
+                });
+            }
+            const existing = progressionMap.get(charId);
+            existing.chronicles_completed++;
+            existing.claim_dates.push(new Date(claim.claimed_at));
+            existing.last_quest_id = claim.quest_id;
+            existing.last_claim_date = claim.claimed_at;
+        });
+        
+        // Calculate engagement metrics for each character
+        progressionMap.forEach((progression, charId) => {
+            // Calculate average days between claims
+            if (progression.claim_dates.length > 1) {
+                const sortedDates = progression.claim_dates.sort((a, b) => a - b);
+                let totalDaysBetween = 0;
+                for (let i = 1; i < sortedDates.length; i++) {
+                    const daysDiff = (sortedDates[i] - sortedDates[i-1]) / (1000 * 60 * 60 * 24);
+                    totalDaysBetween += daysDiff;
+                }
+                progression.avg_days_between = totalDaysBetween / (sortedDates.length - 1);
+            } else {
+                progression.avg_days_between = null;
+            }
+            
+            // Calculate days inactive (since last claim)
+            if (progression.last_claim_date) {
+                const lastClaim = new Date(progression.last_claim_date);
+                progression.days_inactive = Math.floor((now - lastClaim) / (1000 * 60 * 60 * 24));
+            } else {
+                progression.days_inactive = null;
+            }
+            
+            // Calculate completion rate
+            if (totalQuests > 0) {
+                progression.completion_rate = (progression.chronicles_completed / totalQuests) * 100;
+            } else {
+                progression.completion_rate = 0;
+            }
+        });
+        
+        // Merge with character data
+        data = characters.map(char => {
+            const progression = progressionMap.get(char.character_id) || {
+                chronicles_completed: 0,
+                avg_days_between: null,
+                days_inactive: null,
+                completion_rate: 0,
+                last_quest_id: null,
+                last_claim_date: null
+            };
+            
+            return {
+                character_id: char.character_id,
+                username: userMap.get(char.user_id) || 'Unknown',
+                character_name: char.character_name,
+                region: char.region || '—',
+                shard: char.shard || '—',
+                chronicles_completed: progression.chronicles_completed,
+                avg_days_between: progression.avg_days_between,
+                days_inactive: progression.days_inactive,
+                completion_rate: progression.completion_rate,
+                last_quest: progression.last_quest_id ? questMap.get(progression.last_quest_id) || 'Unknown' : '—',
+                last_claim_date: progression.last_claim_date
+            };
+        });
+        
+        // Sort by chronicles completed (descending)
+        data.sort((a, b) => b.chronicles_completed - a.chronicles_completed);
+    } else {
+        const { data: fetchedData, error } = await supabase
+            .from(currentTable)
+            .select('*')
+            .order(config.sort, { ascending: false });
+        
+        if (error) {
+            console.error('Error:', error);
+            tbody.innerHTML = '<tr><td colspan="99" class="text-center py-8 text-red-500">Error loading data</td></tr>';
+            return;
+        }
+        data = fetchedData;
+    }
+
+    allTableData = data;
+    applyFilters();
+    
+    // Calculate dropoff analysis if on progression tab
+    if (currentTable === 'character_progression') {
+        await calculateDropoffAnalysis();
     }
 }
 
@@ -259,9 +473,31 @@ function applyFilters() {
     const statusFilter = document.getElementById('filter-status')?.value || 'all';
     const config = tableConfigs[currentTable];
     
+    // Reset to page 1 when filters change
+    currentPage = 1;
+    
     let filtered = [...allTableData];
     
-    if (searchTerm) {
+    // User claims specific filtering
+    if (currentTable === 'user_claims') {
+        const usernameSearch = document.getElementById('search-username')?.value.toLowerCase() || '';
+        const questSearch = document.getElementById('search-quest')?.value.toLowerCase() || '';
+        
+        if (usernameSearch) {
+            filtered = filtered.filter(row => {
+                const username = (row.username || '').toLowerCase();
+                const characterName = (row.character_name || '').toLowerCase();
+                return username.includes(usernameSearch) || characterName.includes(usernameSearch);
+            });
+        }
+        
+        if (questSearch) {
+            filtered = filtered.filter(row => {
+                const questName = (row.quest_name || '').toLowerCase();
+                return questName.includes(questSearch);
+            });
+        }
+    } else if (searchTerm) {
         filtered = filtered.filter(row => {
             return config.columns.some(col => {
                 const val = row[col];
@@ -287,15 +523,86 @@ function applyFilters() {
         }
     }
     
+    // Apply leaderboard mode filter (top 25 players by chronicles completed)
+    if (leaderboardMode && currentTable === 'character_progression') {
+        filtered = filtered.slice(0, 25);
+    }
+    
+    // Apply sorting if a column is selected
+    if (sortColumn) {
+        filtered.sort((a, b) => {
+            let aVal = a[sortColumn];
+            let bVal = b[sortColumn];
+            
+            // Handle dates
+            if (sortColumn === 'claimed_at' || sortColumn === 'created_at') {
+                aVal = new Date(aVal).getTime();
+                bVal = new Date(bVal).getTime();
+            }
+            // Handle strings (case insensitive)
+            else if (typeof aVal === 'string') {
+                aVal = aVal.toLowerCase();
+                bVal = (bVal || '').toLowerCase();
+            }
+            
+            if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+            if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+    
     renderTable(filtered, config);
 }
 
 function renderTable(data, config) {
     const head = document.getElementById('mgmt-table-head');
     const body = document.getElementById('mgmt-table-body');
-    head.innerHTML = `<tr>${config.labels.map(label => `<th class="px-6 py-5 font-bold">${label}</th>`).join('')}<th class="px-6 py-5 text-right">Actions</th></tr>`;
     
-    body.innerHTML = data.map(row => `
+    // Pagination logic for character progression
+    let paginatedData = data;
+    let totalPages = 1;
+    
+    if (currentTable === 'character_progression') {
+        totalPages = Math.ceil(data.length / itemsPerPage);
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        paginatedData = data.slice(startIndex, endIndex);
+    }
+    
+    // Create table headers with sorting indicators
+    const sortableColumns = config.sortableColumns || [];
+    const headerCells = config.labels.map((label, index) => {
+        const columnName = config.columns[index];
+        const isSortable = sortableColumns.includes(columnName);
+        
+        if (isSortable) {
+            const isActive = sortColumn === columnName;
+            const sortIcon = isActive 
+                ? (sortDirection === 'asc' ? '<i class="fa-solid fa-sort-up ml-2"></i>' : '<i class="fa-solid fa-sort-down ml-2"></i>')
+                : '<i class="fa-solid fa-sort ml-2 opacity-30"></i>';
+            
+            return `<th class="px-6 py-5 font-bold cursor-pointer hover:text-[#FFD700] transition-colors ${isActive ? 'text-[#FFD700]' : ''}" data-column="${columnName}">${label}${sortIcon}</th>`;
+        }
+        return `<th class="px-6 py-5 font-bold">${label}</th>`;
+    }).join('');
+    
+    head.innerHTML = `<tr>${headerCells}<th class="px-6 py-5 text-right">Actions</th></tr>`;
+    
+    // Add click handlers for sortable columns
+    head.querySelectorAll('th[data-column]').forEach(th => {
+        th.onclick = () => {
+            const column = th.getAttribute('data-column');
+            if (sortColumn === column) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = column;
+                sortDirection = 'asc';
+            }
+            applyFilters();
+        };
+    });
+    
+    body.innerHTML = paginatedData.map(row => `
         <tr class="hover:bg-slate-800/40 transition-colors">
             ${config.columns.map(col => {
                 let val = row[col];
@@ -305,9 +612,100 @@ function renderTable(data, config) {
                     return `<td class="px-6 py-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-black ${isActive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">${isActive ? (col === 'is_secret' ? 'SECRET' : 'ACTIVE') : (col === 'is_secret' ? 'REGULAR' : 'INACTIVE')}</span></td>`;
                 }
                 
-                if (col === 'created_at') {
+                if (col === 'created_at' || col === 'claimed_at' || col === 'last_claim_date') {
+                    if (!val) {
+                        return `<td class="px-6 py-4 text-slate-400 text-sm">—</td>`;
+                    }
                     const date = new Date(val);
                     return `<td class="px-6 py-4 text-slate-400 text-sm">${date.toLocaleDateString()} ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>`;
+                }
+                
+                if (col === 'chronicles_completed') {
+                    const count = val || 0;
+                    let badgeColor = 'bg-slate-600/20 text-slate-400';
+                    let milestone = '';
+                    
+                    // Milestone indicators
+                    if (count >= 60) {
+                        badgeColor = 'bg-gradient-to-r from-yellow-600/30 to-orange-600/30 text-yellow-300 border-2 border-yellow-500/50';
+                        milestone = '<i class="fas fa-crown ml-2 text-yellow-400"></i>';
+                    } else if (count >= 40) {
+                        badgeColor = 'bg-purple-600/20 text-purple-400 border border-purple-600/30';
+                        milestone = '<i class="fas fa-gem ml-2"></i>';
+                    } else if (count >= 21) {
+                        badgeColor = 'bg-blue-600/20 text-blue-400 border border-blue-600/30';
+                        milestone = '<i class="fas fa-star ml-2"></i>';
+                    } else if (count >= 10) {
+                        badgeColor = 'bg-green-600/20 text-green-400 border border-green-600/30';
+                        milestone = '<i class="fas fa-medal ml-2"></i>';
+                    } else if (count >= 5) {
+                        badgeColor = 'bg-yellow-600/20 text-yellow-400 border border-yellow-600/30';
+                        milestone = '<i class="fas fa-trophy ml-2"></i>';
+                    } else if (count >= 1) {
+                        badgeColor = 'bg-slate-700/40 text-slate-300';
+                    }
+                    
+                    const cursorClass = count >= 5 ? 'cursor-pointer hover:scale-105 transition-transform' : '';
+                    const titleText = count >= 5 ? 'Click to view milestone legend' : '';
+                    
+                    return `<td class="px-6 py-4 chronicles_completed">
+                        <span class="px-3 py-1.5 rounded-lg text-sm font-black ${badgeColor} inline-flex items-center ${cursorClass}" title="${titleText}">${count}${milestone}</span>
+                    </td>`;
+                }
+                
+                if (col === 'avg_days_between') {
+                    if (val === null || val === undefined) {
+                        return `<td class="px-6 py-4 text-slate-500 text-sm">—</td>`;
+                    }
+                    const days = Math.round(val * 10) / 10;
+                    let color = 'text-slate-300';
+                    if (days <= 1) color = 'text-green-400';
+                    else if (days <= 3) color = 'text-yellow-400';
+                    else if (days <= 7) color = 'text-orange-400';
+                    else color = 'text-red-400';
+                    
+                    return `<td class="px-6 py-4 ${color} text-sm font-semibold">${days} days</td>`;
+                }
+                
+                if (col === 'days_inactive') {
+                    if (val === null || val === undefined) {
+                        return `<td class="px-6 py-4 text-slate-500 text-sm">—</td>`;
+                    }
+                    let color = 'text-green-400';
+                    let badge = '';
+                    
+                    if (val === 0) {
+                        badge = '<span class="ml-2 px-2 py-0.5 bg-green-500/20 text-green-400 text-[10px] rounded-full font-bold">ACTIVE TODAY</span>';
+                    } else if (val === 1) {
+                        color = 'text-green-400';
+                    } else if (val === 2) {
+                        color = 'text-yellow-400';
+                    } else if (val >= 3 && val <= 5) {
+                        color = 'text-orange-400';
+                    } else {
+                        color = 'text-red-400';
+                        badge = '<span class="ml-2 px-2 py-0.5 bg-red-500/20 text-red-400 text-[10px] rounded-full font-bold">INACTIVE</span>';
+                    }
+                    
+                    return `<td class="px-6 py-4 ${color} text-sm font-semibold">${val} day${val === 1 ? '' : 's'}${badge}</td>`;
+                }
+                
+                if (col === 'completion_rate') {
+                    if (val === null || val === undefined) {
+                        return `<td class="px-6 py-4 text-slate-500 text-sm">—</td>`;
+                    }
+                    const percent = Math.round(val * 10) / 10;
+                    let color = 'text-slate-400';
+                    if (percent >= 75) color = 'text-purple-400';
+                    else if (percent >= 50) color = 'text-blue-400';
+                    else if (percent >= 25) color = 'text-green-400';
+                    else if (percent >= 10) color = 'text-yellow-400';
+                    
+                    return `<td class="px-6 py-4 ${color} text-sm font-bold">${percent}%</td>`;
+                }
+                
+                if (col === 'last_quest') {
+                    return `<td class="px-6 py-4 text-slate-300 text-sm max-w-xs truncate" title="${val}">${val}</td>`;
                 }
 
                 if (col === 'unlock_sequence' || col === 'signs') {
@@ -339,12 +737,12 @@ function renderTable(data, config) {
             }).join('')}
             <td class="px-6 py-4 text-right">
                 <div class="flex items-center justify-end gap-2">
-                    <button class="db-edit-btn text-slate-500 hover:text-[#FFD700] transition-colors" data-record='${JSON.stringify(row).replace(/'/g, "&apos;")}' title="Edit">
+                    ${currentTable !== 'user_claims' && currentTable !== 'character_progression' ? `<button class="db-edit-btn text-slate-500 hover:text-[#FFD700] transition-colors" data-record='${JSON.stringify(row).replace(/'/g, "&apos;")}' title="Edit">
                         <i class="fa-solid fa-pen-to-square"></i>
-                    </button>
-                    <button class="db-delete-btn text-slate-500 hover:text-red-500 transition-colors" data-id="${row.id || row.name}" title="Delete">
+                    </button>` : ''}
+                    ${currentTable !== 'character_progression' ? `<button class="db-delete-btn text-slate-500 hover:text-red-500 transition-colors" data-id="${row.id || row.name}" title="Delete">
                         <i class="fa-solid fa-trash-can"></i>
-                    </button>
+                    </button>` : ''}
                 </div>
             </td>
         </tr>`).join('');
@@ -357,6 +755,17 @@ function renderTable(data, config) {
         };
     });
     enableSignTooltip();
+    
+    // Render pagination controls for character progression
+    if (currentTable === 'character_progression') {
+        renderPaginationControls(totalPages, data.length);
+    } else {
+        // Hide pagination for other tables
+        const paginationContainer = document.getElementById('pagination-controls');
+        if (paginationContainer) {
+            paginationContainer.classList.add('hidden');
+        }
+    }
 }
 
 async function saveRecord() {
@@ -450,25 +859,157 @@ function showToast(message, type = 'info') {
 }
 
 async function deleteRecord(identifier) {
-    if (!confirm('Delete record?')) return;
+    const record = allTableData.find(r => (r.id || r.name) === identifier);
     
-    if (currentTable === 'quest_categories') {
-        await supabase.from(currentTable).delete().eq('name', identifier);
+    // Show custom modal instead of browser confirm
+    const modal = document.getElementById('delete-confirm-modal');
+    const message = document.getElementById('delete-confirm-message');
+    const confirmBtn = document.getElementById('delete-confirm-btn');
+    const cancelBtn = document.getElementById('delete-cancel-btn');
+    
+    // Set the message based on table type
+    if (currentTable === 'user_claims' && record) {
+        message.innerHTML = `Delete claim for user <span class="text-[#FFD700] font-bold">"${record.username}"</span> (${record.character_name}) on quest <span class="text-[#FFD700] font-bold">"${record.quest_name}"</span>?`;
     } else {
-        await supabase.from(currentTable).delete().eq('id', identifier);
+        message.textContent = 'Are you sure you want to delete this record?';
     }
     
-    if (currentTable === 'secret_unlock_configs' || currentTable === 'heroic_feats' || currentTable === 'quest_categories') {
-        if (questState.isReady()) {
-            await questState.invalidate(['quests']);
+    // Show modal
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    
+    // Set up one-time event handlers
+    const handleConfirm = async () => {
+        // Hide modal
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        
+        // Perform deletion
+        let result;
+        if (currentTable === 'quest_categories') {
+            result = await supabase.from(currentTable).delete().eq('name', identifier);
+        } else {
+            result = await supabase.from(currentTable).delete().eq('id', identifier);
+        }
+        
+        if (result.error) {
+            console.error('Delete failed:', result.error);
+            showToast(`Delete failed: ${result.error.message}`, 'error');
+        } else {
+            showToast('Record deleted successfully', 'success');
+        }
+        
+        if (currentTable === 'secret_unlock_configs' || currentTable === 'heroic_feats' || currentTable === 'quest_categories') {
+            if (questState.isReady()) {
+                await questState.invalidate(['quests']);
+            }
+        }
+        
+        await fetchTableData();
+        
+        // Clean up listeners
+        confirmBtn.removeEventListener('click', handleConfirm);
+        cancelBtn.removeEventListener('click', handleCancel);
+    };
+    
+    const handleCancel = () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        confirmBtn.removeEventListener('click', handleConfirm);
+        cancelBtn.removeEventListener('click', handleCancel);
+    };
+    
+    confirmBtn.addEventListener('click', handleConfirm);
+    cancelBtn.addEventListener('click', handleCancel);
+    
+    // Also close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            handleCancel();
+        }
+    });
+}
+
+function renderPaginationControls(totalPages, totalItems) {
+    let paginationContainer = document.getElementById('pagination-controls');
+    
+    if (!paginationContainer) {
+        // Create pagination container if it doesn't exist
+        paginationContainer = document.createElement('div');
+        paginationContainer.id = 'pagination-controls';
+        paginationContainer.className = 'flex items-center justify-between px-6 py-4 bg-[#0f1419] border-t border-slate-800';
+        
+        // Insert before the quest-dropoff-section instead of at the end
+        const dropoffSection = document.getElementById('quest-dropoff-section');
+        const contentBody = document.querySelector('.content-body');
+        
+        if (dropoffSection && contentBody) {
+            contentBody.insertBefore(paginationContainer, dropoffSection);
+        } else if (contentBody) {
+            contentBody.appendChild(paginationContainer);
         }
     }
     
-    fetchTableData();
+    paginationContainer.classList.remove('hidden');
+    
+    const startItem = ((currentPage - 1) * itemsPerPage) + 1;
+    const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+    
+    paginationContainer.innerHTML = `
+        <div class="text-sm text-slate-400">
+            Showing <span class="font-bold text-white">${startItem}-${endItem}</span> of <span class="font-bold text-white">${totalItems}</span> characters
+        </div>
+        <div class="flex items-center gap-2">
+            <button id="first-page" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-semibold text-sm uppercase transition-colors disabled:opacity-50 disabled:cursor-not-allowed" ${currentPage === 1 ? 'disabled' : ''}>
+                <i class="fas fa-angles-left"></i>
+            </button>
+            <button id="prev-page" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-semibold text-sm uppercase transition-colors disabled:opacity-50 disabled:cursor-not-allowed" ${currentPage === 1 ? 'disabled' : ''}>
+                <i class="fas fa-angle-left"></i>
+            </button>
+            <span class="px-4 py-2 bg-slate-900 text-white rounded-lg font-bold text-sm">
+                Page ${currentPage} of ${totalPages}
+            </span>
+            <button id="next-page" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-semibold text-sm uppercase transition-colors disabled:opacity-50 disabled:cursor-not-allowed" ${currentPage === totalPages ? 'disabled' : ''}>
+                <i class="fas fa-angle-right"></i>
+            </button>
+            <button id="last-page" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-semibold text-sm uppercase transition-colors disabled:opacity-50 disabled:cursor-not-allowed" ${currentPage === totalPages ? 'disabled' : ''}>
+                <i class="fas fa-angles-right"></i>
+            </button>
+        </div>
+    `;
+    
+    // Add event listeners
+    document.getElementById('first-page')?.addEventListener('click', () => {
+        currentPage = 1;
+        applyFilters();
+    });
+    
+    document.getElementById('prev-page')?.addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            applyFilters();
+        }
+    });
+    
+    document.getElementById('next-page')?.addEventListener('click', () => {
+        if (currentPage < totalPages) {
+            currentPage++;
+            applyFilters();
+        }
+    });
+    
+    document.getElementById('last-page')?.addEventListener('click', () => {
+        currentPage = totalPages;
+        applyFilters();
+    });
 }
 
 function setActiveTab(tableId) {
     currentTable = tableId;
+    sortColumn = null;
+    sortDirection = 'asc';
+    currentPage = 1; // Reset to first page when switching tabs
+    
     document.querySelectorAll('.mgmt-tab').forEach(tab => {
         tab.classList.remove('active', 'text-[#FFD700]');
         tab.classList.add('text-slate-400');
@@ -480,8 +1021,56 @@ function setActiveTab(tableId) {
     }
     document.getElementById('add-form-container').classList.add('hidden');
     
-    const searchInput = document.getElementById('search-input');
+    // Show/hide quest dropoff section for progression
+    const dropoffSection = document.getElementById('quest-dropoff-section');
+    if (dropoffSection) {
+        if (currentTable === 'character_progression') {
+            dropoffSection.classList.remove('hidden');
+        } else {
+            dropoffSection.classList.add('hidden');
+        }
+    }
+    
+    // Reset leaderboard mode when switching tabs
+    if (currentTable !== 'character_progression') {
+        leaderboardMode = false;
+    }
+    
+    // Hide/show Create New button based on table
+    const addBtn = document.getElementById('add-entry-btn');
+    if (addBtn) {
+        if (currentTable === 'user_claims' || currentTable === 'character_progression') {
+            addBtn.style.display = 'none';
+        } else {
+            addBtn.style.display = 'block';
+        }
+    }
+    
+    // Hide/show status filter and user claims filters
     const statusFilter = document.getElementById('filter-status');
+    const userClaimsFilters = document.getElementById('user-claims-filters');
+    const progressionInfo = document.getElementById('character-progression-info');
+    const mainSearchInput = document.getElementById('search-input');
+    
+    if (currentTable === 'user_claims') {
+        if (statusFilter) statusFilter.style.display = 'none';
+        if (userClaimsFilters) userClaimsFilters.classList.remove('hidden');
+        if (progressionInfo) progressionInfo.classList.add('hidden');
+        if (mainSearchInput) mainSearchInput.style.display = 'none';
+    } else if (currentTable === 'character_progression') {
+        // For progression, show main search and info banner but hide status filter
+        if (statusFilter) statusFilter.style.display = 'none';
+        if (userClaimsFilters) userClaimsFilters.classList.add('hidden');
+        if (progressionInfo) progressionInfo.classList.remove('hidden');
+        if (mainSearchInput) mainSearchInput.style.display = 'block';
+    } else {
+        if (statusFilter) statusFilter.style.display = 'block';
+        if (userClaimsFilters) userClaimsFilters.classList.add('hidden');
+        if (progressionInfo) progressionInfo.classList.add('hidden');
+        if (mainSearchInput) mainSearchInput.style.display = 'block';
+    }
+    
+    const searchInput = document.getElementById('search-input');
     if (searchInput) searchInput.value = '';
     if (statusFilter) statusFilter.value = 'all';
     
@@ -489,6 +1078,180 @@ function setActiveTab(tableId) {
     editingRecordId = null;
     
     fetchTableData();
+}
+
+async function calculateDropoffAnalysis() {
+    if (currentTable !== 'character_progression') {
+        return;
+    }
+    
+    // Fetch all quest claims and quest data
+    const { data: claimsData } = await supabase
+        .from('user_claims')
+        .select('quest_id, character_id, user_id');
+    
+    const { data: allQuests } = await supabase
+        .from('cipher_quests')
+        .select('id, quest_name');
+    
+    const { data: characters } = await supabase
+        .from('characters')
+        .select('character_id');
+    
+    if (!claimsData || !allQuests || !characters) return;
+    
+    const totalCharacters = characters.length;
+    const questCompletionMap = new Map();
+    const lastQuestMap = new Map();
+    
+    // Count completions per quest
+    claimsData.forEach(claim => {
+        const count = questCompletionMap.get(claim.quest_id) || 0;
+        questCompletionMap.set(claim.quest_id, count + 1);
+    });
+    
+    // Get character's last quest (from allTableData which has it computed)
+    allTableData.forEach(charData => {
+        if (charData.last_quest && charData.last_quest !== '—' && charData.chronicles_completed > 0) {
+            const count = lastQuestMap.get(charData.last_quest) || 0;
+            lastQuestMap.set(charData.last_quest, count + 1);
+        }
+    });
+    
+    // Calculate least completed quests
+    const questCompletionRates = allQuests.map(quest => {
+        const completions = questCompletionMap.get(quest.id) || 0;
+        const rate = (completions / totalCharacters) * 100;
+        return {
+            name: quest.quest_name,
+            completions,
+            rate: Math.round(rate * 10) / 10
+        };
+    }).sort((a, b) => a.completions - b.completions).slice(0, 10);
+    
+    // Most common stopping points
+    const stoppingPoints = Array.from(lastQuestMap.entries())
+        .map(([questName, count]) => ({
+            name: questName,
+            count,
+            percentage: Math.round((count / totalCharacters) * 1000) / 10
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+    
+    // Calculate engagement insights
+    const activeCount = allTableData.filter(c => c.days_inactive <= 1).length;
+    const atRiskCount = allTableData.filter(c => c.days_inactive >= 2 && c.days_inactive <= 5).length;
+    const inactiveCount = allTableData.filter(c => c.days_inactive > 5).length;
+    const avgCompletion = allTableData.reduce((sum, c) => sum + c.chronicles_completed, 0) / totalCharacters;
+    const avgDaysBetween = allTableData
+        .filter(c => c.avg_days_between !== null)
+        .reduce((sum, c, i, arr) => sum + c.avg_days_between / arr.length, 0);
+    
+    dropoffData = {
+        leastCompleted: questCompletionRates,
+        stoppingPoints,
+        insights: {
+            activeCount,
+            atRiskCount,
+            inactiveCount,
+            avgCompletion: Math.round(avgCompletion * 10) / 10,
+            avgDaysBetween: Math.round(avgDaysBetween * 10) / 10,
+            totalCharacters
+        }
+    };
+    
+    renderDropoffAnalysis();
+}
+
+function renderDropoffAnalysis() {
+    if (!dropoffData) return;
+    
+    // Render least completed quests
+    const leastCompletedEl = document.getElementById('least-completed-quests');
+    if (leastCompletedEl) {
+        leastCompletedEl.innerHTML = dropoffData.leastCompleted.map((quest, index) => `
+            <div class="flex items-center justify-between p-3 bg-slate-800/30 rounded-lg border border-slate-700/50 hover:border-red-500/30 transition-colors">
+                <div class="flex items-center gap-3 flex-1">
+                    <span class="text-slate-500 font-bold text-sm w-6">#${index + 1}</span>
+                    <span class="text-slate-300 text-sm">${quest.name}</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span class="text-red-400 font-bold text-sm">${quest.completions} completions</span>
+                    <span class="text-slate-500 text-xs">(${quest.rate}%)</span>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    // Render stopping points
+    const stoppingPointsEl = document.getElementById('stopping-points');
+    if (stoppingPointsEl) {
+        stoppingPointsEl.innerHTML = dropoffData.stoppingPoints.map((point, index) => `
+            <div class="flex items-center justify-between p-3 bg-slate-800/30 rounded-lg border border-slate-700/50 hover:border-orange-500/30 transition-colors">
+                <div class="flex items-center gap-3 flex-1">
+                    <span class="text-slate-500 font-bold text-sm w-6">#${index + 1}</span>
+                    <span class="text-slate-300 text-sm">${point.name}</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span class="text-orange-400 font-bold text-sm">${point.count} players</span>
+                    <span class="text-slate-500 text-xs">(${point.percentage}%)</span>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    // Render insights
+    const insightsEl = document.getElementById('engagement-insights');
+    if (insightsEl) {
+        insightsEl.innerHTML = `
+            <div class="bg-green-900/20 border border-green-600/30 rounded-lg p-4">
+                <div class="text-green-400 text-2xl font-bold mb-2">${dropoffData.insights.activeCount}</div>
+                <div class="text-sm text-slate-400">Active Players (≤1 day)</div>
+                <div class="text-xs text-green-500 mt-2">${Math.round((dropoffData.insights.activeCount / dropoffData.insights.totalCharacters) * 100)}% of total</div>
+            </div>
+            <div class="bg-orange-900/20 border border-orange-600/30 rounded-lg p-4">
+                <div class="text-orange-400 text-2xl font-bold mb-2">${dropoffData.insights.atRiskCount}</div>
+                <div class="text-sm text-slate-400">At Risk (2-5 days)</div>
+                <div class="text-xs text-orange-500 mt-2">${Math.round((dropoffData.insights.atRiskCount / dropoffData.insights.totalCharacters) * 100)}% of total</div>
+            </div>
+            <div class="bg-red-900/20 border border-red-600/30 rounded-lg p-4">
+                <div class="text-red-400 text-2xl font-bold mb-2">${dropoffData.insights.inactiveCount}</div>
+                <div class="text-sm text-slate-400">Inactive (>5 days)</div>
+                <div class="text-xs text-red-500 mt-2">${Math.round((dropoffData.insights.inactiveCount / dropoffData.insights.totalCharacters) * 100)}% of total</div>
+            </div>
+            <div class="bg-blue-900/20 border border-blue-600/30 rounded-lg p-4">
+                <div class="text-blue-400 text-2xl font-bold mb-2">${dropoffData.insights.avgCompletion}</div>
+                <div class="text-sm text-slate-400">Avg. Chronicles/Player</div>
+            </div>
+            <div class="bg-purple-900/20 border border-purple-600/30 rounded-lg p-4">
+                <div class="text-purple-400 text-2xl font-bold mb-2">${dropoffData.insights.avgDaysBetween}</div>
+                <div class="text-sm text-slate-400">Avg. Days Between</div>
+            </div>
+            <div class="bg-slate-800/40 border border-slate-700 rounded-lg p-4">
+                <div class="text-slate-300 text-2xl font-bold mb-2">${dropoffData.insights.totalCharacters}</div>
+                <div class="text-sm text-slate-400">Total Characters</div>
+            </div>
+        `;
+    }
+}
+
+function toggleLeaderboardMode() {
+    leaderboardMode = !leaderboardMode;
+    currentPage = 1; // Reset to first page when toggling mode
+    const btn = document.getElementById('toggle-leaderboard');
+    
+    if (leaderboardMode) {
+        btn.innerHTML = '<i class="fas fa-list mr-2"></i>Show All';
+        btn.classList.remove('bg-[#FFD700]', 'hover:bg-[#e6c200]', 'text-black');
+        btn.classList.add('bg-slate-700', 'hover:bg-slate-600', 'text-white');
+    } else {
+        btn.innerHTML = '<i class="fas fa-trophy mr-2"></i>Leaderboard Mode';
+        btn.classList.remove('bg-slate-700', 'hover:bg-slate-600', 'text-white');
+        btn.classList.add('bg-[#FFD700]', 'hover:bg-[#e6c200]', 'text-black');
+    }
+    
+    applyFilters();
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -499,7 +1262,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadSignsMetadata();
     enableSignTooltip();
     
-    ['secret_unlock_configs', 'heroic_feats', 'quest_categories'].forEach(id => {
+    ['secret_unlock_configs', 'heroic_feats', 'quest_categories', 'user_claims', 'character_progression'].forEach(id => {
         const tab = document.getElementById(`tab-${id.replace(/_/g, '-')}`);
         if (tab) tab.onclick = () => setActiveTab(id);
     });
@@ -534,8 +1297,72 @@ document.addEventListener('DOMContentLoaded', async () => {
         clearBtn.onclick = () => {
             if (searchInput) searchInput.value = '';
             if (statusFilter) statusFilter.value = 'all';
+            
+            const usernameSearch = document.getElementById('search-username');
+            const questSearch = document.getElementById('search-quest');
+            if (usernameSearch) usernameSearch.value = '';
+            if (questSearch) questSearch.value = '';
+            
             applyFilters();
         };
+    }
+    
+    // Add event listeners for user claims search fields
+    const usernameSearch = document.getElementById('search-username');
+    const questSearch = document.getElementById('search-quest');
+    
+    if (usernameSearch) {
+        usernameSearch.addEventListener('input', applyFilters);
+    }
+    
+    if (questSearch) {
+        questSearch.addEventListener('input', applyFilters);
+    }
+    
+    // Leaderboard toggle
+    const leaderboardBtn = document.getElementById('toggle-leaderboard');
+    if (leaderboardBtn) {
+        leaderboardBtn.addEventListener('click', toggleLeaderboardMode);
+    }
+    
+    // Dropoff analysis toggle
+    const toggleDropoff = document.getElementById('toggle-dropoff');
+    const dropoffContent = document.getElementById('dropoff-content');
+    const dropoffChevron = document.getElementById('dropoff-chevron');
+    if (toggleDropoff && dropoffContent && dropoffChevron) {
+        toggleDropoff.addEventListener('click', () => {
+            dropoffContent.classList.toggle('hidden');
+            dropoffChevron.classList.toggle('rotate-180');
+        });
+    }
+    
+    // Milestone legend modal
+    const milestoneModal = document.getElementById('milestone-legend-modal');
+    const closeMilestoneModal = document.getElementById('close-milestone-modal');
+    
+    // Add click handler to milestone badges to show legend
+    document.addEventListener('click', (e) => {
+        const badge = e.target.closest('td.chronicles_completed span.inline-flex');
+        if (badge && badge.classList.contains('cursor-pointer')) {
+            if (milestoneModal) {
+                milestoneModal.classList.remove('hidden');
+                milestoneModal.classList.add('flex');
+            }
+        }
+    });
+    
+    if (closeMilestoneModal && milestoneModal) {
+        closeMilestoneModal.addEventListener('click', () => {
+            milestoneModal.classList.add('hidden');
+            milestoneModal.classList.remove('flex');
+        });
+        
+        milestoneModal.addEventListener('click', (e) => {
+            if (e.target === milestoneModal) {
+                milestoneModal.classList.add('hidden');
+                milestoneModal.classList.remove('flex');
+            }
+        });
     }
     
     fetchTableData();

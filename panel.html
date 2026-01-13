@@ -118,8 +118,16 @@
                     </div>
             </div>
             <div class="space-y-2">
-                <label class="block text-sm font-bold text-[#FFD700] uppercase tracking-wider">Completion Prerequisites</label>
-                <p class="text-xs text-gray-400 italic mb-2">The quest will be visible, but the "Complete" button will stay locked until these are finished.</p>
+                <label class="block text-sm font-bold text-[#FFD700] uppercase tracking-wider">Hard Lock Prerequisites (Quest Won't Appear)</label>
+                <p class="text-xs text-gray-400 italic mb-2">Quest will be hidden until ALL of these are completed. Combine with category unlock for complex gating.</p>
+                <div id="hard-lock-container" class="bg-black/20 border border-gray-700 rounded-xl p-4 max-h-48 overflow-y-auto custom-scrollbar space-y-2">
+                    <div class="text-gray-500 text-xs italic">Loading quests...</div>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="block text-sm font-bold text-[#FFD700] uppercase tracking-wider">Soft Lock Prerequisites (Required to Complete)</label>
+                <p class="text-xs text-gray-400 italic mb-2">Quest will be visible, but the "Complete" button will stay locked until these are finished.</p>
                 <div id="prerequisite-container" class="bg-black/20 border border-gray-700 rounded-xl p-4 max-h-48 overflow-y-auto custom-scrollbar space-y-2">
                     <div class="text-gray-500 text-xs italic">Loading quests...</div>
                 </div>
@@ -135,11 +143,6 @@
             <div>
                 <label class="block text-s font-bold text-gray-400 uppercase mb-2 tracking-wider">Quest Instructions</label>
                 <textarea id="location" class="w-full p-3 rounded-lg bg-[#1f2937] text-white border border-gray-700 focus:border-[#FFD700] outline-none text-base" placeholder="e.g. Near the Great Oak"></textarea>
-            </div>
-
-            <div>
-                <label class="block text-s font-bold text-gray-400 uppercase mb-2 tracking-wider">Lore & Instructions</label>
-                <textarea id="lore" class="w-full p-3 rounded-lg bg-[#1f2937] text-white border border-gray-700 h-40 focus:border-[#FFD700] outline-none text-base leading-relaxed" placeholder="Tell the story of this quest..."></textarea>
             </div>
         </div>
 
@@ -200,16 +203,74 @@
                 <div id="selected-signs" class="flex flex-wrap gap-8 justify-center min-h-[220px] items-start w-full text-white"></div>
                 <span id="limit-message" class="text-sm text-red-400 font-bold hidden mt-4 animate-pulse">Maximum of 5 signs allowed.</span>
             </div>
+        </div>
+        </div>
 
+        <!-- Full Width Lore Section -->
+        <div class="mt-8 bg-[#1f2937] rounded-2xl border border-gray-700 p-6">
+            <div class="mb-4">
+                <label class="block text-sm font-bold text-[#FFD700] uppercase mb-3 tracking-wider">Lore & Full Instructions</label>
+                <p class="text-xs text-gray-400 italic mb-4">Use Markdown formatting for rich text. This will be displayed to users on the quest details page.</p>
+                
+                <!-- Markdown Toolbar -->
+                <div class="flex flex-wrap gap-2 mb-3 p-3 bg-black/30 rounded-lg border border-gray-700">
+                    <button type="button" class="markdown-btn px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm font-mono transition-colors" data-format="bold" title="Bold">
+                        <i class="fa-solid fa-bold"></i>
+                    </button>
+                    <button type="button" class="markdown-btn px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm font-mono transition-colors" data-format="italic" title="Italic">
+                        <i class="fa-solid fa-italic"></i>
+                    </button>
+                    <button type="button" class="markdown-btn px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm font-mono transition-colors" data-format="heading" title="Heading">
+                        <i class="fa-solid fa-heading"></i>
+                    </button>
+                    <div class="w-px bg-gray-600 mx-1"></div>
+                    <button type="button" class="markdown-btn px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm font-mono transition-colors" data-format="list" title="Bullet List">
+                        <i class="fa-solid fa-list-ul"></i>
+                    </button>
+                    <button type="button" class="markdown-btn px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm font-mono transition-colors" data-format="numbered" title="Numbered List">
+                        <i class="fa-solid fa-list-ol"></i>
+                    </button>
+                    <div class="w-px bg-gray-600 mx-1"></div>
+                    <button type="button" class="markdown-btn px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm font-mono transition-colors" data-format="link" title="Link">
+                        <i class="fa-solid fa-link"></i>
+                    </button>
+                    <button type="button" class="markdown-btn px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm font-mono transition-colors" data-format="quote" title="Blockquote">
+                        <i class="fa-solid fa-quote-left"></i>
+                    </button>
+                    <button type="button" class="markdown-btn px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm font-mono transition-colors" data-format="code" title="Code Block">
+                        <i class="fa-solid fa-code"></i>
+                    </button>
+                    <div class="ml-auto flex gap-2">
+                        <button type="button" id="preview-lore-btn" class="px-3 py-1.5 bg-[#FFD700] hover:bg-yellow-400 text-black rounded text-sm font-bold transition-colors">
+                            <i class="fa-solid fa-eye mr-1"></i> Preview
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <textarea id="lore" class="w-full p-4 rounded-lg bg-[#111827] text-white border border-gray-700 h-96 focus:border-[#FFD700] outline-none text-base leading-relaxed font-mono" placeholder="Write your quest lore and instructions here... Use the toolbar above for markdown formatting."></textarea>
+            
+            <!-- Preview Panel -->
+            <div id="lore-preview" class="hidden mt-4 p-4 rounded-lg bg-black/30 border border-gray-700">
+                <div class="flex justify-between items-center mb-3">
+                    <h4 class="text-sm font-bold text-[#FFD700] uppercase tracking-wider">Preview</h4>
+                    <button type="button" id="close-preview-btn" class="text-gray-400 hover:text-white transition-colors">
+                        <i class="fa-solid fa-times"></i>
+                    </button>
+                </div>
+                <div id="lore-preview-content" class="prose prose-invert max-w-none text-gray-300">
+                </div>
+            </div>
+        </div>
+    </div>
             <div class="mt-12 text-center">
                 <button id="create-quest" class="px-12 py-4 bg-[#FFD700] hover:bg-yellow-400 text-black rounded-full font-black shadow-[0_0_20px_rgba(255,215,0,0.3)] transition-all hover:scale-105 active:scale-95 uppercase tracking-widest text-lg">
                     PUBLISH QUEST
                 </button>
             </div>
-        </div>
-        </div>
+
     </div>
-    </div>
+    
 
     <div id="footer-placeholder"></div>
 
@@ -242,6 +303,7 @@
     <script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
     <script type="module" src="frontend/www/js/popoutAuth.js"></script>
     <script type="module" src="frontend/www/js/small_sidebar.js"></script>
+    <script type="module" src="frontend/www/js/main.js"></script>
 
 </body>
 </html>

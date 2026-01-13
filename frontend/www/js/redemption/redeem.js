@@ -105,22 +105,48 @@ document.addEventListener("DOMContentLoaded", async () => {
         errorDisplay.classList.remove("hidden");
         setTimeout(() => errorDisplay.classList.add("hidden"), 5000);
     };
+    
+    const showToast = (message, type = 'success') => {
+        let container = document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            container.className = 'fixed bottom-5 right-5 z-[9999] flex flex-col items-end';
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        
+        const isSuccess = type === 'success';
+        const bgClass = isSuccess ? 'bg-[#0f1a11]' : 'bg-[#1a0f0f]';
+        const borderClass = isSuccess ? 'border-green-900/40' : 'border-red-900/40';
+        const textClass = isSuccess ? 'text-green-300' : 'text-red-300';
+        const icon = isSuccess ? 'fa-circle-check' : 'fa-triangle-exclamation';
+
+        toast.className = `mb-3 px-6 py-4 rounded-lg shadow-2xl border font-bold uppercase text-[11px] tracking-widest flex items-center gap-3 transition-all duration-500 opacity-0 translate-y-2 ${bgClass} ${borderClass} ${textClass}`;
+        
+        toast.innerHTML = `
+            <i class="fa-solid ${icon} text-base"></i>
+            <span>${message}</span>
+        `;
+
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            toast.classList.remove('opacity-0', 'translate-y-2');
+        }, 10);
+
+        setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-x-4');
+            setTimeout(() => toast.remove(), 500);
+        }, 4000);
+    };
 
     document.getElementById("clear-signs").onclick = () => {
         selected.length = 0;
         updateSelected(baseUrl, version);
         if (errorDisplay) errorDisplay.classList.add("hidden");
     };
-
-    const successBtn = document.querySelector("#success-state button");
-    if (successBtn) {
-        successBtn.onclick = (e) => {
-            e.preventDefault();
-            const successModal = document.getElementById("success-state");
-            successModal.classList.add("hidden");
-            successModal.classList.remove("flex");
-        };
-    }
 
     verifyBtn.addEventListener("click", async () => {
         const characterId = questState.getActiveCharacterId();
@@ -162,17 +188,15 @@ document.addEventListener("DOMContentLoaded", async () => {
             await loadArchetypeBanner(characterId);
 
             const modal = document.getElementById("sign-redemption-modal");
-            const successModal = document.getElementById("success-state");
             
             if (modal) {
                 modal.classList.add("hidden");
                 modal.classList.remove("flex");
             }
             
-            if (successModal) {
-                successModal.classList.remove("hidden");
-                successModal.classList.add("flex", "items-center", "justify-center");
-            }
+            // Skip showing success modal - let quest claimed event handle UI updates
+            // Show a toast notification instead
+            showToast(`Quest "${matchedQuest.quest_name}" completed!`, 'success');
 
             selected.length = 0;
             updateSelected(baseUrl, version);

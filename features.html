@@ -146,26 +146,64 @@
                     <button id="tab-quest-categories" class="mgmt-tab py-2 font-bold text-slate-400 hover:text-white transition-all uppercase">
                         Quest Categories
                     </button>
+                    <button id="tab-user-claims" class="mgmt-tab py-2 font-bold text-slate-400 hover:text-white transition-all uppercase">
+                        User Quest Claims
+                    </button>
+                    <button id="tab-character-progression" class="mgmt-tab py-2 font-bold text-slate-400 hover:text-white transition-all uppercase">
+                        Character Progression
+                    </button>
                 </div>
                 <button id="add-entry-btn" class="bg-[#FFD700] hover:bg-[#e6c200] text-black px-6 py-2.5 rounded-md font-black text-md uppercase tracking-widest shadow-lg transition-transform active:scale-95">
                     <i class="fa-solid fa-plus mr-2"></i>Create New
                 </button>
             </div>
             
-            <div class="bg-[#0f1419] px-6 py-4 border-b border-slate-800 flex flex-col md:flex-row gap-4 items-center">
-                <div class="flex-1 relative">
-                    <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
-                    <input type="text" id="search-input" placeholder="Search records..." class="w-full bg-[#161b22] border border-slate-700 rounded-lg pl-12 pr-4 py-2.5 text-white placeholder-slate-500 focus:border-[#FFD700] focus:outline-none transition-colors">
+            <div class="bg-[#0f1419] px-6 py-4 border-b border-slate-800 flex flex-col gap-4">
+                <div class="flex flex-col md:flex-row gap-4 items-center">
+                    <div class="flex-1 relative">
+                        <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                        <input type="text" id="search-input" placeholder="Search records..." class="w-full bg-[#161b22] border border-slate-700 rounded-lg pl-12 pr-4 py-2.5 text-white placeholder-slate-500 focus:border-[#FFD700] focus:outline-none transition-colors">
+                    </div>
+                    <div class="flex gap-3">
+                        <select id="filter-status" class="bg-[#161b22] border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-[#FFD700] focus:outline-none transition-colors">
+                            <option value="all">All Records</option>
+                            <option value="active">Active Only</option>
+                            <option value="inactive">Inactive Only</option>
+                        </select>
+                        <button id="clear-filters-btn" class="px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold text-sm uppercase transition-colors">
+                            <i class="fa-solid fa-filter-circle-xmark mr-2"></i>Clear
+                        </button>
+                    </div>
                 </div>
-                <div class="flex gap-3">
-                    <select id="filter-status" class="bg-[#161b22] border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:border-[#FFD700] focus:outline-none transition-colors">
-                        <option value="all">All Records</option>
-                        <option value="active">Active Only</option>
-                        <option value="inactive">Inactive Only</option>
-                    </select>
-                    <button id="clear-filters-btn" class="px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold text-sm uppercase transition-colors">
-                        <i class="fa-solid fa-filter-circle-xmark mr-2"></i>Clear
-                    </button>
+                <div id="user-claims-filters" class="hidden flex flex-col gap-4">
+                    <div class="bg-yellow-900/20 border border-yellow-600/30 rounded-lg px-4 py-3 flex items-start gap-3">
+                        <i class="fa-solid fa-info-circle text-yellow-400 text-lg mt-0.5"></i>
+                        <div class="text-sm text-yellow-200">
+                            <span class="font-semibold">Note:</span> This page displays completed quest claims. Use the filters below to search for specific users or quests.
+                        </div>
+                    </div>
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <div class="flex-1 relative">
+                            <i class="fa-solid fa-user absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                            <input type="text" id="search-username" placeholder="Search by username or character..." class="w-full bg-[#161b22] border border-slate-700 rounded-lg pl-12 pr-4 py-2.5 text-white placeholder-slate-500 focus:border-[#FFD700] focus:outline-none transition-colors">
+                        </div>
+                        <div class="flex-1 relative">
+                            <i class="fa-solid fa-scroll absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                            <input type="text" id="search-quest" placeholder="Search by quest name..." class="w-full bg-[#161b22] border border-slate-700 rounded-lg pl-12 pr-4 py-2.5 text-white placeholder-slate-500 focus:border-[#FFD700] focus:outline-none transition-colors">
+                        </div>
+                    </div>
+                </div>
+                <div id="character-progression-info" class="hidden">
+                    <div class="bg-blue-900/20 border border-blue-600/30 rounded-lg px-4 py-3 flex items-start gap-3">
+                        <i class="fa-solid fa-chart-line text-blue-400 text-lg mt-0.5"></i>
+                        <div class="flex-1 text-sm text-blue-200">
+                            <div class="mb-2"><span class="font-semibold">Character Progression Analytics:</span> This page shows chronicle completion statistics per character, sorted by total completions. Use this data to understand player engagement patterns and identify where players may get stuck or stop progressing.</div>
+                            <div class="text-xs text-blue-300/80"><i class="fas fa-info-circle mr-1"></i>Tip: Click on milestone badges (5+ completions) to view the milestone legend.</div>
+                        </div>
+                        <button id="toggle-leaderboard" class="px-4 py-2 bg-[#FFD700] hover:bg-[#e6c200] text-black rounded-lg font-bold text-xs uppercase tracking-wider transition-colors whitespace-nowrap">
+                            <i class="fas fa-trophy mr-2"></i>Leaderboard Mode
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -194,14 +232,160 @@
                         </tbody>
                     </table>
                 </div>
+                
+                <!-- Quest Drop-off Analysis Section -->
+                <div id="quest-dropoff-section" class="hidden bg-[#0f1419] border-t-2 border-[#FFD700]/30 mt-8">
+                    <button id="toggle-dropoff" class="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-[#161b22] transition-colors">
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-chart-line text-[#FFD700] text-xl"></i>
+                            <div>
+                                <h3 class="text-lg font-bold text-white uppercase tracking-wider">Quest Drop-off Analysis</h3>
+                                <p class="text-sm text-slate-400 mt-1">Identify completion patterns and where players tend to stop</p>
+                            </div>
+                        </div>
+                        <i id="dropoff-chevron" class="fas fa-chevron-down text-slate-500 text-xl transition-transform"></i>
+                    </button>
+                    <div id="dropoff-content" class="hidden px-6 pb-6">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+                            <!-- Least Completed Quests -->
+                            <div class="bg-[#161b22] rounded-lg border border-slate-800 p-6">
+                                <div class="flex items-center gap-3 mb-6">
+                                    <div class="w-10 h-10 rounded-full bg-red-600/20 flex items-center justify-center">
+                                        <i class="fas fa-exclamation-triangle text-red-400"></i>
+                                    </div>
+                                    <h4 class="text-md font-bold text-white uppercase tracking-wider">Least Completed Quests</h4>
+                                </div>
+                                <div id="least-completed-quests" class="space-y-3">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+                            
+                            <!-- Most Common Last Quests (Where Players Stop) -->
+                            <div class="bg-[#161b22] rounded-lg border border-slate-800 p-6">
+                                <div class="flex items-center gap-3 mb-6">
+                                    <div class="w-10 h-10 rounded-full bg-orange-600/20 flex items-center justify-center">
+                                        <i class="fas fa-stop-circle text-orange-400"></i>
+                                    </div>
+                                    <h4 class="text-md font-bold text-white uppercase tracking-wider">Common Stopping Points</h4>
+                                </div>
+                                <div id="stopping-points" class="space-y-3">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Engagement Insights -->
+                        <div class="bg-[#161b22] rounded-lg border border-slate-800 p-6 mt-6">
+                            <div class="flex items-center gap-3 mb-6">
+                                <div class="w-10 h-10 rounded-full bg-blue-600/20 flex items-center justify-center">
+                                    <i class="fas fa-lightbulb text-blue-400"></i>
+                                </div>
+                                <h4 class="text-md font-bold text-white uppercase tracking-wider">Engagement Insights</h4>
+                            </div>
+                            <div id="engagement-insights" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
+        </div>
+    </div>
+
+    <!-- Milestone Legend Modal -->
+    <div id="milestone-legend-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <div class="bg-[#1a1a1a] border-2 border-[#FFD700]/50 rounded-xl shadow-2xl max-w-2xl w-full animate-in fade-in zoom-in-95 duration-200">
+            <div class="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 px-6 py-4 border-b border-[#FFD700]/30">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-[#FFD700]/20 flex items-center justify-center">
+                            <i class="fas fa-trophy text-[#FFD700] text-xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white uppercase tracking-wider">Milestone Legend</h3>
+                    </div>
+                    <button id="close-milestone-modal" class="text-slate-400 hover:text-white transition-colors">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="px-6 py-6 space-y-4">
+                <div class="flex items-center gap-4 p-4 bg-gradient-to-r from-yellow-600/10 to-orange-600/10 rounded-lg border border-yellow-500/30">
+                    <i class="fas fa-crown text-yellow-400 text-2xl"></i>
+                    <div class="flex-1">
+                        <span class="font-bold text-yellow-300">Legendary Champion</span>
+                        <p class="text-sm text-slate-400 mt-1">60+ Chronicles Completed</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 p-4 bg-purple-600/10 rounded-lg border border-purple-600/30">
+                    <i class="fas fa-gem text-purple-400 text-2xl"></i>
+                    <div class="flex-1">
+                        <span class="font-bold text-purple-400">Master Explorer</span>
+                        <p class="text-sm text-slate-400 mt-1">40-59 Chronicles Completed</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 p-4 bg-blue-600/10 rounded-lg border border-blue-600/30">
+                    <i class="fas fa-star text-blue-400 text-2xl"></i>
+                    <div class="flex-1">
+                        <span class="font-bold text-blue-400">Veteran Adventurer</span>
+                        <p class="text-sm text-slate-400 mt-1">21-39 Chronicles Completed</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 p-4 bg-green-600/10 rounded-lg border border-green-600/30">
+                    <i class="fas fa-medal text-green-400 text-2xl"></i>
+                    <div class="flex-1">
+                        <span class="font-bold text-green-400">Seasoned Seeker</span>
+                        <p class="text-sm text-slate-400 mt-1">10-20 Chronicles Completed</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 p-4 bg-yellow-600/10 rounded-lg border border-yellow-600/30">
+                    <i class="fas fa-trophy text-yellow-400 text-2xl"></i>
+                    <div class="flex-1">
+                        <span class="font-bold text-yellow-400">Rising Champion</span>
+                        <p class="text-sm text-slate-400 mt-1">5-9 Chronicles Completed</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 p-4 bg-slate-700/20 rounded-lg border border-slate-700">
+                    <i class="fas fa-circle text-slate-400 text-2xl"></i>
+                    <div class="flex-1">
+                        <span class="font-bold text-slate-300">Novice Explorer</span>
+                        <p class="text-sm text-slate-400 mt-1">1-4 Chronicles Completed</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <div class="mb-20"></div>
 
     <div id="footer-placeholder"></div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-confirm-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <div class="bg-[#1a1a1a] border-2 border-red-600/50 rounded-xl shadow-2xl max-w-md w-full animate-in fade-in zoom-in-95 duration-200">
+            <div class="bg-gradient-to-r from-red-900/30 to-red-800/30 px-6 py-4 border-b border-red-600/30">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-red-600/20 flex items-center justify-center">
+                        <i class="fa-solid fa-triangle-exclamation text-red-500 text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white uppercase tracking-wider">Confirm Deletion</h3>
+                </div>
+            </div>
+            <div class="px-6 py-6">
+                <p id="delete-confirm-message" class="text-gray-300 text-base leading-relaxed mb-2"></p>
+                <p class="text-red-400 text-sm font-semibold">This action cannot be undone!</p>
+            </div>
+            <div class="px-6 py-4 bg-[#0f0f0f] border-t border-slate-800 flex justify-end gap-3">
+                <button id="delete-cancel-btn" class="px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold text-sm uppercase transition-colors">
+                    Cancel
+                </button>
+                <button id="delete-confirm-btn" class="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-sm uppercase transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-trash-can"></i>
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
 
     <div id="floating-avatar-container">
         <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar js-floating-avatar">

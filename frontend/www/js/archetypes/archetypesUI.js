@@ -105,7 +105,8 @@ export async function initArchetypeSelection(containerId) {
 
         container.innerHTML = '';
         archetypes.forEach((arch, i) => {
-            const angle = (i * 2 * Math.PI) / archetypes.length;
+            // Offset by -90 degrees (-Math.PI/2) to start at top (12 o'clock position)
+            const angle = (i * 2 * Math.PI) / archetypes.length - Math.PI / 2;
             const node = document.createElement('div');
             node.className = 'archetype-node active-pos';
             node.style.setProperty('--x', Math.cos(angle));

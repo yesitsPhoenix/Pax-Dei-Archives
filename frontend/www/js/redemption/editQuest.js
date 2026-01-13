@@ -1,6 +1,7 @@
 import { supabase } from "../supabaseClient.js";
 import { enableSignTooltip, mouseTooltip } from '../ui/signTooltip.js';
 import { questState } from './questStateManager.js';
+import { initializeMarkdownToolbar } from '../ui/markdownToolbar.js';
 
 const alphabet = "abcdefghijklmnopqrstuvwxyz";
 
@@ -393,12 +394,14 @@ async function loadEditor(userId, signData) {
         selected.push(...quest.signs);
         updateSelected(baseUrl, version);
     }
-    await loadPrerequisiteOptionsForEdit('prerequisite-container', quest.prerequisite_quest_ids || []);
+    await loadPrerequisiteOptionsForEdit('hard-lock-container', quest.hard_lock_quest_ids || [], 'hard-lock-quest', 'hard-lock-search', 'hard-lock-list');
+    await loadPrerequisiteOptionsForEdit('prerequisite-container', quest.prerequisite_quest_ids || [], 'prereq-quest', 'prereq-search', 'prereq-list');
 
+    initializeMarkdownToolbar();
     setupEditorEvents(baseUrl, version);
 }
 
-async function loadPrerequisiteOptionsForEdit(containerId, existingIds = []) {
+async function loadPrerequisiteOptionsForEdit(containerId, existingIds = [], inputName = 'prereq-quest', searchId = 'prereq-search', listId = 'prereq-list') {
     //console.log('[EDIT_QUEST.HTML] Loading prerequisite options...');
     
     // Use state manager to get quests
@@ -423,12 +426,12 @@ async function loadPrerequisiteOptionsForEdit(containerId, existingIds = []) {
 
     parent.innerHTML = `
         <div class="mb-3">
-            <input type="text" id="prereq-search" placeholder="Search quests..." class="w-full bg-[#374151] border border-gray-600 rounded-lg p-2 text-sm text-white focus:border-[#FFD700] outline-none">
+            <input type="text" id="${searchId}" placeholder="Search quests..." class="w-full bg-[#374151] border border-gray-600 rounded-lg p-2 text-sm text-white focus:border-[#FFD700] outline-none">
         </div>
-        <div id="prereq-list" class="space-y-1"></div>
+        <div id="${listId}" class="space-y-1"></div>
     `;
 
-    const listContainer = document.getElementById('prereq-list');
+    const listContainer = document.getElementById(listId);
 
     const renderPrereqs = (filter = "") => {
         listContainer.innerHTML = quests
@@ -437,18 +440,18 @@ async function loadPrerequisiteOptionsForEdit(containerId, existingIds = []) {
                 const isChecked = existingIds.includes(q.id) ? 'checked' : '';
                 return `
                     <label class="flex items-center space-x-3 p-2 hover:bg-white/5 rounded-lg cursor-pointer transition-colors">
-                        <input type="checkbox" name="prereq-quest" value="${q.id}" ${isChecked} class="w-4 h-4 rounded border-gray-700 text-[#FFD700] focus:ring-[#FFD700] bg-gray-900">
+                        <input type="checkbox" name="${inputName}" value="${q.id}" ${isChecked} class="w-4 h-4 rounded border-gray-700 text-[#FFD700] focus:ring-[#FFD700] bg-gray-900">
                         <span class="text-sm text-gray-300">${q.quest_name} <small class="text-gray-500 ml-2">(${q.category})</small></span>
                     </label>
                 `;
             }).join('');
     };
 
-    document.getElementById('prereq-search').addEventListener('input', (e) => {
-        const currentChecked = Array.from(document.querySelectorAll('input[name="prereq-quest"]:checked')).map(cb => cb.value);
+    document.getElementById(searchId).addEventListener('input', (e) => {
+        const currentChecked = Array.from(document.querySelectorAll(`input[name="${inputName}"]:checked`)).map(cb => cb.value);
         existingIds = [...new Set([...existingIds, ...currentChecked])];
         
-        const currentUnchecked = Array.from(document.querySelectorAll('input[name="prereq-quest"]:not(:checked)')).map(cb => cb.value);
+        const currentUnchecked = Array.from(document.querySelectorAll(`input[name="${inputName}"]:not(:checked)`)).map(cb => cb.value);
         existingIds = existingIds.filter(id => !currentUnchecked.includes(id));
         
         renderPrereqs(e.target.value);
@@ -568,6 +571,9 @@ function setupEditorEvents(baseUrl, version) {
         const selectedPrereqs = Array.from(document.querySelectorAll('input[name="prereq-quest"]:checked'))
             .map(cb => cb.value);
 
+        const selectedHardLocks = Array.from(document.querySelectorAll('input[name="hard-lock-quest"]:checked'))
+            .map(cb => cb.value);
+
         let finalCategory = categorySelect.value;
         if (finalCategory === "NEW") {
             finalCategory = newCategoryInput.value.trim();
@@ -614,7 +620,8 @@ function setupEditorEvents(baseUrl, version) {
             max_claims: parseInt(document.getElementById('max-claims').value) || 1,
             signs: selected.length > 0 ? selected : null,
             reward_key: reward_keys.length > 0 ? reward_keys.join(",") : null,
-            prerequisite_quest_ids: selectedPrereqs
+            prerequisite_quest_ids: selectedPrereqs,
+            hard_lock_quest_ids: selectedHardLocks
         };
 
         const { error } = await supabase

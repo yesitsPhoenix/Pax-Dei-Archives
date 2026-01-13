@@ -3,8 +3,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const abilityFilterContainer = document.getElementById('ability-filters');
     const abilityPopupOverlay = document.getElementById('ability-popup-overlay');
 
-    const GITHUB_PAGES_BASE_URL = "https://yesitsphoenix.github.io/Pax-Dei-Archives";
-
     if (!abilitiesListContainer || !abilityFilterContainer || !abilityPopupOverlay) {
         console.error('Required containers (abilities-list, ability-filters, or ability-popup-overlay) not found!');
         return;
@@ -121,9 +119,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const showPopup = (abilityData, abilityId) => {
         const parsedDescription = marked.parse(abilityData.description);
         const appliesToArray = Array.from(abilityData.applies_to).sort();
-        
-        const slug = abilityId.toLowerCase().replace(/\s+/g, '-').replace(/'/g, '');
-        const currentUrl = `${GITHUB_PAGES_BASE_URL}/abilities/${slug}.html`;
 
         abilityPopupOverlay.innerHTML = `
             <div class="popup-content">
@@ -136,13 +131,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="applies-to w-full text-center mb-4">
                     <p class="text-gray-400 text-sm font-semibold mb-1">Applies to:</p>
                     <div class="flex flex-wrap justify-center gap-1">
-                        ${appliesToArray.map(type => `<span class="bg-gray-700 text-gray-200 px-3 py-1 rounded-full text-xs whitespace-nowrap">${type}</span>`).join('')}
+                        ${appliesToArray.map(type => `<span class="bg-gray-700 text-gray-200 px-3 py-1 rounded-full text-md whitespace-nowrap">${type}</span>`).join('')}
                     </div>
-                </div>
-                <div class="flex justify-center mt-4">
-                    <button id="copy-link-button" class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-4 rounded transition duration-200">
-                        Copy Link
-                    </button>
                 </div>
             </div>
         `;
@@ -153,18 +143,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (e.target === abilityPopupOverlay) {
                 hidePopup();
             }
-        });
-
-        document.getElementById('copy-link-button').addEventListener('click', () => {
-            navigator.clipboard.writeText(currentUrl).then(() => {
-                const originalText = document.getElementById('copy-link-button').textContent;
-                document.getElementById('copy-link-button').textContent = 'Copied!';
-                setTimeout(() => {
-                    document.getElementById('copy-link-button').textContent = originalText;
-                }, 2000);
-            }).catch(err => {
-                console.error('Failed to copy text: ', err);
-            });
         });
     };
 
@@ -191,9 +169,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             <img src="${abilityData.image_url}" alt="${abilityName} icon" class="w-16 h-16 mb-3 rounded-md border-2 border-yellow-500 object-cover">
             <h3 class="text-lg font-bold text-yellow-400 mb-2">${abilityName}</h3>
 
-                <p class="text-gray-400 text-xs font-semibold mb-1">Applies to:</p>
+                <p class="text-gray-400 text-md font-semibold mb-1">Applies to:</p>
                 <div class="flex flex-wrap justify-center gap-1">
-                    ${appliesToArray.map(type => `<span class="bg-gray-700 text-gray-200 px-3 py-1 rounded-full text-xs whitespace-nowrap">${type}</span>`).join('')}
+                    ${appliesToArray.map(type => `<span class="bg-gray-700 text-gray-200 px-3 py-1 rounded-full text-md whitespace-nowrap">${type}</span>`).join('')}
                 </div>
             </div>
         `;

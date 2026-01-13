@@ -192,7 +192,7 @@ $(document).ready(async function() {
         setInterval(() => updateUtcClock(utcClockDisplay), 1000);
     }
     
-    $('.menu-trigger').on('click', function() {
+        $(document).on('click', '.menu-trigger', function() {
         $(this).toggleClass('active');
         $('.header-area .nav').toggleClass('active');
     });
