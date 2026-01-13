@@ -3,6 +3,7 @@ import { questState } from './questStateManager.js';
 let cy = null;
 let allQuests = [];
 let activeFilters = new Set(); // Track which categories are being highlighted
+let showSoftLocks = true; // Track soft lock visibility
 
 // Enhanced color scale based on unlock_required_count
 const getNodeColor = (quest) => {
@@ -47,7 +48,7 @@ async function initDiagram() {
 }
 
 function setupUI() {
-    setupTraceCollapsible();
+    setupTabSwitching();
     setupResetButton();
     setupMainPathToggle();
     setupCategoryFilters();
@@ -121,18 +122,7 @@ function initCytoscape() {
                     'arrow-scale': 1.5
                 }
             },
-            {
-                selector: 'edge.hard-lock',
-                style: {
-                    'width': 3,
-                    'line-color': '#EF4444',
-                    'target-arrow-color': '#EF4444',
-                    'target-arrow-shape': 'triangle',
-                    'curve-style': 'bezier',
-                    'arrow-scale': 1.5,
-                    'line-style': 'solid'
-                }
-            },
+
             {
                 selector: 'edge.soft-lock',
                 style: {
@@ -358,39 +348,24 @@ function renderGraph() {
 
         //console.log(`Adding ${nodes.length} nodes and ${edges.length} edges`);
 
-        // Add hard lock edges (quest-level dependencies)
-        filteredQuests.forEach(quest => {
-            const hardLocks = quest.hard_lock_quest_ids || [];
-            hardLocks.forEach(hardLockId => {
-                if (questIdMap.has(hardLockId)) {
-                    edges.push({
-                        data: {
-                            source: hardLockId,
-                            target: quest.id,
-                            id: `hard-lock-${hardLockId}-${quest.id}`
-                        },
-                        classes: 'hard-lock'
-                    });
-                }
+        // Add soft lock edges (prerequisite dependencies) - only if enabled
+        if (showSoftLocks) {
+            filteredQuests.forEach(quest => {
+                const softLocks = quest.prerequisite_quest_ids || [];
+                softLocks.forEach(softLockId => {
+                    if (questIdMap.has(softLockId)) {
+                        edges.push({
+                            data: {
+                                source: softLockId,
+                                target: quest.id,
+                                id: `soft-lock-${softLockId}-${quest.id}`
+                            },
+                            classes: 'soft-lock'
+                        });
+                    }
+                });
             });
-        });
-
-        // Add soft lock edges (prerequisite dependencies)
-        filteredQuests.forEach(quest => {
-            const softLocks = quest.prerequisite_quest_ids || [];
-            softLocks.forEach(softLockId => {
-                if (questIdMap.has(softLockId)) {
-                    edges.push({
-                        data: {
-                            source: softLockId,
-                            target: quest.id,
-                            id: `soft-lock-${softLockId}-${quest.id}`
-                        },
-                        classes: 'soft-lock'
-                    });
-                }
-            });
-        });
+        }
 
         // Add all elements to graph
         cy.add([...nodes, ...edges]);
@@ -607,42 +582,7 @@ function showDetails(data) {
         }
     }
 
-    // Build hard lock prerequisites list
-    const hardLockContainer = document.getElementById('detail-hard-locks');
-    if (hardLockContainer && quest) {
-        let hardLockIds = [];
-        try {
-            hardLockIds = Array.isArray(quest.hard_lock_quest_ids)
-                ? quest.hard_lock_quest_ids
-                : (quest.hard_lock_quest_ids ? JSON.parse(quest.hard_lock_quest_ids) : []);
-        } catch (e) {
-            hardLockIds = [];
-        }
-        
-        if (hardLockIds.length > 0) {
-            const hardLockQuests = hardLockIds
-                .map(id => allQuests.find(q => q.id === id))
-                .filter(q => q); // Remove nulls
-            
-            if (hardLockQuests.length > 0) {
-                const hardLockList = hardLockQuests
-                    .map(q => `<div class="text-sm px-2 py-1 bg-red-500/20 rounded hover:bg-red-500/30 cursor-pointer" onclick="window.highlightQuest('${q.id}')">
-                        <i class="fas fa-arrow-right mr-1"></i>${q.quest_name}
-                    </div>`)
-                    .join('');
-                
-                hardLockContainer.innerHTML = `
-                    <p class="text-sm uppercase tracking-wider text-gray-500 mb-1">Hard Locks (Required to Unlock):</p>
-                    <div class="space-y-1">${hardLockList}</div>
-                `;
-                hardLockContainer.style.display = 'block';
-            } else {
-                hardLockContainer.style.display = 'none';
-            }
-        } else {
-            hardLockContainer.style.display = 'none';
-        }
-    }
+
     
     panel.style.display = 'block';
 }
@@ -727,6 +667,15 @@ function setupMainPathToggle() {
     traceBtn.innerHTML = '<i class="fas fa-route mr-1"></i> Trace Main Path';
     resetBtn.parentElement.insertBefore(traceBtn, resetBtn.nextSibling);
     
+    // Add "Toggle Soft Locks" button after trace button
+    const softLockBtn = document.createElement('button');
+    softLockBtn.id = 'toggle-soft-locks';
+    softLockBtn.className = 'btn-reset';
+    softLockBtn.style.background = '#F59E0B';
+    softLockBtn.style.color = '#000';
+    softLockBtn.innerHTML = '<i class="fas fa-link mr-1"></i> Hide Soft Locks';
+    traceBtn.parentElement.insertBefore(softLockBtn, traceBtn.nextSibling);
+    
     let mainPathActive = false;
     
     traceBtn.addEventListener('click', () => {
@@ -755,11 +704,79 @@ function setupMainPathToggle() {
             mainPathActive = true;
         }
     });
+    
+    // Soft lock toggle handler
+    softLockBtn.addEventListener('click', () => {
+        showSoftLocks = !showSoftLocks;
+        
+        if (showSoftLocks) {
+            softLockBtn.innerHTML = '<i class="fas fa-link mr-1"></i> Hide Soft Locks';
+            softLockBtn.style.background = '#F59E0B';
+            softLockBtn.style.color = '#000';
+        } else {
+            softLockBtn.innerHTML = '<i class="fas fa-link-slash mr-1"></i> Show Soft Locks';
+            softLockBtn.style.background = '#333';
+            softLockBtn.style.color = '#ccc';
+        }
+        
+        // Re-render the graph with updated soft lock visibility
+        renderGraph();
+    });
 }
 
 function setupCategoryFilters() {
     // Category filtering is now handled by populateFilter()
 }
+
+function setupTabSwitching() {
+    const visualizationTab = document.getElementById('tab-visualization');
+    const analyticsTab = document.getElementById('tab-analytics');
+    const visualizationContent = document.getElementById('visualization-content');
+    const analyticsContent = document.getElementById('analytics-content');
+    
+    if (!visualizationTab || !analyticsTab || !visualizationContent || !analyticsContent) return;
+    
+    visualizationTab.addEventListener('click', () => {
+        switchToVisualizationTab();
+    });
+    
+    analyticsTab.addEventListener('click', () => {
+        // Update tabs
+        analyticsTab.classList.add('active', 'text-[#FFD700]');
+        analyticsTab.classList.remove('text-slate-400');
+        visualizationTab.classList.remove('active', 'text-[#FFD700]');
+        visualizationTab.classList.add('text-slate-400');
+        
+        // Update content
+        analyticsContent.classList.remove('hidden');
+        visualizationContent.classList.add('hidden');
+    });
+}
+
+// Global function to switch to visualization tab
+window.switchToVisualizationTab = function() {
+    const visualizationTab = document.getElementById('tab-visualization');
+    const analyticsTab = document.getElementById('tab-analytics');
+    const visualizationContent = document.getElementById('visualization-content');
+    const analyticsContent = document.getElementById('analytics-content');
+    
+    if (!visualizationTab || !analyticsTab || !visualizationContent || !analyticsContent) return;
+    
+    // Update tabs
+    visualizationTab.classList.add('active', 'text-[#FFD700]');
+    visualizationTab.classList.remove('text-slate-400');
+    analyticsTab.classList.remove('active', 'text-[#FFD700]');
+    analyticsTab.classList.add('text-slate-400');
+    
+    // Update content
+    visualizationContent.classList.remove('hidden');
+    analyticsContent.classList.add('hidden');
+    
+    // Resize cytoscape when switching back to visualization
+    setTimeout(() => {
+        if (cy) cy.resize();
+    }, 100);
+};
 
 function setupResetButton() {
     const resetBtn = document.getElementById('reset-view');
@@ -783,34 +800,18 @@ function setupResetButton() {
                 traceBtn.style.color = '#ccc';
             }
             
-            // Reset zoom
-            cy.fit(50);
-        };
-    }
-}
-
-function setupTraceCollapsible() {
-    const panel = document.querySelector('.inspector-panel');
-    const wrapper = document.getElementById('layout-wrapper');
-    if (!panel || !wrapper) return;
-    
-    const header = panel.querySelector('h2');
-    const chevron = document.getElementById('trace-chevron');
-    
-    if (header && chevron) {
-        header.onclick = () => {
-            panel.classList.toggle('collapsed');
-            wrapper.classList.toggle('collapsed-state');
-            
-            if (panel.classList.contains('collapsed')) {
-                chevron.className = 'fas fa-chevron-left text-gray-500';
-            } else {
-                chevron.className = 'fas fa-chevron-right ml-auto text-gray-500';
+            // Reset soft lock toggle if it exists
+            const softLockBtn = document.getElementById('toggle-soft-locks');
+            if (softLockBtn && !showSoftLocks) {
+                showSoftLocks = true;
+                softLockBtn.innerHTML = '<i class="fas fa-link mr-1"></i> Hide Soft Locks';
+                softLockBtn.style.background = '#F59E0B';
+                softLockBtn.style.color = '#000';
+                renderGraph();
             }
             
-            setTimeout(() => {
-                if (cy) cy.resize();
-            }, 310);
+            // Reset zoom
+            cy.fit(50);
         };
     }
 }
@@ -822,74 +823,174 @@ function runValidation() {
     try {
         validationContainer.innerHTML = '<p class="text-gray-500 text-sm">Running validation checks...</p>';
         
-        const issues = [];
+        const criticalIssues = [];
         const warnings = [];
         
-        // 1. Check for orphaned quests
-        const orphans = findOrphanQuests();
-        if (orphans.length > 0) {
-            warnings.push({
-                type: 'warning',
-                icon: 'fa-unlink',
-                title: 'Orphaned Quests Detected',
-                message: `${orphans.length} quest(s) have no prerequisites or dependents`,
-                quests: orphans
-            });
-        }
-        
-        // 2. Check for missing prerequisite quest IDs
-        const missingPrereqs = [];
+        // Calculate category quest counts
+        const categoryBreakdown = new Map();
         allQuests.forEach(quest => {
-            let prereqIds = [];
-            try {
-                prereqIds = Array.isArray(quest.prerequisite_quest_ids)
-                    ? quest.prerequisite_quest_ids
-                    : (quest.prerequisite_quest_ids ? JSON.parse(quest.prerequisite_quest_ids) : []);
-            } catch (e) {
-                prereqIds = [];
+            const category = quest.category || 'Uncategorized';
+            if (!categoryBreakdown.has(category)) {
+                categoryBreakdown.set(category, []);
             }
-            
-            prereqIds.forEach(prereqId => {
-                const exists = allQuests.find(q => q.id === prereqId);
-                if (!exists) {
-                    missingPrereqs.push({ quest: quest, missingId: prereqId });
-                }
-            });
+            categoryBreakdown.get(category).push(quest);
         });
         
-        if (missingPrereqs.length > 0) {
-            issues.push({
+        // 1. Check for categories with < 5 quests (CRITICAL)
+        const criticalCategories = [];
+        categoryBreakdown.forEach((quests, category) => {
+            if (quests.length < 5) {
+                criticalCategories.push({ category, count: quests.length, quests });
+            }
+        });
+        
+        if (criticalCategories.length > 0) {
+            criticalIssues.push({
                 type: 'error',
-                icon: 'fa-exclamation-triangle',
-                title: 'Missing Prerequisites',
-                message: `${missingPrereqs.length} quest(s) reference non-existent prerequisite IDs`,
-                items: missingPrereqs
+                icon: 'fa-exclamation-circle',
+                title: 'Categories Below Minimum Quest Count',
+                message: `${criticalCategories.length} categor${criticalCategories.length === 1 ? 'y has' : 'ies have'} fewer than 5 quests`,
+                categories: criticalCategories
             });
         }
+        
+        // 2. Check for categories with 5-7 quests (WARNING)
+        const attentionCategories = [];
+        categoryBreakdown.forEach((quests, category) => {
+            if (quests.length >= 5 && quests.length <= 7) {
+                attentionCategories.push({ category, count: quests.length, quests });
+            }
+        });
+        
+        if (attentionCategories.length > 0) {
+            warnings.push({
+                type: 'warning',
+                icon: 'fa-exclamation-triangle',
+                title: 'Categories Needing Attention',
+                message: `${attentionCategories.length} categor${attentionCategories.length === 1 ? 'y has' : 'ies have'} 5-7 quests (recommended: 8+)`,
+                categories: attentionCategories
+            });
+        }
+        
+        // 3. Check for orphaned quests (Advanced Diagnostics)
+        const orphans = findOrphanQuests();
         
         // Render results
         validationContainer.innerHTML = '';
         
-        if (issues.length === 0 && warnings.length === 0) {
+        if (criticalIssues.length === 0 && warnings.length === 0) {
             validationContainer.innerHTML = `
                 <div class="validation-item validation-success">
                     <i class="fas fa-check-circle mr-2"></i>
                     <strong>All validations passed!</strong>
-                    <p class="text-sm mt-1">No issues detected in quest flow structure.</p>
+                    <p class="text-sm mt-1">All categories meet the minimum quest requirements.</p>
                 </div>
             `;
         } else {
-            issues.forEach(issue => {
-                validationContainer.innerHTML += createValidationItem(issue);
+            criticalIssues.forEach(issue => {
+                validationContainer.innerHTML += createCategoryValidationItem(issue);
             });
             warnings.forEach(warning => {
-                validationContainer.innerHTML += createValidationItem(warning);
+                validationContainer.innerHTML += createCategoryValidationItem(warning);
             });
+        }
+        
+        // Add Advanced Diagnostics section if there are orphans
+        if (orphans.length > 0) {
+            validationContainer.innerHTML += `
+                <div class="mt-4 border-t border-gray-700 pt-4">
+                    <button class="w-full flex items-center justify-between text-left text-gray-400 hover:text-white transition-colors" 
+                            onclick="toggleAdvancedDiagnostics()">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-microscope"></i>
+                            <span class="text-sm font-semibold">Advanced Diagnostics</span>
+                            <span class="text-xs text-gray-500">(${orphans.length} orphaned quest${orphans.length === 1 ? '' : 's'})</span>
+                        </div>
+                        <i id="diagnostics-chevron" class="fas fa-chevron-down text-xs"></i>
+                    </button>
+                    <div id="advanced-diagnostics" class="hidden mt-3">
+                        <div class="validation-item validation-info">
+                            <div class="flex items-start">
+                                <i class="fas fa-info-circle mr-2 mt-1"></i>
+                                <div class="flex-1">
+                                    <strong>Orphaned Quests</strong>
+                                    <p class="text-sm mt-1">These quests have no category prerequisites and are not prerequisites for other quests. This may indicate disconnected content.</p>
+                                    <div class="mt-2 space-y-1 max-h-48 overflow-y-auto">
+                                        ${orphans.slice(0, 20).map(quest => `
+                                            <div class="text-xs opacity-90 hover:opacity-100 cursor-pointer px-2 py-1 bg-black/20 rounded" 
+                                                 onclick="window.highlightQuest('${quest.id}')">
+                                                <i class="fas fa-arrow-right mr-1"></i> ${quest.quest_name}
+                                                <span class="text-gray-500 ml-2">(${quest.category})</span>
+                                            </div>
+                                        `).join('')}
+                                        ${orphans.length > 20 ? `<div class="text-xs opacity-75 px-2">... and ${orphans.length - 20} more</div>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
     } catch (error) {
         console.error("Validation error:", error);
         validationContainer.innerHTML = '<p class="text-red-500 text-sm">Error running validation</p>';
     }
+}
+
+window.toggleAdvancedDiagnostics = function() {
+    const diagnosticsPanel = document.getElementById('advanced-diagnostics');
+    const chevron = document.getElementById('diagnostics-chevron');
+    
+    if (diagnosticsPanel && chevron) {
+        diagnosticsPanel.classList.toggle('hidden');
+        chevron.classList.toggle('fa-chevron-down');
+        chevron.classList.toggle('fa-chevron-up');
+    }
+};
+
+function createCategoryValidationItem(item) {
+    const className = item.type === 'error' ? 'validation-error' : 'validation-warning';
+    
+    let categoriesHtml = '';
+    if (item.categories && item.categories.length > 0) {
+        categoriesHtml = '<div class="mt-3 space-y-2">';
+        item.categories.forEach(({ category, count, quests }) => {
+            categoriesHtml += `
+                <div class="bg-black/20 rounded-lg p-3 hover:bg-black/30 transition-colors">
+                    <div class="flex items-center justify-between mb-2">
+                        <button class="text-left flex-1 text-white hover:text-[#FFD700] transition-colors" 
+                                onclick="window.highlightCategory('${category.replace(/'/g, "\\'")}')"
+                                title="Click to highlight all quests in this category">
+                            <i class="fas fa-folder mr-2"></i>
+                            <span class="font-semibold">${category}</span>
+                        </button>
+                        <span class="text-sm font-bold ${item.type === 'error' ? 'text-red-400' : 'text-yellow-400'} ml-2">${count} quest${count === 1 ? '' : 's'}</span>
+                    </div>
+                    <div class="text-xs text-gray-500 pl-6">
+                        ${item.type === 'error' ? 
+                            `Needs ${5 - count} more quest${5 - count === 1 ? '' : 's'} to reach minimum` : 
+                            `Consider adding ${8 - count} more quest${8 - count === 1 ? '' : 's'} for healthy content`
+                        }
+                    </div>
+                </div>
+            `;
+        });
+        categoriesHtml += '</div>';
+    }
+    
+    return `
+        <div class="validation-item ${className}">
+            <div class="flex items-start">
+                <i class="fas ${item.icon} mr-2 mt-1"></i>
+                <div class="flex-1">
+                    <strong>${item.title}</strong>
+                    <p class="text-sm mt-1">${item.message}</p>
+                    ${categoriesHtml}
+                </div>
+            </div>
+        </div>
+    `;
 }
 
 function createValidationItem(item) {
@@ -945,25 +1046,94 @@ window.highlightQuest = function(questId) {
     if (!cy) return;
     
     try {
-        const node = cy.getElementById(questId);
-        if (node.length > 0) {
+        // Switch to visualization tab first
+        window.switchToVisualizationTab();
+        
+        // Small delay to ensure tab switch completes
+        setTimeout(() => {
+            const node = cy.getElementById(questId);
+            if (node.length > 0) {
+                clearHighlights();
+                node.addClass('highlighted');
+                
+                cy.animate({
+                    center: { eles: node },
+                    zoom: 1.5,
+                    duration: 500
+                });
+                
+                showDetails(node.data());
+                
+                setTimeout(() => {
+                    highlightPaths(node);
+                }, 600);
+            }
+        }, 150);
+    } catch (error) {
+        console.error("Error highlighting quest:", error);
+    }
+};
+
+window.highlightCategory = function(categoryName) {
+    if (!cy) return;
+    
+    try {
+        // Switch to visualization tab first
+        window.switchToVisualizationTab();
+        
+        // Small delay to ensure tab switch completes
+        setTimeout(() => {
             clearHighlights();
-            node.addClass('highlighted');
             
+            // Find all nodes in this category
+            const categoryNodes = cy.nodes().filter(node => {
+                return !node.data('virtual') && node.data('category') === categoryName;
+            });
+            
+            if (categoryNodes.length === 0) {
+                console.warn(`No quests found in category: ${categoryName}`);
+                return;
+            }
+            
+            // Highlight all nodes in the category
+            categoryNodes.addClass('highlighted');
+            
+            // Find all edges connecting nodes within the category
+            const categoryEdges = cy.edges().filter(edge => {
+                const source = edge.source();
+                const target = edge.target();
+                return categoryNodes.contains(source) && categoryNodes.contains(target);
+            });
+            
+            categoryEdges.addClass('highlighted');
+            
+            // Dim everything else
+            cy.elements().difference(categoryNodes.union(categoryEdges)).addClass('dimmed');
+            
+            // Fit view to show all category nodes
             cy.animate({
-                center: { eles: node },
-                zoom: 1.5,
+                fit: { eles: categoryNodes, padding: 50 },
                 duration: 500
             });
             
-            showDetails(node.data());
-            
-            setTimeout(() => {
-                highlightPaths(node);
-            }, 600);
-        }
+            // Update details panel with category info
+            const panel = document.getElementById('details-panel');
+            if (panel) {
+                document.getElementById('detail-name').textContent = categoryName;
+                document.getElementById('detail-pre').textContent = `${categoryNodes.length} quest${categoryNodes.length === 1 ? '' : 's'} in category`;
+                document.getElementById('detail-count').textContent = '—';
+                document.getElementById('detail-id').textContent = 'Category View';
+                
+                const prereqContainer = document.getElementById('detail-soft-prereqs');
+                if (prereqContainer) {
+                    prereqContainer.style.display = 'none';
+                }
+                
+                panel.style.display = 'block';
+            }
+        }, 150);
     } catch (error) {
-        console.error("Error highlighting quest:", error);
+        console.error("Error highlighting category:", error);
     }
 };
 
@@ -1031,14 +1201,6 @@ function calculateMetrics() {
         // Count main path quests
         const mainPathQuests = visibleQuests.filter(q => q.category === "The First Steps: Beginner's Guide");
         
-        // Count branch points (quests that have archetype quests depending on them)
-        const branchPoints = mainPathQuests.filter(quest => {
-            return visibleQuests.some(q => 
-                q.unlock_prerequisite_category === "The First Steps: Beginner's Guide" &&
-                q.category !== "The First Steps: Beginner's Guide"
-            );
-        });
-        
         // Calculate actual max depth using proper algorithm
         let maxDepth = 0;
         if (cy && cy.nodes().length > 1) {
@@ -1080,28 +1242,96 @@ function calculateMetrics() {
             }
         }
         
+        // Calculate category breakdown
+        const categoryBreakdown = new Map();
+        visibleQuests.forEach(quest => {
+            const category = quest.category || 'Uncategorized';
+            categoryBreakdown.set(category, (categoryBreakdown.get(category) || 0) + 1);
+        });
+        
+        // Sort categories by count (descending)
+        const sortedCategories = Array.from(categoryBreakdown.entries())
+            .sort((a, b) => b[1] - a[1]);
+        
+        // Build category list HTML
+        const categoryListHtml = sortedCategories.map(([category, count]) => {
+            let statusClass = '';
+            let statusIcon = '';
+            
+            if (count < 5) {
+                statusClass = 'text-red-400';
+                statusIcon = '<i class="fas fa-exclamation-circle mr-1"></i>';
+            } else if (count <= 7) {
+                statusClass = 'text-yellow-400';
+                statusIcon = '<i class="fas fa-exclamation-triangle mr-1"></i>';
+            } else {
+                statusClass = 'text-green-400';
+                statusIcon = '<i class="fas fa-check-circle mr-1"></i>';
+            }
+            
+            const categorySlug = category.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+            
+            return `
+                <div class="flex items-center justify-between p-2 hover:bg-white/5 rounded cursor-pointer transition-colors"
+                     onclick="window.highlightCategory('${category.replace(/'/g, "\\'")}')"
+                     title="Click to highlight ${category} quests">
+                    <div class="flex items-center gap-2 flex-1 min-w-0">
+                        ${statusIcon}
+                        <span class="text-sm text-gray-300 truncate">${category}</span>
+                    </div>
+                    <span class="text-sm font-bold ${statusClass} ml-2">${count}</span>
+                </div>
+            `;
+        }).join('');
+        
         metricsContainer.innerHTML = `
-            <div class="metric-card">
-                <div class="metric-label">Total Quests</div>
-                <div class="metric-value">${totalQuests}</div>
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div class="metric-card">
+                    <div class="metric-label">Total Quests</div>
+                    <div class="metric-value">${totalQuests}</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="metric-label">Main Path</div>
+                    <div class="metric-value">${mainPathQuests.length}</div>
+                    <p class="text-xs text-gray-500 mt-1">Beginner's Guide</p>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="metric-label">Categories</div>
+                    <div class="metric-value">${totalCategories}</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="metric-label">Max Depth</div>
+                    <div class="metric-value">${maxDepth}</div>
+                    <p class="text-xs text-gray-500 mt-1">Chain length</p>
+                </div>
             </div>
             
-            <div class="metric-card">
-                <div class="metric-label">Main Path Length</div>
-                <div class="metric-value">${mainPathQuests.length}</div>
-                <p class="text-xs text-gray-500 mt-1">Beginner's Guide quests</p>
-            </div>
-            
-            <div class="metric-card">
-                <div class="metric-label">Total Categories</div>
-                <div class="metric-value">${totalCategories}</div>
-                <p class="text-xs text-gray-500 mt-1">Including archetypes</p>
-            </div>
-            
-            <div class="metric-card">
-                <div class="metric-label">Max Chain Depth</div>
-                <div class="metric-value">${maxDepth}</div>
-                <p class="text-xs text-gray-500 mt-1">Longest dependency chain</p>
+            <div class="mt-4 border-t border-gray-700 pt-4">
+                <h4 class="text-sm font-semibold text-gray-400 mb-3 flex items-center">
+                    <i class="fas fa-list-ul mr-2"></i>
+                    Category Breakdown
+                    <span class="ml-auto text-xs text-gray-500">(Click to highlight)</span>
+                </h4>
+                <div class="space-y-1 max-h-64 overflow-y-auto">
+                    ${categoryListHtml}
+                </div>
+                <div class="mt-3 text-xs text-gray-500 space-y-1">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-check-circle text-green-400"></i>
+                        <span>8+ quests (healthy)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+                        <span>5-7 quests (needs attention)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-exclamation-circle text-red-400"></i>
+                        <span>&lt;5 quests (critical)</span>
+                    </div>
+                </div>
             </div>
         `;
     } catch (error) {

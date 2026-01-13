@@ -626,13 +626,13 @@ function renderTable(data, config) {
                     let milestone = '';
                     
                     // Milestone indicators
-                    if (count >= 100) {
+                    if (count >= 60) {
                         badgeColor = 'bg-gradient-to-r from-yellow-600/30 to-orange-600/30 text-yellow-300 border-2 border-yellow-500/50';
                         milestone = '<i class="fas fa-crown ml-2 text-yellow-400"></i>';
-                    } else if (count >= 50) {
+                    } else if (count >= 40) {
                         badgeColor = 'bg-purple-600/20 text-purple-400 border border-purple-600/30';
                         milestone = '<i class="fas fa-gem ml-2"></i>';
-                    } else if (count >= 25) {
+                    } else if (count >= 21) {
                         badgeColor = 'bg-blue-600/20 text-blue-400 border border-blue-600/30';
                         milestone = '<i class="fas fa-star ml-2"></i>';
                     } else if (count >= 10) {

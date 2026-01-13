@@ -18,24 +18,28 @@
     <script src="https://cdn.jsdelivr.net/npm/webcola@3.4.0/WebCola/cola.min.js"></script>
     <style>
         .page-content { 
-            background-color: #1a1a1a; 
-            border-radius: 20px; 
             padding: 30px; 
             min-height: 90vh; 
-            position: relative; 
-            width: 100% !important; 
-            max-width: 94vw !important;
         }
-        #layout-wrapper { 
-            display: grid; 
-            grid-template-columns: 1fr 380px; 
-            gap: 20px; 
-            width: 100%;
-            transition: grid-template-columns 0.3s ease;
-            margin-left: 4rem;
+        .flow-tab {
+            background: transparent;
+            border: none;
+            cursor: pointer;
         }
-        #layout-wrapper.collapsed-state {
-            grid-template-columns: 1fr 45px;
+        .mgmt-tab {
+            border-bottom: 2px solid transparent;
+        }
+        .mgmt-tab.active,
+        .mgmt-tab:hover {
+            color: #FFD700;
+            border-bottom-color: #FFD700;
+        }
+        .tab-content {
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
         #quest-diagram-container { 
             width: 100%; 
@@ -44,7 +48,7 @@
             background: #0d0d0d; 
             border-radius: 12px; 
             border: 1px solid #333; 
-            position: relative; 
+            position: relative;
         }
         #visualizer {
             width: 100%;
@@ -79,12 +83,16 @@
             border-left: 3px solid #22c55e;
             color: #86efac;
         }
+        .validation-info {
+            background: rgba(59, 130, 246, 0.1);
+            border-left: 3px solid #3b82f6;
+            color: #93c5fd;
+        }
         .metric-card {
             background: #1e1e1e;
             border: 1px solid #333;
             border-radius: 8px;
             padding: 12px;
-            margin-bottom: 12px;
         }
         .metric-label {
             color: #888;
@@ -98,10 +106,6 @@
             font-weight: bold;
             margin-top: 4px;
         }
-        .inspector-panel { background: #111; border: 1px solid #333; border-radius: 12px; padding: 20px; height: 70vh; overflow-y: auto; overflow-x: hidden; }
-        .inspector-panel.collapsed #trace-list { display: none; }
-        .inspector-panel.collapsed h2 span { display: none; }
-        .inspector-panel.collapsed h2 { writing-mode: vertical-lr; height: 100%; justify-content: start; padding-top: 10px; margin-bottom: 0; }
         #details-panel { 
             position: absolute; 
             top: 20px; 
@@ -241,70 +245,76 @@
     <h1 class="text-xl font-semibold mt-6 mb-3 text-white text-center">Quest Flow Architect</h1>
     <div class="h-1 w-24 bg-[#FFD700] mx-auto rounded-full"></div><br>
 
-    <div class="w-full px-4">
-        <div class="page-content">
-            <div class="flex justify-between items-center mb-6">
-                <div class="flex items-center gap-4">
-                    <div id="toggle-container">
-                        <label class="text-md font-medium text-gray-400 mr-2">Quest Flow Display:</label>
-                        <select id="root-filter"><option value="all">All Quests</option></select>
-                    </div>
-                    <button id="reset-view" class="btn-reset">
-                        <i class="fas fa-sync-alt mr-1"></i> Reset Zoom
+    <div class="container mx-auto px-6 max-w-8xl">
+        <div class="page-content bg-[#111827] rounded-xl border border-slate-800 shadow-2xl overflow-hidden">
+            <!-- Tab Navigation -->
+            <div class="flex flex-col md:flex-row justify-between items-center bg-[#1f2937] px-6 py-4 border-b border-slate-700 gap-6">
+                <div class="flex space-x-8">
+                    <button id="tab-visualization" class="mgmt-tab py-2 font-bold text-[#FFD700] transition-all uppercase active">
+                        <i class="fas fa-project-diagram mr-2"></i>Quest Flow Visualization
                     </button>
-                    <div id="diagram-legend">
-                        <!-- Node Colors -->
-                        <div class="flex items-center gap-2">
-                            <div class="w-4 h-4 rounded-full" style="background-color: #FFD700;"></div>
-                            <span class="text-sm text-gray-400">Entry (0)</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <div class="w-4 h-4 rounded-full" style="background-color: #10B981;"></div>
-                            <span class="text-sm text-gray-400">Early (1-2)</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <div class="w-4 h-4 rounded-full" style="background-color: #06B6D4;"></div>
-                            <span class="text-sm text-gray-400">Mid (3-5)</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <div class="w-4 h-4 rounded-full" style="background-color: #F59E0B;"></div>
-                            <span class="text-sm text-gray-400">Late (6-8)</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <div class="w-4 h-4 rounded-full" style="background-color: #EF4444;"></div>
-                            <span class="text-sm text-gray-400">Advanced (9+)</span>
-                        </div>
-                        
-                        <!-- Separator -->
-                        <div class="h-6 w-px bg-gray-600"></div>
-                        
-                        <!-- Edge Types -->
-                        <div class="flex items-center gap-2">
-                            <svg width="30" height="12">
-                                <line x1="0" y1="6" x2="30" y2="6" stroke="#dedede" stroke-width="2"/>
-                                <polygon points="30,6 25,3 25,9" fill="#dedede"/>
-                            </svg>
-                            <span class="text-sm text-gray-400">Category Flow</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <svg width="30" height="12">
-                                <line x1="0" y1="6" x2="30" y2="6" stroke="#EF4444" stroke-width="3"/>
-                                <polygon points="30,6 25,3 25,9" fill="#EF4444"/>
-                            </svg>
-                            <span class="text-sm text-gray-400">Hard Lock</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <svg width="30" height="12">
-                                <line x1="0" y1="6" x2="30" y2="6" stroke="#F59E0B" stroke-width="2" stroke-dasharray="4,2"/>
-                                <polygon points="30,6 25,3 25,9" fill="#F59E0B"/>
-                            </svg>
-                            <span class="text-sm text-gray-400">Soft Lock</span>
-                        </div>
-                    </div>
+                    <button id="tab-analytics" class="mgmt-tab py-2 font-bold text-slate-400 hover:text-white transition-all uppercase">
+                        <i class="fas fa-chart-bar mr-2"></i>Metrics & Validation
+                    </button>
                 </div>
             </div>
 
-            <div id="layout-wrapper">
+            <!-- Visualization Tab Content -->
+            <div id="visualization-content" class="tab-content" style="margin-left: 4rem;">
+                <div class="flex justify-between items-center mb-6">
+                    <div class="flex items-center gap-4">
+                        <div id="toggle-container">
+                            <label class="text-md font-medium text-gray-400 mr-2">Quest Flow Display:</label>
+                            <select id="root-filter"><option value="all">All Quests</option></select>
+                        </div>
+                        <button id="reset-view" class="btn-reset">
+                            <i class="fas fa-sync-alt mr-1"></i> Reset Zoom
+                        </button>
+                        <div id="diagram-legend">
+                            <!-- Node Colors -->
+                            <div class="flex items-center gap-2">
+                                <div class="w-4 h-4 rounded-full" style="background-color: #FFD700;"></div>
+                                <span class="text-sm text-gray-400">Entry (0)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-4 h-4 rounded-full" style="background-color: #10B981;"></div>
+                                <span class="text-sm text-gray-400">Early (1-2)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-4 h-4 rounded-full" style="background-color: #06B6D4;"></div>
+                                <span class="text-sm text-gray-400">Mid (3-5)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-4 h-4 rounded-full" style="background-color: #F59E0B;"></div>
+                                <span class="text-sm text-gray-400">Late (6-8)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-4 h-4 rounded-full" style="background-color: #EF4444;"></div>
+                                <span class="text-sm text-gray-400">Advanced (9+)</span>
+                            </div>
+                            
+                            <!-- Separator -->
+                            <div class="h-6 w-px bg-gray-600"></div>
+                            
+                            <!-- Edge Types -->
+                            <div class="flex items-center gap-2">
+                                <svg width="30" height="12">
+                                    <line x1="0" y1="6" x2="30" y2="6" stroke="#dedede" stroke-width="2"/>
+                                    <polygon points="30,6 25,3 25,9" fill="#dedede"/>
+                                </svg>
+                                <span class="text-sm text-gray-400">Category Flow</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <svg width="30" height="12">
+                                    <line x1="0" y1="6" x2="30" y2="6" stroke="#F59E0B" stroke-width="2" stroke-dasharray="4,2"/>
+                                    <polygon points="30,6 25,3 25,9" fill="#F59E0B"/>
+                                </svg>
+                                <span class="text-sm text-gray-400">Soft Lock</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="quest-diagram-container">
                     <div id="visualizer"></div>
                     <div id="details-panel">
@@ -318,9 +328,6 @@
                                 <p class="text-sm uppercase tracking-wider text-gray-500 mb-1">Completions Required</p>
                                 <p id="detail-count" class="text-white text-base"></p>
                             </div>
-                            <div id="detail-hard-locks" style="display: none;">
-                                <!-- Hard lock prerequisites will be inserted here -->
-                            </div>
                             <div id="detail-soft-prereqs" style="display: none;">
                                 <!-- Soft prerequisites will be inserted here -->
                             </div>
@@ -331,34 +338,30 @@
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <div class="inspector-panel">
-                    <h2 class="text-lg font-bold text-white mb-4 flex items-center cursor-pointer">
-                        <i class="fas fa-project-diagram mr-2 text-[#FFD700]"></i>
-                        <span>VALIDATION & METRICS</span>
-                        <i class="fas fa-chevron-right ml-auto text-gray-500" id="trace-chevron"></i>
-                    </h2>
-                    <div id="trace-list">
-                        <!-- Metrics Section -->
-                        <div id="metrics-section" class="mb-6">
-                            <h3 class="text-md font-semibold text-white mb-3 flex items-center">
-                                <i class="fas fa-chart-line mr-2 text-blue-400"></i>
-                                Quest Metrics
-                            </h3>
-                            <div id="metrics-container">
-                                <p class="text-gray-500 text-sm italic">Calculating metrics...</p>
-                            </div>
+            <!-- Analytics Tab Content -->
+            <div id="analytics-content" class="tab-content hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Metrics Section -->
+                    <div class="bg-[#111] border border-slate-800 rounded-xl p-6">
+                        <h2 class="text-xl font-bold text-white mb-6 flex items-center">
+                            <i class="fas fa-chart-line mr-3 text-blue-400"></i>
+                            Quest Metrics
+                        </h2>
+                        <div id="metrics-container">
+                            <p class="text-gray-500 text-sm italic">Calculating metrics...</p>
                         </div>
-                        
-                        <!-- Validation Section -->
-                        <div id="validation-section">
-                            <h3 class="text-md font-semibold text-white mb-3 flex items-center">
-                                <i class="fas fa-shield-alt mr-2 text-green-400"></i>
-                                Validation Results
-                            </h3>
-                            <div id="validation-container">
-                                <p class="text-gray-500 text-sm italic">Running validation...</p>
-                            </div>
+                    </div>
+                    
+                    <!-- Validation Section -->
+                    <div class="bg-[#111] border border-slate-800 rounded-xl p-6">
+                        <h2 class="text-xl font-bold text-white mb-6 flex items-center">
+                            <i class="fas fa-shield-alt mr-3 text-green-400"></i>
+                            Validation Results
+                        </h2>
+                        <div id="validation-container">
+                            <p class="text-gray-500 text-sm italic">Running validation...</p>
                         </div>
                     </div>
                 </div>
