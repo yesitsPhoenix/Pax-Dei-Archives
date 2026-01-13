@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="applies-to w-full text-center mb-4">
                     <p class="text-gray-400 text-sm font-semibold mb-1">Found In:</p>
                     <div class="flex flex-wrap justify-center gap-1">
-                        ${foundInArray.map(source => `<span class="bg-gray-700 text-gray-200 px-3 py-1 rounded-full text-xs whitespace-nowrap">${source}</span>`).join('')}
+                        ${foundInArray.map(source => `<span class="bg-gray-700 text-gray-200 px-3 py-1 rounded-full text-md whitespace-nowrap">${source}</span>`).join('')}
                     </div>
                 </div>
 
@@ -175,9 +175,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             <img src="${gemData.imageUrl}" alt="${gemName} icon" class="w-16 h-16 mb-3 rounded-md border-2 border-yellow-500 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/64x64/000000/FFFFFF?text=No+Image';">
             <h3 class="text-lg font-bold text-yellow-400 mb-2">${gemName}</h3>
 
-                <p class="text-gray-400 text-xs font-semibold mb-1">Found In:</p>
+                <p class="text-gray-400 text-md font-semibold mb-1">Found In:</p>
                 <div class="flex flex-wrap justify-center gap-1">
-                    ${foundInArray.map(source => `<span class="bg-gray-700 text-gray-200 px-3 py-1 rounded-full text-xs whitespace-nowrap">${source}</span>`).join('')}
+                    ${foundInArray.map(source => `<span class="bg-gray-700 text-gray-200 px-3 py-1 rounded-full text-md whitespace-nowrap">${source}</span>`).join('')}
                 </div>
             </div>
         `;
