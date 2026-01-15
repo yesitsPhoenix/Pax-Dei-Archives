@@ -74,34 +74,26 @@ export const fetchCharacters = async (selectedId = null) => {
     let targetCharId = null;
     
     if (selectedId && characters.some(c => c.character_id === selectedId)) {
-        console.log('[CharacterManager] Using passed selectedId:', selectedId);
         targetCharId = selectedId;
     } else {
         const activeCharId = questState.getActiveCharacterId();
-        const sessionCharId = sessionStorage.getItem('active_character_id');
-        console.log('[CharacterManager] Active from questState:', activeCharId);
-        console.log('[CharacterManager] Active from sessionStorage:', sessionCharId);
         
         if (activeCharId && characters.some(c => c.character_id === activeCharId)) {
             targetCharId = activeCharId;
-            console.log('[CharacterManager] Using active character:', targetCharId);
         } else if (characters.length > 0) {
             targetCharId = characters[0].character_id;
-            console.log('[CharacterManager] No active character, using first:', targetCharId);
             // If no character was in sessionStorage, set the first one as active
             await questState.setActiveCharacter(targetCharId);
         }
     }
     
     if (targetCharId) {
-        console.log('[CharacterManager] Setting dropdown to:', targetCharId);
         characterSelect.value = targetCharId;
         currentCharacterId = targetCharId;
         
         // Force verify the dropdown value was set correctly
         setTimeout(() => {
             if (characterSelect.value !== targetCharId) {
-                console.warn('[CharacterManager] Dropdown value mismatch! Forcing set...');
                 characterSelect.value = targetCharId;
             }
         }, 100);
@@ -110,7 +102,6 @@ export const fetchCharacters = async (selectedId = null) => {
     if (!characterSelect.hasAttribute('data-listener-set')) {
         characterSelect.addEventListener('change', async (e) => {
             const newCharId = e.target.value;
-            console.log('[CharacterManager] Character changed to:', newCharId);
             await questState.setActiveCharacter(newCharId);
             currentCharacterId = newCharId;
 
