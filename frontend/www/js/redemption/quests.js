@@ -302,6 +302,14 @@ async function claimQuestDirectly(quest) {
             directModal.classList.remove('flex');
         }
 
+        // Close the quest modal if it's open
+        const questModal = document.getElementById('quest-modal');
+        if (questModal && questModal.classList.contains('flex')) {
+            questModal.classList.add('hidden');
+            questModal.classList.remove('flex');
+            document.body.style.overflow = 'auto';
+        }
+
         // Skip showing success modal - let quest claimed event handle UI updates
         // Show a toast notification instead
         showToast(`Quest "${quest.quest_name}" completed!`, 'success');
