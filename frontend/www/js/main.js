@@ -6,10 +6,7 @@ import { fetchAndRenderLorePosts } from './lore/lorePosts.js';
 import { fetchAndRenderArticles, handleArticlePageLogic } from './articles/articles.js';
 import DOMPurify from 'https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.es.min.js';
 
-const TAG_LIST_CACHE_KEY = 'paxDeiTagList';
-const TAG_LIST_CACHE_EXPIRY_MS = 10 * 1000; 
-const DEV_COMMENTS_CACHE_KEY = 'paxDeiDevComments';
-const DEV_COMMENTS_CACHE_EXPIRY_MS = 5 * 60 * 1000;
+
 
 function normalizeAbilityNameForHash(name) {
     return name.toLowerCase().replace(/\s+/g, '-').replace(/'/g, '');
@@ -230,60 +227,6 @@ $(document).ready(async function() {
     if (currentPage === 'index.html' || currentPage === '') {
         fetchAndRenderDeveloperComments('recent-comments-home', 9);
         fetchAndRenderNewsUpdates('news-updates-home', 3);
-    } else if (currentPage === 'developer-comments.html') {
-        const devCommentsContainer = $('#dev-comments-container');
-        const filterTagContainer = $('#filterTagContainer');
-
-        async function populateTags() {
-            const cachedData = localStorage.getItem(TAG_LIST_CACHE_KEY);
-            if (cachedData) {
-                const { data, timestamp } = JSON.parse(cachedData);
-                if (Date.now() - timestamp < TAG_LIST_CACHE_EXPIRY_MS) {
-                    renderTags(data);
-                    return;
-                }
-            }
-            const { data } = await supabase.from('tag_list').select('tag_name');
-            if (data) {
-                data.sort((a, b) => a.tag_name.localeCompare(b.tag_name));
-                localStorage.setItem(TAG_LIST_CACHE_KEY, JSON.stringify({ data, timestamp: Date.now() }));
-                renderTags(data);
-            }
-        }
-
-        function renderTags(tags) {
-            tags.forEach(tag => {
-                const tagElement = $(`<span class="tag-button">${tag.tag_name}</span>`);
-                tagElement.on('click', function() {
-                    $(this).toggleClass('selected');
-                    applyFilters();
-                });
-                filterTagContainer.append(tagElement);
-            });
-        }
-
-        function applyFilters() {
-            const selectedAuthor = $('#filterAuthor').val();
-            const selectedDate = $('#filterDate').val();
-            const selectedTags = [];
-            $('#filterTagContainer .tag-button.selected').each(function() { selectedTags.push($(this).text()); });
-
-            devCommentsContainer.children('.dev-comment-item').each(function() {
-                const authorMatch = selectedAuthor === "" || $(this).data('author') === selectedAuthor;
-                const dateMatch = selectedDate === "" || $(this).data('date') === selectedDate;
-                const tagMatch = selectedTags.length === 0 || selectedTags.every(tag => ($(this).data('tag') || []).includes(tag));
-                $(this).toggle(authorMatch && dateMatch && tagMatch);
-            });
-        }
-
-        await fetchAndRenderDeveloperComments('dev-comments-container', null, null, DEV_COMMENTS_CACHE_KEY, DEV_COMMENTS_CACHE_EXPIRY_MS);
-        populateTags();
-        $('#applyFilters').on('click', applyFilters);
-        $('#clearFilters').on('click', () => {
-            $('#filterAuthor, #filterDate').val('');
-            $('.tag-button').removeClass('selected');
-            devCommentsContainer.children('.dev-comment-item').show();
-        });
     } else if (currentPage === 'news-updates.html') {
         fetchAndRenderNewsUpdates('news-updates-container');
     } else if (currentPage === 'articles.html') {
