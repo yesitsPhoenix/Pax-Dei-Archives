@@ -2,6 +2,11 @@ import { supabase } from "../supabaseClient.js";
 import { enableSignTooltip, mouseTooltip } from '../ui/signTooltip.js';
 import { questState } from './questStateManager.js';
 import { initializeMarkdownToolbar } from '../ui/markdownToolbar.js';
+import { 
+    createAdditionalCategoriesUI, 
+    getSelectedAdditionalCategories,
+    updateAdditionalCategoriesForPrimaryChange 
+} from './additionalCategoriesHelper.js';
 
 const alphabet = "abcdefghijklmnopqrstuvwxyz";
 
@@ -84,9 +89,7 @@ async function renderQuestManager(userId, config) {
                         <tr class="bg-black/40 text-[#FFD700] text-xs uppercase tracking-widest font-bold border-b border-gray-700">
                             <th class="px-4 py-3">Quest Name</th>
                             <th class="px-4 py-3">Category</th>
-                            <th class="px-4 py-3">Cipher (World)</th>
-                            <th class="px-4 py-3">Solution (Input)</th>
-                            <th class="px-4 py-3">Key</th>
+                            <th class="px-4 py-3">Additional Categories</th>
                             <th class="px-4 py-3">Claims</th>
                             <th class="px-4 py-3 text-right">Actions</th>
                         </tr>
@@ -166,8 +169,6 @@ async function renderQuestManager(userId, config) {
         filtered.forEach(quest => {
             const claimCount = claims.filter(c => c.quest_id === quest.id).length;
             const maxClaims = quest.max_claims || 0;
-            const keyword = quest.cipher_keyword || 'None';
-            const shift = getCipherShift(keyword);
             
             const row = document.createElement('tr');
             row.className = 'hover:bg-white/5 transition-colors group';
@@ -180,44 +181,18 @@ async function renderQuestManager(userId, config) {
             categoryCell.className = 'px-4 py-3';
             categoryCell.innerHTML = `<div class="text-xs text-gray-400 font-medium">${quest.category || 'No Category'}</div>`;
 
-            const cipherCell = document.createElement('td');
-            cipherCell.className = 'px-4 py-3 whitespace-nowrap';
-            if (quest.signs && quest.signs.length > 0) {
-                quest.signs.forEach(id => {
-                    const img = document.createElement('img');
-                    img.src = `${baseUrl}${id}.webp?${version}`;
-                    img.style.width = '36px';
-                    img.style.height = '36px';
-                    img.className = 'inline-block bg-black/40 rounded p-1 border border-gray-700 mr-1 hover:border-[#72e0cc]';
-                    attachTooltip(img, id.split('_').slice(1).join(' '));
-                    cipherCell.appendChild(img);
-                });
+            const additionalCatCell = document.createElement('td');
+            additionalCatCell.className = 'px-4 py-3';
+            if (quest.additional_categories && quest.additional_categories.length > 0) {
+                const catBadges = quest.additional_categories.slice(0, 2).map(cat => 
+                    `<span class="inline-block px-2 py-1 text-xs bg-slate-700/50 text-slate-300 rounded mr-1 mb-1">${cat}</span>`
+                ).join('');
+                const remaining = quest.additional_categories.length > 2 ? 
+                    `<span class="text-xs text-gray-500">+${quest.additional_categories.length - 2} more</span>` : '';
+                additionalCatCell.innerHTML = `<div class="flex flex-wrap items-center gap-1">${catBadges}${remaining}</div>`;
             } else {
-                cipherCell.innerHTML = '<span class="text-gray-500 italic text-xs">None</span>';
+                additionalCatCell.innerHTML = '<span class="text-gray-500 italic text-xs">None</span>';
             }
-
-            const solutionCell = document.createElement('td');
-            solutionCell.className = 'px-4 py-3 whitespace-nowrap';
-            if (quest.signs && quest.signs.length > 0) {
-                quest.signs.forEach(id => {
-                    const currentIndex = allSignIds.indexOf(id);
-                    const encodedIndex = (currentIndex + shift) % allSignIds.length;
-                    const encodedId = allSignIds[encodedIndex];
-                    const img = document.createElement('img');
-                    img.src = `${baseUrl}${encodedId}.webp?${version}`;
-                    img.style.width = '36px';
-                    img.style.height = '36px';
-                    img.className = 'inline-block bg-gray-800 rounded p-1 border border-gray-600 mr-1 hover:border-[#72e0cc]';
-                    attachTooltip(img, encodedId.split('_').slice(1).join(' '));
-                    solutionCell.appendChild(img);
-                });
-            } else {
-                solutionCell.innerHTML = '<span class="text-gray-500 italic text-xs">No Signs</span>';
-            }
-
-            const keywordCell = document.createElement('td');
-            keywordCell.className = 'px-4 py-3';
-            keywordCell.innerHTML = `<span class="text-xs font-bold text-[#FFD700] uppercase">${keyword}</span>`;
 
             const claimsCell = document.createElement('td');
             claimsCell.className = 'px-4 py-3';
@@ -237,7 +212,7 @@ async function renderQuestManager(userId, config) {
                 </a>
             `;
 
-            row.append(questNameCell, categoryCell, cipherCell, solutionCell, keywordCell, claimsCell, actionsCell);
+            row.append(questNameCell, categoryCell, additionalCatCell, claimsCell, actionsCell);
             list.appendChild(row);
         });
     };
@@ -381,6 +356,19 @@ async function loadEditor(userId, signData) {
     document.getElementById('quest-category-select').value = quest.category || '';
     document.getElementById('unlock-pre-cat').value = quest.unlock_prerequisite_category || '';
     document.getElementById('unlock-req-count').value = quest.unlock_required_count || '';
+    
+    // Initialize additional categories UI
+    const categories = questState.getCategories();
+    const additionalCatContainer = document.getElementById('additional-categories-wrapper');
+    if (additionalCatContainer && categories) {
+        const additionalCategoriesUI = createAdditionalCategoriesUI(
+            categories, 
+            quest.category || '', 
+            quest.additional_categories || []
+        );
+        additionalCatContainer.innerHTML = '';
+        additionalCatContainer.appendChild(additionalCategoriesUI);
+    }
     document.getElementById('region-selection').value = quest.region_id || "global";
     document.getElementById('location').value = quest.location || '';
     document.getElementById('cipher-keyword-select').value = quest.cipher_keyword || "None";
@@ -538,6 +526,12 @@ function setupEditorEvents(baseUrl, version) {
             newCategoryWrapper.classList.remove("hidden");
         } else {
             newCategoryWrapper.classList.add("hidden");
+            
+            // Update additional categories UI when primary category changes
+            const categories = questState.getCategories();
+            if (categories) {
+                updateAdditionalCategoriesForPrimaryChange(categories, categorySelect.value);
+            }
         }
     });
 
@@ -604,11 +598,15 @@ function setupEditorEvents(baseUrl, version) {
             return allSignIds[encodedIndex].split('_').slice(1).join('_');
         });
 
+        // Get additional categories
+        const additionalCategories = getSelectedAdditionalCategories();
+        
         const updatedData = {
             quest_name: document.getElementById('quest-name').value.trim(),
             author,
             quest_key: document.getElementById('quest-key').value.trim(),
             category: finalCategory,
+            additional_categories: additionalCategories.length > 0 ? additionalCategories : null,
             unlock_prerequisite_category: document.getElementById('unlock-pre-cat').value || null,
             unlock_required_count: parseInt(document.getElementById('unlock-req-count').value) || null,
             region_id: region_id === "global" ? null : region_id,

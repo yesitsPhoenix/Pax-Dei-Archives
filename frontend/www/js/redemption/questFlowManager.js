@@ -545,6 +545,36 @@ function showDetails(data) {
     document.getElementById('detail-count').textContent = data.count || 0;
     document.getElementById('detail-id').textContent = data.id || '';
     
+    // Show all categories this quest belongs to
+    const categoriesContainer = document.getElementById('detail-categories');
+    if (categoriesContainer && quest) {
+        const allCategories = [quest.category];
+        if (quest.additional_categories && Array.isArray(quest.additional_categories) && quest.additional_categories.length > 0) {
+            allCategories.push(...quest.additional_categories);
+        }
+        
+        if (allCategories.length > 1) {
+            const categoriesList = allCategories
+                .map((cat, idx) => `
+                    <div class="text-sm px-2 py-1 ${idx === 0 ? 'bg-blue-500/20' : 'bg-slate-500/20'} rounded hover:bg-opacity-30 cursor-pointer" 
+                         onclick="window.highlightCategory('${cat.replace(/'/g, "\\'")}')"
+                         title="${idx === 0 ? 'Primary Category' : 'Additional Category'}">
+                        ${idx === 0 ? '<i class="fas fa-star text-blue-400 mr-1 text-xs"></i>' : '<i class="fas fa-layer-group text-slate-400 mr-1 text-xs"></i>'}
+                        ${cat}
+                    </div>
+                `)
+                .join('');
+            
+            categoriesContainer.innerHTML = `
+                <p class="text-sm uppercase tracking-wider text-gray-500 mb-1 mt-3">Categories:</p>
+                <div class="flex flex-wrap gap-1">${categoriesList}</div>
+            `;
+            categoriesContainer.style.display = 'block';
+        } else {
+            categoriesContainer.style.display = 'none';
+        }
+    }
+    
     // Build soft prerequisites list
     const prereqContainer = document.getElementById('detail-soft-prereqs');
     if (prereqContainer && quest) {
@@ -826,14 +856,24 @@ function runValidation() {
         const criticalIssues = [];
         const warnings = [];
         
-        // Calculate category quest counts
+        // Calculate category quest counts - include additional_categories
         const categoryBreakdown = new Map();
         allQuests.forEach(quest => {
-            const category = quest.category || 'Uncategorized';
-            if (!categoryBreakdown.has(category)) {
-                categoryBreakdown.set(category, []);
+            // Get all categories this quest belongs to (primary + additional)
+            const categories = [quest.category];
+            if (quest.additional_categories && Array.isArray(quest.additional_categories)) {
+                categories.push(...quest.additional_categories);
             }
-            categoryBreakdown.get(category).push(quest);
+            
+            // Count this quest toward all its categories
+            categories.forEach(cat => {
+                if (!cat) return;
+                
+                if (!categoryBreakdown.has(cat)) {
+                    categoryBreakdown.set(cat, []);
+                }
+                categoryBreakdown.get(cat).push(quest);
+            });
         });
         
         // 1. Check for categories with < 5 quests (CRITICAL)
@@ -843,6 +883,9 @@ function runValidation() {
                 criticalCategories.push({ category, count: quests.length, quests });
             }
         });
+        
+        // Sort critical categories by count (ascending - lowest first)
+        criticalCategories.sort((a, b) => a.count - b.count);
         
         if (criticalCategories.length > 0) {
             criticalIssues.push({
@@ -861,6 +904,9 @@ function runValidation() {
                 attentionCategories.push({ category, count: quests.length, quests });
             }
         });
+        
+        // Sort attention categories by count (ascending - lowest first)
+        attentionCategories.sort((a, b) => a.count - b.count);
         
         if (attentionCategories.length > 0) {
             warnings.push({
@@ -1242,11 +1288,19 @@ function calculateMetrics() {
             }
         }
         
-        // Calculate category breakdown
+        // Calculate category breakdown - include additional_categories
         const categoryBreakdown = new Map();
         visibleQuests.forEach(quest => {
-            const category = quest.category || 'Uncategorized';
-            categoryBreakdown.set(category, (categoryBreakdown.get(category) || 0) + 1);
+            // Get all categories this quest belongs to (primary + additional)
+            const categories = [quest.category || 'Uncategorized'];
+            if (quest.additional_categories && Array.isArray(quest.additional_categories)) {
+                categories.push(...quest.additional_categories);
+            }
+            
+            // Count this quest toward all its categories
+            categories.forEach(cat => {
+                categoryBreakdown.set(cat, (categoryBreakdown.get(cat) || 0) + 1);
+            });
         });
         
         // Sort categories by count (descending)

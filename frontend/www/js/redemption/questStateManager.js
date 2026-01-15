@@ -205,27 +205,46 @@ class QuestStateManager {
         const categoryProgress = {};
         const claimedCategories = new Set();
 
+        // Count completed quests toward all their categories (primary + additional)
         this.cache.userClaims.forEach(claim => {
             const quest = this.cache.allQuests.find(q => q.id === claim.quest_id);
-            if (quest && quest.category) {
-                categoryProgress[quest.category] = (categoryProgress[quest.category] || 0) + 1;
-                claimedCategories.add(quest.category);
+            if (quest) {
+                // Get all categories this quest belongs to
+                const categories = [quest.category];
+                if (quest.additional_categories && Array.isArray(quest.additional_categories)) {
+                    categories.push(...quest.additional_categories);
+                }
+                
+                // Count toward all categories
+                categories.forEach(cat => {
+                    if (cat) {
+                        categoryProgress[cat] = (categoryProgress[cat] || 0) + 1;
+                        claimedCategories.add(cat);
+                    }
+                });
             }
         });
 
+        // Check unlock requirements
         this.cache.allQuests.forEach(quest => {
-            const cat = quest.category || 'Uncategorized';
-            
-            if (unlocked.has(cat)) return;
-
-            const reqCat = quest.unlock_prerequisite_category;
-            const reqCount = quest.unlock_required_count || 0;
-
-            if (!reqCat || reqCat === '') {
-                unlocked.add(cat);
-            } else if (categoryProgress[reqCat] >= reqCount) {
-                unlocked.add(cat);
+            // Get all categories for this quest
+            const categories = [quest.category];
+            if (quest.additional_categories && Array.isArray(quest.additional_categories)) {
+                categories.push(...quest.additional_categories);
             }
+            
+            categories.forEach(cat => {
+                if (!cat || unlocked.has(cat)) return;
+
+                const reqCat = quest.unlock_prerequisite_category;
+                const reqCount = quest.unlock_required_count || 0;
+
+                if (!reqCat || reqCat === '') {
+                    unlocked.add(cat);
+                } else if (categoryProgress[reqCat] >= reqCount) {
+                    unlocked.add(cat);
+                }
+            });
         });
 
         claimedCategories.forEach(cat => unlocked.add(cat));
@@ -498,12 +517,21 @@ class QuestStateManager {
     }
 
     getCategoryProgress(categoryName) {
+        // Count completed quests that belong to this category (primary or additional)
         const count = this.cache.userClaims.filter(claim => {
             const quest = this.getQuestById(claim.quest_id);
-            return quest?.category === categoryName;
+            if (!quest) return false;
+            
+            // Check if quest belongs to this category (primary or additional)
+            return quest.category === categoryName ||
+                   (quest.additional_categories && quest.additional_categories.includes(categoryName));
         }).length;
 
-        const total = this.cache.allQuests.filter(q => q.category === categoryName).length;
+        // Count total quests in this category (primary or additional)
+        const total = this.cache.allQuests.filter(q => {
+            return q.category === categoryName ||
+                   (q.additional_categories && q.additional_categories.includes(categoryName));
+        }).length;
 
         return { count, total, percentage: total > 0 ? (count / total) * 100 : 0 };
     }

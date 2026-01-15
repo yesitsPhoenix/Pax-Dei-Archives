@@ -133,15 +133,29 @@ async function renderPage(allQuests, userClaims, allFeats, unlockedCategories, s
     const character = questState.getActiveCharacter();
     const userArchetype = character?.archetype;
 
+    // Calculate progress for all categories (primary + additional)
     const categoryProgress = {};
     allQuests.forEach(q => {
-        if (!categoryProgress[q.category]) {
-            categoryProgress[q.category] = { total: 0, completed: 0 };
+        // Get all categories this quest belongs to (primary + additional)
+        const categories = [q.category];
+        if (q.additional_categories && Array.isArray(q.additional_categories)) {
+            categories.push(...q.additional_categories);
         }
-        categoryProgress[q.category].total++;
-        if (userClaims.some(c => c.quest_id === q.id)) {
-            categoryProgress[q.category].completed++;
-        }
+        
+        // Count this quest toward all its categories
+        categories.forEach(cat => {
+            if (!cat) return; // Skip if category is null/undefined
+            
+            if (!categoryProgress[cat]) {
+                categoryProgress[cat] = { total: 0, completed: 0 };
+            }
+            categoryProgress[cat].total++;
+            
+            // If quest is completed, count it for all categories
+            if (userClaims.some(c => c.quest_id === q.id)) {
+                categoryProgress[cat].completed++;
+            }
+        });
     });
 
     const tales = {};
@@ -196,7 +210,11 @@ async function renderPage(allQuests, userClaims, allFeats, unlockedCategories, s
         chaptersGrid.className = isFirstSteps ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "contents";
 
         const chaptersInTale = tales[taleName].map(item => {
-            const catQuests = allQuests.filter(q => q.category === item.full);
+            // Get quests that have this category as primary OR additional
+            const catQuests = allQuests.filter(q => {
+                return q.category === item.full || 
+                       (q.additional_categories && q.additional_categories.includes(item.full));
+            });
             const stats = categoryProgress[item.full] || { total: 0, completed: 0 };
             const isUnlocked = unlockedCategories.has(item.full);
             const percent = stats.total > 0 ? (stats.completed / stats.total) * 100 : 0;
