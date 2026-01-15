@@ -125,11 +125,14 @@ class QuestStateManager {
             .order('created_at', { ascending: true });
 
         this.cache.characters = characters || [];
+        console.log('[QuestState] Loaded characters:', this.cache.characters.length);
 
         const sessionCharId = sessionStorage.getItem('active_character_id');
+        console.log('[QuestState] SessionStorage character ID:', sessionCharId);
         
         if (sessionCharId && this.cache.characters.some(c => c.character_id === sessionCharId)) {
             this.cache.activeCharacterId = sessionCharId;
+            console.log('[QuestState] Using session character:', sessionCharId);
             this.log(`Using session character: ${sessionCharId}`);
         } else {
             const defaultChar = this.cache.characters.find(c => c.is_default_character);
@@ -137,16 +140,20 @@ class QuestStateManager {
             
             if (defaultChar) {
                 this.cache.activeCharacterId = defaultChar.character_id;
+                console.log('[QuestState] Using default character:', defaultChar.character_id);
                 this.log(`Using default character: ${defaultChar.character_id}`);
             } else if (firstChar) {
                 this.cache.activeCharacterId = firstChar.character_id;
+                console.log('[QuestState] Using first character:', firstChar.character_id);
                 this.log(`Using first character: ${firstChar.character_id}`);
             } else {
+                console.log('[QuestState] No characters found for user');
                 this.log('No characters found for user');
                 return;
             }
             if (this.cache.activeCharacterId) {
                 sessionStorage.setItem('active_character_id', this.cache.activeCharacterId);
+                console.log('[QuestState] Saved to sessionStorage:', this.cache.activeCharacterId);
             }
         }
 
@@ -269,14 +276,17 @@ class QuestStateManager {
 
     async setActiveCharacter(characterId) {
         if (this.cache.activeCharacterId === characterId) {
+            console.log('[QuestState] Character already active:', characterId);
             this.log(`Character ${characterId} already active`);
             return;
         }
 
+        console.log('[QuestState] Switching to character:', characterId);
         this.log(`Switching to character: ${characterId}`);
 
         this.cache.activeCharacterId = characterId;
         sessionStorage.setItem('active_character_id', characterId);
+        console.log('[QuestState] Saved character to sessionStorage:', characterId);
 
         await this._loadCharacterData(characterId);
 

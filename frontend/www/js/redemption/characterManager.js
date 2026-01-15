@@ -67,19 +67,50 @@ export const fetchCharacters = async (selectedId = null) => {
         characterSelect.appendChild(option);
     });
 
-    const currentCharId = selectedId || questState.getActiveCharacterId();
+    // Priority order for selecting character:
+    // 1. Passed selectedId parameter (highest priority)
+    // 2. Active character from questState (which reads from sessionStorage)
+    // 3. First character in the list (fallback)
+    let targetCharId = null;
     
-    if (currentCharId && characters.some(c => c.character_id === currentCharId)) {
-        characterSelect.value = currentCharId;
-        currentCharacterId = currentCharId;
-    } else if (characters.length > 0) {
-        currentCharacterId = characters[0].character_id;
-        characterSelect.value = currentCharacterId;
+    if (selectedId && characters.some(c => c.character_id === selectedId)) {
+        console.log('[CharacterManager] Using passed selectedId:', selectedId);
+        targetCharId = selectedId;
+    } else {
+        const activeCharId = questState.getActiveCharacterId();
+        const sessionCharId = sessionStorage.getItem('active_character_id');
+        console.log('[CharacterManager] Active from questState:', activeCharId);
+        console.log('[CharacterManager] Active from sessionStorage:', sessionCharId);
+        
+        if (activeCharId && characters.some(c => c.character_id === activeCharId)) {
+            targetCharId = activeCharId;
+            console.log('[CharacterManager] Using active character:', targetCharId);
+        } else if (characters.length > 0) {
+            targetCharId = characters[0].character_id;
+            console.log('[CharacterManager] No active character, using first:', targetCharId);
+            // If no character was in sessionStorage, set the first one as active
+            await questState.setActiveCharacter(targetCharId);
+        }
+    }
+    
+    if (targetCharId) {
+        console.log('[CharacterManager] Setting dropdown to:', targetCharId);
+        characterSelect.value = targetCharId;
+        currentCharacterId = targetCharId;
+        
+        // Force verify the dropdown value was set correctly
+        setTimeout(() => {
+            if (characterSelect.value !== targetCharId) {
+                console.warn('[CharacterManager] Dropdown value mismatch! Forcing set...');
+                characterSelect.value = targetCharId;
+            }
+        }, 100);
     }
 
     if (!characterSelect.hasAttribute('data-listener-set')) {
         characterSelect.addEventListener('change', async (e) => {
             const newCharId = e.target.value;
+            console.log('[CharacterManager] Character changed to:', newCharId);
             await questState.setActiveCharacter(newCharId);
             currentCharacterId = newCharId;
 
