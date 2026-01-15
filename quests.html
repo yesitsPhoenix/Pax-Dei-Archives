@@ -96,6 +96,139 @@
             background: rgba(255, 215, 0, 0.3);
             transform: scale(1.1);
         }
+
+        /* Focus Mode Styles */
+        body.focus-mode #header-placeholder,
+        body.focus-mode #footer-placeholder,
+        body.focus-mode #sidebar,
+        body.focus-mode #floating-avatar-container,
+        body.focus-mode #quest-log-main-content > h1,
+        body.focus-mode #quest-log-main-content > .h-1,
+        body.focus-mode #quest-log-main-content > p,
+        body.focus-mode .utc-clock-container,
+        body.focus-mode .clock-container,
+        body.focus-mode [class*="clock"] {
+            display: none !important;
+        }
+
+        body.focus-mode {
+            overflow: hidden;
+        }
+
+        body.focus-mode #quest-log-main-content {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 9999;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(10px);
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem !important;
+            margin: 0 !important;
+        }
+
+        body.focus-mode .container {
+            max-width: 95vw !important;
+            width: 100% !important;
+            height: 95vh !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            display: flex;
+            flex-direction: column;
+        }
+
+        body.focus-mode #character-banner,
+        body.focus-mode #character-banner-empty {
+            margin-bottom: 1rem !important;
+            box-shadow: 0 20px 60px rgba(255, 215, 0, 0.3) !important;
+            border: 2px solid rgba(255, 215, 0, 0.4) !important;
+        }
+
+        body.focus-mode .quest-log-container {
+            height: calc(100% - 140px) !important;
+            max-height: none !important;
+            flex: 1;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8) !important;
+        }
+
+        /* Focus mode exit button */
+        #focus-mode-exit {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            z-index: 10000;
+            display: none;
+            background: rgba(0, 0, 0, 0.5);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid rgba(255, 215, 0, 0.3);
+        }
+
+        #focus-mode-exit:hover {
+            background: rgba(255, 215, 0, 0.2);
+            transform: scale(1.1);
+            border-color: rgba(255, 215, 0, 0.6);
+        }
+
+        body.focus-mode #focus-mode-exit {
+            display: flex;
+        }
+
+        #toggle-focus-mode {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #toggle-focus-mode:not(.bg-\[\#FFD700\/10\])::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, transparent 30%, rgba(255, 215, 0, 0.3) 50%, transparent 70%);
+            background-size: 200% 200%;
+            animation: shimmer 3s ease-in-out infinite;
+            border-radius: 0.5rem;
+            z-index: -1;
+            opacity: 0;
+        }
+
+        #toggle-focus-mode:not(.bg-\[\#FFD700\/10\]):hover::before {
+            opacity: 1;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        #toggle-focus-mode:not(.bg-\[\#FFD700\/10\]) {
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.2), 
+                        0 0 30px rgba(255, 215, 0, 0.1),
+                        inset 0 0 20px rgba(255, 215, 0, 0.05);
+        }
+
+        #toggle-focus-mode:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4), 
+                        0 0 40px rgba(255, 215, 0, 0.2),
+                        inset 0 0 25px rgba(255, 215, 0, 0.1);
+        }
+
+        body.focus-mode #toggle-focus-mode i {
+            transform: rotate(180deg);
+        }
     </style>
     <meta property="og:title" content="Pax Dei Archives - Quests">
     <meta property="og:description" content="The Archives hold more than mere ink and parchment; they preserve the echoes of those who dared to wander. Sift through the unwritten tales below to discover and explore our world.">
@@ -249,6 +382,9 @@
                 <button id="collapse-all-btn" class="text-[12px] uppercase tracking-widest font-bold text-gray-400 hover:text-[#FFD700] transition-colors border border-gray-700 px-3 py-1.5 rounded bg-black/20">
                     <i class="fa-solid fa-minimize mr-1"></i> Collapse All
                 </button>
+                <button id="toggle-focus-mode" class="text-[12px] uppercase tracking-widest font-bold text-gray-400 hover:text-[#FFD700] transition-colors border border-gray-700 px-3 py-1.5 rounded bg-black/20" title="Toggle Focus Mode (Press F) | Exit with Esc">
+                    <i class="fa-solid fa-eye mr-1"></i> Focus Mode
+                </button>
             </div>
 
             <div id="character-container" class="flex items-center gap-3">
@@ -349,7 +485,7 @@
     </div>
 </div>
 
-<div id="quest-modal" class="fixed inset-0 z-[150] hidden flex-col items-center justify-start p-4 md:p-8 bg-black/80 backdrop-blur-sm">
+<div id="quest-modal" class="fixed inset-0 z-[10001] hidden flex-col items-center justify-start p-4 md:p-8 bg-black/80 backdrop-blur-sm">
     <div class="bg-gradient-to-br from-[#1f2937] to-[#111827] border border-gray-700 w-full max-w-[1400px] max-h-[80vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col mt-24">
         <div class="relative shrink-0 h-24 bg-gradient-to-r from-[#72e0cc]/20 to-[#FFD700]/20 flex items-center px-10 border-b border-gray-700">
             <div class="flex justify-between items-center w-full">
@@ -368,7 +504,7 @@
     </div>
 </div>
 
-<div id="sign-redemption-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md hidden items-center justify-center z-[200] p-4">
+<div id="sign-redemption-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md hidden items-center justify-center z-[10001] p-4">
     <div class="bg-[#1f2937] w-full max-w-2xl rounded-2xl border border-gray-700 shadow-2xl overflow-hidden relative flex flex-col max-h-[85vh]">
         <button id="close-sign-redemption" class="absolute top-4 right-4 text-gray-500 hover:text-white z-10 transition-colors">
             <i class="fa-solid fa-xmark text-xl"></i>
@@ -411,7 +547,7 @@
     </div>
 </div>
 
-<div id="direct-confirm-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md hidden items-center justify-center z-[200] p-4">
+<div id="direct-confirm-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md hidden items-center justify-center z-[10001] p-4">
     <div class="bg-[#1f2937] w-full max-w-md rounded-2xl border border-gray-700 shadow-2xl overflow-hidden relative">
         <button id="close-direct-confirm" class="absolute top-4 right-4 text-gray-500 hover:text-white z-10 transition-colors">
             <i class="fa-solid fa-xmark text-xl"></i>
@@ -431,7 +567,11 @@
     </div>
 </div>
 
-<div id="toast-container" class="fixed bottom-5 right-5 z-[9999] flex flex-col items-end"></div>
+<div id="toast-container" class="fixed bottom-5 right-5 z-[10002] flex flex-col items-end"></div>
+
+<div id="focus-mode-exit" class="text-white text-2xl" title="Exit Focus Mode (Press F or Esc)">
+    <i class="fa-solid fa-xmark"></i>
+</div>
 
 <div id="footer-placeholder"></div>
 
@@ -443,7 +583,7 @@
     <div class="modal-content-wrapper" id="modal-content-wrapper"></div>
 </div>
 
-<div id="createCharacterModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center z-[200] p-4" style="display: none;">
+<div id="createCharacterModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center z-[10001] p-4" style="display: none;">
     <div class="bg-[#1f2937] w-full max-w-sm rounded-2xl border border-gray-700 shadow-2xl overflow-hidden">
         <div class="p-6 border-b border-gray-700 bg-black/20">
             <h3 class="text-lg font-bold text-white uppercase tracking-widest">New Character</h3>
@@ -469,6 +609,44 @@
             $(this).addClass('active bg-[#FFD700] text-black');
             const status = $(this).data('filter-status');
             $('#filter-status').val(status).trigger('change');
+        });
+
+        // Focus Mode Toggle
+        $('#toggle-focus-mode, #focus-mode-exit').on('click', function() {
+            $('body').toggleClass('focus-mode');
+            const isFocusMode = $('body').hasClass('focus-mode');
+            
+            if (isFocusMode) {
+                $('#toggle-focus-mode').removeClass('text-gray-400').addClass('text-[#FFD700] bg-[#FFD700]/10');
+                $('#toggle-focus-mode').find('i').removeClass('fa-eye').addClass('fa-eye-slash');
+            } else {
+                $('#toggle-focus-mode').removeClass('text-[#FFD700] bg-[#FFD700]/10').addClass('text-gray-400');
+                $('#toggle-focus-mode').find('i').removeClass('fa-eye-slash').addClass('fa-eye');
+            }
+            
+            // Save preference
+            localStorage.setItem('quest-focus-mode', isFocusMode);
+        });
+
+        // Restore focus mode on page load
+        const savedFocusMode = localStorage.getItem('quest-focus-mode');
+        if (savedFocusMode === 'true') {
+            $('#toggle-focus-mode').trigger('click');
+        }
+
+        // Keyboard shortcut: F key to toggle focus mode
+        $(document).on('keydown', function(e) {
+            // Only trigger if not typing in an input/textarea and not in a modal
+            if ((e.key === 'f' || e.key === 'F') && !$(e.target).is('input, textarea, select') && !$('.modal-content-wrapper').is(':visible') && !$('#quest-modal').hasClass('flex')) {
+                e.preventDefault();
+                $('#toggle-focus-mode').trigger('click');
+            }
+            
+            // Escape key to exit focus mode
+            if (e.key === 'Escape' && $('body').hasClass('focus-mode')) {
+                e.preventDefault();
+                $('#focus-mode-exit').trigger('click');
+            }
         });
     });
 </script>
