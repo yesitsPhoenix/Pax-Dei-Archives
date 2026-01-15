@@ -42,6 +42,10 @@ export function createAdditionalCategoriesUI(categories, currentPrimaryCategory,
 
     // Render categories
     const renderCategories = (filter = '') => {
+        // Get currently checked categories from DOM before re-rendering
+        const currentlyChecked = Array.from(document.querySelectorAll('input[name="additional-category"]:checked'))
+            .map(cb => cb.value);
+        
         const filteredCategories = categories.filter(cat => {
             // Don't show the primary category
             if (cat.name === currentPrimaryCategory) return false;
@@ -51,7 +55,8 @@ export function createAdditionalCategoriesUI(categories, currentPrimaryCategory,
         });
 
         listContainer.innerHTML = filteredCategories.map(cat => {
-            const isChecked = existingAdditionalCategories.includes(cat.name);
+            // Check if this category is currently checked OR was in the initial selection
+            const isChecked = currentlyChecked.includes(cat.name) || existingAdditionalCategories.includes(cat.name);
             return `
                 <label class="flex items-center space-x-3 p-2 hover:bg-white/5 rounded-lg cursor-pointer transition-colors">
                     <input 
@@ -85,6 +90,13 @@ export function createAdditionalCategoriesUI(categories, currentPrimaryCategory,
 
     // Event listeners
     searchBox.addEventListener('input', (e) => {
+        // Capture current checkbox state before re-rendering
+        const currentChecked = Array.from(document.querySelectorAll('input[name="additional-category"]:checked')).map(cb => cb.value);
+        existingAdditionalCategories = [...new Set([...existingAdditionalCategories, ...currentChecked])];
+        
+        const currentUnchecked = Array.from(document.querySelectorAll('input[name="additional-category"]:not(:checked)')).map(cb => cb.value);
+        existingAdditionalCategories = existingAdditionalCategories.filter(cat => !currentUnchecked.includes(cat));
+        
         renderCategories(e.target.value);
     });
 
@@ -112,7 +124,10 @@ export function updateAdditionalCategoriesForPrimaryChange(categories, newPrimar
     // Remove the new primary category from additional if it was selected
     const updatedSelection = currentlySelected.filter(cat => cat !== newPrimaryCategory);
     
+    // Store the updated selection in a variable that will persist
+    const persistedSelection = updatedSelection;
+    
     // Re-render the UI
-    const newUI = createAdditionalCategoriesUI(categories, newPrimaryCategory, updatedSelection);
+    const newUI = createAdditionalCategoriesUI(categories, newPrimaryCategory, persistedSelection);
     container.replaceWith(newUI);
 }

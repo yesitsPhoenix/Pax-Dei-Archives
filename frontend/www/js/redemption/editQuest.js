@@ -425,10 +425,10 @@ async function loadPrerequisiteOptionsForEdit(containerId, existingIds = [], inp
         listContainer.innerHTML = quests
             .filter(q => q.quest_name.toLowerCase().includes(filter.toLowerCase()))
             .map(q => {
-                const isChecked = existingIds.includes(q.id) ? 'checked' : '';
+                const isChecked = existingIds.includes(q.id);
                 return `
                     <label class="flex items-center space-x-3 p-2 hover:bg-white/5 rounded-lg cursor-pointer transition-colors">
-                        <input type="checkbox" name="${inputName}" value="${q.id}" ${isChecked} class="w-4 h-4 rounded border-gray-700 text-[#FFD700] focus:ring-[#FFD700] bg-gray-900">
+                        <input type="checkbox" name="${inputName}" value="${q.id}" ${isChecked ? 'checked' : ''} class="w-4 h-4 rounded border-gray-700 text-[#FFD700] focus:ring-[#FFD700] bg-gray-900">
                         <span class="text-sm text-gray-300">${q.quest_name} <small class="text-gray-500 ml-2">(${q.category})</small></span>
                     </label>
                 `;
@@ -436,6 +436,7 @@ async function loadPrerequisiteOptionsForEdit(containerId, existingIds = [], inp
     };
 
     document.getElementById(searchId).addEventListener('input', (e) => {
+        // Capture current checkbox state before re-rendering
         const currentChecked = Array.from(document.querySelectorAll(`input[name="${inputName}"]:checked`)).map(cb => cb.value);
         existingIds = [...new Set([...existingIds, ...currentChecked])];
         
