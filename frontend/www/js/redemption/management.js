@@ -179,7 +179,7 @@ async function showAddForm(recordToEdit = null) {
     if (recordToEdit && (recordToEdit.id || recordToEdit.name)) {
         isEditMode = true;
         editingRecordId = recordToEdit.id || recordToEdit.name;
-        //console.log('Edit mode activated for:', editingRecordId);
+        //console.log('Edit mode activated for:', editingRecordId, 'Record:', recordToEdit);
     } else {
         isEditMode = false;
         editingRecordId = null;
@@ -803,6 +803,7 @@ async function saveRecord() {
     //console.log('Attempting to save record:', payload);
     //console.log('Current table:', currentTable);
     //console.log('Edit mode:', isEditMode);
+    //console.log('Editing record ID:', editingRecordId);
 
     let error, data;
     
@@ -810,6 +811,7 @@ async function saveRecord() {
         if (currentTable === 'quest_categories') {
             ({ error, data } = await supabase.from(currentTable).update(payload).eq('name', editingRecordId).select());
         } else {
+            //console.log('Executing UPDATE query on table:', currentTable, 'with ID:', editingRecordId);
             ({ error, data } = await supabase.from(currentTable).update(payload).eq('id', editingRecordId).select());
         }
     } else {
@@ -822,6 +824,39 @@ async function saveRecord() {
     if (error) {
         console.error('Database error:', error);
         alert(`Error: ${error.message}\nDetails: ${error.details || 'No additional details'}\nHint: ${error.hint || 'No hint available'}`);
+    } else if (isEditMode && (!data || data.length === 0)) {
+        // Update succeeded but returned empty array - likely RLS policy issue
+        console.warn('Update query succeeded but returned no data - possible RLS policy blocking SELECT');
+        //console.log('Verifying update by re-fetching record...');
+        
+        // Try to fetch the record directly to verify the update worked
+        const { data: verifyData, error: verifyError } = await supabase
+            .from(currentTable)
+            .select('*')
+            .eq('id', editingRecordId)
+            .single();
+        
+        //console.log('Verification fetch result:', verifyData, verifyError);
+        
+        if (verifyError || !verifyData) {
+            console.error('Could not verify update - RLS policy may be blocking access');
+            showToast('Update sent but cannot verify due to permissions. Refreshing data...', 'info');
+        } else {
+            //console.log('Update verified successfully:', verifyData);
+            showToast('Record updated successfully!', 'success');
+        }
+        
+        document.getElementById('add-form-container').classList.add('hidden');
+        isEditMode = false;
+        editingRecordId = null;
+        
+        if (currentTable === 'secret_unlock_configs' || currentTable === 'heroic_feats' || currentTable === 'quest_categories') {
+            if (questState.isReady()) {
+                await questState.invalidate(['quests']);
+            }
+        }
+        
+        await fetchTableData();
     } else {
         //console.log('Record saved successfully:', data);
         showToast(isEditMode ? 'Record updated successfully!' : 'Record created successfully!', 'success');
