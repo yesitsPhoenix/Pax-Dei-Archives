@@ -433,16 +433,24 @@ async function loadPrerequisiteOptionsForEdit(containerId, existingIds = [], inp
                     </label>
                 `;
             }).join('');
+        
+        // Add event listeners to checkboxes to track state changes
+        listContainer.querySelectorAll(`input[name="${inputName}"]`).forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    // Add to existingIds if not already there
+                    if (!existingIds.includes(e.target.value)) {
+                        existingIds.push(e.target.value);
+                    }
+                } else {
+                    // Remove from existingIds
+                    existingIds = existingIds.filter(id => id !== e.target.value);
+                }
+            });
+        });
     };
 
     document.getElementById(searchId).addEventListener('input', (e) => {
-        // Capture current checkbox state before re-rendering
-        const currentChecked = Array.from(document.querySelectorAll(`input[name="${inputName}"]:checked`)).map(cb => cb.value);
-        existingIds = [...new Set([...existingIds, ...currentChecked])];
-        
-        const currentUnchecked = Array.from(document.querySelectorAll(`input[name="${inputName}"]:not(:checked)`)).map(cb => cb.value);
-        existingIds = existingIds.filter(id => !currentUnchecked.includes(id));
-        
         renderPrereqs(e.target.value);
     });
 
