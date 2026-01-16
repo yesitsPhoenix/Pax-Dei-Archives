@@ -376,6 +376,7 @@ async function loadEditor(userId, signData) {
     document.getElementById('items').value = Array.isArray(quest.items) ? quest.items.join(', ') : (quest.items || '');
     document.getElementById('gold').value = quest.gold || 0;
     document.getElementById('max-claims').value = quest.max_claims || 1;
+    document.getElementById('is-capstone-quest').checked = quest.is_capstone_quest || false;
 
     selected = [];
     if (quest.signs) {
@@ -609,6 +610,7 @@ function setupEditorEvents(baseUrl, version) {
 
         // Get additional categories
         const additionalCategories = getSelectedAdditionalCategories();
+        const isCapstoneQuest = document.getElementById('is-capstone-quest')?.checked || false;
         
         const updatedData = {
             quest_name: document.getElementById('quest-name').value.trim(),
@@ -628,7 +630,8 @@ function setupEditorEvents(baseUrl, version) {
             signs: selected.length > 0 ? selected : null,
             reward_key: reward_keys.length > 0 ? reward_keys.join(",") : null,
             prerequisite_quest_ids: selectedPrereqs,
-            hard_lock_quest_ids: selectedHardLocks
+            hard_lock_quest_ids: selectedHardLocks,
+            is_capstone_quest: isCapstoneQuest
         };
 
         const { error } = await supabase

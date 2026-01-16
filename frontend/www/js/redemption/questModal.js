@@ -6,7 +6,9 @@ export function initQuestModal() {
     if (!expandBtn || !modal) return;
 
     expandBtn.onclick = () => {
-        const title = document.getElementById('detail-name').innerText;
+        const titleEl = document.getElementById('detail-name');
+        // Extract text content whether it's plain text or has HTML (crown icon)
+        const title = titleEl.textContent || titleEl.innerText;
         const region = document.getElementById('detail-region').innerText;
         const lore = document.getElementById('detail-lore').innerHTML;
         const location = document.getElementById('detail-location').innerHTML;
@@ -29,7 +31,13 @@ export function initQuestModal() {
         const redeemBtn = document.getElementById('detail-redeem-btn');
         const redeemBtnHTML = redeemBtn ? redeemBtn.outerHTML : '';
 
-        document.getElementById('modal-quest-title').innerText = title;
+        // Copy the title with crown icon if it exists
+        const modalTitle = document.getElementById('modal-quest-title');
+        if (titleEl.querySelector('.capstone-crown-icon')) {
+            modalTitle.innerHTML = titleEl.innerHTML;
+        } else {
+            modalTitle.innerText = title;
+        }
         document.getElementById('modal-quest-region').innerText = region;
         document.getElementById('modal-quest-status').innerHTML = status;
         

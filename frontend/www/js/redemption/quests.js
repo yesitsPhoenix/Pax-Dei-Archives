@@ -618,7 +618,14 @@ async function showQuestDetails(quest, userClaimed) {
         }
     });
 
-    document.getElementById('detail-name').innerText = quest.quest_name;
+    // Add crown icon for capstone quests
+    const isCapstoneQuest = quest.is_capstone_quest === true;
+    const detailNameEl = document.getElementById('detail-name');
+    if (isCapstoneQuest) {
+        detailNameEl.innerHTML = `<div class="flex items-center gap-2"><i class="fa-solid fa-crown text-[#FFD700] text-xl capstone-crown-icon"></i><span>${quest.quest_name}</span></div>`;
+    } else {
+        detailNameEl.innerText = quest.quest_name;
+    }
     
     const reg = quest.regions;
     const regionText = reg ? `${reg.region_name} • ${reg.shard} • ${reg.home_valley}` : 'World Quest';
@@ -1128,9 +1135,21 @@ async function renderQuestsList() {
 
             const item = document.createElement("div");
             item.dataset.key = quest.quest_key;
-            item.className = isHardLocked 
+            
+            // Check if this is a capstone quest
+            const isCapstoneQuest = quest.is_capstone_quest === true;
+            
+            // Base class name for quest items
+            let baseClassName = isHardLocked 
                 ? "quest-item p-4 border-b border-gray-700/50 cursor-not-allowed text-md opacity-50 grayscale bg-black/20"
                 : `quest-item p-4 border-b border-gray-700/50 cursor-pointer text-md transition-all hover:bg-white/5 ${activeQuestKey === quest.quest_key ? 'bg-white/10 border-l-4 border-[#FFD700]' : ''}`;
+            
+            // Add capstone glow effect classes - combining all three effects for maximum visual impact
+            if (isCapstoneQuest && !isHardLocked) {
+                baseClassName += ' capstone-quest capstone-quest-shimmer capstone-quest-crown';
+            }
+            
+            item.className = baseClassName;
 
             const itemFlex = document.createElement("div");
             itemFlex.className = "flex justify-between items-center pointer-events-none";
@@ -1138,6 +1157,15 @@ async function renderQuestsList() {
             let titleMarkup;
             if (isHardLocked) {
                 titleMarkup = `<div class="font-bold text-gray-500 text-md flex items-center gap-2"><i class="fa-solid fa-lock text-[10px]"></i>${quest.quest_name} <span class="text-[10px] uppercase tracking-tighter opacity-70">(Locked)</span></div>`;
+            } else if (isCapstoneQuest) {
+                // Capstone quests get the crown icon whether they're soft-locked or not
+                if (isSoftLocked) {
+                    // Capstone + Soft-locked: Show crown with a subtle lock indicator
+                    titleMarkup = `<div class="font-bold text-white text-md flex items-center gap-2"><i class="fa-solid fa-crown text-[12px] capstone-crown-icon"></i>${quest.quest_name}<i class="fa-solid fa-circle-exclamation text-[8px] text-[#FFD700]/50 ml-1"></i></div>`;
+                } else {
+                    // Capstone + Unlocked: Just the crown
+                    titleMarkup = `<div class="font-bold text-white text-md flex items-center gap-2"><i class="fa-solid fa-crown text-[12px] capstone-crown-icon"></i>${quest.quest_name}</div>`;
+                }
             } else if (isSoftLocked) {
                 titleMarkup = `<div class="font-bold text-white text-md flex items-center gap-2"><i class="fa-solid fa-circle-exclamation text-[10px] text-[#FFD700]/50"></i>${quest.quest_name}</div>`;
             } else {

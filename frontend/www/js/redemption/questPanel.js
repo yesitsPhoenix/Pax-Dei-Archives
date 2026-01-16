@@ -382,6 +382,7 @@ document.getElementById("create-quest").onclick = async () => {
     const gold = parseInt(document.getElementById("gold")?.value || 0);
     const unlockPreCat = document.getElementById("unlock-pre-cat")?.value || null;
     const unlockReqCount = parseInt(document.getElementById("unlock-req-count")?.value || 0);
+    const isCapstoneQuest = document.getElementById("is-capstone-quest")?.checked || false;
 
     const selectedPrereqs = Array.from(document.querySelectorAll('input[name="prereq-quest"]:checked'))
         .map(cb => cb.value);
@@ -445,7 +446,8 @@ document.getElementById("create-quest").onclick = async () => {
         unlock_prerequisite_category: unlockPreCat,
         unlock_required_count: unlockReqCount,
         prerequisite_quest_ids: selectedPrereqs,
-        hard_lock_quest_ids: selectedHardLocks
+        hard_lock_quest_ids: selectedHardLocks,
+        is_capstone_quest: isCapstoneQuest
     });
 
     if (error) {
