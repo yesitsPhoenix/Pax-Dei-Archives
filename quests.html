@@ -397,8 +397,8 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-11 gap-0 bg-[#1f2937] rounded-b-2xl border-x border-b border-gray-700 shadow-2xl overflow-hidden quest-log-container min-h-[500px]">
-            <div id="quest-list-pane" class="md:col-span-2 border-r border-gray-700 bg-black/20 flex flex-col h-full overflow-hidden">
+        <div id="quest-log-grid" class="grid grid-cols-1 md:grid-cols-12 gap-0 bg-[#1f2937] rounded-b-2xl border-x border-b border-gray-700 shadow-2xl overflow-hidden quest-log-container min-h-[500px]">
+            <div id="quest-list-pane" class="md:col-span-3 border-r border-gray-700 bg-black/20 flex flex-col h-full overflow-hidden">
                 <div id="quest-titles-list" class="flex-1 overflow-y-auto quest-list-scroll custom-scrollbar">
                 </div>
             </div>
@@ -619,9 +619,17 @@
             if (isFocusMode) {
                 $('#toggle-focus-mode').removeClass('text-gray-400').addClass('text-[#FFD700] bg-[#FFD700]/10');
                 $('#toggle-focus-mode').find('i').removeClass('fa-eye').addClass('fa-eye-slash');
+                
+                // Adjust grid columns for focus mode
+                $('#quest-log-grid').removeClass('md:grid-cols-12').addClass('md:grid-cols-11');
+                $('#quest-list-pane').removeClass('md:col-span-3').addClass('md:col-span-2');
             } else {
                 $('#toggle-focus-mode').removeClass('text-[#FFD700] bg-[#FFD700]/10').addClass('text-gray-400');
                 $('#toggle-focus-mode').find('i').removeClass('fa-eye-slash').addClass('fa-eye');
+                
+                // Restore grid columns for normal mode
+                $('#quest-log-grid').removeClass('md:grid-cols-11').addClass('md:grid-cols-12');
+                $('#quest-list-pane').removeClass('md:col-span-2').addClass('md:col-span-3');
             }
             
             // Save preference
@@ -631,7 +639,10 @@
         // Restore focus mode on page load
         const savedFocusMode = localStorage.getItem('quest-focus-mode');
         if (savedFocusMode === 'true') {
-            $('#toggle-focus-mode').trigger('click');
+            // Use a small delay to ensure DOM is ready
+            setTimeout(function() {
+                $('#toggle-focus-mode').trigger('click');
+            }, 100);
         }
 
         // Keyboard shortcut: F key to toggle focus mode

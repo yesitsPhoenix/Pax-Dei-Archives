@@ -3,6 +3,11 @@ import { enableSignTooltip, mouseTooltip } from '../ui/signTooltip.js';
 import { initializeCharacterSystem } from "./characterManager.js";
 import { questState } from './questStateManager.js';
 import { initializeMarkdownToolbar } from '../ui/markdownToolbar.js';
+import { 
+    createAdditionalCategoriesUI, 
+    getSelectedAdditionalCategories,
+    updateAdditionalCategoriesForPrimaryChange 
+} from './additionalCategoriesHelper.js';
 
 const alphabet = "abcdefghijklmnopqrstuvwxyz";
 
@@ -100,6 +105,18 @@ async function loadCategories() {
             preCatSelect.add(opt);
         });
         //console.log('[PANEL.HTML] Prerequisite category dropdown populated with', preCatSelect.options.length - 1, 'categories');
+    }
+    
+    // Initialize additional categories UI (will show placeholder until primary category is selected)
+    const additionalCatContainer = document.getElementById('additional-categories-wrapper');
+    if (additionalCatContainer && categories) {
+        const additionalCategoriesUI = createAdditionalCategoriesUI(
+            categories, 
+            '', // No primary category selected yet
+            [] // No existing additional categories
+        );
+        additionalCatContainer.innerHTML = '';
+        additionalCatContainer.appendChild(additionalCategoriesUI);
     }
 }
 
@@ -249,6 +266,12 @@ document.getElementById('quest-category-select').addEventListener('change', (e) 
         wrapper.classList.remove('hidden');
     } else {
         wrapper.classList.add('hidden');
+        
+        // Update additional categories UI when primary category changes
+        const categories = questState.getCategories();
+        if (categories) {
+            updateAdditionalCategoriesForPrimaryChange(categories, e.target.value);
+        }
     }
 });
 
@@ -396,6 +419,9 @@ document.getElementById("create-quest").onclick = async () => {
         return;
     }
 
+    // Get additional categories
+    const additionalCategories = getSelectedAdditionalCategories();
+    
     const confirmed = await showModal("Confirm Quest Creation", `Create quest "${quest_name}"?`);
     if (!confirmed) return;
 
@@ -404,6 +430,7 @@ document.getElementById("create-quest").onclick = async () => {
         quest_name,
         author,
         category,
+        additional_categories: additionalCategories.length > 0 ? additionalCategories : null,
         region_id: region_id === "global" ? null : region_id,
         signs: selected.length > 0 ? selected : null,
         reward_key: reward_keys.length > 0 ? reward_keys.join(",") : null,
