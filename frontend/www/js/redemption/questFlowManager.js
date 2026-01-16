@@ -12,7 +12,7 @@ const getNodeColor = (quest) => {
     // Color based on unlock_required_count (matches the legend)
     if (count === 0) return '#FFD700';      // Gold - Entry points
     if (count <= 2) return '#10B981';       // Emerald Green - Early
-    if (count <= 5) return '#06B6D4';       // Cyan - Mid
+    if (count <= 5) return '#1E40AF';       // Darker Blue - Mid
     if (count <= 8) return '#F59E0B';       // Amber - Late
     return '#EF4444';                        // Red - Advanced
 };
@@ -84,6 +84,14 @@ function initCytoscape() {
                     'text-outline-color': '#000',
                     'transition-property': 'background-color, border-color, width, height',
                     'transition-duration': '0.3s'
+                }
+            },
+            {
+                selector: 'node[hasAdditionalCategories]',
+                style: {
+                    'border-width': 5,
+                    'border-color': '#00FFFF',
+                    'border-style': 'solid'
                 }
             },
             {
@@ -264,6 +272,11 @@ function renderGraph() {
             const isMainPath = quest.category === "The First Steps: Beginner's Guide";
             const nodeColor = getNodeColor(quest);
             
+            // Check if quest has additional categories
+            const hasAdditionalCategories = quest.additional_categories && 
+                                           Array.isArray(quest.additional_categories) && 
+                                           quest.additional_categories.length > 0;
+            
             nodes.push({
                 data: {
                     id: quest.id,
@@ -274,7 +287,8 @@ function renderGraph() {
                     count: quest.unlock_required_count || 0,
                     prereqCategory: quest.unlock_prerequisite_category,
                     prereqIds: quest.prerequisite_quest_ids || [],
-                    isMainPath: isMainPath
+                    isMainPath: isMainPath,
+                    hasAdditionalCategories: hasAdditionalCategories
                 },
                 classes: isMainPath ? 'main-path' : ''
             });
@@ -663,7 +677,20 @@ function applyCategoryFilter(category) {
         cy.nodes().forEach(node => {
             if (node.data('virtual')) return;
             
+            // Get the quest data to check additional_categories
+            const quest = allQuests.find(q => q.id === node.data('id'));
+            
+            // Check if this category matches (primary OR additional)
+            let inCategory = false;
             if (node.data('category') === category) {
+                inCategory = true;
+            } else if (quest && quest.additional_categories && 
+                       Array.isArray(quest.additional_categories) && 
+                       quest.additional_categories.includes(category)) {
+                inCategory = true;
+            }
+            
+            if (inCategory) {
                 node.removeClass('dimmed');
                 node.addClass('category-filter');
             } else {
@@ -677,7 +704,7 @@ function applyCategoryFilter(category) {
             const source = edge.source();
             const target = edge.target();
             
-            if (source.data('category') === category || target.data('category') === category) {
+            if (source.hasClass('category-filter') || target.hasClass('category-filter')) {
                 edge.removeClass('dimmed');
             } else {
                 edge.addClass('dimmed');
@@ -1131,9 +1158,25 @@ window.highlightCategory = function(categoryName) {
         setTimeout(() => {
             clearHighlights();
             
-            // Find all nodes in this category
+            // Find all nodes in this category (primary OR additional)
             const categoryNodes = cy.nodes().filter(node => {
-                return !node.data('virtual') && node.data('category') === categoryName;
+                if (node.data('virtual')) return false;
+                
+                // Get the quest data to check additional_categories
+                const quest = allQuests.find(q => q.id === node.data('id'));
+                if (!quest) return false;
+                
+                // Check if this category is the primary category
+                if (node.data('category') === categoryName) return true;
+                
+                // Check if this category is in additional_categories
+                if (quest.additional_categories && 
+                    Array.isArray(quest.additional_categories) && 
+                    quest.additional_categories.includes(categoryName)) {
+                    return true;
+                }
+                
+                return false;
             });
             
             if (categoryNodes.length === 0) {
@@ -1173,6 +1216,11 @@ window.highlightCategory = function(categoryName) {
                 const prereqContainer = document.getElementById('detail-soft-prereqs');
                 if (prereqContainer) {
                     prereqContainer.style.display = 'none';
+                }
+                
+                const categoriesContainer = document.getElementById('detail-categories');
+                if (categoriesContainer) {
+                    categoriesContainer.style.display = 'none';
                 }
                 
                 panel.style.display = 'block';
