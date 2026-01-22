@@ -2,13 +2,17 @@ import os
 import re
 from supabase import create_client, Client
 from html import escape
+import urllib.request
+import urllib.error
 
 # Configuration
 SUPABASE_URL = 'https://jrjgbnopmfovxwvtbivh.supabase.co';
 SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impyamdibm9wbWZvdnh3dnRiaXZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDgxOTg1MjYsImV4cCI6MjAyMzc3NDUyNn0.za7oUzFhNmBdtcCRBmxwW5FSTFRWVAY6_rsRwlr3iqY';
 
-PLACEHOLDER_IMAGE = "frontend/www/assets/banner.png"
+PLACEHOLDER_IMAGE = "https://yesitsphoenix.github.io/Pax-Dei-Archives/frontend/www/assets/petra_dei_stone.png"
 OUTPUT_DIR = "quests"
+QUEST_IMAGES_DIR = "frontend/www/assets/quests"
+DOWNLOAD_IMAGES = False 
 
 # Initialize Supabase client
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
@@ -42,20 +46,56 @@ def strip_markdown_and_html(text):
     
     return text.strip()
 
-def extract_first_image(lore):
-    """Extract the first image URL from markdown lore"""
+def download_image(url, filename):
+    """Download an image from a URL to the local quest images directory"""
+    try:
+        filepath = os.path.join(QUEST_IMAGES_DIR, filename)
+        
+        # Skip if file already exists
+        if os.path.exists(filepath):
+            print(f"   Image already exists: {filename}")
+            return True
+        
+        # Download the image
+        urllib.request.urlretrieve(url, filepath)
+        print(f"   Downloaded: {filename}")
+        return True
+    except urllib.error.URLError as e:
+        print(f"   ⚠️  Failed to download {url}: {e}")
+        return False
+    except Exception as e:
+        print(f"   ⚠️  Error downloading {url}: {e}")
+        return False
+
+def extract_first_image(lore, quest_key):
+    """Extract the first image URL from markdown lore and convert to GitHub Pages URL"""
     if not lore:
         return None
     
     # Match markdown image syntax: ![alt](url)
     match = re.search(r'!\[.*?\]\((https?://[^\)]+)\)', lore)
-    if match:
-        return match.group(1)
+    if not match:
+        # Match HTML img tags: <img src="url"
+        match = re.search(r'<img[^>]+src=["\'](https?://[^"\']+)["\']', lore)
     
-    # Match HTML img tags: <img src="url"
-    match = re.search(r'<img[^>]+src=["\'](https?://[^"\']+)["\']', lore)
     if match:
-        return match.group(1)
+        image_url = match.group(1)
+        
+        # If it's a postimg.cc URL, convert to GitHub Pages hosted version
+        if 'postimg.cc' in image_url:
+            # Extract filename from postimg URL (e.g., bronze_heater.png)
+            filename_match = re.search(r'/([^/]+\.(?:png|jpg|jpeg|gif|webp))$', image_url, re.IGNORECASE)
+            if filename_match:
+                filename = filename_match.group(1)
+                
+                # Download image if enabled
+                if DOWNLOAD_IMAGES:
+                    download_image(image_url, filename)
+                
+                # Return GitHub Pages URL
+                return f"https://yesitsphoenix.github.io/Pax-Dei-Archives/{QUEST_IMAGES_DIR}/{filename}"
+        
+        return image_url
     
     return None
 
@@ -83,7 +123,7 @@ def generate_quest_html(quest):
     description = truncate_description(clean_lore, 150)
     
     # Extract image or use placeholder
-    image_url = extract_first_image(lore) or PLACEHOLDER_IMAGE
+    image_url = extract_first_image(lore, quest_key) or PLACEHOLDER_IMAGE
     
     # Generate quest page URL
     quest_url = f"https://yesitsphoenix.github.io/Pax-Dei-Archives/quests/{quest_key}.html"
@@ -138,6 +178,11 @@ def main():
         os.makedirs(OUTPUT_DIR)
         print(f"Created directory: {OUTPUT_DIR}/")
     
+    # Create quest images directory if downloading images
+    if DOWNLOAD_IMAGES and not os.path.exists(QUEST_IMAGES_DIR):
+        os.makedirs(QUEST_IMAGES_DIR)
+        print(f"Created directory: {QUEST_IMAGES_DIR}/")
+    
     # Generate HTML files
     generated_count = 0
     for quest in quests:
@@ -158,9 +203,20 @@ def main():
         print(f"✓ Generated: {filename}")
     
     print(f"\n✅ Successfully generated {generated_count} quest HTML files in '{OUTPUT_DIR}/' directory")
+    
+    if DOWNLOAD_IMAGES:
+        print(f"\n📥 Images downloaded to '{QUEST_IMAGES_DIR}/' directory")
+        print(f"   Make sure to commit and push this folder to GitHub!")
+    else:
+        print(f"\n💡 Tip: Set DOWNLOAD_IMAGES = True to download images from postimg.cc to local folder")
+    
     print(f"\nNext steps:")
     print(f"1. Upload the '{OUTPUT_DIR}/' folder to your GitHub repository")
-    print(f"2. Quest links will work as: https://yesitsphoenix.github.io/Pax-Dei-Archives/quests/QUEST-KEY.html")
+    if DOWNLOAD_IMAGES:
+        print(f"2. Upload the '{QUEST_IMAGES_DIR}/' folder to your GitHub repository")
+        print(f"3. Quest links will work as: https://yesitsphoenix.github.io/Pax-Dei-Archives/quests/QUEST-KEY.html")
+    else:
+        print(f"2. Quest links will work as: https://yesitsphoenix.github.io/Pax-Dei-Archives/quests/QUEST-KEY.html")
 
 if __name__ == "__main__":
     main()
