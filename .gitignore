@@ -9,3 +9,4 @@ frontend/www/assets/.DS_Store
 frontend/.DS_Store
 backend/data/json/localisation_en.json
 backend/data/json/StaticDataBundle.json
+claude.md
