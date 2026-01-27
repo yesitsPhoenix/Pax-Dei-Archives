@@ -176,7 +176,23 @@ const aggregateTransactionData = (transactions, timeframe) => {
   });
 
   // Sort all labels chronologically using the full key format
-  const allLabels = Array.from(allLabelsSet).sort((a, b) => a.localeCompare(b));
+  let allLabels = Array.from(allLabelsSet).sort((a, b) => a.localeCompare(b));
+
+  // Apply data point limits to prevent chart clutter
+  // Daily: Show last 45 days (~1.5 months)
+  // Weekly: Show last 12 weeks (~3 months)
+  // Monthly: Show all data (already compressed)
+  const maxDataPoints = {
+    daily: 45,
+    weekly: 12,
+    monthly: 24
+  };
+
+  const limit = maxDataPoints[timeframe] || Infinity;
+  if (allLabels.length > limit) {
+    // Keep only the most recent data points
+    allLabels = allLabels.slice(-limit);
+  }
 
   // Create display labels by stripping the year for daily view
   const displayLabels = allLabels.map(label => {
