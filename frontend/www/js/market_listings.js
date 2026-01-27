@@ -101,8 +101,8 @@ const highestPriceUnit = document.getElementById('highestPriceUnit');
 const lowestTotalPrice = document.getElementById('lowestTotalPrice');
 const highestTotalPrice = document.getElementById('highestTotalPrice');
 
-let currentSortColumn = 'item_name';
-let currentSortDirection = 'asc';
+let currentSortColumn = 'listing_date';
+let currentSortDirection = 'desc';
 export let currentPage = 1;
 const listingsPerPage = 20;
 
@@ -339,6 +339,38 @@ const renderMarketSummary = (listings, totalCount = null) => {
     }
 };
 
+// NEW: Render summary cards from pre-calculated statistics (state manager path)
+const renderMarketSummaryFromStats = (summary, totalCount = 0) => {
+    // Set total count
+    totalListingsCount.textContent = totalCount;
+    
+    // Set price per unit statistics
+    if (summary.lowestPriceUnit !== null && summary.lowestPriceUnit !== undefined) {
+        lowestPriceUnit.textContent = summary.lowestPriceUnit.toFixed(2);
+    } else {
+        lowestPriceUnit.textContent = 'N/A';
+    }
+    
+    if (summary.highestPriceUnit !== null && summary.highestPriceUnit !== undefined) {
+        highestPriceUnit.textContent = summary.highestPriceUnit.toFixed(2);
+    } else {
+        highestPriceUnit.textContent = 'N/A';
+    }
+    
+    // Set total price statistics
+    if (summary.lowestTotalPrice !== null && summary.lowestTotalPrice !== undefined) {
+        lowestTotalPrice.textContent = summary.lowestTotalPrice.toFixed(2);
+    } else {
+        lowestTotalPrice.textContent = 'N/A';
+    }
+    
+    if (summary.highestTotalPrice !== null && summary.highestTotalPrice !== undefined) {
+        highestTotalPrice.textContent = summary.highestTotalPrice.toFixed(2);
+    } else {
+        highestTotalPrice.textContent = 'N/A';
+    }
+};
+
 export const renderListings = (listings) => {
     if (!listings?.length) {
         listingResultsBody.innerHTML = '<tr><td colspan="8" class="px-3 py-4 whitespace-nowrap text-sm text-gray-400 text-center">No active listings found for the current filters.</td></tr>';
@@ -405,20 +437,29 @@ async function fetchActiveListingsFromState(page, filters = {}) {
 
     try {
         // Single call to state manager (handles caching internally)
-        const result = await marketState.getPublicListings(filters, page);
-        const { listings, pagination } = result;
+        // Pass sort parameters for server-side sorting
+        const result = await marketState.getPublicListings(filters, page, currentSortColumn, currentSortDirection);
+        const { listings, pagination, summary } = result;
         
         //console.log(`[Listings] ✓ Got ${listings.length} listings from state manager`);
         //console.timeEnd('[Listings] Fetch time');
         
-        // Render summary cards with total count
-        renderMarketSummary(listings, pagination.totalCount);
+        // Render summary cards using summary statistics from ALL filtered listings
+        renderMarketSummaryFromStats(summary, pagination.totalCount);
         
-        // Sort listings
-        const sorted = sortListings([...listings], currentSortColumn, currentSortDirection);
+        // For item_name and category_name, we need client-side sorting
+        // because Supabase can't sort by nested fields
+        const clientSortColumns = ['item_name', 'category_name'];
+        let displayListings = listings;
+        
+        if (clientSortColumns.includes(currentSortColumn)) {
+            // Apply client-side sorting for these columns
+            displayListings = sortListings([...listings], currentSortColumn, currentSortDirection);
+        }
+        // Otherwise listings are already sorted by server
         
         // Render listings
-        renderListings(sorted);
+        renderListings(displayListings);
         
         // Render pagination
         renderPagination(pagination.totalCount, pagination.currentPage);
@@ -426,7 +467,7 @@ async function fetchActiveListingsFromState(page, filters = {}) {
     } catch (error) {
         console.error('[Listings] Error fetching from state manager:', error);
         listingResultsBody.innerHTML = `<tr><td colspan="8" class="text-red-400 text-center py-4">Error: ${error.message}</td></tr>`;
-        renderMarketSummary([]);
+        renderMarketSummaryFromStats({}, 0);
     } finally {
         listingResultsBody.style.opacity = '1';
         listingResultsBody.style.pointerEvents = 'auto';

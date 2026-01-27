@@ -44,6 +44,14 @@ class MarketStateManager {
           totalCount: 0,
           pageSize: 20
         },
+        summary: {
+          lowestPriceUnit: null,
+          highestPriceUnit: null,
+          lowestTotalPrice: null,
+          highestTotalPrice: null
+        },
+        sortColumn: 'listing_date',
+        sortDirection: 'desc',
         lastFetch: null
       },
       
@@ -525,27 +533,57 @@ async loadAllCharactersData() {
    * Get public market listings with filters
    * @param {Object} filters - Filter criteria
    * @param {number} page - Page number (1-indexed)
+   * @param {string} sortColumn - Column to sort by (default: 'listing_date')
+   * @param {string} sortDirection - Sort direction 'asc' or 'desc' (default: 'desc')
    */
-  async getPublicListings(filters = {}, page = 1) {
+  async getPublicListings(filters = {}, page = 1, sortColumn = 'listing_date', sortDirection = 'desc') {
     const cached = this.cache.publicListings;
     
     // Check cache validity
     const cacheAge = Date.now() - (cached.lastFetch || 0);
     const filtersMatch = JSON.stringify(cached.filters) === JSON.stringify(filters);
     const pageMatch = cached.pagination.currentPage === page;
+    const sortMatch = cached.sortColumn === sortColumn && cached.sortDirection === sortDirection;
     
-    if (filtersMatch && pageMatch && cacheAge < this.config.cache.publicListings) {
+    if (filtersMatch && pageMatch && sortMatch && cacheAge < this.config.cache.publicListings) {
       this.log('✓ Serving public listings from cache');
       return {
         listings: cached.data,
-        pagination: cached.pagination
+        pagination: cached.pagination,
+        summary: cached.summary
       };
     }
     
     this.log(`Fetching public listings (page ${page}, filters: ${JSON.stringify(filters)})`);
     
-    // Build query (match exact structure from original market_listings.js)
-    let query = supabase
+    // Helper function to apply filters to a query (without select or pagination)
+    const applyFilters = (query) => {
+      let q = query
+        .eq('is_fully_sold', false)
+        .eq('is_cancelled', false);
+      
+      if (filters.region) q = q.eq('market_stalls.region', filters.region);
+      if (filters.shard) q = q.eq('characters.shard', filters.shard);
+      if (filters.province) q = q.eq('market_stalls.province', filters.province);
+      if (filters.homeValley) q = q.eq('market_stalls.home_valley', filters.homeValley);
+      if (filters.category) q = q.eq('items.category_id', parseInt(filters.category));
+      if (filters.itemName) q = q.eq('item_id', parseInt(filters.itemName));
+      
+      return q;
+    };
+    
+    // Query 1: Fetch ALL filtered listings (just prices for summary statistics)
+    let summaryQuery = supabase
+      .from('market_listings')
+      .select('listed_price_per_unit, total_listed_price');
+    summaryQuery = applyFilters(summaryQuery);
+    
+    // Query 2: Fetch paginated listings with full details and total count
+    const pageSize = this.cache.publicListings.pagination.pageSize;
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize - 1;
+    
+    let paginatedQuery = supabase
       .from('market_listings')
       .select(`
         listing_id, item_id, quantity_listed, listed_price_per_unit, total_listed_price,
@@ -553,66 +591,94 @@ async loadAllCharactersData() {
         items ( item_name, category_id, item_categories:category_id ( category_name ) ),
         market_stalls ( region, province, home_valley ),
         characters ( shard )
-      `, { count: 'exact' })
-      .eq('is_fully_sold', false)
-      .eq('is_cancelled', false);
+      `, { count: 'exact' });
+    paginatedQuery = applyFilters(paginatedQuery)
+      .range(start, end);
     
-    // Apply filters
-    if (filters.region) {
-      query = query.eq('market_stalls.region', filters.region);
-    }
-    if (filters.shard) {
-      query = query.eq('characters.shard', filters.shard);
-    }
-    if (filters.province) {
-      query = query.eq('market_stalls.province', filters.province);
-    }
-    if (filters.homeValley) {
-      query = query.eq('market_stalls.home_valley', filters.homeValley);
-    }
-    if (filters.category) {
-      query = query.eq('items.category_id', parseInt(filters.category));
-    }
-    if (filters.itemName) {
-      // itemName filter actually contains item_id from the dropdown
-      query = query.eq('item_id', parseInt(filters.itemName));
+    // Apply sorting based on column
+    // Note: Supabase doesn't support ordering by nested fields (items.item_name, etc.)
+    // So we only sort by direct columns server-side
+    const serverSortableColumns = ['quantity_listed', 'listed_price_per_unit', 'total_listed_price', 'listing_date', 'listing_id'];
+    const ascending = sortDirection === 'asc';
+    
+    if (serverSortableColumns.includes(sortColumn)) {
+      // Server-side sorting for direct columns
+      paginatedQuery = paginatedQuery.order(sortColumn, { ascending });
+    } else {
+      // For item_name and category_name, default to listing_date order
+      // Client will handle these via sortListings
+      paginatedQuery = paginatedQuery.order('listing_date', { ascending: false });
     }
     
-    // Pagination
-    const pageSize = this.cache.publicListings.pagination.pageSize;
-    const start = (page - 1) * pageSize;
-    const end = start + pageSize - 1;
-    query = query.range(start, end);
+    // Execute both queries in parallel
+    const [summaryResult, paginatedResult] = await Promise.all([
+      summaryQuery,
+      paginatedQuery
+    ]);
     
-    // Order by
-    query = query.order('listing_date', { ascending: false });
+    if (summaryResult.error) {
+      console.error('Error fetching summary data:', summaryResult.error);
+      throw summaryResult.error;
+    }
     
-    const { data, error, count } = await query;
+    if (paginatedResult.error) {
+      console.error('Error fetching paginated listings:', paginatedResult.error);
+      throw paginatedResult.error;
+    }
     
-    if (error) {
-      console.error('Error fetching public listings:', error);
-      throw error;
+    // Calculate summary statistics from ALL filtered listings
+    const allListings = summaryResult.data || [];
+    const summary = {
+      lowestPriceUnit: null,
+      highestPriceUnit: null,
+      lowestTotalPrice: null,
+      highestTotalPrice: null
+    };
+    
+    if (allListings.length > 0) {
+      const unitPrices = allListings
+        .map(l => parseFloat(l.listed_price_per_unit))
+        .filter(p => !isNaN(p));
+      
+      const totalPrices = allListings
+        .map(l => parseFloat(l.total_listed_price))
+        .filter(p => !isNaN(p));
+      
+      if (unitPrices.length > 0) {
+        summary.lowestPriceUnit = Math.min(...unitPrices);
+        summary.highestPriceUnit = Math.max(...unitPrices);
+      }
+      
+      if (totalPrices.length > 0) {
+        summary.lowestTotalPrice = Math.min(...totalPrices);
+        summary.highestTotalPrice = Math.max(...totalPrices);
+      }
     }
     
     // Update cache
     this.cache.publicListings = {
-      data: data || [],
+      data: paginatedResult.data || [],
       filters,
       pagination: {
         currentPage: page,
-        totalCount: count || 0,
+        totalCount: paginatedResult.count || 0,
         pageSize
       },
+      summary,
+      sortColumn,
+      sortDirection,
       lastFetch: Date.now()
     };
     
     this.saveToSessionStorage();
     
-    this.log(`✓ Fetched ${data?.length || 0} listings (${count} total)`);
+    this.log(`✓ Fetched ${paginatedResult.data?.length || 0} listings (${paginatedResult.count} total)`);
+    this.log(`✓ Summary stats from ${allListings.length} listings - Lowest unit: ${summary.lowestPriceUnit}, Highest unit: ${summary.highestPriceUnit}`);
     
     return {
-      listings: data || [],
-      pagination: this.cache.publicListings.pagination
+      listings: paginatedResult.data || [],
+      pagination: this.cache.publicListings.pagination,
+      summary
     };
   }
   
@@ -1003,6 +1069,14 @@ async loadAllCharactersData() {
         data: [],
         filters: {},
         pagination: { currentPage: 1, totalCount: 0, pageSize: 20 },
+        summary: {
+          lowestPriceUnit: null,
+          highestPriceUnit: null,
+          lowestTotalPrice: null,
+          highestTotalPrice: null
+        },
+        sortColumn: 'listing_date',
+        sortDirection: 'desc',
         lastFetch: null
       },
       marketStats: {
