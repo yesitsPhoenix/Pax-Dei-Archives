@@ -2,17 +2,47 @@ import { showManageMarketStallsModal } from './modules/actions.js';
 
 const sidebar = document.getElementById('sidebar');
 
+// Function to update alert badge position based on sidebar state
+export function updateAlertBadgePosition() {
+    const alertBadge = document.getElementById('sidebarAlertBadge');
+    const sidebar = document.getElementById('sidebar');
+    
+    if (!alertBadge) return;
+    
+    // Only reposition if there's content (not hidden)
+    if (!alertBadge.classList.contains('hidden')) {
+        if (sidebar && sidebar.classList.contains('collapsed')) {
+            // When collapsed, center the badge on the icon using !important to override Tailwind
+            alertBadge.style.setProperty('right', 'auto', 'important');
+            alertBadge.style.setProperty('left', '50%', 'important');
+            alertBadge.style.setProperty('transform', 'translateX(-50%)', 'important');
+            alertBadge.style.setProperty('top', '-8px', 'important');
+        } else {
+            // When expanded, remove inline styles to let Tailwind classes take over
+            alertBadge.style.removeProperty('right');
+            alertBadge.style.removeProperty('left');
+            alertBadge.style.removeProperty('transform');
+            alertBadge.style.removeProperty('top');
+        }
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     if (sidebar) {
         sidebar.classList.add('collapsed');
 
         sidebar.addEventListener('mouseenter', () => {
             sidebar.classList.remove('collapsed');
+            updateAlertBadgePosition();
         });
 
         sidebar.addEventListener('mouseleave', () => {
             sidebar.classList.add('collapsed');
+            updateAlertBadgePosition();
         });
+        
+        // Initial update
+        updateAlertBadgePosition();
     }
 
     const manageMarketStallsModal = document.getElementById('manageMarketStallsModal');

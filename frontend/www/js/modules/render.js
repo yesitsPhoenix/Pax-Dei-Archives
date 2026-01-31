@@ -27,6 +27,7 @@ export const renderListingsTable = (listings) => {
         const linkTarget = isLinkEnabled ? 'target="_blank"' : '';
 
         const row = document.createElement('tr');
+        row.dataset.listingId = listing.listing_id;
         row.innerHTML = `
             <td class="py-3 px-6 text-center w-1">
                 <input type="checkbox" 

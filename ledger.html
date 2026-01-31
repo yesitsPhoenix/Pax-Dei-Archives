@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pax Dei Archives - Ledger</title>
+    <title>Pax Dei Archives - Ledger (Card Layout)</title>
     <link rel="stylesheet" href="frontend/www/css/style.css">
     <link rel="stylesheet" href="frontend/www/css/trader.css">
     <link rel="stylesheet" href="frontend/www/css/sidebar.css">
@@ -13,14 +13,121 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script> window.gtTooltipConfig = {
-        scale: 0.8,
-        delay: 30,
+    <script> 
+        window.gtTooltipConfig = {
+            scale: 0.8,
+            delay: 30,
         };
+        tailwind.config = {
+            theme: {
+                extend: {
+                    animation: {
+                        'slide-in': 'slideIn 0.3s ease-out',
+                        'fade-in': 'fadeIn 0.4s ease-out',
+                        'scale-in': 'scaleIn 0.3s ease-out',
+                    },
+                    keyframes: {
+                        slideIn: {
+                            '0%': { transform: 'translateX(-100%)', opacity: '0' },
+                            '100%': { transform: 'translateX(0)', opacity: '1' },
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        scaleIn: {
+                            '0%': { transform: 'scale(0.9)', opacity: '0' },
+                            '100%': { transform: 'scale(1)', opacity: '1' },
+                        }
+                    }
+                }
+            }
+        }
     </script>
     <script async src="https://paxdei.gaming.tools/embed.js"></script>
-</head>
+    <style>
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #fbbf24;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #f59e0b;
+        }
 
+        /* Smooth transitions - separate transform for responsive layouts */
+        * {
+            transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        /* Allow smooth layout transitions for responsive elements */
+        .container, main, section, div, aside {
+            transition: width 0.3s ease, height 0.3s ease, padding 0.3s ease, margin 0.3s ease, 
+                        background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        /* Ensure all select dropdowns and options are white text */
+        select option {
+            background-color: #334155;
+            color: white;
+        }
+
+        /* Enhanced card hover effects */
+        .stat-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(251, 191, 36, 0.1), 0 10px 10px -5px rgba(251, 191, 36, 0.04);
+        }
+        
+        /* Hide icons inside dashboard values */
+        .stat-card p i,
+        .stat-card p .fa,
+        .stat-card p .fas,
+        .stat-card p .far,
+        .stat-card p .fab {
+            display: none;
+        }
+
+        /* Gradient backgrounds */
+        .gradient-bg {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        }
+
+        /* Enhanced table rows - no transform to prevent scrollbar */
+        tbody tr {
+            transition: background-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        tbody tr:hover {
+            background-color: rgba(251, 191, 36, 0.05) !important;
+            box-shadow: inset 3px 0 0 #fbbf24;
+        }
+
+        /* Modal backdrop blur */
+        .modal-backdrop {
+            backdrop-filter: blur(8px);
+        }
+
+        /* Skeleton loader */
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+        .skeleton {
+            background: linear-gradient(90deg, #1e293b 0%, #334155 50%, #1e293b 100%);
+            background-size: 1000px 100%;
+            animation: shimmer 2s infinite;
+        }
+    </style>
+</head>
 
 <aside id="sidebar" class="w-64 bg-[#1c1c1c] border-r-4 border-amber-300 shadow-lg transition-all duration-300 hover:bg-slate-700 px-3 py-4 cursor-pointer fixed h-v50vh z-50 top-[220px] collapsed">
   <ul class="space-y-2 font-medium">
@@ -55,6 +162,13 @@
       </a>
     </li>
     <li>
+      <a href="#" class="relative flex items-center p-2 text-white rounded-lg hover:bg-gray-900" id="sidebarListingAlertsBtn">
+        <i class="fas fa-bell w-5 h-5 text-gray-400 transition duration-75"></i>
+        <span class="ml-3">Listing Alerts</span>
+        <span id="sidebarAlertBadge" class="hidden absolute -top-1 -right-1 px-2 py-0.5 text-xs bg-red-500 text-white font-bold rounded-full min-w-[20px] text-center"></span>
+      </a>
+    </li>
+    <li>
       <a href="#active-listings-section" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900" id="sidebarActiveListingsLink">
         <i class="fas fa-list-alt w-5 h-5 text-gray-200 transition duration-75"></i>
         <span class="ml-3">Active Listings</span>
@@ -68,234 +182,467 @@
     </li>
   </ul>
 </aside>
+
+<!-- Mobile Bottom Navigation -->
+<!-- <div class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900 border-t-2 border-amber-400 z-40">
+    <div class="flex justify-around items-center py-2">
+        <button class="flex flex-col items-center p-2 text-gray-400 hover:text-amber-400" id="mobileAddListing">
+            <i class="fas fa-plus-square text-xl"></i>
+            <span class="text-xs mt-1">Add</span>
+        </button>
+        <button class="flex flex-col items-center p-2 text-gray-400 hover:text-amber-400" id="mobilePVE">
+            <i class="fas fa-chess-rook text-xl"></i>
+            <span class="text-xs mt-1">PVE</span>
+        </button>
+        <button class="flex flex-col items-center p-2 text-gray-400 hover:text-amber-400" id="mobilePurchase">
+            <i class="fas fa-receipt text-xl"></i>
+            <span class="text-xs mt-1">Purchase</span>
+        </button>
+        <button class="flex flex-col items-center p-2 text-gray-400 hover:text-amber-400" id="mobileStalls">
+            <i class="fas fa-store text-xl"></i>
+            <span class="text-xs mt-1">Stalls</span>
+        </button>
+    </div>
+</div> -->
+
 <body>
 <div id="header-placeholder"></div>
 
-    <main class="trader-container">
-        <div class="container">
-            <!-- <div class="bg-amber-100 border-l-4 border-amber-500 text-amber-700 p-4 rounded shadow-md" role="alert">
-                <p class="font-bold text-black">System Notice:</p>
-                <p>Please note that the Archives will not be implementing or connecting to the API functionality of the Pax Dei Database.
-                <p>Please consider transitioning over to the Pax Dei Database or the Pax Dei Atlas if you wish to partake in those automated features.
-                <p>As a reminder, you can download your data using the CSV button below.</p>
-            </div> -->
-            <div id="traderLoginContainer" class="admin-form-container" style="display: none; text-align: center;">
-                <p>Please log in to view your Trader Ledger.</p>
-                <button id="traderDiscordLoginButton" class="discord-button" style="margin: 15px auto;">
-                    <i class="fab fa-discord"></i> Login with Discord
-                </button>
-                <p id="traderLoginError" style="color: red; display: none;"></p>
+    <div id="loadingOverlay" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm z-50 flex items-center justify-center" style="display: none;">
+            <div class="bg-gray-800 rounded-lg p-8 shadow-2xl border border-amber-600/30 max-w-md">
+                <div class="flex flex-col items-center space-y-4">
+                    <div class="relative">
+                        <div class="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <i class="fas fa-user text-amber-400 text-2xl"></i>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <h3 class="text-xl font-semibold text-amber-400 mb-2">Loading Profile</h3>
+                        <p class="text-gray-300 text-sm">Fetching your character data...</p>
+                    </div>
+                    <div class="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+                        <div class="bg-gradient-to-r from-amber-600 to-yellow-500 h-full rounded-full animate-pulse" style="width: 100%"></div>
+                    </div>
+                </div>
             </div>
-    <h1 class="text-xl font-semibold mt-6 mb-3 text-white text-center">Ledger</h1>
-    <div class="h-1 w-24 bg-[#FFD700] mx-auto rounded-full"></div><br>
-            <div class="mb-4">
-                <label for="character-select" class="block text-gray-700 text-sm font-bold mb-2">Select Character:</label>
-                <select id="character-select" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                </select>
-            </div>
-            <div class="mb-6 flex gap-4">
-                <button id="showCreateCharacterModalBtn" class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-full">
-                    Create New Character
-                </button>
-            </div>
-            <div id="traderDashboardAndForms" style="display: none;">
+        </div>
 
-                <em>Most transactions are handled via the sidebar on the left.
-                    <br>It may be necessary to update gold manually (due to Dungeons, POIs, and gold pickup/chest deposits).
-                    <br>In cases like this, use the sidebar modal to add a PVE transaction.
-                </em>
-                <br>
-                <br>
-                <section class="dashboard">
-                    <div class="dashboard-card">
-                        <h3>Gross Sales</h3>
-                        <p id="dashboard-gross-sales">0 <i class="fa-solid fa-chart-line"></i></p>
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 md:pb-8">
+        
+        <!-- Login Container -->
+        <div id="traderLoginContainer" class="hidden animate-fade-in">
+            <div class="max-w-md mx-auto bg-gradient-to-br from-slate-800 to-slate-900 p-8 rounded-2xl shadow-2xl border border-amber-400/20">
+                <div class="text-center">
+                    <i class="fas fa-lock text-amber-400 text-6xl mb-4"></i>
+                    <p class="text-white text-lg mb-6">Please log in to view your Trader Ledger.</p>
+                    <button id="traderDiscordLoginButton" class="w-full bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-3">
+                        <i class="fab fa-discord text-2xl"></i>
+                        <span>Login with Discord</span>
+                    </button>
+                    <p id="traderLoginError" class="text-red-400 text-sm mt-4 hidden"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="animate-fade-in">
+            <!-- Header Section -->
+            <div class="text-center mb-8">
+                <h1 class="text-xl font-semibold mt-6 mb-3 text-white">
+                    Ledger
+                </h1>
+                <div class="h-1 w-24 bg-[#FFD700] mx-auto rounded-full"></div>
+            </div>
+
+            <!-- Character Selection -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div class="animate-scale-in">
+                    <div class="h-full bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 shadow-2xl border border-amber-400/20">
+                        <label for="character-select" class="block text-amber-400 text-sm font-bold mb-3 flex items-center gap-2">
+                            <i class="fas fa-user-circle"></i>
+                            Select Character
+                        </label>
+                        <div class="flex gap-3">
+                            <select id="character-select" class="flex-1 bg-slate-700 text-white rounded-lg px-4 py-3 focus:ring-2 focus:ring-amber-400 focus:outline-none shadow-inner">
+                                <option>Loading characters...</option>
+                            </select>
+                            <button id="showCreateCharacterModalBtn" class="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 whitespace-nowrap">
+                                <i class="fas fa-plus mr-2"></i>
+                                <span class="hidden sm:inline">New Character</span>
+                                <span class="sm:hidden">New</span>
+                            </button>
+                        </div>
                     </div>
-                    <div class="dashboard-card">
-                        <h3>Fees Paid</h3>
-                        <p id="dashboard-fees-paid">0 <i class="fa-solid fa-arrow-trend-down"></i></p>
+                </div>
+                
+                <!-- Info Card -->
+                <div id="traderDashboardAndForms" class="hidden">
+                    <div class="h-full bg-gradient-to-r from-blue-900/30 to-blue-800/30 border-l-4 border-blue-400 rounded-lg p-6 backdrop-blur-sm">
+                        <div class="flex items-start gap-3">
+                            <i class="fas fa-info-circle text-blue-400 text-lg mt-1"></i>
+                            <div class="text-sm text-blue-100">
+                                <p class="font-semibold mb-1">Quick Guide</p>
+                                <p>Most transactions are handled via the sidebar on the left. It may be necessary to update gold manually (due to Dungeons, POIs, and gold pickup/chest deposits). In cases like this, use the sidebar modal to add a PVE transaction.</p>
+                            </div>
+                        </div>
                     </div>
-                    <div class="dashboard-card">
-                        <h3>Net Profit</h3>
-                        <p id="dashboard-net-profit">0 <i class="fas fa-coins"></i></p>
+                </div>
+            </div>
+
+                <!-- Statistics Grid -->
+                    <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
+                    <div class="stat-card bg-gradient-to-br from-cyan-900/40 to-cyan-800/40 rounded-xl p-5 border border-cyan-500/30 shadow-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-cyan-300 text-xs font-semibold uppercase">Revenue</h3>
+                            <i class="fas fa-chart-line text-cyan-400 text-lg"></i>
+                        </div>
+                        <p id="dashboard-gross-sales" class="text-white text-2xl font-bold">0</p>
                     </div>
-                    <div class="dashboard-card">
-                        <h3>Active Listings</h3>
-                        <p id="dashboard-active-listings">0 <i class="fa-solid fa-list"></i></p>
+
+                    <div class="stat-card bg-gradient-to-br from-red-900/40 to-red-800/40 rounded-xl p-5 border border-red-500/30 shadow-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-red-300 text-xs font-semibold uppercase">Fees Paid</h3>
+                            <i class="fas fa-arrow-trend-down text-red-400 text-lg"></i>
+                        </div>
+                        <p id="dashboard-fees-paid" class="text-white text-2xl font-bold">0</p>
                     </div>
-                    <div class="dashboard-card">
-                        <h3>Earned PVE Gold</h3>
-                        <p id="dashboard-earned-pve-gold">0 <i class="fa-solid fa-hand-holding-dollar"></i></p>
+
+                    <div class="stat-card bg-gradient-to-br from-emerald-900/40 to-emerald-800/40 rounded-xl p-5 border border-emerald-500/30 shadow-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-emerald-300 text-xs font-semibold uppercase">Profit</h3>
+                            <i class="fas fa-coins text-emerald-400 text-lg"></i>
+                        </div>
+                        <p id="dashboard-net-profit" class="text-white text-2xl font-bold">0</p>
                     </div>
-                    <div class="dashboard-card">
-                        <h3>Current Holdings</h3>
-                        <p id="dashboard-current-holdings">0 <i class="fa-solid fa-sack-dollar"></i></p>
+
+                    <div class="stat-card bg-gradient-to-br from-blue-900/40 to-blue-800/40 rounded-xl p-5 border border-blue-500/30 shadow-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-blue-300 text-xs font-semibold uppercase">Active Listings</h3>
+                            <i class="fas fa-list text-blue-400 text-lg"></i>
+                        </div>
+                        <p id="dashboard-active-listings" class="text-white text-2xl font-bold">0</p>
+                    </div>
+
+                    <div class="stat-card bg-gradient-to-br from-purple-900/40 to-purple-800/40 rounded-xl p-5 border border-purple-500/30 shadow-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-purple-300 text-xs font-semibold uppercase">Listed Value</h3>
+                            <i class="fas fa-hand-holding-dollar text-purple-400 text-lg"></i>
+                        </div>
+                        <p id="dashboard-listed-value-gold" class="text-white text-2xl font-bold">0</p>
+                    </div>
+
+                    <div class="stat-card bg-gradient-to-br from-indigo-900/40 to-indigo-800/40 rounded-xl p-5 border border-indigo-500/30 border-b-indigo-400/40 border-r-indigo-400/40 shadow-[6px_6px_15px_-3px_rgba(99,102,241,0.3)]">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-indigo-300 text-xs font-semibold uppercase">Current Holdings</h3>
+                            <i class="fas fa-sack-dollar text-indigo-400 text-lg"></i>
+                        </div>
+                        <p id="dashboard-current-holdings" class="text-white text-2xl font-bold">0</p>
                     </div>
                 </section>
 
-                <section class="sales-chart-section my-6">
-                    <h2 class="text-2xl font-bold mb-4 text-gray-800">Market Transaction Trends</h2>
-
-                    <div class="flex flex-nowrap gap-4 mb-4 h-[350px]">
-                        <div class="basis-2/3 relative overflow-hidden">
-                        <canvas id="salesChartCanvas" class="absolute inset-0 w-full h-full"></canvas>
+                <!-- Additional Insights Section -->
+                <section class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+                    <!-- Most Profitable Item -->
+                    <div class="stat-card bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-amber-400/20 shadow-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-cyan-300 text-xs font-semibold uppercase">Most Profitable Item</h3>
+                            <i class="fas fa-trophy text-cyan-400 text-lg"></i>
                         </div>
-
-                        <div class="basis-1/3 relative overflow-hidden">
-                        <canvas id="pveChartCanvas" class="absolute inset-0 w-full h-full"></canvas>
-                        </div>
+                        <p id="ledger-most-profitable-item" class="text-white text-lg font-bold mb-2">-</p>
+                        <p id="ledger-most-profitable-value" class="text-emerald-400 text-sm font-medium">-</p>
                     </div>
 
-                    <div class="flex justify-center gap-4 mb-6">
-                        <button id="viewDaily" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">
-                        View Daily
-                        </button>
-                        <button id="viewWeekly" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">
-                        View Weekly
-                        </button>
-                        <button id="viewMonthly" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">
-                        View Monthly
+                    <!-- Most Sold Item -->
+                    <div class="stat-card bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-amber-400/20 shadow-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-orange-300 text-xs font-semibold uppercase">Most Sold Item</h3>
+                            <i class="fas fa-fire text-orange-400 text-lg"></i>
+                        </div>
+                        <p id="ledger-most-sold-item" class="text-white text-lg font-bold mb-2">-</p>
+                        <p id="ledger-most-sold-count" class="text-gray-400 text-sm">-</p>
+                    </div>
+
+                    <!-- Avg Time on Market -->
+                    <div class="stat-card bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-amber-400/20 shadow-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-blue-300 text-xs font-semibold uppercase">Avg Time on Market</h3>
+                            <i class="fas fa-clock text-blue-400 text-lg"></i>
+                        </div>
+                        <p id="ledger-avg-time-on-market" class="text-white text-lg font-bold mb-2">-</p>
+                        <p id="ledger-time-on-market-unit" class="text-gray-400 text-sm">-</p>
+                    </div>
+
+                    <!-- Highest Performing Market Stall -->
+                    <!-- <div class="stat-card bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-amber-400/20 shadow-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-emerald-300 text-xs font-semibold uppercase">Best Market Stall</h3>
+                            <i class="fas fa-store text-emerald-400 text-lg"></i>
+                        </div>
+                        <p id="ledger-highest-performing-market-stall" class="text-white text-lg font-bold mb-2">-</p>
+                        <p id="ledger-highest-performing-market-stall-value" class="text-gray-400 text-sm">-</p>
+                    </div> -->
+
+                    <!-- Total Purchases -->
+                    <div class="stat-card bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-amber-400/20 shadow-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-rose-300 text-xs font-semibold uppercase">Total Purchases</h3>
+                            <i class="fas fa-shopping-cart text-rose-400 text-lg"></i>
+                        </div>
+                        <p id="dashboard-total-purchases" class="text-white text-lg font-bold mb-2">0</p>
+                        <p class="text-gray-400 text-sm">Gold spent on items</p>
+                    </div>
+
+                    <!-- Listing Alerts -->
+                    <div class="stat-card bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-amber-400/20 shadow-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-amber-300 text-xs font-semibold uppercase">Listing Alerts</h3>
+                            <i class="fas fa-bell text-red-400 text-lg"></i>
+                        </div>
+                        <p id="ledger-alerts-count" class="text-white text-lg font-bold mb-2">-</p>
+                        <p class="text-gray-400 text-sm"></p>
+                        <button id="openAlertsModalBtn" class="text-sm text-amber-400 hover:text-amber-500 mt-2 inline-block focus:outline-none">
+                            View Details <i class="fas fa-arrow-right ml-1 text-xs"></i>
                         </button>
                     </div>
                 </section>
 
-                <section id="active-listings-section" class="active-listings">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="w-40 min-w-max"></div> 
+                <!-- PVE Grid -->
+                <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
+                    <div class="stat-card bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-amber-400/20 shadow-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-purple-300 text-xs font-semibold uppercase">PVE Gold Earned</h3>
+                            <i class="fas fa-coins text-purple-400 text-lg"></i>
+                        </div>
+                        <p id="dashboard-earned-pve-gold" class="text-white text-lg font-bold">0</p>
+                    </div>
 
-                        <h2 class="text-2xl font-semibold text-white">Active Market Listings</h2>
+                    <div class="stat-card bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-amber-400/20 shadow-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-red-300 text-xs font-semibold uppercase">Gold Earned in Dungeons</h3>
+                            <i class="fas fa-dungeon text-red-400 text-lg"></i>
+                        </div>
+                        <p id="dashboard-dungeon-runs" class="text-white text-lg font-bold">0</p>
+                    </div>
 
-                        <button id="bulkEditListingsBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-full shadow-md transition duration-150 ease-in-out transform hover:scale-105" style="display: none;">
-                            <i class="fas fa-edit mr-2"></i> Bulk Edit (<span id="selectedListingCount">0</span>)
-                        </button>
+                    <div class="stat-card bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-amber-400/20 shadow-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-emerald-300 text-xs font-semibold uppercase">POI Clears/Mob Encounters</h3>
+                            <i class="fas fa-map-location-dot text-emerald-400 text-lg"></i>
+                        </div>
+                        <p id="dashboard-poi-mob-encounters" class="text-white text-lg font-bold">0</p>
                     </div>
-                    <div class="market-stall-tabs"></div>
-                    <div class="tab-content-container"></div>
-                    
-                    <div class="flex flex-wrap items-center gap-4 mb-6">
-                        <div class="flex-1 min-w-[200px]">
-                            <label for="filter-listing-item-name" class="block text-gray-400 text-sm font-bold mb-1">Filter by Item Name:</label>
-                            <input type="text" id="filter-listing-item-name" placeholder="Enter item name" class="p-2 border rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
+
+                    <div class="stat-card bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-amber-400/20 shadow-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-blue-300 text-xs font-semibold uppercase">Gold Spent on Grace</h3>
+                            <i class="fas fa-cart-shopping text-blue-400 text-lg"></i>
                         </div>
-                        <div class="flex-1 min-w-[150px]">
-                            <label for="filter-listing-category" class="block text-gray-400 text-sm font-bold mb-1">Filter by Category:</label>
-                            <select id="filter-listing-category" class="p-2 border rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
-                                <option value="">All Categories</option>
-                            </select>
-                        </div>
-                        <div class="flex-1 min-w-[150px]">
-                            <label for="filter-listing-status" class="block text-gray-400 text-sm font-bold mb-1">Filter by Status:</label>
-                            <select id="filter-listing-status" class="p-2 border rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
-                                <option value="active">Active</option>
-                                <option value="sold">Sold</option>
-                                <option value="cancelled">Cancelled</option>
-                                <option value="all">All Listings</option>
-                            </select>
-                        </div>
-                        <div class="flex-1 min-w-[150px]">
-                            <label for="sort-by" class="block text-gray-400 text-sm font-bold mb-1">Sort By:</label>
-                            <select id="sort-by" class="p-2 border rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
-                                <option value="listing_date">Listed On</option>
-                                <option value="item_name">Item Name</option>
-                                <option value="quantity_listed">Quantity</option>
-                                <option value="listed_price_per_unit">Price Per Unit</option>
-                                <option value="total_listed_price">Total Value</option>
-                            </select>
-                        </div>
-                        <div class="flex-1 min-w-[150px]">
-                            <label for="sort-direction" class="block text-gray-400 text-sm font-bold mb-1">Sort Direction:</label>
-                            <select id="sort-direction" class="p-2 border rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
-                                <option value="desc">Descending</option>
-                                <option value="asc">Ascending</option>
-                            </select>
-                        </div>
+                        <p id="dashboard-grace-purchases" class="text-white text-lg font-bold">0</p>
                     </div>
-                   <div id="loader">Loading...</div>
-                    <table id="listings-table" style="display:none;">
-                        <thead>
-                            <tr>
-                                <th class="w-1">
-                                    <input type="checkbox" id="selectAllListingsCheckbox" title="Select All" class="form-checkbox h-4 w-4 text-gray-800 rounded">
-                                </th>
-                                <th>Item Name</th>
-                                <th>Item Category</th>
-                                <th>Total Quantity</th>
-                                <th>Price (per unit)</th>
-                                <th>Total Value</th>
-                                <th>Fee</th>
-                                <th>List Date (UTC)</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="listings-body">
-                        </tbody>
-                    </table>
-                    <div id="listings-pagination" class="flex justify-center items-center space-x-2 mt-4 text-white"></div>
-                    </section>
-                <section id="transaction-history-section" class="sales-history">
-                    <h2 class="text-2xl font-bold mb-4 text-gray-800">Transaction History Ledger</h2>
-                    <div class="flex flex-wrap items-center gap-4 mb-6">
-                        <div class="flex-1 min-w-[200px]">
-                            <label for="transaction-search-input" class="block text-gray-400 text-sm font-bold mb-1">Item Name:</label>
-                            <input type="text" id="transaction-search-input" placeholder="Enter item name" class="p-2 border rounded-md bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
+
+                    <div class="stat-card bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-amber-400/20 shadow-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-indigo-300 text-xs font-semibold uppercase">Other</h3>
+                            <i class="fas fa-dice text-indigo-400 text-lg"></i>
                         </div>
-                        <div class="flex-1 min-w-[150px]">
-                            <label for="transaction-type-filter" class="block text-gray-400 text-sm font-bold mb-1">Filter by Type:</label>
-                            <select id="transaction-type-filter" class="p-2 border rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
-                                <option value="">All Types</option>
-                            </select>
+                        <p id="dashboard-pve-other" class="text-white text-lg font-bold">0</p>
+                    </div>
+                </section>
+
+
+                <!-- Charts Section -->
+                <section class="mb-8">
+                    <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 shadow-2xl border border-amber-400/20">
+                        <div class="flex items-center justify-between mb-6">
+                            <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                                <i class="fas fa-chart-area text-amber-400"></i>
+                                Transaction Trends
+                            </h2>
+                            <div class="flex gap-2">
+                                <button id="viewDaily" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all duration-300">Daily</button>
+                                <button id="viewWeekly" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition-all duration-300">Weekly</button>
+                                <button id="viewMonthly" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition-all duration-300">Monthly</button>
+                            </div>
                         </div>
-                        <div class="flex-1 min-w-[150px]">
-                            <label for="transaction-category-filter" class="block text-gray-400 text-sm font-bold mb-1">Filter by Category:</label>
-                            <select id="transaction-category-filter" class="p-2 border rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
-                                <option value="">All Categories</option>
-                            </select>
-                        </div>
-                        <div class="flex-1 min-w-[150px]">
-                            <label for="transaction-sort-by" class="block text-gray-400 text-sm font-bold mb-1">Sort By:</label>
-                            <select id="transaction-sort-by" class="p-2 border rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
-                                <option value="date">Date</option>
-                                <option value="type">Type</option>
-                                <option value="item_name">Item Name</option>
-                                <option value="category">Category</option>
-                                <option value="total_amount">Total Amount</option>
-                                <option value="fee">Fee</option>
-                            </select>
-                        </div>
-                        <div class="flex-1 min-w-[150px]">
-                            <label for="transaction-sort-direction" class="block text-gray-400 text-sm font-bold mb-1">Sort Direction:</label>
-                            <select id="transaction-sort-direction" class="p-2 border rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
-                                <option value="desc">Descending</option>
-                                <option value="asc">Ascending</option>
-                            </select>
+
+                        <div class="grid md:grid-cols-3 gap-6">
+                            <div class="md:col-span-2 bg-slate-700/30 rounded-xl p-4">
+                                <canvas id="salesChartCanvas" class="w-full" style="max-height: 300px;"></canvas>
+                            </div>
+                            <div class="bg-slate-700/30 rounded-xl p-4">
+                                <canvas id="pveChartCanvas" class="w-full" style="max-height: 300px;"></canvas>
+                            </div>
                         </div>
                     </div>
-                    <div id="sales-loader">Loading sales data...</div>
-                    <table id="sales-table" class="min-w-full bg-white shadow-md rounded-lg overflow-hidden" style="display:none;">
-                        <thead>
-                            <tr class="bg-gray-200 text-gray-700 uppercase text-sm leading-normal">
-                                <th class="py-3 px-6 text-left">Type</th>
-                                <th class="py-3 px-6 text-left">Date (UTC)</th>
-                                <th class="py-3 px-6 text-left">Item Name</th>
-                                <th class="py-3 px-6 text-left">Category</th>
-                                <th class="py-3 px-6 text-left">Market Stall</th>
-                                <th class="py-3 px-6 text-left">Quantity</th>
-                                <th class="py-3 px-6 text-left">Price/Unit</th>
-                                <th class="py-3 px-6 text-left">Total Amount</th>
-                                <th class="py-3 px-6 text-left">Fee</th>
-                                <th class="py-3 px-6 text-left">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="sales-body" class="text-gray-600 text-sm font-light">
-                        </tbody>
-                    </table>
-                    <div class="flex items-center mt-4">
-                        <div class="flex-grow flex justify-center">
-                            <div id="sales-pagination" class="flex items-center space-x-2 text-white"></div>
+                </section>
+
+                <!-- Active Listings Section -->
+                <section id="active-listings-section" class="mb-8">
+                    <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 shadow-2xl border border-amber-400/20">
+                        <div class="flex items-center justify-between mb-6">
+                            <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                                <i class="fas fa-store text-amber-400"></i>
+                                Active Market Listings
+                            </h2>
+                            <button id="bulkEditListingsBtn" class="hidden bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition-all duration-300">
+                                <i class="fas fa-edit mr-2"></i>
+                                Bulk Edit (<span id="selectedListingCount">0</span>)
+                            </button>
                         </div>
-                        <button id="download-sales-csv" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-full shadow-md transition duration-150 ease-in-out transform hover:scale-105 ml-auto">
-                            <i class="fas fa-download mr-2"></i> Download Market History CSV
-                        </button>
+
+                        <div class="market-stall-tabs mb-4"></div>
+                        <div class="tab-content-container mb-4"></div>
+
+                        <!-- Filters -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+                            <div>
+                                <label for="filter-listing-item-name" class="block text-amber-400 text-xs font-semibold mb-2">Item Name</label>
+                                <input type="text" id="filter-listing-item-name" placeholder="Search items..." class="w-full bg-slate-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-400 focus:outline-none">
+                            </div>
+                            <div>
+                                <label for="filter-listing-category" class="block text-amber-400 text-xs font-semibold mb-2">Category</label>
+                                <select id="filter-listing-category" class="w-full bg-slate-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-400 focus:outline-none">
+                                    <option value="">All Categories</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="filter-listing-status" class="block text-amber-400 text-xs font-semibold mb-2">Status</label>
+                                <select id="filter-listing-status" class="w-full bg-slate-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-400 focus:outline-none">
+                                    <option value="active">Active</option>
+                                    <option value="sold">Sold</option>
+                                    <option value="cancelled">Cancelled</option>
+                                    <option value="all">All Listings</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="sort-by" class="block text-amber-400 text-xs font-semibold mb-2">Sort By</label>
+                                <select id="sort-by" class="w-full bg-slate-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-400 focus:outline-none">
+                                    <option value="listing_date">Listed On</option>
+                                    <option value="item_name">Item Name</option>
+                                    <option value="quantity_listed">Quantity</option>
+                                    <option value="listed_price_per_unit">Price Per Unit</option>
+                                    <option value="total_listed_price">Total Value</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="sort-direction" class="block text-amber-400 text-xs font-semibold mb-2">Direction</label>
+                                <select id="sort-direction" class="w-full bg-slate-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-400 focus:outline-none">
+                                    <option value="desc">Descending</option>
+                                    <option value="asc">Ascending</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="loader" class="text-center py-12">
+                            <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-amber-400 border-t-transparent"></div>
+                            <p class="text-white mt-4">Loading listings...</p>
+                        </div>
+
+                        <div class="overflow-x-auto rounded-xl">
+                            <table id="listings-table" class="w-full hidden">
+                                <thead class="bg-slate-700">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-amber-400 uppercase">
+                                            <input type="checkbox" id="selectAllListingsCheckbox" class="rounded text-amber-600 focus:ring-amber-500">
+                                        </th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-amber-400 uppercase">Item</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-amber-400 uppercase">Category</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-amber-400 uppercase">Quantity</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-amber-400 uppercase">Price/Unit</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-amber-400 uppercase">Total Value</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-amber-400 uppercase">Fee</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-amber-400 uppercase">Listed On</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-amber-400 uppercase">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="listings-body" class="bg-slate-800/50 divide-y divide-slate-700">
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="listings-pagination" class="flex justify-center items-center gap-2 mt-6"></div>
+                    </div>
+                </section>
+
+                <!-- Transaction History Section -->
+                <section id="transaction-history-section">
+                    <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 shadow-2xl border border-amber-400/20">
+                        <div class="flex items-center justify-between mb-6">
+                            <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                                <i class="fas fa-history text-amber-400"></i>
+                                Transaction History
+                            </h2>
+                            <button id="download-sales-csv" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition-all duration-300">
+                                <i class="fas fa-download mr-2"></i>
+                                <span class="hidden sm:inline">Download CSV</span>
+                                <span class="sm:hidden">CSV</span>
+                            </button>
+                        </div>
+
+                        <!-- Filters -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+                            <div>
+                                <label for="transaction-search-input" class="block text-amber-400 text-xs font-semibold mb-2">Item Name</label>
+                                <input type="text" id="transaction-search-input" placeholder="Search transactions..." class="w-full bg-slate-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-400 focus:outline-none">
+                            </div>
+                            <div>
+                                <label for="transaction-type-filter" class="block text-amber-400 text-xs font-semibold mb-2">Type</label>
+                                <select id="transaction-type-filter" class="w-full bg-slate-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-400 focus:outline-none">
+                                    <option value="">All Types</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="transaction-category-filter" class="block text-amber-400 text-xs font-semibold mb-2">Category</label>
+                                <select id="transaction-category-filter" class="w-full bg-slate-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-400 focus:outline-none">
+                                    <option value="">All Categories</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="transaction-sort-by" class="block text-amber-400 text-xs font-semibold mb-2">Sort By</label>
+                                <select id="transaction-sort-by" class="w-full bg-slate-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-400 focus:outline-none">
+                                    <option value="date">Date</option>
+                                    <option value="type">Type</option>
+                                    <option value="item_name">Item Name</option>
+                                    <option value="category">Category</option>
+                                    <option value="total_amount">Total Amount</option>
+                                    <option value="fee">Fee</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="transaction-sort-direction" class="block text-amber-400 text-xs font-semibold mb-2">Direction</label>
+                                <select id="transaction-sort-direction" class="w-full bg-slate-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-400 focus:outline-none">
+                                    <option value="desc">Descending</option>
+                                    <option value="asc">Ascending</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="sales-loader" class="text-center py-12">
+                            <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-amber-400 border-t-transparent"></div>
+                            <p class="text-white mt-4">Loading transactions...</p>
+                        </div>
+
+                        <div class="overflow-x-auto rounded-xl">
+                            <table id="sales-table" class="w-full hidden">
+                                <thead class="bg-slate-700">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-amber-400 uppercase">Type</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-amber-400 uppercase">Date</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-amber-400 uppercase">Item</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-amber-400 uppercase">Category</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-amber-400 uppercase">Stall</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-amber-400 uppercase">Quantity</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-amber-400 uppercase">Price/Unit</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-amber-400 uppercase">Total</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-amber-400 uppercase">Fee</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-amber-400 uppercase">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sales-body" class="bg-slate-800/50 divide-y divide-slate-700">
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="sales-pagination" class="flex justify-center items-center gap-2 mt-6"></div>
                     </div>
                 </section>
             </div>
@@ -307,101 +654,95 @@
     </div>
 
     <div id="auth-modal">
-        <div class="modal-content-wrapper" id="modal-content-wrapper">
+        <div class="modal-content-wrapper" id="modal-content-wrapper"></div>
+    </div>
+
+    <div id="manageMarketStallsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center hidden modal-backdrop" style="z-index: 1;">
+        <div class="bg-slate-800 p-8 rounded-2xl shadow-2xl max-w-2xl w-full relative border border-amber-400/30">
+            <h2 class="text-2xl font-bold mb-4 text-white">Manage Market Stalls</h2>
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold mb-3 text-amber-400">Your Current Stalls:</h3>
+                <em class="text-gray-400 text-sm">Sorted alphabetically</em>
+                <div id="marketStallsList" class="space-y-3 max-h-60 overflow-y-auto pr-2 mt-3">
+                    <p class="text-gray-400">Loading stalls...</p>
+                </div>
+                <p id="deleteStallError" class="text-red-400 text-sm mt-2 hidden"></p>
+            </div>
+            <hr class="my-6 border-gray-700">
+            <h3 class="text-xl font-semibold mb-3 text-amber-400">Create New Market Stall:</h3>
+            <form id="create-market-stall-form" class="space-y-4">
+                <div>
+                    <label for="new-market-stall-name" class="block text-sm font-medium text-gray-300">Market Stall Name:</label>
+                    <input type="text" id="new-market-stall-name" name="market-stall-name" required
+                            class="mt-1 block w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
+                            placeholder="e.g., My Trading Post">
+                </div>
+                <div>
+                    <label for="newMarketStallProvinceSelect" class="block text-sm font-medium text-gray-300">Province:</label>
+                    <select id="newMarketStallProvinceSelect" name="province" required
+                            class="mt-1 block w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400">
+                        <option value="" selected>Select a Province</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="newMarketStallHomeValleySelect" class="block text-sm font-medium text-gray-300">Home Valley:</label>
+                    <select id="newMarketStallHomeValleySelect" name="home-valley" required
+                            class="mt-1 block w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400">
+                        <option value="" disabled selected>Select a Home Valley</option>
+                    </select>
+                </div>
+                <button type="submit" id="addMarketStallBtn" class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300">
+                    Create Market Stall
+                </button>
+                <p id="createStallError" class="text-red-400 text-sm mt-2 hidden"></p>
+            </form>
+            <div class="flex justify-end mt-6">
+                <button type="button" id="closeManageMarketStallsModalBtn" class="bg-slate-600 hover:bg-slate-700 text-white py-2 px-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-300">
+                    Close
+                </button>
+            </div>
         </div>
     </div>
 
-<div id="manageMarketStallsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center hidden" style="z-index: 1;">
-    <div class="bg-white p-8 rounded-lg shadow-xl max-w-2xl w-full relative">
-        <h2 class="text-2xl font-bold mb-4 text-gray-800">Manage Market Stalls</h2>
-
-        <div class="mb-6">
-            <h3 class="text-xl font-semibold mb-3 text-gray-800">Your Current Stalls:</h3>
-            <em>Sorted alphabetically</em>
-            <div id="marketStallsList" class="space-y-3 max-h-60 overflow-y-auto pr-2">
-                <p class="text-gray-600">Loading stalls...</p>
-            </div>
-            <p id="deleteStallError" class="text-red-500 text-sm mt-2 hidden"></p>
-        </div>
-        <hr class="my-6 border-gray-300">
-
-        <h3 class="text-xl font-semibold mb-3 text-gray-800">Create New Market Stall:</h3>
-        <form id="create-market-stall-form" class="space-y-4">
-            <div>
-                <label for="new-market-stall-name" class="block text-sm font-medium text-gray-700">Market Stall Name:</label>
-                <input type="text" id="new-market-stall-name" name="market-stall-name" required
-                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        placeholder="e.g., My Trading Post">
-            </div>
-
-            <div>
-                <label for="newMarketStallProvinceSelect" class="block text-sm font-medium text-gray-700">Province:</label>
-                <select id="newMarketStallProvinceSelect" name="province" required
-                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                    <option value="" selected>Select a Province</option>
-                </select>
-            </div>
-
-            <div>
-                <label for="newMarketStallHomeValleySelect" class="block text-sm font-medium text-gray-700">Home Valley:</label>
-                <select id="newMarketStallHomeValleySelect" name="home-valley" required
-                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                    <option value="" disabled selected>Select a Home Valley</option>
-                </select>
-            </div>
-
-            <button type="submit" id="addMarketStallBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                Create Market Stall
-            </button>
-            <p id="createStallError" class="text-red-500 text-sm mt-2 hidden"></p>
-        </form>
-        
-        <div class="flex justify-end mt-6">
-            <button type="button" id="closeManageMarketStallsModalBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
-                Close
-            </button>
-        </div>
-    </div>
-</div>
-    <div id="addListingModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
-        <div class="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md border border-emerald-400">
+    <div id="addListingModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 modal-backdrop">
+        <div class="bg-slate-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border border-emerald-400/30">
             <h3 class="text-2xl font-bold text-white mb-6 text-center">Add New Listing</h3>
             <form id="add-listing-form-modal" class="space-y-4">
                 <div class="form-group">
                     <label for="modal-item-name" class="block text-sm font-medium text-gray-300">Item Name</label>
                     <div class="autocomplete-wrapper">
                         <input type="text" id="modal-item-name" name="item-name" placeholder="e.g., Iron Ingot" required
-                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                               class="mt-1 block w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
                         <div id="modal-item-name-suggestions" class="autocomplete-suggestions"></div>
                     </div>
                 </div>
                 <div class="form-group">
                     <label for="modal-item-stacks" class="block text-sm font-medium text-gray-300">Stacks (Number of Individual Listings)</label>
                     <input type="number" id="modal-item-stacks" name="item-stacks" value="1" required
-                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                               class="mt-1 block w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
                 </div>
                 <div class="form-group">
                     <label for="modal-item-count-per-stack" class="block text-sm font-medium text-gray-300">Count (per stack)</label>
                     <input type="number" id="modal-item-count-per-stack" name="item-count-per-stack" placeholder="e.g., 100" required
-                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                               class="mt-1 block w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
                 </div>
                 <div class="form-group">
                     <label for="modal-item-price-per-stack" class="block text-sm font-medium text-gray-300">Price (per stack)</label>
                     <input type="number" id="modal-item-price-per-stack" name="item-price-per-stack" placeholder="e.g., 500" required
-                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                               class="mt-1 block w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
                 </div>
                 <div class="form-group">
                     <label for="modal-market-stall-location" class="block text-sm font-medium text-gray-300">Market Stall Location</label>
                     <select id="modal-market-stall-location" name="market-stall-location" required
-                                class="w-full p-2 border rounded-lg bg-gray-700 text-white">
+                                class="w-full p-2 bg-slate-700 text-white border border-slate-600 rounded-lg focus:ring-2 focus:ring-amber-400">
                         <option value="">Select a Market Stall</option>
                     </select>
                 </div>
                 <div class="flex justify-end gap-4">
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <button type="submit" class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300">
                         Add Listing
                     </button>
-                    <button type="button" id="closeAddListingModalBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                    <button type="button" id="closeAddListingModalBtn" class="bg-slate-600 hover:bg-slate-700 text-white py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-300">
                         Close
                     </button>
                 </div>
@@ -409,40 +750,40 @@
         </div>
     </div>
 
-    <div id="recordPurchaseModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
-        <div class="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md border border-emerald-400">
+    <div id="recordPurchaseModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 modal-backdrop">
+        <div class="bg-slate-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border border-emerald-400/30">
             <h2 class="text-2xl font-bold text-white mb-6 text-center">Record New Purchase</h2>
             <form id="recordPurchaseFormModal" class="space-y-4">
                 <div class="form-group">
                     <label for="modal-purchase-item-name" class="block text-sm font-medium text-gray-300">Item Name</label>
                     <div class="autocomplete-wrapper">
                         <input type="text" id="modal-purchase-item-name" name="item-name" placeholder="e.g., Copper Ore" required
-                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            class="mt-1 block w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
                         <div id="modal-purchase-item-name-suggestions" class="autocomplete-suggestions"></div>
                     </div>
                 </div>
                 <div class="form-group">
                     <label for="modal-purchase-item-stacks" class="block text-sm font-medium text-gray-300">Stacks (Number of individual stacks)</label>
                     <input type="number" id="modal-purchase-item-stacks" name="item-stacks" value="1" required
-                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        class="mt-1 block w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
                 </div>
                 <div class="form-group">
                     <label for="modal-purchase-item-count-per-stack" class="block text-sm font-medium text-gray-300">Count of item per stack</label>
                     <input type="number" id="modal-purchase-item-count-per-stack" name="item-count-per-stack" placeholder="e.g., 50" required
-                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        class="mt-1 block w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
                 </div>
                 <div class="form-group">
                     <label for="modal-purchase-item-total-price" class="block text-sm font-medium text-gray-300">Total Price (total gold spent on all stacks)</label>
                     <input type="number" step="0.01" id="modal-purchase-item-total-price" name="item-total-price" placeholder="e.g., 250" required
-                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        class="mt-1 block w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
                 </div>
                 <div class="flex justify-end gap-4">
                     <button type="submit"
-                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300">
                         Record Purchase
                     </button>
                     <button type="button" id="closeRecordPurchaseModalBtn"
-                        class="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                        class="bg-slate-600 hover:bg-slate-700 text-white py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-300">
                         Cancel
                     </button>
                 </div>
@@ -450,46 +791,78 @@
         </div>
     </div>
 
-  <div id="addPveTransactionModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
-    <div class="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md border border-emerald-400">
-      <h3 class="text-2xl font-bold text-white mb-6 text-center">Add PVE Transaction</h3>
-      <form id="add-pve-transaction-form" class="space-y-4">
-        <div class="form-group">
-          <label for="pve-transaction-type" class="block text-sm font-medium text-gray-300">Transaction Type</label>
-          <select id="pve-transaction-type" name="pve-transaction-type" class="w-full p-2 border rounded-lg bg-gray-700 text-white" required>
-            <option value="">Select a type</option>
-            <option value="Dungeon">Dungeon Run</option>
-            <option value="POI">POI Clear</option>
-            <option value="Chest_withdrawal">Chest Withdrawal (positive amt)</option>
-            <option value="Chest_deposit">Chest Deposit (negative amt)</option>
-            <option value="Grace">Grace Purchase</option>
-            <option value="World_encounter">Random World Encounter</option>
-            <option value="Other">Other</option>
-          </select>
+    <div id="addPveTransactionModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 modal-backdrop">
+        <div class="bg-slate-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border border-emerald-400/30">
+            <h3 class="text-2xl font-bold text-white mb-6 text-center">Add PVE Transaction</h3>
+            <form id="add-pve-transaction-form" class="space-y-4">
+                <div class="form-group">
+                    <label for="pve-transaction-type" class="block text-sm font-medium text-gray-300">Transaction Type</label>
+                    <select id="pve-transaction-type" name="pve-transaction-type" class="w-full p-2 bg-slate-700 text-white border border-slate-600 rounded-lg focus:ring-2 focus:ring-amber-400" required>
+                        <option value="">Select a type</option>
+                        <option value="Dungeon">Dungeon Run</option>
+                        <option value="POI">POI Clear</option>
+                        <option value="Chest_withdrawal">Chest Withdrawal (positive amt)</option>
+                        <option value="Chest_deposit">Chest Deposit (negative amt)</option>
+                        <option value="Grace">Grace Purchase</option>
+                        <option value="World_encounter">Random World Encounter</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="pve-amount" class="block text-sm font-medium text-gray-300">New Gold Total</label>
+                    <input type="number" id="pve-amount" name="pve-amount" min="0" step="1" required
+                        class="mt-1 block w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                        placeholder="Enter new gold total to calculate difference">
+                </div>
+                <div class="flex justify-end gap-4">
+                    <button type="submit" class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300">
+                        Add Transaction
+                    </button>
+                    <button type="button" id="closeAddPveTransactionModalBtn" class="bg-slate-600 hover:bg-slate-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-300">
+                        Close
+                    </button>
+                </div>
+            </form>
         </div>
-        <div class="form-group">
-          <label for="pve-amount" class="block text-sm font-medium text-gray-300">New Gold Total</label>
-          <input type="number" id="pve-amount" name="pve-amount" min="0" step="1" required
-                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                placeholder="Enter new gold total to calculate difference">
-        </div>
-        <div class="flex justify-end gap-4">
-          <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-            Add Transaction
-          </button>
-          <button type="button" id="closeAddPveTransactionModalBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
-            Close
-          </button>
-        </div>
-      </form>
     </div>
-</div>
 
-<div id="bulkEditModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
-    <div class="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md border border-emerald-400">
+    <div id="bulkEditModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 modal-backdrop">
+        <div class="bg-slate-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border border-emerald-400/30">
         </div>
-</div>
+    </div>
+
+    <!-- Listing Alerts Modal -->
+    <div id="listingAlertsModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 modal-backdrop">
+        <div class="bg-slate-800 p-8 rounded-2xl shadow-2xl w-full max-w-3xl border border-amber-400/30">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                    <i class="fas fa-bell text-red-400"></i>
+                    Listing Alert Details
+                </h2>
+                <button id="closeAlertsModalBtn" class="text-gray-400 hover:text-white transition-colors">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            
+            <div id="alertsLoadingIndicator" class="text-center py-12">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-amber-400 border-t-transparent"></div>
+                <p class="text-gray-400 mt-4 text-sm">Loading alerts...</p>
+            </div>
+            
+            <div id="alertsListContainer" class="hidden space-y-3 max-h-96 overflow-y-auto pr-2">
+                <!-- Alerts will be populated here -->
+            </div>
+            
+            <div id="alertsEmptyState" class="hidden text-center py-12">
+                <i class="fas fa-check-circle text-green-400 text-5xl mb-4"></i>
+                <p class="text-gray-300 text-lg font-semibold mb-2">No aging listings found!</p>
+                <p class="text-gray-400 text-sm">All your listings are fresh and active.</p>
+            </div>
+        </div>
+    </div>
+
     <div id="footer-placeholder"></div>
+
     <script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
     <script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
@@ -503,6 +876,226 @@
     <script type="module" src="frontend/www/js/sidebar.js"></script>
     <script type="module" src="frontend/www/js/modules/filter.js"></script>
 
+    <script>
+        // Checkbox persistence across pagination
+        window.selectedListingIds = new Set();
+        
+        // Store checkbox state
+        document.addEventListener('change', function(e) {
+            if (e.target.matches('#listings-body input[type="checkbox"]')) {
+                const row = e.target.closest('tr');
+                const listingId = row?.dataset?.listingId;
+                
+                if (listingId) {
+                    if (e.target.checked) {
+                        window.selectedListingIds.add(listingId);
+                    } else {
+                        window.selectedListingIds.delete(listingId);
+                    }
+                    
+                    // Update counter
+                    const count = window.selectedListingIds.size;
+                    const countEl = document.getElementById('selectedListingCount');
+                    const bulkBtn = document.getElementById('bulkEditListingsBtn');
+                    
+                    if (countEl) countEl.textContent = count;
+                    if (bulkBtn) {
+                        if (count > 0) {
+                            bulkBtn.classList.remove('hidden');
+                        } else {
+                            bulkBtn.classList.add('hidden');
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Restore checkbox state after pagination
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'childList' && mutation.target.id === 'listings-body') {
+                    // Restore checked states
+                    const checkboxes = document.querySelectorAll('#listings-body input[type="checkbox"]');
+                    checkboxes.forEach(cb => {
+                        const row = cb.closest('tr');
+                        const listingId = row?.dataset?.listingId;
+                        if (listingId && window.selectedListingIds.has(listingId)) {
+                            cb.checked = true;
+                        }
+                    });
+                }
+            });
+        });
+        
+        // Start observing the listings table body
+        const listingsBody = document.getElementById('listings-body');
+        if (listingsBody) {
+            observer.observe(listingsBody, { childList: true, subtree: true });
+        }
+        
+        // Wire up sidebar buttons
+        document.getElementById('addListingSidebarBtn')?.addEventListener('click', () => {
+            document.getElementById('addListingModal')?.classList.remove('hidden');
+        });
+        document.getElementById('addPveTransactionSidebarBtn')?.addEventListener('click', () => {
+            document.getElementById('addPveTransactionModal')?.classList.remove('hidden');
+        });
+        document.getElementById('recordPurchaseSidebarBtn')?.addEventListener('click', () => {
+            document.getElementById('recordPurchaseModal')?.classList.remove('hidden');
+        });
+        document.getElementById('manageStallsBtn')?.addEventListener('click', () => {
+            document.getElementById('manageMarketStallsModal')?.classList.remove('hidden');
+        });
 
+        // Wire up mobile buttons
+        document.getElementById('mobileAddListing')?.addEventListener('click', () => {
+            document.getElementById('addListingModal')?.classList.remove('hidden');
+        });
+        document.getElementById('mobilePVE')?.addEventListener('click', () => {
+            document.getElementById('addPveTransactionModal')?.classList.remove('hidden');
+        });
+        document.getElementById('mobilePurchase')?.addEventListener('click', () => {
+            document.getElementById('recordPurchaseModal')?.classList.remove('hidden');
+        });
+        document.getElementById('mobileStalls')?.addEventListener('click', () => {
+            document.getElementById('manageMarketStallsModal')?.classList.remove('hidden');
+        });
+
+        // Listing Alerts Modal
+        const alertsModal = document.getElementById('listingAlertsModal');
+        const openAlertsModalBtn = document.getElementById('openAlertsModalBtn');
+        const sidebarListingAlertsBtn = document.getElementById('sidebarListingAlertsBtn');
+        const closeAlertsModalBtn = document.getElementById('closeAlertsModalBtn');
+        let alertsLoaded = false;
+        
+        // Function to open alerts modal
+        const openAlertsModal = async () => {
+            alertsModal?.classList.remove('hidden');
+            
+            // Load alerts if not already loaded
+            if (!alertsLoaded) {
+                await loadListingAlerts();
+                alertsLoaded = true;
+            }
+        };
+        
+        openAlertsModalBtn?.addEventListener('click', openAlertsModal);
+        sidebarListingAlertsBtn?.addEventListener('click', (e) => {
+            e.preventDefault();
+            openAlertsModal();
+        });
+        
+        closeAlertsModalBtn?.addEventListener('click', () => {
+            alertsModal?.classList.add('hidden');
+        });
+        
+        // Close modal when clicking outside
+        alertsModal?.addEventListener('click', (event) => {
+            if (event.target === alertsModal) {
+                alertsModal.classList.add('hidden');
+            }
+        });
+        
+        async function loadListingAlerts() {
+            const loadingIndicator = document.getElementById('alertsLoadingIndicator');
+            const listContainer = document.getElementById('alertsListContainer');
+            const emptyState = document.getElementById('alertsEmptyState');
+            
+            try {
+                // Show loading
+                loadingIndicator.classList.remove('hidden');
+                listContainer.classList.add('hidden');
+                emptyState.classList.add('hidden');
+                
+                const { supabase } = await import('./frontend/www/js/supabaseClient.js');
+                const { currentCharacterId } = await import('./frontend/www/js/modules/characters.js');
+                
+                if (!currentCharacterId) {
+                    listContainer.innerHTML = '<p class="text-gray-400 text-center py-4">Please select a character to view alerts.</p>';
+                    loadingIndicator.classList.add('hidden');
+                    listContainer.classList.remove('hidden');
+                    return;
+                }
+                
+                const now = new Date();
+                const DAYS_AGING = 15;
+                const DAYS_WARNING = 30;
+                const DAYS_CRITICAL = 45;
+                const MS_PER_DAY = 24 * 60 * 60 * 1000;
+                
+                const agingDaysAgo = new Date(now.getTime() - DAYS_AGING * MS_PER_DAY).toISOString();
+                const warningDaysAgo = new Date(now.getTime() - DAYS_WARNING * MS_PER_DAY).toISOString();
+                const criticalDaysAgo = new Date(now.getTime() - DAYS_CRITICAL * MS_PER_DAY).toISOString();
+                
+                const { data: oldListings, error } = await supabase
+                    .from('market_listings')
+                    .select('item_id, listing_date, items(item_name)')
+                    .eq('character_id', currentCharacterId)
+                    .is('is_fully_sold', false)
+                    .is('is_cancelled', false)
+                    .lt('listing_date', agingDaysAgo)
+                    .order('listing_date', { ascending: true });
+                
+                if (error) throw error;
+                
+                loadingIndicator.classList.add('hidden');
+                
+                if (!oldListings || oldListings.length === 0) {
+                    emptyState.classList.remove('hidden');
+                    return;
+                }
+                
+                // Categorize and display alerts
+                const alerts = [];
+                
+                oldListings.forEach(listing => {
+                    const itemName = listing.items?.item_name || `Item #${listing.item_id}`;
+                    const daysOld = Math.floor((now - new Date(listing.listing_date)) / MS_PER_DAY);
+                    
+                    let className, icon, text, severity;
+                    
+                    if (listing.listing_date < criticalDaysAgo) {
+                        className = "text-sm text-red-400 p-3 border border-red-500 rounded-lg bg-red-900/20";
+                        icon = "fa-exclamation-triangle";
+                        text = `<strong class=\"text-red-300\">CRITICAL:</strong> <strong>${itemName}</strong> has been listed for <strong>${daysOld} days</strong> (${DAYS_CRITICAL}+ days)`;
+                        severity = 3;
+                    } else if (listing.listing_date < warningDaysAgo) {
+                        className = "text-sm text-amber-400 p-3 border border-amber-500 rounded-lg bg-amber-900/20";
+                        icon = "fa-clock";
+                        text = `<strong class=\"text-amber-300\">WARNING:</strong> <strong>${itemName}</strong> has been listed for <strong>${daysOld} days</strong> (${DAYS_WARNING}+ days)`;
+                        severity = 2;
+                    } else {
+                        className = "text-sm text-green-400 p-3 border border-green-500 rounded-lg bg-green-900/20";
+                        icon = "fa-info-circle";
+                        text = `<strong class=\"text-green-300\">NOTICE:</strong> <strong>${itemName}</strong> has been listed for <strong>${daysOld} days</strong> (${DAYS_AGING}+ days)`;
+                        severity = 1;
+                    }
+                    
+                    alerts.push({ className, icon, text, severity, date: listing.listing_date });
+                });
+                
+                // Sort by severity (critical first) then by date (oldest first)
+                alerts.sort((a, b) => {
+                    if (a.severity !== b.severity) return b.severity - a.severity;
+                    return new Date(a.date) - new Date(b.date);
+                });
+                
+                // Render alerts
+                listContainer.innerHTML = alerts.map(alert => `
+                    <div class="${alert.className}">
+                        <i class="fas ${alert.icon} mr-2"></i>${alert.text}
+                    </div>
+                `).join('');
+                
+                listContainer.classList.remove('hidden');
+                
+            } catch (error) {
+                console.error('Error loading listing alerts:', error);
+                loadingIndicator.classList.add('hidden');
+                listContainer.innerHTML = '<p class="text-red-400 text-center py-4">Error loading alerts. Please try again.</p>';
+                listContainer.classList.remove('hidden');
+            }
+        }
+    </script>
 </body>
 </html>

@@ -205,7 +205,7 @@ const updateAllCharts = (timeframe) => {
 
 
 const clearTraderPageUI = () => {
-    renderDashboard({}, null);
+    renderDashboard({}, null, []);
     loadTransactionHistory([]);
     if (document.querySelector('.market-stall-tabs')) {
         document.querySelector('.market-stall-tabs').innerHTML = '<p class="text-gray-600 text-center py-4">Select a character to manage market stalls.</p>';
@@ -217,6 +217,8 @@ const clearTraderPageUI = () => {
 
 
 export const loadTraderPageData = async (reloadActiveListings = true) => {
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    
     if (!currentUser || !currentUser.id || !currentCharacterId) {
         clearTraderPageUI();
         if (reloadActiveListings) {
@@ -224,10 +226,18 @@ export const loadTraderPageData = async (reloadActiveListings = true) => {
             await loadActiveListings(activeStallId);
         }
         updateAllCharts('daily');
+        if (loadingOverlay) {
+            loadingOverlay.style.display = 'none';
+        }
         return;
     }
 
     try {
+        // Show loading overlay
+        if (loadingOverlay) {
+            loadingOverlay.style.display = 'flex';
+        }
+        
         clearMarketStallsCache();
         const [
             dashboardStatsResult,
@@ -245,7 +255,7 @@ export const loadTraderPageData = async (reloadActiveListings = true) => {
 
         allCharacterActivityData = processCharacterActivityData(rawActivityData);
 
-        renderDashboard(dashboardStatsResult.data ? dashboardStatsResult.data[0] : {}, currentCharacterData);
+        await renderDashboard(dashboardStatsResult.data ? dashboardStatsResult.data[0] : {}, currentCharacterData, allCharacterActivityData);
         if (reloadActiveListings) {
             const activeStallId = getActiveStallId();
             await loadActiveListings(activeStallId);
@@ -260,6 +270,11 @@ export const loadTraderPageData = async (reloadActiveListings = true) => {
     } catch (error) {
         console.error('Error loading trader page data:', error.message);
         await showCustomModal('Error', 'Failed to load trader data: ' + error.message, [{ text: 'OK', value: true }]);
+    } finally {
+        // Hide loading overlay
+        if (loadingOverlay) {
+            loadingOverlay.style.display = 'none';
+        }
     }
 };
 
