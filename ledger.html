@@ -968,6 +968,25 @@
         const closeAlertsModalBtn = document.getElementById('closeAlertsModalBtn');
         let alertsLoaded = false;
         
+        // Reset alertsLoaded flag and clear modal content when character changes
+        document.addEventListener('characterChanged', () => {
+            alertsLoaded = false;
+            // Clear modal content to ensure fresh data on next open
+            const listContainer = document.getElementById('alertsListContainer');
+            if (listContainer) {
+                listContainer.innerHTML = '';
+                listContainer.classList.add('hidden');
+            }
+            const loadingIndicator = document.getElementById('alertsLoadingIndicator');
+            if (loadingIndicator) {
+                loadingIndicator.classList.add('hidden');
+            }
+            const emptyState = document.getElementById('alertsEmptyState');
+            if (emptyState) {
+                emptyState.classList.add('hidden');
+            }
+        });
+        
         // Function to open alerts modal
         const openAlertsModal = async () => {
             alertsModal?.classList.remove('hidden');

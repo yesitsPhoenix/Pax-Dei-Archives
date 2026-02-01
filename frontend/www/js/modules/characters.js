@@ -246,6 +246,12 @@ const handleCharacterSelection = async (event) => {
     } else {
         setCurrentCharacterGold(0); 
     }
+    
+    // Dispatch custom event to notify other components that character has changed
+    document.dispatchEvent(new CustomEvent('characterChanged', { 
+        detail: { characterId: currentCharacterId } 
+    }));
+    
     await loadTraderPageData();
 };
 
