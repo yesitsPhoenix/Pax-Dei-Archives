@@ -8,23 +8,32 @@ let allFeats = [];
 let signsConfig = {};
 
 async function initChronicles() {
-    if (!questState.isReady()) {
-        await questState.initialize();
-    }
-    
-    const characterId = questState.getActiveCharacterId();
-    
-    if (!characterId) {
-        console.warn("[Chronicles] No active character found");
-        setTimeout(initChronicles, 500);
-        return;
+    // Show loading overlay
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    if (loadingOverlay) {
+        loadingOverlay.style.display = 'flex';
     }
 
     try {
+        if (!questState.isReady()) {
+            await questState.initialize();
+        }
+
+        const characterId = questState.getActiveCharacterId();
+
+        if (!characterId) {
+            console.warn("[Chronicles] No active character found");
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'none';
+            }
+            setTimeout(initChronicles, 500);
+            return;
+        }
+
         allQuests = questState.getAllQuests();
         userClaims = questState.getUserClaims();
         allFeats = questState.getHeroicFeats();
-        
+
         try {
             const response = await fetch("frontend/www/assets/signs.json");
             signsConfig = await response.json();
@@ -39,20 +48,46 @@ async function initChronicles() {
         renderPage(allQuests, userClaims, allFeats, unlockedCategories, signsConfig);
     } catch (error) {
         console.error("[Chronicles] Error during data initialization:", error);
+    } finally {
+        // Hide loading overlay after initialization
+        if (loadingOverlay) {
+            loadingOverlay.style.display = 'none';
+        }
     }
 }
 
 window.addEventListener('characterChanged', async (e) => {
     console.log('[Chronicles] Character changed event received:', e.detail);
-    
-    allQuests = questState.getAllQuests();
-    userClaims = questState.getUserClaims();
-    allFeats = questState.getHeroicFeats();
-    
-    const unlockedCategoriesList = questState.getUnlockedCategories();
-    const unlockedCategories = new Set(unlockedCategoriesList);
-    
-    renderPage(allQuests, userClaims, allFeats, unlockedCategories, signsConfig);
+
+    // Show loading overlay when switching characters
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const startTime = Date.now();
+    const minDisplayTime = 300; // Minimum 300ms display time for better UX
+
+    if (loadingOverlay) {
+        loadingOverlay.style.display = 'flex';
+    }
+
+    try {
+        allQuests = questState.getAllQuests();
+        userClaims = questState.getUserClaims();
+        allFeats = questState.getHeroicFeats();
+
+        const unlockedCategoriesList = questState.getUnlockedCategories();
+        const unlockedCategories = new Set(unlockedCategoriesList);
+
+        renderPage(allQuests, userClaims, allFeats, unlockedCategories, signsConfig);
+    } finally {
+        // Ensure minimum display time for loading overlay
+        const elapsedTime = Date.now() - startTime;
+        const remainingTime = Math.max(0, minDisplayTime - elapsedTime);
+
+        setTimeout(() => {
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'none';
+            }
+        }, remainingTime);
+    }
 });
 
 document.addEventListener('DOMContentLoaded', async () => {

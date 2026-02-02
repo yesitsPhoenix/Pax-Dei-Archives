@@ -1287,49 +1287,70 @@ async function loadCharacterBanner(characterId) {
 
 window.addEventListener('characterChanged', async (e) => {
     const newCharacterId = e.detail.characterId;
-    
-    await loadCharacterBanner(newCharacterId);
-    
-    activeQuestKey = null;
-    window.activeQuestKey = null;
-    
-    const url = new URL(window.location);
-    url.searchParams.delete('quest');
-    window.history.replaceState({}, '', url.pathname);
 
-    const emptyState = document.getElementById('empty-state');
-    const content = document.getElementById('details-content');
-    
-    if (content) content.classList.add('hidden');
-    if (emptyState) {
-        emptyState.classList.remove('hidden');
-        emptyState.innerHTML = `
-        <div class="text-center text-gray-400">
-        <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2"></i>
-        <p>Updating records...</p>
-        </div>`;
+    // Show loading overlay when switching characters
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const startTime = Date.now();
+    const minDisplayTime = 300; // Minimum 300ms display time for better UX
+
+    if (loadingOverlay) {
+        loadingOverlay.style.display = 'flex';
     }
 
-    userClaims = questState.getUserClaims();
-    window.userClaims = userClaims;
-    
-    await fetchCharacters();
-    
-    const characters = questState.getCharacters();
-    if (characters && characters.length === 1) {
-        updateSidebarPermissions();
-        populateFilters(regionsData);
-        initQuestModal();
-    }
-    
-    await renderQuestsList();
-    
-    if (emptyState) {
-        emptyState.innerHTML = `
-        <div class="text-center text-gray-400">
-                <i class="fa-solid fa-scroll text-4xl mb-4 opacity-20"></i>
-                <p>Select a chronicle from the list to view details</p>
+    try {
+        await loadCharacterBanner(newCharacterId);
+
+        activeQuestKey = null;
+        window.activeQuestKey = null;
+
+        const url = new URL(window.location);
+        url.searchParams.delete('quest');
+        window.history.replaceState({}, '', url.pathname);
+
+        const emptyState = document.getElementById('empty-state');
+        const content = document.getElementById('details-content');
+
+        if (content) content.classList.add('hidden');
+        if (emptyState) {
+            emptyState.classList.remove('hidden');
+            emptyState.innerHTML = `
+            <div class="text-center text-gray-400">
+            <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2"></i>
+            <p>Updating records...</p>
             </div>`;
+        }
+
+        userClaims = questState.getUserClaims();
+        window.userClaims = userClaims;
+
+        await fetchCharacters();
+
+        const characters = questState.getCharacters();
+        if (characters && characters.length === 1) {
+            updateSidebarPermissions();
+            populateFilters(regionsData);
+            initQuestModal();
+        }
+
+        await renderQuestsList();
+
+        if (emptyState) {
+            emptyState.innerHTML = `
+            <div class="text-center text-gray-400">
+                    <i class="fa-solid fa-scroll text-4xl mb-4 opacity-20"></i>
+                    <p>Select a chronicle from the list to view details</p>
+                </div>`;
+        }
+    } finally {
+        // Ensure minimum display time for loading overlay
+        const elapsedTime = Date.now() - startTime;
+        const remainingTime = Math.max(0, minDisplayTime - elapsedTime);
+
+        setTimeout(() => {
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'none';
+            }
+        }, remainingTime);
     }
 });
 
@@ -1356,54 +1377,74 @@ window.addEventListener("questClaimed", async (e) => {
 
 
 async function init() {
-    enableSignTooltip();
-    
-    if (!questState.isReady()) {
-        await questState.initialize();
+    // Show loading overlay
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    if (loadingOverlay) {
+        loadingOverlay.style.display = 'flex';
     }
-    
-    allQuests = questState.getAllQuests();
-    window.allQuests = allQuests;
-    regionsData = questState.getRegions();
-    userClaims = questState.getUserClaims();
-    window.userClaims = userClaims;
-    
-    // Quest counter system temporarily disabled
-    // loadQuestCounters() and initialization removed
-    
-    await initializeCharacterSystem();
-    
-    const characters = questState.getCharacters();
-    const user = questState.getUser();
-    
-    if (user && (!characters || characters.length === 0)) {
-        const modal = document.getElementById('createCharacterModal');
-        if (modal) {
-            modal.classList.remove('hidden');
-            modal.style.display = 'flex';
-            // Populate region dropdowns for new user
-            await populateCharacterRegionDropdowns();
+
+    try {
+        enableSignTooltip();
+
+        if (!questState.isReady()) {
+            await questState.initialize();
         }
-        return;
-    }
-    
-    const characterId = questState.getActiveCharacterId();
-    if (characterId) {
-        await loadCharacterBanner(characterId);
-    }
 
-    updateSidebarPermissions();
-    populateFilters(regionsData);
-    initQuestModal();
-    
-    await renderQuestsList();
+        allQuests = questState.getAllQuests();
+        window.allQuests = allQuests;
+        regionsData = questState.getRegions();
+        userClaims = questState.getUserClaims();
+        window.userClaims = userClaims;
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const targetQuestKey = urlParams.get('quest');
-    if (targetQuestKey && allQuests.length > 0) {
-        const targetQuest = allQuests.find(q => q.quest_key === targetQuestKey);
-        if (targetQuest) {
-            showQuestDetails(targetQuest, questState.isQuestClaimed(targetQuest.id));
+        // Quest counter system temporarily disabled
+        // loadQuestCounters() and initialization removed
+
+        await initializeCharacterSystem();
+
+        const characters = questState.getCharacters();
+        const user = questState.getUser();
+
+        if (user && (!characters || characters.length === 0)) {
+            const modal = document.getElementById('createCharacterModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.style.display = 'flex';
+                // Populate region dropdowns for new user
+                await populateCharacterRegionDropdowns();
+            }
+            // Hide loading overlay before returning
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'none';
+            }
+            return;
+        }
+
+        const characterId = questState.getActiveCharacterId();
+        if (characterId) {
+            await loadCharacterBanner(characterId);
+        }
+
+        updateSidebarPermissions();
+        populateFilters(regionsData);
+        initQuestModal();
+
+        await renderQuestsList();
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetQuestKey = urlParams.get('quest');
+        if (targetQuestKey && allQuests.length > 0) {
+            const targetQuest = allQuests.find(q => q.quest_key === targetQuestKey);
+            if (targetQuest) {
+                showQuestDetails(targetQuest, questState.isQuestClaimed(targetQuest.id));
+            }
+        }
+    } catch (error) {
+        console.error('Error during quest log initialization:', error);
+        showToast('Failed to load quest log. Please refresh the page.', 'error');
+    } finally {
+        // Hide loading overlay after everything is loaded
+        if (loadingOverlay) {
+            loadingOverlay.style.display = 'none';
         }
     }
 }
