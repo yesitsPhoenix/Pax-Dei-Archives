@@ -347,20 +347,31 @@ class QuestStateManager {
         });
     }
 
-    async addCharacter(characterName) {
+    async addCharacter(characterName, regionData = null) {
         if (!this.cache.user) {
             throw new Error('User must be logged in to create character');
         }
 
         this.log(`Creating character: ${characterName}`);
 
+        const insertData = {
+            user_id: this.cache.user.id,
+            character_name: characterName,
+            is_default_character: this.cache.characters.length === 0
+        };
+
+        // Add region data if provided
+        if (regionData) {
+            insertData.region = regionData.region;
+            insertData.shard = regionData.shard;
+            insertData.province = regionData.province;
+            insertData.home_valley = regionData.home_valley;
+            insertData.region_entry_id = regionData.region_entry_id;
+        }
+
         const { data, error } = await supabase
             .from('characters')
-            .insert({
-                user_id: this.cache.user.id,
-                character_name: characterName,
-                is_default_character: this.cache.characters.length === 0
-            })
+            .insert(insertData)
             .select()
             .single();
 

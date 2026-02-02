@@ -99,72 +99,6 @@ async function populateCharacterRegionDropdowns() {
     });
 }
 
-/**
- * Load archetypes data from JSON
- */
-async function loadArchetypesData() {
-    if (archetypesData) return archetypesData;
-    
-    try {
-        const response = await fetch('backend/data/json/archetypes.json');
-        archetypesData = await response.json();
-        return archetypesData;
-    } catch (error) {
-        console.error('Failed to load archetypes:', error);
-        return [];
-    }
-}
-
-/**
- * Load character archetype
- */
-async function loadArchetype(characterId) {
-    try {
-        const { data, error } = await supabase
-            .from('characters')
-            .select('archetype')
-            .eq('character_id', characterId)
-            .single();
-
-        if (error) throw error;
-
-        const archetypeName = data.archetype || 'Not Set';
-       //console.log('[Archetype] Character archetype:', archetypeName);
-        
-        // Load archetypes data
-        const archetypes = await loadArchetypesData();
-       //console.log('[Archetype] Loaded archetypes data:', archetypes);
-        const archetypeData = archetypes.find(a => a.name === archetypeName);
-       //console.log('[Archetype] Found archetype match:', archetypeData);
-        
-        // Determine icon HTML
-        let iconHtml = '<i class="fas fa-user-shield"></i>'; // default
-        
-        if (archetypeData && archetypeData.icon) {
-            const iconClass = archetypeData.icon;
-           //console.log('[Archetype] Using icon class:', iconClass);
-            // Simply use the icon class as-is
-            iconHtml = `<i class="${iconClass}"></i>`;
-        } else {
-           //console.log('[Archetype] No archetype data found, using default icon');
-        }
-        
-       //console.log('[Archetype] Final icon HTML:', iconHtml);
-
-        archetypeSection.innerHTML = `
-            <div class="text-center py-6">
-                <div class="inline-block p-4 bg-gray-800 rounded-full mb-3">
-                    ${iconHtml}
-                </div>
-                <p class="text-2xl font-bold text-white">${archetypeName}</p>
-            </div>
-        `;
-
-    } catch (error) {
-        console.error('Error loading archetype:', error);
-        archetypeSection.innerHTML = '<p class="text-red-400 text-center py-4">Failed to load archetype</p>';
-    }
-}
 
 /**
  * Load heroic feats summary
@@ -270,7 +204,6 @@ const userCreatedAt = document.getElementById('user-created-at');
 const userLastLoginAt = document.getElementById('user-last-login-at');
 const characterSelect = document.getElementById('characterSelect');
 const characterDetails = document.getElementById('characterDetails');
-const archetypeSection = document.getElementById('archetypeSection');
 const featsSummary = document.getElementById('featsSummary');
 const questSummary = document.getElementById('questSummary');
 const stallsContainer = document.getElementById('stallsContainer');
@@ -294,7 +227,6 @@ const createStallForm = document.getElementById('createStallForm');
 // State
 let currentUserId = null;
 let currentCharacterId = null;
-let archetypesData = null;
 let cachedRegions = null;
 
 /**
@@ -424,7 +356,6 @@ async function loadCharacters(skipAutoLoad = false) {
 async function loadCharacterData(characterId) {
     if (!characterId) {
         characterDetails.innerHTML = '<p class="text-gray-400 text-center py-8">Select a character to view details</p>';
-        archetypeSection.innerHTML = '<p class="text-gray-400 text-center py-8">Select a character</p>';
         featsSummary.innerHTML = '<p class="text-gray-400 text-sm text-center py-4">Select a character</p>';
         questSummary.innerHTML = '<p class="text-gray-400 text-sm text-center py-4">Select a character</p>';
         stallsContainer.innerHTML = '<p class="text-gray-400 text-center py-8">Select a character to view stalls</p>';
@@ -443,7 +374,6 @@ async function loadCharacterData(characterId) {
 
     // Load all sections
     await loadCharacterDetails(characterId);
-    await loadArchetype(characterId);
     await loadFeatsSummary(characterId);
     await loadQuestSummary(characterId);
     await loadMarketStalls(characterId);

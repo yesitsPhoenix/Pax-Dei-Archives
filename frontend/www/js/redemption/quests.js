@@ -2,7 +2,7 @@ import { questState } from "./questStateManager.js";
 import { getUnlockedCategories, applyLockStyles } from "./unlocks.js";
 import { enableSignTooltip } from '../ui/signTooltip.js';
 import { initQuestModal } from './questModal.js';
-import { initializeCharacterSystem, fetchCharacters } from './characterManager.js';
+import { initializeCharacterSystem, fetchCharacters, populateCharacterRegionDropdowns } from './characterManager.js';
 
 
 let allQuests = [];
@@ -1381,6 +1381,8 @@ async function init() {
         if (modal) {
             modal.classList.remove('hidden');
             modal.style.display = 'flex';
+            // Populate region dropdowns for new user
+            await populateCharacterRegionDropdowns();
         }
         return;
     }
