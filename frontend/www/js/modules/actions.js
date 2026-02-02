@@ -1135,11 +1135,67 @@ export const updateListingStatus = async (updates) => {
     const successfulUpdates = [];
     const failedUpdates = [];
     // Renaming this variable for clarity, but it holds the total gold to be credited (Gross).
-    let totalGoldToCredit = 0; 
+    let totalGoldToCredit = 0;
+    let totalFeeToDeduct = 0;
 
     const updatePromises = updates.map(async (update) => {
-        const { id, new_status, gold_received } = update;
+        const { id, new_status, gold_received, action, new_price } = update;
 
+        // Handle price update action
+        if (action === 'update-price') {
+            if (!new_price || new_price <= 0) {
+                return { success: false, id, error: 'Invalid price provided.' };
+            }
+
+            // Fetch the current listing details
+            const { data: currentListing, error: fetchError } = await supabase
+                .from('market_listings')
+                .select('quantity_listed, total_listed_price, market_fee')
+                .eq('listing_id', id)
+                .eq('character_id', currentCharacterId)
+                .single();
+
+            if (fetchError || !currentListing) {
+                return { success: false, id, error: `Could not fetch listing ${id} for price update.` };
+            }
+
+            const oldPrice = currentListing.total_listed_price;
+            const oldFee = currentListing.market_fee;
+            const priceIncrease = new_price - oldPrice;
+
+            let newFee = oldFee;
+            let additionalFee = 0;
+
+            // Only charge additional fee if price increased
+            if (priceIncrease > 0) {
+                newFee = Math.ceil(new_price * 0.05);
+                if (newFee < oldFee) {
+                    newFee = oldFee;
+                }
+                additionalFee = newFee - oldFee;
+                totalFeeToDeduct += additionalFee;
+            }
+
+            const newPricePerUnit = new_price / currentListing.quantity_listed;
+
+            const { error: updateError } = await supabase
+                .from('market_listings')
+                .update({
+                    total_listed_price: new_price,
+                    listed_price_per_unit: newPricePerUnit,
+                    market_fee: newFee
+                })
+                .eq('listing_id', id)
+                .eq('character_id', currentCharacterId);
+
+            if (updateError) {
+                return { success: false, id, error: updateError.message };
+            }
+
+            return { success: true, id };
+        }
+
+        // Handle status update actions (sold/cancelled)
         let payload = {};
         if (new_status === 'cancelled') {
             payload = {
@@ -1218,8 +1274,9 @@ export const updateListingStatus = async (updates) => {
             failedUpdates.push(result);
         }
     });
-    
-    if (totalGoldToCredit > 0) { 
+
+    // Update character gold if there are fees to deduct or gold to credit
+    if (totalGoldToCredit > 0 || totalFeeToDeduct > 0) {
         const { data: characterData, error: fetchGoldError } = await supabase
             .from('characters')
             .select('gold')
@@ -1231,15 +1288,23 @@ export const updateListingStatus = async (updates) => {
             failedUpdates.push({ success: false, id: 'GOLD_UPDATE', error: errorMsg });
             console.error(errorMsg, fetchGoldError);
         } else {
-            const newGold = (characterData.gold || 0) + totalGoldToCredit;
-            
+            const currentGold = characterData.gold || 0;
+
+            // Check if character has enough gold for fees
+            if (totalFeeToDeduct > 0 && currentGold < totalFeeToDeduct) {
+                const errorMsg = `Not enough gold! You need ${totalFeeToDeduct.toLocaleString()} gold for fees but only have ${currentGold.toLocaleString()}.`;
+                return { success: false, error: errorMsg };
+            }
+
+            const newGold = currentGold + totalGoldToCredit - totalFeeToDeduct;
+
             const { error: updateGoldError } = await supabase
                 .from('characters')
                 .update({ gold: newGold })
                 .eq('character_id', currentCharacterId);
 
             if (updateGoldError) {
-                const errorMsg = 'Failed to update character gold balance after bulk sale.';
+                const errorMsg = 'Failed to update character gold balance after bulk update.';
                 failedUpdates.push({ success: false, id: 'GOLD_UPDATE', error: errorMsg });
                 console.error(errorMsg, updateGoldError);
             }

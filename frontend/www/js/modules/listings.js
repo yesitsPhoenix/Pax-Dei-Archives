@@ -117,15 +117,22 @@ function openBulkEditModal(listingIds) {
         <p class="text-gray-300 mb-4">You are editing <strong>${listingIds.length}</strong> active listings.</p>
         <form id="bulk-edit-form" class="space-y-4">
             <div class="form-group">
-                <label for="bulk-status-select" class="block text-sm font-medium text-gray-300">New Status</label>
-                <select id="bulk-status-select" name="new-status" required
+                <label for="bulk-action-select" class="block text-sm font-medium text-gray-300">Bulk Action</label>
+                <select id="bulk-action-select" name="bulk-action" required
                     class="w-full p-2 border rounded-lg bg-gray-700 text-white">
                     <option value="">Select Action</option>
                     <option value="sold">Mark as Sold (Successful Sale)</option>
                     <option value="cancelled">Mark as Cancelled (Removed Listing)</option>
+                    <option value="update-price">Update Price Per Stack</option>
                 </select>
             </div>
 
+            <div id="price-update-container" class="form-group hidden">
+                <label for="bulk-new-price" class="block text-sm font-medium text-gray-300">New Price Per Stack</label>
+                <input type="number" id="bulk-new-price" name="new-price" step="0.01" min="0"
+                    class="w-full p-2 border rounded-lg bg-gray-700 text-white"
+                    placeholder="Enter new price per stack">
+                <p class="text-xs text-gray-400 mt-1">This price will be applied to each selected stack individually</p>
             </div>
 
             <div class="flex justify-end gap-4 mt-6">
@@ -135,7 +142,6 @@ function openBulkEditModal(listingIds) {
                 <button type="button" id="cancelBulkEditBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md">
                     Cancel
                 </button>
-
             </div>
             <p id="bulk-edit-error" class="text-red-500 text-sm mt-2 hidden"></p>
         </form>
@@ -144,9 +150,11 @@ function openBulkEditModal(listingIds) {
     openModal(modalContent);
 
     const form = document.getElementById('bulk-edit-form');
-    const statusSelect = document.getElementById('bulk-status-select');
+    const actionSelect = document.getElementById('bulk-action-select');
+    const priceUpdateContainer = document.getElementById('price-update-container');
+    const newPriceInput = document.getElementById('bulk-new-price');
     const errorMsg = document.getElementById('bulk-edit-error');
-    
+
     const cancelBtn = document.getElementById('cancelBulkEditBtn');
 
     if (cancelBtn) {
@@ -155,22 +163,51 @@ function openBulkEditModal(listingIds) {
         });
     }
 
+    // Show/hide price input based on action selection
+    actionSelect.addEventListener('change', () => {
+        if (actionSelect.value === 'update-price') {
+            priceUpdateContainer.classList.remove('hidden');
+            newPriceInput.required = true;
+        } else {
+            priceUpdateContainer.classList.add('hidden');
+            newPriceInput.required = false;
+        }
+    });
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         errorMsg.classList.add('hidden');
 
-        const newStatus = statusSelect.value;
+        const selectedAction = actionSelect.value;
 
-        if (!newStatus) {
-            errorMsg.textContent = 'Please select a new status.';
+        if (!selectedAction) {
+            errorMsg.textContent = 'Please select an action.';
             errorMsg.classList.remove('hidden');
             return;
         }
 
-        const updates = listingIds.map(id => ({
-            id: id,
-            new_status: newStatus
-        }));
+        let updates;
+
+        if (selectedAction === 'update-price') {
+            const newPrice = parseFloat(newPriceInput.value);
+
+            if (isNaN(newPrice) || newPrice <= 0) {
+                errorMsg.textContent = 'Please enter a valid price greater than 0.';
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            updates = listingIds.map(id => ({
+                id: id,
+                action: 'update-price',
+                new_price: newPrice
+            }));
+        } else {
+            updates = listingIds.map(id => ({
+                id: id,
+                new_status: selectedAction
+            }));
+        }
 
         try {
             const {
@@ -181,9 +218,13 @@ function openBulkEditModal(listingIds) {
             if (success) {
                 closeModal();
 
+                const actionText = selectedAction === 'update-price'
+                    ? 'price updated for'
+                    : selectedAction === 'sold' ? 'marked as sold' : 'cancelled';
+
                 showCustomModal(
                     'Success!',
-                    `Successfully updated <strong>${listingIds.length}</strong> listing(s).`,
+                    `Successfully ${actionText} <strong>${listingIds.length}</strong> listing(s).`,
                     [{
                         text: 'OK',
                         value: 'ok'
