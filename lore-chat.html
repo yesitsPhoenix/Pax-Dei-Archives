@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pax Dei Archives - Lore Keeper</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="frontend/www/css/lore-chat.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+    <script type="module" src="frontend/www/js/supabaseClient.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+<div id="header-placeholder"></div>
+
+    <h1 class="text-xl font-semibold mt-6 mb-3 text-white text-center">Lore Keeper</h1>
+    <div class="h-1 w-24 bg-[#FFD700] mx-auto rounded-full"></div>
+    <p class="text-center text-gray-400 text-sm mt-2 mb-6">Ask the Keeper anything about the world of Pax Dei</p>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="page-content">
+                    <div class="lore-chat-wrapper">
+                        
+                        <!-- Status indicator -->
+                        <div id="lore-chat-status" class="lore-chat-status">
+                            <span class="status-dot" id="status-dot"></span>
+                            <span class="status-text" id="status-text">Checking connection...</span>
+                        </div>
+
+                        <!-- Chat messages area -->
+                        <div class="lore-chat-messages" id="lore-chat-messages">
+                            <!-- Welcome message -->
+                            <div class="chat-message assistant-message">
+                                <div class="message-avatar">
+                                    <i class="fa-solid fa-book-open"></i>
+                                </div>
+                                <div class="message-content">
+                                    <div class="message-sender">Lore Keeper</div>
+                                    <div class="message-text">
+                                        <p>Greetings, seeker. I am the Keeper of the Pax Dei Archives — the chronicler of ages past, the guardian of forgotten truths.</p>
+                                        <p>Ask of me what you will — of the Nine Creations that came before, of the Redeemers who shaped the world, of the factions that rose and fell, or of the writings that survived the Great Cataclysm.</p>
+                                        <p>I speak only what the Archives record. No more, no less.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Suggested questions -->
+                        <div class="lore-chat-suggestions" id="lore-chat-suggestions">
+                            <button class="suggestion-chip" data-question="What happened before the Tenth Creation?">
+                                <i class="fa-solid fa-hourglass-half"></i> Before the Tenth Creation
+                            </button>
+                            <button class="suggestion-chip" data-question="Tell me about the Redeemers and their roles.">
+                                <i class="fa-solid fa-hand-holding-heart"></i> The Redeemers
+                            </button>
+                            <button class="suggestion-chip" data-question="Who are the Fay and where did they come from?">
+                                <i class="fa-solid fa-feather"></i> The Fay
+                            </button>
+                            <button class="suggestion-chip" data-question="What is the Cult of Zeb?">
+                                <i class="fa-solid fa-skull"></i> Cult of Zeb
+                            </button>
+                            <button class="suggestion-chip" data-question="Tell me about Thelonius the Scribe.">
+                                <i class="fa-solid fa-pen-nib"></i> Thelonius the Scribe
+                            </button>
+                            <button class="suggestion-chip" data-question="What was the Great Cataclysm?">
+                                <i class="fa-solid fa-bolt"></i> The Great Cataclysm
+                            </button>
+                        </div>
+
+                        <!-- Input area -->
+                        <div class="lore-chat-input-area">
+                            <div class="lore-chat-input-wrapper">
+                                <textarea 
+                                    id="lore-chat-input" 
+                                    class="lore-chat-input" 
+                                    placeholder="Ask the Lore Keeper a question..."
+                                    rows="1"
+                                    maxlength="500"
+                                ></textarea>
+                                <button id="lore-chat-send" class="lore-chat-send" title="Send message" disabled>
+                                    <i class="fa-solid fa-paper-plane"></i>
+                                </button>
+                            </div>
+                            <div class="lore-chat-footer">
+                                <span class="char-count"><span id="char-count">0</span>/500</span>
+                                <span class="powered-by">Powered by local AI · <a href="lore.html">Browse Lore</a></span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="floating-avatar-container">
+        <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar js-floating-avatar">
+    </div>
+
+    <div id="auth-modal">
+        <div class="modal-content-wrapper" id="modal-content-wrapper">
+        </div>
+    </div>
+    <div id="ability-popup-overlay" class="popup-overlay"></div>
+    
+    <div id="footer-placeholder"></div>
+    <script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
+    <script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script type="module" src="frontend/www/js/main.js"></script>
+    <script type="module" src="frontend/www/js/lore/loreChat.js"></script>
+    <script type="module" src="frontend/www/js/popoutAuth.js"></script>
+</body>
+</html>

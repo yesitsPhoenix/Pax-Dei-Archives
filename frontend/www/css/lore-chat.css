@@ -1,0 +1,411 @@
+/* lore-chat.css — Pax Dei Archives Lore Keeper Chat */
+
+.lore-chat-wrapper {
+    max-width: 860px;
+    margin: 0 auto 40px;
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 240px);
+    min-height: 500px;
+    background-color: #1A202C;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* Status bar */
+.lore-chat-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 12px;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #666;
+    transition: background-color 0.3s ease;
+}
+
+.status-dot.connected {
+    background-color: #4ade80;
+    box-shadow: 0 0 6px rgba(74, 222, 128, 0.4);
+}
+
+.status-dot.disconnected {
+    background-color: #ef4444;
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
+}
+
+.status-dot.loading {
+    background-color: #fbbf24;
+    animation: pulse-dot 1.5s infinite;
+}
+
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+.status-text {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Messages area */
+.lore-chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    scroll-behavior: smooth;
+}
+
+.lore-chat-messages::-webkit-scrollbar {
+    width: 6px;
+}
+
+.lore-chat-messages::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.lore-chat-messages::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+}
+
+.lore-chat-messages::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* Individual message */
+.chat-message {
+    display: flex;
+    gap: 12px;
+    max-width: 100%;
+    animation: message-in 0.3s ease-out;
+}
+
+@keyframes message-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.message-avatar {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+
+.assistant-message .message-avatar {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(218, 165, 32, 0.15));
+    color: #FFD700;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.user-message .message-avatar {
+    background: rgba(99, 102, 241, 0.15);
+    color: #818cf8;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.message-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.message-sender {
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.assistant-message .message-sender {
+    color: #FFD700;
+}
+
+.user-message .message-sender {
+    color: #818cf8;
+}
+
+.message-text {
+    color: rgba(255, 255, 255, 0.85);
+    line-height: 1.65;
+    font-size: 14px;
+}
+
+.message-text p {
+    margin-bottom: 8px;
+}
+
+.message-text p:last-child {
+    margin-bottom: 0;
+}
+
+.message-text strong {
+    color: #FFD700;
+    font-weight: 600;
+}
+
+.message-text em {
+    color: rgba(255, 255, 255, 0.7);
+    font-style: italic;
+}
+
+.message-text blockquote {
+    border-left: 3px solid rgba(255, 215, 0, 0.4);
+    padding-left: 12px;
+    margin: 8px 0;
+    color: rgba(255, 255, 255, 0.65);
+    font-style: italic;
+}
+
+.message-text ul, .message-text ol {
+    padding-left: 20px;
+    margin: 8px 0;
+}
+
+.message-text li {
+    margin-bottom: 4px;
+}
+
+.message-text h1, .message-text h2, .message-text h3, .message-text h4 {
+    color: #FFD700;
+    margin-top: 12px;
+    margin-bottom: 6px;
+}
+
+/* Typing indicator */
+.typing-indicator {
+    display: flex;
+    gap: 4px;
+    padding: 4px 0;
+}
+
+.typing-indicator span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #FFD700;
+    opacity: 0.4;
+    animation: typing-bounce 1.4s infinite;
+}
+
+.typing-indicator span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typing-bounce {
+    0%, 60%, 100% { opacity: 0.4; transform: translateY(0); }
+    30% { opacity: 1; transform: translateY(-4px); }
+}
+
+/* Suggested questions */
+.lore-chat-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.suggestion-chip {
+    background: rgba(255, 215, 0, 0.08);
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    color: rgba(255, 255, 255, 0.7);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Poppins', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.suggestion-chip:hover {
+    background: rgba(255, 215, 0, 0.15);
+    border-color: rgba(255, 215, 0, 0.4);
+    color: #FFD700;
+}
+
+.suggestion-chip i {
+    font-size: 10px;
+    color: rgba(255, 215, 0, 0.5);
+}
+
+.lore-chat-suggestions.hidden {
+    display: none;
+}
+
+/* Input area */
+.lore-chat-input-area {
+    padding: 12px 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: rgba(0, 0, 0, 0.15);
+}
+
+.lore-chat-input-wrapper {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    padding: 8px 12px;
+    transition: border-color 0.2s ease;
+}
+
+.lore-chat-input-wrapper:focus-within {
+    border-color: rgba(255, 215, 0, 0.4);
+}
+
+.lore-chat-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #fff;
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px;
+    resize: none;
+    max-height: 120px;
+    line-height: 1.5;
+    padding: 4px 0;
+}
+
+.lore-chat-input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.lore-chat-send {
+    background: rgba(255, 215, 0, 0.15);
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    color: #FFD700;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    font-size: 14px;
+}
+
+.lore-chat-send:hover:not(:disabled) {
+    background: rgba(255, 215, 0, 0.25);
+    border-color: #FFD700;
+}
+
+.lore-chat-send:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.lore-chat-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 4px 0;
+}
+
+.char-count {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.25);
+}
+
+.powered-by {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.25);
+}
+
+.powered-by a {
+    color: rgba(255, 215, 0, 0.5);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.powered-by a:hover {
+    color: #FFD700;
+}
+
+/* Error message styling */
+.chat-error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin: 8px 0;
+    font-size: 13px;
+    color: #fca5a5;
+}
+
+.chat-error i {
+    margin-right: 6px;
+}
+
+/* Streaming cursor */
+.streaming-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 14px;
+    background-color: #FFD700;
+    margin-left: 2px;
+    vertical-align: text-bottom;
+    animation: cursor-blink 0.8s infinite;
+}
+
+@keyframes cursor-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .lore-chat-wrapper {
+        height: calc(100vh - 200px);
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        margin-bottom: 0;
+    }
+
+    .lore-chat-messages {
+        padding: 14px;
+    }
+
+    .suggestion-chip {
+        font-size: 11px;
+        padding: 5px 10px;
+    }
+
+    .lore-chat-suggestions {
+        padding: 10px 14px;
+    }
+}
