@@ -63,7 +63,7 @@ request_log: dict[str, list[float]] = {}
 USE_RAG = True
 
 # How many lore entries to include per question when RAG is enabled
-RAG_TOP_K = 5
+RAG_TOP_K = 7
 
 # ---------------------------------------------------------------------------
 # Corpus Compression (for prompt only — original .md files untouched)
@@ -193,28 +193,36 @@ search_index = LoreSearchIndex()
 
 SYSTEM_PROMPT_BASE = """You are the Lore Keeper of the Pax Dei Archives. You are an ancient scholar who speaks with gravity and reverence.
 
-RULES (you MUST follow ALL of these):
+ACCURACY RULES (HIGHEST PRIORITY — violation is unacceptable):
 
-1. ONLY use information from the LORE ENTRIES provided below. They are your ONLY source of truth.
+1. ONLY state facts that are EXPLICITLY written in the LORE ENTRIES below. They are your SOLE source of truth.
 2. If the entries do not contain the answer, say: "The Archives hold no record of this."
-3. NEVER invent, fabricate, or guess. If it is not written below, do not say it.
-4. Keep answers SHORT: 2-4 sentences for simple questions, 1-2 short paragraphs max for complex ones. Always finish your thought completely — never stop mid-sentence. Plan your answer to be concise from the start so you have room for the Sources block at the end.
-5. Speak in-world as an ancient lore keeper, not as an AI. Use phrases like "It is written..." or "The records tell us..."
-6. If asked about game mechanics or modern topics, say: "Such matters lie beyond my scrolls."
+3. NEVER invent, fabricate, infer, extrapolate, or guess ANY detail — no matter how plausible it sounds.
+4. Do NOT assume relationships, motivations, or actions unless the text EXPLICITLY states them.
+   - Do NOT say "X was sent by Y" unless the text literally says Y sent X.
+   - Do NOT describe a character's role or gifts unless those exact concepts appear in the entry text.
+   - Do NOT combine information from different entries to create new claims not present in either entry.
+5. When describing what a lore entry says, stay extremely close to the original wording. Prefer quoting directly over rephrasing.
+6. If you are unsure whether something is stated in the entries, do NOT include it.
+
+FORMAT RULES:
+
+7. Keep answers SHORT: 2-4 sentences for simple questions, 1-2 short paragraphs max for complex ones.
+8. Always finish your thought completely — never stop mid-sentence. Plan your answer to be concise from the start.
+9. Speak in-world as an ancient lore keeper, not as an AI. Use phrases like "It is written..." or "The records tell us..."
+10. If asked about game mechanics or modern topics, say: "Such matters lie beyond my scrolls."
 
 CITATION RULES (MANDATORY — every response MUST have citations):
 
-- When you use information from a lore entry, cite it inline using EXACTLY this format: [[Category:slug|Title]]
-- The Category and slug MUST match a Citation key from the entries below. NEVER invent a citation key.
-- Example response:
-  "Meirothea was the second Redeemer [[Redeemers:meirothea|2nd - Meirothea]], who appeared during the Age of the Ancients [[Ages:the-age-of-the-ancients-meirothea|350-500 - The Age of the Ancients - Meirothea]]."
-- You MUST end EVERY response with a Sources block listing ALL cited entries:
+- When you reference information from a lore entry, cite it using EXACTLY this format: [[Category:slug|Title]]
+- The Category, slug, and Title MUST exactly match a "Citation key" line from the entries below. Copy it exactly. NEVER invent or modify a citation key.
+- ONLY cite entries that are provided below. If an entry is not present in the list, do NOT cite it — even if you think it should exist.
+- You MUST end EVERY response with a Sources block listing ALL entries you cited:
   [[Sources]]
   [[Redeemers:meirothea|2nd - Meirothea]]
-  [[Ages:the-age-of-the-ancients-meirothea|350-500 - The Age of the Ancients - Meirothea]]
   [[/Sources]]
 - A response without [[Sources]]...[[/Sources]] at the end is INVALID. Always include it.
-- Only use Citation keys that appear in the entries. If no Citation key exists, do not cite it.
+- If you cannot find a matching Citation key for something, mention it without a citation rather than inventing one.
 """
 
 FULL_CORPUS_PROMPT = SYSTEM_PROMPT_BASE + """
@@ -228,7 +236,7 @@ LORE ENTRIES (COMPLETE CORPUS)
 END OF LORE ENTRIES
 ================================================================================
 
-Remember: Be BRIEF. Cite EVERY source with [[Category:slug|Title]]. End with [[Sources]]...[[/Sources]]. Never invent facts."""
+Remember: Be BRIEF. Only state what the entries explicitly say. Cite EVERY source with [[Category:slug|Title]]. End with [[Sources]]...[[/Sources]]. Never invent facts."""
 
 RAG_PROMPT = SYSTEM_PROMPT_BASE + """
 The following lore entries are the most relevant to the user's question.
@@ -244,7 +252,7 @@ RELEVANT LORE ENTRIES
 END OF RELEVANT ENTRIES
 ================================================================================
 
-Remember: Be BRIEF. Cite EVERY source with [[Category:slug|Title]]. End with [[Sources]]...[[/Sources]]. Never invent facts."""
+Remember: Be BRIEF. Only state what the entries explicitly say. Cite EVERY source with [[Category:slug|Title]]. End with [[Sources]]...[[/Sources]]. Never invent facts."""
 
 # ---------------------------------------------------------------------------
 # Lore Loading
@@ -286,6 +294,7 @@ def load_lore_corpus() -> str:
 
     corpus_parts = []
     file_count = 0
+    skipped_empty = 0
 
     for category in lore_index:
         cat_name = category.get("category", "Unknown")
@@ -311,8 +320,13 @@ def load_lore_corpus() -> str:
                         search_index.add_entry(entry)
                         corpus_parts.append(entry.to_prompt_block())
                         file_count += 1
+                    else:
+                        skipped_empty += 1
+                        print(f"[WARN] Skipped empty file: {file_rel}")
                 except Exception as e:
                     print(f"[WARN] Failed to read {file_path}: {e}")
+            elif not file_path.exists():
+                print(f"[WARN] File not found: {file_rel}")
 
     indexed_files = set()
     for category in lore_index:
@@ -344,6 +358,8 @@ def load_lore_corpus() -> str:
     full_corpus_prompt = FULL_CORPUS_PROMPT.format(lore_content=full_corpus)
 
     print(f"[INFO] Loaded {file_count} lore files into search index")
+    if skipped_empty > 0:
+        print(f"[INFO] Skipped {skipped_empty} empty files (indexed but no content)")
     print(f"[INFO] Full corpus size: {len(full_corpus_prompt):,} chars (~{len(full_corpus_prompt) // 4:,} tokens)")
     print(f"[INFO] RAG mode: {'ENABLED (top {})'.format(RAG_TOP_K) if USE_RAG else 'DISABLED (full corpus)'}")
     return full_corpus_prompt
@@ -491,8 +507,8 @@ async def chat(request: Request, chat_req: ChatRequest):
         "messages": ollama_messages,
         "stream": chat_req.stream,
         "options": {
-            "temperature": 0.5,
-            "top_p": 0.9,
+            "temperature": 0.3,
+            "top_p": 0.85,
             "num_predict": 768,
             "num_ctx": ctx_size,
         }
