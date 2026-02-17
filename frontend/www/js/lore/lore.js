@@ -1,13 +1,21 @@
-// lore.js - reads from Supabase lore_items table
+// lore.js - Lore Wiki powered by Supabase
 import { supabase } from '../supabaseClient.js';
 
-// ── Markdown renderer ──────────────────────────────────────────────
+// ── Markdown renderer ──────────────────────────────────────────
 const renderMarkdown = (md) => {
+    if (!md) return '';
     if (typeof marked === 'undefined') return `<p>${md}</p>`;
     return marked.parse(md);
 };
 
-// ── URL helpers ───────────────────────────────────────────────────
+// Strip HTML for previews
+const stripHtml = (html) => {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+};
+
+// ── URL helpers ───────────────────────────────────────────────
 function getQueryParams() {
     const params = {};
     const qs = window.location.search.substring(1);
@@ -27,10 +35,27 @@ function updateUrl(category, itemSlug = null) {
     window.history.pushState({ category, item: itemSlug }, '', newUrl);
 }
 
-// ── Supabase queries ───────────────────────────────────────────────
+// ── Category icon mapping ──────────────────────────────────────
+function getCategoryIcon(category) {
+    switch (category) {
+        case 'World':         return 'fa-earth-americas';
+        case 'Divine':        return 'fa-star';
+        case 'Factions':      return 'fa-users-gear';
+        case 'Known Figures': return 'fa-user-tie';
+        case 'Ages':          return 'fa-hourglass-half';
+        case 'Redeemers':     return 'fa-hand-holding-heart';
+        case 'Writings':      return 'fa-pen-nib';
+        case 'Magic':         return 'fa-wand-magic-sparkles';
+        case 'Geography':     return 'fa-mountain-sun';
+        default:              return 'fa-book';
+    }
+}
+
+// ── Supabase queries with caching ──────────────────────────────
 let categoriesCache = null;
-let itemsCache = {};     // { [category]: items[] }
-let itemDetailCache = {}; // { [slug]: item }
+let itemsCache = {};
+let itemDetailCache = {};
+let allItemsCache = null;
 
 async function fetchCategories() {
     if (categoriesCache) return categoriesCache;
@@ -39,16 +64,25 @@ async function fetchCategories() {
         .select('category')
         .order('category', { ascending: true });
     if (error) { console.error('Error fetching categories:', error); return []; }
-    const unique = [...new Set(data.map(r => r.category).filter(Boolean))];
-    categoriesCache = unique;
-    return unique;
+    categoriesCache = [...new Set(data.map(r => r.category).filter(Boolean))];
+    return categoriesCache;
+}
+
+async function fetchCategoryCounts() {
+    const cats = await fetchCategories();
+    const counts = {};
+    for (const cat of cats) {
+        const items = await fetchItemsByCategory(cat);
+        counts[cat] = items.length;
+    }
+    return counts;
 }
 
 async function fetchItemsByCategory(category) {
     if (itemsCache[category]) return itemsCache[category];
     const { data, error } = await supabase
         .from('lore_items')
-        .select('id, title, slug, sort_order')
+        .select('id, title, slug, sort_order, content, author, date')
         .eq('category', category)
         .order('sort_order', { ascending: true })
         .order('title', { ascending: true });
@@ -69,243 +103,334 @@ async function fetchItemDetail(slug) {
     return data;
 }
 
-// ── Category icon mapping ──────────────────────────────────────────
-function getCategoryIcon(category) {
-    switch (category) {
-        case 'World':        return 'fa-earth-americas';
-        case 'Divine':       return 'fa-star';
-        case 'Factions':     return 'fa-users-gear';
-        case 'Known Figures':return 'fa-user-tie';
-        case 'Ages':         return 'fa-hourglass-half';
-        case 'Redeemers':    return 'fa-hand-holding-heart';
-        case 'Writings':     return 'fa-pen-nib';
-        case 'Magic':        return 'fa-wand-magic-sparkles';
-        case 'Geography':    return 'fa-mountain-sun';
-        default:             return 'fa-book';
+async function fetchAllItems() {
+    if (allItemsCache) return allItemsCache;
+    const { data, error } = await supabase
+        .from('lore_items')
+        .select('id, title, slug, category')
+        .order('category')
+        .order('title');
+    if (error) { console.error('Error fetching all items:', error); return []; }
+    allItemsCache = data || [];
+    return allItemsCache;
+}
+
+// ── Build Breadcrumbs ──────────────────────────────────────────
+function renderBreadcrumbs(category, itemTitle) {
+    const el = document.getElementById('lore-breadcrumbs');
+    if (!el) return;
+
+    let html = `<a href="lore.html" class="breadcrumb-link"><i class="fa-solid fa-book-open" style="margin-right: 4px;"></i>Lore</a>`;
+
+    if (category) {
+        html += `<span class="separator"><i class="fa-solid fa-chevron-right" style="font-size: 9px;"></i></span>`;
+        html += `<a href="lore.html?category=${encodeURIComponent(category)}" class="breadcrumb-link">${category}</a>`;
     }
+
+    if (itemTitle) {
+        html += `<span class="separator"><i class="fa-solid fa-chevron-right" style="font-size: 9px;"></i></span>`;
+        html += `<span class="current">${itemTitle}</span>`;
+    }
+
+    el.innerHTML = html;
 }
 
-// ── Render small category cards ────────────────────────────────────
-async function renderSmallCategoryCards(selectedCategory = null) {
-    const container = $('#small-lore-category-cards');
-    container.empty();
-    const categories = await fetchCategories();
-    categories.forEach(cat => {
-        const icon = getCategoryIcon(cat);
-        const active = selectedCategory === cat ? 'active-small-card' : '';
-        container.append(`
-            <div class="col-auto">
-                <div class="feature-card small-feature-card ${active}">
-                    <a href="lore.html?category=${encodeURIComponent(cat)}">
-                        <i class="fa-solid ${icon}"></i>
-                        <h5>${cat}</h5>
-                    </a>
-                </div>
-            </div>
-        `);
-    });
-}
+// ── Build Sidebar ──────────────────────────────────────────────
+async function buildSidebar(selectedCategory, selectedSlug) {
+    const catList = document.getElementById('lore-category-list');
+    const itemList = document.getElementById('lore-item-list');
 
-// ── Build sidebar category list ────────────────────────────────────
-async function buildSidebarCategories(selectedCategory) {
-    const list = $('#lore-category-list');
-    list.empty();
+    // Categories
+    catList.innerHTML = '';
     const categories = await fetchCategories();
-    if (!categories.length) { list.append('<li>No categories found.</li>'); return; }
     categories.forEach(cat => {
         const active = selectedCategory === cat ? 'active-lore-category' : '';
-        list.append(`<li><a href="lore.html?category=${encodeURIComponent(cat)}" class="${active}">${cat}</a></li>`);
+        const icon = getCategoryIcon(cat);
+        const li = document.createElement('li');
+        li.innerHTML = `<a href="lore.html?category=${encodeURIComponent(cat)}" class="${active}"><i class="fa-solid ${icon}" style="width: 16px; margin-right: 6px; font-size: 11px; opacity: 0.6;"></i>${cat}</a>`;
+        catList.appendChild(li);
     });
-}
 
-// ── Build sidebar items list ───────────────────────────────────────
-async function buildSidebarItems(category, selectedSlug) {
-    const list = $('#lore-item-list');
-    list.empty();
-    if (!category) { list.append('<li>Select a category.</li>'); return; }
-    const items = await fetchItemsByCategory(category);
-    if (!items.length) { list.append('<li>No entries in this category.</li>'); return; }
+    // Items
+    itemList.innerHTML = '';
+    if (!selectedCategory) {
+        itemList.innerHTML = '<li style="padding: 0.5rem 0.75rem; color: #4B5563; font-size: 13px;">Select a category</li>';
+        return;
+    }
+
+    const items = await fetchItemsByCategory(selectedCategory);
+    if (!items.length) {
+        itemList.innerHTML = '<li style="padding: 0.5rem 0.75rem; color: #4B5563; font-size: 13px;">No entries found</li>';
+        return;
+    }
+
     items.forEach(item => {
         const active = selectedSlug === item.slug ? 'active-lore-item' : '';
-        list.append(`<li><a href="lore.html?category=${encodeURIComponent(category)}&item=${encodeURIComponent(item.slug)}" class="${active}">${item.title}</a></li>`);
+        const li = document.createElement('li');
+        li.innerHTML = `<a href="lore.html?category=${encodeURIComponent(selectedCategory)}&item=${encodeURIComponent(item.slug)}" class="${active}">${item.title}</a>`;
+        itemList.appendChild(li);
     });
 }
 
-// ── Render main content area ───────────────────────────────────────
-async function renderMainContent(category, slug) {
-    const main = $('#dynamic-lore-main-content');
-    main.empty();
+// ── Category Pill Bar ──────────────────────────────────────────
+async function renderCategoryBar(selectedCategory) {
+    const bar = document.getElementById('lore-category-bar');
+    if (!bar) return;
 
-    if (!slug) {
-        main.html(`
-            <div class="lore-item-header">
-                <h4>${category ? category + ' Archives' : 'Lore Archives'}</h4>
-            </div>
-            <div class="lore-no-content-message">
-                ${category ? 'Select an entry from the "Entries" sidebar to view its content.' : '<h3>Welcome to the Lore Archives.</h3><p>Please select a category to begin exploring the world\'s history.</p>'}
-            </div>
-        `);
-        return;
-    }
+    const categories = await fetchCategories();
+    bar.innerHTML = '';
 
-    main.html('<div class="lore-loading-indicator">Loading entry...</div>');
-    const item = await fetchItemDetail(slug);
-
-    if (!item) {
-        main.html('<div class="lore-no-content-message">Lore entry not found. Please select an entry from the list.</div>');
-        return;
-    }
-
-    // Build meta section
-    let metaHtml = '';
-    if (item.author)      metaHtml += `<p><strong>Author:</strong> ${item.author}</p>`;
-    if (item.titles)      metaHtml += `<p><strong>Titles:</strong> ${item.titles}</p>`;
-    if (item.association) metaHtml += `<p><strong>Association:</strong> ${item.association}</p>`;
-    if (item.date)        metaHtml += `<p><strong>Date:</strong> ${item.date}</p>`;
-    if (item.known_works) metaHtml += `<p><strong>Known Works:</strong> ${renderMarkdown(item.known_works)}</p>`;
-
-    // Build sources/research footer
-    let footerHtml = '';
-    if (item.sources || item.research) {
-        footerHtml = `
-            <div class="lore-item-footer">
-                <h5>Sources & Research Notes</h5>
-                ${item.sources  ? `<p><strong>Source(s):</strong> ${renderMarkdown(item.sources)}</p>` : ''}
-                ${item.research ? `<p><strong>Future Research/Notes/Cross References:</strong> ${renderMarkdown(item.research)}</p>` : ''}
-            </div>
-        `;
-    }
-
-    main.html(`
-        <div class="lore-item-header">
-            <h4>${item.title}</h4>
-            ${metaHtml ? `<div class="lore-meta">${metaHtml}</div>` : ''}
-        </div>
-        <div class="lore-item-content">
-            ${renderMarkdown(item.content || '')}
-        </div>
-        ${footerHtml}
-    `);
+    categories.forEach(cat => {
+        const icon = getCategoryIcon(cat);
+        const active = selectedCategory === cat ? 'active' : '';
+        const pill = document.createElement('a');
+        pill.href = `lore.html?category=${encodeURIComponent(cat)}`;
+        pill.className = `lore-category-pill ${active}`;
+        pill.innerHTML = `<i class="fa-solid ${icon}"></i> ${cat}`;
+        bar.appendChild(pill);
+    });
 }
 
-// ── Main display function ──────────────────────────────────────────
-async function displayLoreContent(category, slug = null) {
-    const categoriesSection = $('#lore-categories-section');
-    const contentWrapper    = $('#dynamic-lore-content-wrapper');
+// ── Build Infobox ──────────────────────────────────────────────
+function buildInfobox(item) {
+    const rows = [];
 
-    if (!category && !slug) {
-        categoriesSection.show();
-        contentWrapper.hide();
-        $('#small-lore-category-cards').empty();
-        return;
-    }
+    if (item.titles)      rows.push({ label: 'Titles', value: item.titles });
+    if (item.association) rows.push({ label: 'Association', value: item.association });
+    if (item.author)      rows.push({ label: 'Author', value: item.author });
+    if (item.date)        rows.push({ label: 'Date', value: item.date });
+    if (item.known_works) rows.push({ label: 'Known Works', value: item.known_works });
 
-    categoriesSection.hide();
-    contentWrapper.show();
+    if (rows.length === 0) return '';
 
-    await Promise.all([
-        buildSidebarCategories(category),
-        buildSidebarItems(category, slug),
-        renderMainContent(category, slug),
-        renderSmallCategoryCards(category)
-    ]);
+    const rowsHtml = rows.map(r =>
+        `<div class="lore-infobox-row">
+            <div class="lore-infobox-label">${r.label}</div>
+            <div class="lore-infobox-value">${r.value}</div>
+        </div>`
+    ).join('');
+
+    return `<div class="lore-infobox">
+        <div class="lore-infobox-title">${item.title}</div>
+        ${rowsHtml}
+    </div>`;
 }
 
-// ── On DOM ready ──────────────────────────────────────────────────
-$(document).ready(async function() {
-    const params = getQueryParams();
-    let category = params.category || null;
-    let slug = params.item || null;
+// ── Build Cross References ─────────────────────────────────────
+async function buildCrossReferences(currentItem) {
+    const allItems = await fetchAllItems();
 
-    // If we have a category but no slug, load the first item
-    if (category && !slug) {
-        const items = await fetchItemsByCategory(category);
-        if (items.length > 0) {
-            slug = items[0].slug;
-            updateUrl(category, slug);
-        }
-    }
+    // Find items in the same category (excluding current)
+    const sameCategory = allItems.filter(i =>
+        i.category === currentItem.category && i.slug !== currentItem.slug
+    );
 
-    await displayLoreContent(category, slug);
-
-    // ── Populate main category cards dynamically (if empty) ──────
-    // The hardcoded cards in lore.html still work; this adds any new categories
-    const categoriesSection = document.getElementById('lore-categories-section');
-    if (categoriesSection) {
-        const existingCategories = [...categoriesSection.querySelectorAll('.feature-card a')].map(a => {
-            const url = new URL(a.href, window.location.origin);
-            return url.searchParams.get('category');
-        });
-        const allCats = await fetchCategories();
-        const missing = allCats.filter(c => !existingCategories.includes(c));
-        if (missing.length > 0) {
-            const row = categoriesSection.querySelector('.row');
-            if (row) {
-                missing.forEach(cat => {
-                    const icon = getCategoryIcon(cat);
-                    const col = document.createElement('div');
-                    col.className = 'col-lg-2 col-md-4 col-sm-6';
-                    col.innerHTML = `
-                        <div class="feature-card">
-                            <a href="lore.html?category=${encodeURIComponent(cat)}">
-                                <i class="fa-solid ${icon}"></i>
-                                <h5>${cat}</h5>
-                            </a>
-                        </div>
-                    `;
-                    row.appendChild(col);
-                });
+    // Scan content for references to other entry titles
+    const contentRefs = [];
+    if (currentItem.content) {
+        const contentLower = currentItem.content.toLowerCase();
+        for (const item of allItems) {
+            if (item.slug === currentItem.slug) continue;
+            if (item.title.length < 4) continue;
+            if (contentLower.includes(item.title.toLowerCase())) {
+                contentRefs.push(item);
             }
         }
     }
 
-    // ── Click handlers ────────────────────────────────────────────
-    async function handleCategoryClick(e, anchor) {
-        e.preventDefault();
-        const href = anchor.getAttribute('href');
-        const url = new URL(href, window.location.origin);
-        const newCat = url.searchParams.get('category');
-        let newSlug = null;
+    // Combine and deduplicate
+    const seen = new Set();
+    const related = [];
 
-        // Invalidate items cache for fresh load
-        delete itemsCache[newCat];
-        const items = await fetchItemsByCategory(newCat);
-        if (items.length > 0) newSlug = items[0].slug;
-
-        updateUrl(newCat, newSlug);
-        displayLoreContent(newCat, newSlug);
+    // Content references first (more relevant)
+    for (const item of contentRefs) {
+        if (!seen.has(item.slug)) {
+            seen.add(item.slug);
+            related.push(item);
+        }
     }
 
-    $(document).on('click', '#lore-categories-section .feature-card a', function(e) {
-        handleCategoryClick(e, this);
+    // Then same-category items
+    for (const item of sameCategory) {
+        if (!seen.has(item.slug) && related.length < 12) {
+            seen.add(item.slug);
+            related.push(item);
+        }
+    }
+
+    if (related.length === 0) return '';
+
+    const linksHtml = related.map(item => {
+        const icon = getCategoryIcon(item.category);
+        return `<a class="lore-see-also-link" href="lore.html?category=${encodeURIComponent(item.category)}&item=${encodeURIComponent(item.slug)}">
+            <i class="fa-solid ${icon}"></i> ${item.title}
+        </a>`;
+    }).join('');
+
+    return `<div class="lore-see-also">
+        <h4><i class="fa-solid fa-link" style="margin-right: 6px;"></i>Related Entries</h4>
+        <div class="lore-see-also-grid">${linksHtml}</div>
+    </div>`;
+}
+
+// ── Render Category Landing Page ───────────────────────────────
+async function renderCategoryLanding(category) {
+    const main = document.getElementById('lore-content-area');
+    const items = await fetchItemsByCategory(category);
+
+    const cardsHtml = items.map(item => {
+        const preview = item.content ? stripHtml(renderMarkdown(item.content)).substring(0, 120) + '...' : 'No content yet.';
+        const meta = [];
+        if (item.author) meta.push(item.author);
+        if (item.date) meta.push(item.date);
+
+        return `<a class="lore-entry-card" href="lore.html?category=${encodeURIComponent(category)}&item=${encodeURIComponent(item.slug)}">
+            <h5>${item.title}</h5>
+            <div class="entry-preview">${preview}</div>
+            ${meta.length ? `<div class="entry-meta">${meta.join(' · ')}</div>` : ''}
+        </a>`;
+    }).join('');
+
+    main.innerHTML = `
+        <div class="lore-category-landing">
+            <h3>${category}</h3>
+            <div class="lore-category-count">${items.length} ${items.length === 1 ? 'entry' : 'entries'}</div>
+            <div class="lore-entry-cards">${cardsHtml}</div>
+        </div>
+    `;
+}
+
+// ── Render Article Detail ──────────────────────────────────────
+async function renderArticle(slug, category) {
+    const main = document.getElementById('lore-content-area');
+    main.innerHTML = '<div class="lore-loading-indicator"><i class="fa-solid fa-spinner fa-spin"></i>Loading entry...</div>';
+
+    const item = await fetchItemDetail(slug);
+
+    if (!item) {
+        main.innerHTML = '<div class="lore-no-content-message">Lore entry not found. Please select an entry from the sidebar.</div>';
+        return;
+    }
+
+    // Infobox
+    const infoboxHtml = buildInfobox(item);
+
+    // Sources / research footer
+    let footerHtml = '';
+    if (item.sources || item.research) {
+        footerHtml = `<div class="lore-article-footer">
+            <h4><i class="fa-solid fa-scroll" style="margin-right: 6px;"></i>Sources & Research</h4>
+            ${item.sources ? `<div class="footer-section"><strong>Sources:</strong><br>${renderMarkdown(item.sources)}</div>` : ''}
+            ${item.research ? `<div class="footer-section"><strong>Research Notes:</strong><br>${renderMarkdown(item.research)}</div>` : ''}
+        </div>`;
+    }
+
+    // Cross references (built async)
+    const crossRefsHtml = await buildCrossReferences(item);
+
+    main.innerHTML = `
+        <div class="lore-article-header">
+            <div class="lore-article-category"><i class="fa-solid ${getCategoryIcon(item.category)}" style="margin-right: 4px;"></i>${item.category}</div>
+            <h2>${item.title}</h2>
+        </div>
+        <div class="lore-article-body">
+            ${infoboxHtml}
+            ${renderMarkdown(item.content || '')}
+        </div>
+        ${footerHtml}
+        ${crossRefsHtml}
+    `;
+}
+
+// ── Render Home (no category selected) ─────────────────────────
+async function renderHome() {
+    const main = document.getElementById('lore-content-area');
+    const categories = await fetchCategories();
+    const counts = await fetchCategoryCounts();
+
+    const cardsHtml = categories.map(cat => {
+        const icon = getCategoryIcon(cat);
+        return `<a class="lore-home-card" href="lore.html?category=${encodeURIComponent(cat)}">
+            <i class="fa-solid ${icon}"></i>
+            <h5>${cat}</h5>
+            <div class="card-count">${counts[cat] || 0} entries</div>
+        </a>`;
+    }).join('');
+
+    main.innerHTML = `
+        <div style="text-align: center; padding: 1rem 0;">
+            <h2 style="font-size: 1.25rem; font-weight: 600; color: #6B7280; max-width: 500px; margin: 0 auto 1.5rem;">Select a category to explore the collected histories, writings, and figures of the world.</h2>
+        </div>
+        <div class="lore-home-cards">${cardsHtml}</div>
+    `;
+}
+
+// ── Main Display Function ──────────────────────────────────────
+async function displayLoreContent(category, slug) {
+    const container = document.getElementById('lore-wiki-container');
+    const categoryBar = document.getElementById('lore-category-bar');
+    const breadcrumbs = document.getElementById('lore-breadcrumbs');
+
+    // Always show the wiki container
+    container.style.display = '';
+
+    if (!category && !slug) {
+        // Home view — hide sidebar, show category cards in main area
+        document.getElementById('lore-sidebar').style.display = 'none';
+        if (categoryBar) categoryBar.style.display = 'none';
+        if (breadcrumbs) breadcrumbs.style.display = 'none';
+        await renderHome();
+        return;
+    }
+
+    // Show sidebar and bar
+    document.getElementById('lore-sidebar').style.display = '';
+    if (categoryBar) categoryBar.style.display = '';
+    if (breadcrumbs) breadcrumbs.style.display = '';
+
+    // Build sidebar
+    await buildSidebar(category, slug);
+    await renderCategoryBar(category);
+
+    if (category && !slug) {
+        // Category landing page
+        renderBreadcrumbs(category, null);
+        await renderCategoryLanding(category);
+    } else if (category && slug) {
+        // Article detail
+        const item = await fetchItemDetail(slug);
+        renderBreadcrumbs(category, item ? item.title : slug);
+        await renderArticle(slug, category);
+    }
+}
+
+// ── Init ──────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async function () {
+    const params = getQueryParams();
+    const category = params.category || null;
+    const slug = params.item || null;
+
+    await displayLoreContent(category, slug);
+
+    // Delegate all lore link clicks
+    document.addEventListener('click', function (e) {
+        const anchor = e.target.closest('a[href^="lore.html"]');
+        if (anchor) {
+            e.preventDefault();
+            const url = new URL(anchor.getAttribute('href'), window.location.origin);
+            const newCat = url.searchParams.get('category');
+            const newSlug = url.searchParams.get('item');
+            updateUrl(newCat, newSlug);
+            displayLoreContent(newCat, newSlug);
+
+            const scrollArea = document.getElementById('lore-content-area');
+            if (scrollArea) scrollArea.scrollTop = 0;
+        }
     });
 
-    $(document).on('click', '#small-lore-category-cards .feature-card a, #lore-category-list a', function(e) {
-        handleCategoryClick(e, this);
-    });
-
-    $(document).on('click', '#lore-item-list a', async function(e) {
-        e.preventDefault();
-        const url = new URL($(this).attr('href'), window.location.origin);
-        const newCat  = url.searchParams.get('category');
-        const newSlug = url.searchParams.get('item');
-        updateUrl(newCat, newSlug);
-        displayLoreContent(newCat, newSlug);
-    });
-
-    // ── Popstate (browser back/forward) ───────────────────────────
-    window.onpopstate = async function() {
+    // Popstate (browser back/forward)
+    window.onpopstate = async function () {
         const p = getQueryParams();
-        if (!p.category && !p.item) {
-            displayLoreContent(null, null);
-            return;
-        }
-        let cat  = p.category || null;
-        let slug = p.item || null;
-        if (cat && !slug) {
-            const items = await fetchItemsByCategory(cat);
-            if (items.length > 0) slug = items[0].slug;
-        }
-        displayLoreContent(cat, slug);
+        await displayLoreContent(p.category || null, p.item || null);
     };
 });
