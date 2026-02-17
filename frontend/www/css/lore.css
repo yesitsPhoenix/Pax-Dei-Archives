@@ -238,6 +238,33 @@
     color: #E5E7EB;
 }
 
+.lore-infobox-value ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.lore-infobox-value ul li {
+    margin-bottom: 0.2rem;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.lore-infobox-value a {
+    color: #63B3ED;
+    text-decoration: none;
+    transition: color 0.15s;
+}
+
+.lore-infobox-value a:hover {
+    color: #FFD700;
+    text-decoration: underline;
+}
+
+.lore-infobox-value p {
+    margin: 0;
+}
+
 @media (max-width: 768px) {
     .lore-infobox {
         float: none;
@@ -251,6 +278,7 @@
     font-size: 15px;
     line-height: 1.85;
     color: #D1D5DB;
+    overflow: hidden;
 }
 
 .lore-article-body p {
@@ -385,6 +413,7 @@
 
 /* ── Sources & Research Footer ──────────────────────────────── */
 .lore-article-footer {
+    clear: both;
     margin-top: 2rem;
     padding-top: 1.5rem;
     border-top: 1px solid #374151;
@@ -422,6 +451,7 @@
 
 /* ── Cross References / See Also ────────────────────────────── */
 .lore-see-also {
+    clear: both;
     margin-top: 2rem;
     padding-top: 1.5rem;
     border-top: 1px solid #374151;

@@ -199,14 +199,14 @@ function buildInfobox(item) {
     if (item.association) rows.push({ label: 'Association', value: item.association });
     if (item.author)      rows.push({ label: 'Author', value: item.author });
     if (item.date)        rows.push({ label: 'Date', value: item.date });
-    if (item.known_works) rows.push({ label: 'Known Works', value: item.known_works });
+    if (item.known_works) rows.push({ label: 'Known Works', value: renderMarkdown(item.known_works), isHtml: true });
 
     if (rows.length === 0) return '';
 
     const rowsHtml = rows.map(r =>
         `<div class="lore-infobox-row">
             <div class="lore-infobox-label">${r.label}</div>
-            <div class="lore-infobox-value">${r.value}</div>
+            <div class="lore-infobox-value">${r.isHtml ? r.value : r.value}</div>
         </div>`
     ).join('');
 
