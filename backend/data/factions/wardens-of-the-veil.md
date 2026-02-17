@@ -1,0 +1,3 @@
+* **Origin:** A visible order of builders and protectors founded upon the teachings of **Eleleth**.
+* **Purpose:** They were the architects of the **glyph-marked towers** raised along the thresholds of the Ley Lines to prevent the encroachment of the underworld.
+* **Current Status:** While most of their great towers now stand as ruins or have been corrupted, the "Silent Crusade" they once led remains the blueprint for modern fellowships attempting to seal the rifts of the Great Cataclysm.

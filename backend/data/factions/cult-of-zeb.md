@@ -1,0 +1,3 @@
+* **Origin:** A corruptive fellowship dedicated to **Zeb, the Prince of Gluttony**, gaining strength as the abundance of the Age of Demira turned into indulgence.
+* **Nature:** They represent the "rotting root" of society, driven by an unslakable hunger and the desire to hoard wealth and sustenance while others starve.
+* **Current Status:** They operate within the **Rivulets** and deeper **Temples**, serving the cursed Prince who bears a shard of Demira’s spirit as "burning iron in the soul."

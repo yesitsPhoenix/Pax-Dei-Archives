@@ -1,0 +1,3 @@
+* **Origin:** A secretive order born from the teachings of **Eleleth, the Seventh Redeemer**, during the Age of the Kingdoms.
+* **Purpose:** They focus on the subtle protection of the spirit, specializing in warding dreams and stitching charms into garments to shield individuals from unseen corruption.
+* **Current Status:** Known as the "quieter" counterpart to the Wardens of the Veil, they have largely vanished from the public eye, though their charms and protective signs are still whispered of by drifters and the faithful.

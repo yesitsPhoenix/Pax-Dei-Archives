@@ -190,9 +190,9 @@
         "research": null
       },
       {
-        "slug": "merlin-the-bard-of-lyonnesse",
-        "title": "Merlin, The Bard of Lyonnesse",
-        "file": "known-figures/merlin-the-bard-of-lyonnesse.md",
+        "slug": "merlin-the-bard-of-lyonesse",
+        "title": "Merlin, The Bard of Lyonesse",
+        "file": "known-figures/merlin-the-bard-of-lyonesse.md",
         "author": null,
         "date": null,
         "sources": null,
@@ -336,27 +336,9 @@
     "category": "World",
     "items": [
       {
-        "slug": "of-the-world-itself",
-        "title": "Of the World Itself",
-        "file": "world/of-the-world-itself.md",
-        "author": null,
-        "date": null,
-        "sources": null,
-        "research": null
-      },
-      {
-        "slug": "of-pax-dei",
-        "title": "Of Pax Dei",
-        "file": "world/of-pax-dei.md",
-        "author": null,
-        "date": null,
-        "sources": null,
-        "research": null
-      },
-      {
-        "slug": "the-four-kindgoms",
-        "title": "The Four Kindgoms",
-        "file": "world/the-four-kindgoms.md",
+        "slug": "the-four-kingdoms",
+        "title": "The Four Kingdoms",
+        "file": "world/the-four-kingdoms.md",
         "author": null,
         "date": null,
         "sources": null,

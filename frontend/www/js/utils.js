@@ -178,20 +178,22 @@ export const updateUtcClock = (element) => {
             setInterval(() => updateUtcClock(utcClockDisplay), 1000);
         }
         
-        $('.menu-trigger').on('click', function() {
-            $(this).toggleClass('active');
-            $('.header-area .nav').toggleClass('active');
-        });
-    
-        $('a[href*="#"]:not([href="#"])').on('click', function() {
-            if (location.pathname.replace(/^\//, '') == this.pathname.replace(/^\//, '') && location.hostname == this.hostname) {
-                var target = $(this.hash);
-                target = target.length ? target : $('[name=' + this.hash.slice(1) + ']');
-                if (target.length) {
-                    $('html, body').animate({
-                        scrollTop: target.offset().top - 80
-                    }, 1000);
-                    return false;
+        if (typeof $ !== 'undefined') {
+            $('.menu-trigger').on('click', function() {
+                $(this).toggleClass('active');
+                $('.header-area .nav').toggleClass('active');
+            });
+        
+            $('a[href*="#"]:not([href="#"])').on('click', function() {
+                if (location.pathname.replace(/^\//, '') == this.pathname.replace(/^\//, '') && location.hostname == this.hostname) {
+                    var target = $(this.hash);
+                    target = target.length ? target : $('[name=' + this.hash.slice(1) + ']');
+                    if (target.length) {
+                        $('html, body').animate({
+                            scrollTop: target.offset().top - 80
+                        }, 1000);
+                        return false;
+                    }
                 }
-            }
-        });
+            });
+        }

@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pax Dei Archives - Edit Lore</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="frontend/www/css/popout.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        /* ── Layout ───────────────────────────────────────────── */
+        .edit-lore-layout {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 24px;
+            align-items: start;
+        }
+        @media (max-width: 900px) {
+            .edit-lore-layout { grid-template-columns: 1fr; }
+        }
+
+        /* ── Sidebar ─────────────────────────────────────────── */
+        .lore-sidebar {
+            background: #1a202c;
+            border: 1px solid #374151;
+            border-radius: 12px;
+            overflow: hidden;
+            position: sticky;
+            top: 16px;
+            max-height: calc(100vh - 120px);
+            display: flex;
+            flex-direction: column;
+        }
+        .lore-sidebar-header {
+            padding: 14px 16px;
+            border-bottom: 1px solid #374151;
+            background: #111827;
+        }
+        .lore-sidebar-search {
+            width: 100%;
+            background: #111827;
+            border: 1px solid #4b5563;
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: #e5e7eb;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .lore-sidebar-search:focus { border-color: #FFD700; }
+        .category-filter {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            padding: 10px 16px;
+            border-bottom: 1px solid #374151;
+        }
+        .cat-btn {
+            padding: 3px 10px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid #374151;
+            background: #111827;
+            color: #9ca3af;
+            transition: all 0.15s;
+        }
+        .cat-btn:hover { border-color: #FFD700; color: #FFD700; }
+        .cat-btn.active { background: #FFD700; color: #000; border-color: #FFD700; }
+        .lore-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 0;
+        }
+        .lore-list-item {
+            padding: 10px 16px;
+            cursor: pointer;
+            border-left: 3px solid transparent;
+            transition: all 0.15s;
+        }
+        .lore-list-item:hover { background: #1f2937; border-left-color: #4b5563; }
+        .lore-list-item.active { background: #1f2937; border-left-color: #FFD700; }
+        .lore-list-item .item-title { font-size: 13px; color: #e5e7eb; font-weight: 500; }
+        .lore-list-item .item-cat { font-size: 11px; color: #6b7280; margin-top: 2px; }
+        .new-item-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: #111827;
+            border-top: 1px solid #374151;
+            color: #FFD700;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .new-item-btn:hover { background: #1f2937; }
+
+        /* ── Form area ────────────────────────────────────────── */
+        .form-panel {
+            background: #1a202c;
+            border: 1px solid #374151;
+            border-radius: 12px;
+            padding: 28px;
+        }
+        .form-group { margin-bottom: 20px; }
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+        }
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            background: #111827;
+            border: 1px solid #374151;
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: #e5e7eb;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: #FFD700; }
+        .form-textarea {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            resize: vertical;
+            min-height: 320px;
+        }
+        .form-select option { background: #1a202c; }
+
+        /* ── Markdown preview ─────────────────────────────────── */
+        .preview-tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+        .preview-tab {
+            padding: 6px 14px;
+            border-radius: 6px 6px 0 0;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid #374151;
+            border-bottom: none;
+            color: #6b7280;
+            background: #111827;
+            transition: all 0.15s;
+        }
+        .preview-tab.active { color: #e5e7eb; background: #1f2937; border-color: #4b5563; }
+        .preview-content {
+            background: #111827;
+            border: 1px solid #374151;
+            border-radius: 0 8px 8px 8px;
+            padding: 16px;
+            min-height: 320px;
+            font-size: 14px;
+            line-height: 1.7;
+            color: #d1d5db;
+        }
+        .preview-content h1, .preview-content h2, .preview-content h3,
+        .preview-content h4, .preview-content h5 {
+            color: #f9fafb; font-weight: 700; margin: 16px 0 8px;
+        }
+        .preview-content p { margin: 8px 0; }
+        .preview-content blockquote {
+            border-left: 3px solid #FFD700;
+            margin: 12px 0;
+            padding: 8px 16px;
+            background: #1a202c;
+            color: #9ca3af;
+            font-style: italic;
+            border-radius: 0 8px 8px 0;
+        }
+        .preview-content strong { color: #FFD700; }
+        .preview-content a { color: #60a5fa; }
+        .preview-content hr { border-color: #374151; margin: 16px 0; }
+        .preview-content ul, .preview-content ol { padding-left: 20px; margin: 8px 0; }
+        .preview-content li { margin: 4px 0; }
+        .preview-content sup { color: #fbbf24; font-size: 11px; }
+        .preview-content code { background: #1f2937; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+
+        /* ── Buttons ─────────────────────────────────────────── */
+        .btn-save {
+            padding: 12px 28px;
+            background: #FFD700;
+            color: #000;
+            font-weight: 800;
+            border-radius: 9999px;
+            font-size: 14px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .btn-save:hover { background: #fbbf24; transform: scale(1.02); }
+        .btn-save:active { transform: scale(0.98); }
+        .btn-save:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-delete {
+            padding: 12px 28px;
+            background: #374151;
+            color: #ef4444;
+            font-weight: 700;
+            border-radius: 9999px;
+            font-size: 14px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: 1px solid #4b5563;
+        }
+        .btn-delete:hover { background: #fee2e2; color: #dc2626; border-color: #ef4444; transform: scale(1.02); }
+        .btn-cancel {
+            padding: 12px 28px;
+            background: #374151;
+            color: #9ca3af;
+            font-weight: 700;
+            border-radius: 9999px;
+            font-size: 14px;
+            text-transform: uppercase;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .btn-cancel:hover { background: #4b5563; color: #e5e7eb; }
+
+        /* ── Toast ─────────────────────────────────────────────── */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 14px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 9999;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            transform: translateX(120%);
+            transition: transform 0.3s ease;
+        }
+        .toast.show { transform: translateX(0); }
+        .toast.success { background: #065f46; color: #6ee7b7; border: 1px solid #059669; }
+        .toast.error   { background: #7f1d1d; color: #fca5a5; border: 1px solid #dc2626; }
+
+        /* ── Confirmation modal ──────────────────────────────── */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 200; backdrop-filter: blur(4px);
+        }
+        .modal-box {
+            background: #1f2937; border: 1px solid #374151;
+            border-radius: 20px; padding: 32px; max-width: 420px;
+            width: calc(100% - 40px);
+        }
+
+        /* Scrollbar */
+        .lore-list::-webkit-scrollbar { width: 4px; }
+        .lore-list::-webkit-scrollbar-track { background: transparent; }
+        .lore-list::-webkit-scrollbar-thumb { background: #374151; border-radius: 2px; }
+
+        /* Conditional fields */
+        .meta-section {
+            background: #111827;
+            border: 1px solid #1f2937;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        .meta-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 14px;
+        }
+        .field-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        @media (max-width: 640px) { .field-grid-2 { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div id="header-placeholder"></div>
+
+<div class="container py-8">
+    <div class="mb-6">
+        <h1 class="text-xl font-semibold text-white">Edit Lore</h1>
+        <div class="h-1 w-16 bg-[#FFD700] rounded-full mt-2"></div>
+    </div>
+
+    <div class="edit-lore-layout">
+
+        <!-- ── Sidebar ───────────────────────────────────────── -->
+        <div class="lore-sidebar">
+            <div class="new-item-btn" onclick="newItem()" style="border-top: none; border-bottom: 1px solid #374151;">
+                <i class="fa-solid fa-plus"></i> New Lore Entry
+            </div>
+            <div class="lore-sidebar-header">
+                <input type="text" id="sidebar-search" class="lore-sidebar-search" placeholder="Search entries..." oninput="filterList()">
+            </div>
+            <div class="category-filter" id="cat-filters">
+                <button class="cat-btn active" data-cat="all" onclick="setCatFilter('all', this)">All</button>
+            </div>
+            <div class="lore-list" id="lore-list">
+                <div class="p-4 text-gray-500 text-sm text-center">Loading entries...</div>
+            </div>
+        </div>
+
+        <!-- ── Form panel ────────────────────────────────────── -->
+        <div class="form-panel" id="form-panel">
+            <!-- Empty state -->
+            <div id="empty-state" class="flex flex-col items-center justify-center py-20 text-center">
+                <i class="fa-solid fa-book-open text-4xl text-gray-600 mb-4"></i>
+                <p class="text-gray-500">Select an entry from the sidebar to edit, or create a new one.</p>
+            </div>
+
+            <!-- Edit form (hidden until item selected) -->
+            <div id="edit-form" class="hidden">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-lg font-bold text-white" id="form-title">New Lore Entry</h2>
+                    <div class="flex items-center gap-2">
+                        <span id="entry-id-badge" class="hidden text-xs text-gray-500 font-mono bg-gray-800 px-2 py-1 rounded">ID: —</span>
+                        <a id="view-link" href="#" target="_blank" class="hidden text-xs text-blue-400 hover:text-blue-300 transition-colors">
+                            <i class="fa-solid fa-arrow-up-right-from-square mr-1"></i>View
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Core fields -->
+                <div class="field-grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Title *</label>
+                        <input type="text" id="field-title" class="form-input" placeholder="Entry title" oninput="autoSlug()">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Slug *</label>
+                        <input type="text" id="field-slug" class="form-input" placeholder="url-safe-slug">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Category *</label>
+                    <input type="text" id="field-category" class="form-input" placeholder="e.g. Ages, Writings, Known Figures..." list="category-datalist" onchange="updateMetaFields()">
+                    <datalist id="category-datalist"></datalist>
+                    <p class="text-xs text-gray-500 mt-1">Determines which section this entry appears in. Must match exactly.</p>
+                </div>
+
+                <!-- Metadata (conditional by category) -->
+                <div class="meta-section">
+                    <div class="meta-section-title"><i class="fa-solid fa-tags mr-1"></i> Metadata</div>
+
+                    <!-- Writings / general author info -->
+                    <div id="meta-author-date" class="field-grid-2">
+                        <div class="form-group mb-0">
+                            <label class="form-label">Author</label>
+                            <input type="text" id="field-author" class="form-input" placeholder="Author name">
+                        </div>
+                        <div class="form-group mb-0">
+                            <label class="form-label">Date / Time Period</label>
+                            <input type="text" id="field-date" class="form-input" placeholder="e.g. Winter of Year 3999">
+                        </div>
+                    </div>
+
+                    <!-- Known Figures specific -->
+                    <div id="meta-figure-fields" class="hidden mt-3">
+                        <div class="field-grid-2">
+                            <div class="form-group mb-0">
+                                <label class="form-label">Titles / Honorifics</label>
+                                <input type="text" id="field-titles" class="form-input" placeholder="e.g. Last Keeper of Hidden Light">
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="form-label">Association</label>
+                                <input type="text" id="field-association" class="form-input" placeholder="e.g. Scriptorium of Lunthyr">
+                            </div>
+                        </div>
+                        <div class="form-group mb-0 mt-3">
+                            <label class="form-label">Known Works</label>
+                            <input type="text" id="field-known-works" class="form-input" placeholder="Brief list of known works">
+                        </div>
+                    </div>
+
+                    <!-- Sources -->
+                    <div class="form-group mt-3 mb-0">
+                        <label class="form-label">Sources</label>
+                        <input type="text" id="field-sources" class="form-input" placeholder="URL or citation">
+                    </div>
+
+                    <!-- Research notes -->
+                    <div class="form-group mt-3 mb-0">
+                        <label class="form-label">Research / Notes / Cross-References</label>
+                        <textarea id="field-research" class="form-textarea" style="min-height:80px;" placeholder="Internal notes, numbered research points, cross-references..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Sort order -->
+                <div class="form-group" style="max-width: 160px;">
+                    <label class="form-label">Sort Order</label>
+                    <input type="number" id="field-sort-order" class="form-input" value="0" min="0">
+                </div>
+
+                <!-- Content / Markdown -->
+                <div class="form-group">
+                    <label class="form-label">Content (Markdown)</label>
+                    <div class="preview-tabs">
+                        <button class="preview-tab active" id="tab-edit" onclick="switchTab('edit')"><i class="fa-solid fa-code mr-1"></i>Edit</button>
+                        <button class="preview-tab" id="tab-preview" onclick="switchTab('preview')"><i class="fa-solid fa-eye mr-1"></i>Preview</button>
+                        <button class="preview-tab" id="tab-split" onclick="switchTab('split')"><i class="fa-solid fa-columns mr-1"></i>Split</button>
+                    </div>
+
+                    <div id="edit-mode">
+                        <textarea id="field-content" class="form-textarea" style="min-height:400px;" placeholder="Markdown content..." oninput="updatePreview()"></textarea>
+                    </div>
+                    <div id="preview-mode" class="hidden">
+                        <div class="preview-content" id="preview-render"></div>
+                    </div>
+                    <div id="split-mode" class="hidden" style="display:none; grid-template-columns:1fr 1fr; gap:8px;">
+                        <textarea id="field-content-split" class="form-textarea" style="min-height:400px;" oninput="syncSplit()"></textarea>
+                        <div class="preview-content" id="preview-render-split" style="max-height:500px; overflow-y:auto;"></div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex flex-wrap gap-3 items-center justify-between pt-4 border-t border-gray-700">
+                    <div class="flex gap-3">
+                        <button class="btn-save" id="save-btn" onclick="saveItem()">
+                            <i class="fa-solid fa-floppy-disk mr-2"></i> Save Entry
+                        </button>
+                        <button class="btn-cancel" onclick="clearForm()">Cancel</button>
+                    </div>
+                    <button class="btn-delete hidden" id="delete-btn" onclick="confirmDelete()">
+                        <i class="fa-solid fa-trash mr-2"></i> Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Confirm delete modal -->
+<div id="confirm-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+        <h3 class="text-lg font-bold text-[#FFD700] mb-2">Delete Lore Entry</h3>
+        <p class="text-gray-300 mb-6">Are you sure you want to permanently delete <strong id="delete-title" class="text-white"></strong>? This cannot be undone.</p>
+        <div class="flex gap-3 justify-end">
+            <button onclick="document.getElementById('confirm-modal').classList.add('hidden')" class="btn-cancel">Cancel</button>
+            <button onclick="deleteItem()" class="px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-sm uppercase transition-colors">Delete</button>
+        </div>
+    </div>
+</div>
+
+<div id="footer-placeholder"></div>
+<div id="floating-avatar-container">
+    <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar js-floating-avatar">
+</div>
+
+<div id="auth-modal">
+    <div class="modal-content-wrapper" id="modal-content-wrapper"></div>
+</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
+<script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
+<script type="module" src="frontend/www/js/popoutAuth.js"></script>
+<script type="module" src="frontend/www/js/main.js"></script>
+<script type="module" src="frontend/www/js/lore/editLore.js"></script>
+<script type="module">
+    import { setupAdminAuthListener } from './frontend/www/js/admin/adminManager.js';
+    setupAdminAuthListener();
+</script>
+</body>
+</html>

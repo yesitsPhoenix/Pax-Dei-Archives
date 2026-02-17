@@ -1,3 +1,3 @@
-Established by Pope Malhenus
-
-> Pope Malhenus established the Inquisition. Its structure echoed the armies of Anatolia, a gesture meant to honor the Eastern Kingdom. In truth, it hollowed it. The finest soldiers pledged not to king or country, but to doctrine. Within a generation, the Inquisition became the greatest military power in the realm.
+* **Origin:** Founded by **Pope Malhenus** to serve as the military arm of the Holy See, echoing the martial discipline of Anatolia.
+* **Nature:** A dominant military and political force that enforces strict religious doctrine through fear and the **Seal of Condemnation**.
+* **Current Status:** In the wake of the Cataclysm, they have become antagonists to the **Scions** and the **Righteous Houses**, branding any who operate outside Papal law as heretics to be "unmade."

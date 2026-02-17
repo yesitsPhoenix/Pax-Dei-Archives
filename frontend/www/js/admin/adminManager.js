@@ -5,7 +5,7 @@ export async function handleAdminAccess(user) {
     const path = window.location.pathname;
     const currentPage = path.split('/').pop().toLowerCase() || 'index.html';
     
-    const publicPages = ['quests.html', 'chronicles.html', 'redeem.html', 'index.html', ''];
+    const publicPages = ['quests.html', 'chronicles.html', 'redeem.html', 'index.html', 'lore.html', ''];
 
     try {
         const { data, error } = await supabase
@@ -21,7 +21,8 @@ export async function handleAdminAccess(user) {
                 'edit-quest-nav',
                 'character-container',
                 'edit-features-nav',
-                'quest-flow-nav'
+                'quest-flow-nav',
+                'edit-lore-nav'
             ];
 
             adminElements.forEach(id => {
@@ -48,7 +49,7 @@ export function setupAdminAuthListener() {
     supabase.auth.onAuthStateChange((event, session) => {
         const path = window.location.pathname;
         const currentPage = path.split('/').pop().toLowerCase() || 'index.html';
-        const publicPages = ['quests.html', 'chronicles.html', 'redeem.html', 'index.html', ''];
+        const publicPages = ['quests.html', 'chronicles.html', 'redeem.html', 'index.html', 'lore.html', 'edit_lore.html', 'edit_quest.html', ''];
 
         if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
             if (session?.user) {
