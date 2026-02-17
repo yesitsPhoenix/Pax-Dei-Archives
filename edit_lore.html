@@ -285,6 +285,74 @@
         }
         .field-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
         @media (max-width: 640px) { .field-grid-2 { grid-template-columns: 1fr; } }
+
+        /* ── Related Entries Picker ─────────────────────────── */
+        .related-search-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #111827;
+            border: 1px solid #4b5563;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            max-height: 220px;
+            overflow-y: auto;
+            z-index: 50;
+            scrollbar-width: thin;
+            scrollbar-color: #FFD700 #111827;
+        }
+        .related-search-dropdown.hidden { display: none; }
+        .related-search-item {
+            padding: 8px 14px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #d1d5db;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.1s;
+        }
+        .related-search-item:hover { background: #1f2937; }
+        .related-search-item .item-cat-badge {
+            font-size: 10px;
+            color: #6b7280;
+            background: #1f2937;
+            padding: 2px 8px;
+            border-radius: 9999px;
+        }
+        .related-search-item:hover .item-cat-badge { background: #374151; }
+        .related-pills-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 10px;
+            min-height: 28px;
+        }
+        .related-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #FFD700;
+        }
+        .related-pill .pill-cat {
+            font-size: 10px;
+            color: #6b7280;
+        }
+        .related-pill .pill-remove {
+            cursor: pointer;
+            color: #9ca3af;
+            font-size: 11px;
+            transition: color 0.15s;
+            margin-left: 2px;
+        }
+        .related-pill .pill-remove:hover { color: #ef4444; }
     </style>
 </head>
 <body>
@@ -369,35 +437,50 @@
                         </div>
                     </div>
 
-                    <!-- Known Figures specific -->
-                    <div id="meta-figure-fields" class="hidden mt-3">
+                    <!-- Extended metadata (shown for all categories) -->
+                    <div id="meta-figure-fields" class="mt-3">
                         <div class="field-grid-2">
                             <div class="form-group mb-0">
                                 <label class="form-label">Titles / Honorifics</label>
                                 <input type="text" id="field-titles" class="form-input" placeholder="e.g. Last Keeper of Hidden Light">
+                                <p class="text-xs text-gray-600 mt-1">Supports markdown links</p>
                             </div>
                             <div class="form-group mb-0">
                                 <label class="form-label">Association</label>
-                                <input type="text" id="field-association" class="form-input" placeholder="e.g. Scriptorium of Lunthyr">
+                                <input type="text" id="field-association" class="form-input" placeholder="e.g. [Armozel](lore.html?category=Redeemers&item=armozel)">
+                                <p class="text-xs text-gray-600 mt-1">Supports markdown links</p>
                             </div>
                         </div>
                         <div class="form-group mb-0 mt-3">
                             <label class="form-label">Known Works</label>
-                            <input type="text" id="field-known-works" class="form-input" placeholder="Brief list of known works">
+                            <textarea id="field-known-works" class="form-textarea" style="min-height:100px;" placeholder="- [Work Title](lore.html?category=Writings&item=slug)"></textarea>
+                            <p class="text-xs text-gray-600 mt-1">Markdown list of works. Rendered in the wiki infobox.</p>
                         </div>
                     </div>
 
                     <!-- Sources -->
                     <div class="form-group mt-3 mb-0">
                         <label class="form-label">Sources</label>
-                        <input type="text" id="field-sources" class="form-input" placeholder="URL or citation">
+                        <textarea id="field-sources" class="form-textarea" style="min-height:80px;" placeholder="URLs or citations (markdown supported)"></textarea>
                     </div>
 
                     <!-- Research notes -->
                     <div class="form-group mt-3 mb-0">
-                        <label class="form-label">Research / Notes / Cross-References</label>
-                        <textarea id="field-research" class="form-textarea" style="min-height:80px;" placeholder="Internal notes, numbered research points, cross-references..."></textarea>
+                        <label class="form-label">Research / Notes</label>
+                        <textarea id="field-research" class="form-textarea" style="min-height:80px;" placeholder="Internal notes, numbered research points..."></textarea>
                     </div>
+                </div>
+
+                <!-- Related Entries picker -->
+                <div class="meta-section">
+                    <div class="meta-section-title"><i class="fa-solid fa-link mr-1"></i> Related Entries</div>
+                    <p class="text-xs text-gray-500 mb-3">Manually curate which entries appear in the "Related Entries" section. Search and click to add.</p>
+                    <div style="position: relative;">
+                        <input type="text" id="related-search" class="form-input" placeholder="Search entries to add..." autocomplete="off">
+                        <div id="related-search-results" class="related-search-dropdown hidden"></div>
+                    </div>
+                    <div id="related-pills" class="related-pills-container"></div>
+                    <input type="hidden" id="field-related-entries" value="">
                 </div>
 
                 <!-- Sort order -->

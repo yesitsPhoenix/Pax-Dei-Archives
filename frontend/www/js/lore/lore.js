@@ -195,18 +195,18 @@ async function renderCategoryBar(selectedCategory) {
 function buildInfobox(item) {
     const rows = [];
 
-    if (item.titles)      rows.push({ label: 'Titles', value: item.titles });
-    if (item.association) rows.push({ label: 'Association', value: item.association });
-    if (item.author)      rows.push({ label: 'Author', value: item.author });
+    if (item.titles)      rows.push({ label: 'Titles', value: renderMarkdown(item.titles) });
+    if (item.association) rows.push({ label: 'Association', value: renderMarkdown(item.association) });
+    if (item.author)      rows.push({ label: 'Author', value: renderMarkdown(item.author) });
     if (item.date)        rows.push({ label: 'Date', value: item.date });
-    if (item.known_works) rows.push({ label: 'Known Works', value: renderMarkdown(item.known_works), isHtml: true });
+    if (item.known_works) rows.push({ label: 'Known Works', value: renderMarkdown(item.known_works) });
 
     if (rows.length === 0) return '';
 
     const rowsHtml = rows.map(r =>
         `<div class="lore-infobox-row">
             <div class="lore-infobox-label">${r.label}</div>
-            <div class="lore-infobox-value">${r.isHtml ? r.value : r.value}</div>
+            <div class="lore-infobox-value">${r.value}</div>
         </div>`
     ).join('');
 
@@ -216,46 +216,19 @@ function buildInfobox(item) {
     </div>`;
 }
 
-// ── Build Cross References ─────────────────────────────────────
+// ── Build Cross References (manual from related_entries field) ──
 async function buildCrossReferences(currentItem) {
+    if (!currentItem.related_entries) return '';
+
+    const slugs = currentItem.related_entries.split(',').map(s => s.trim()).filter(Boolean);
+    if (slugs.length === 0) return '';
+
     const allItems = await fetchAllItems();
-
-    // Find items in the same category (excluding current)
-    const sameCategory = allItems.filter(i =>
-        i.category === currentItem.category && i.slug !== currentItem.slug
-    );
-
-    // Scan content for references to other entry titles
-    const contentRefs = [];
-    if (currentItem.content) {
-        const contentLower = currentItem.content.toLowerCase();
-        for (const item of allItems) {
-            if (item.slug === currentItem.slug) continue;
-            if (item.title.length < 4) continue;
-            if (contentLower.includes(item.title.toLowerCase())) {
-                contentRefs.push(item);
-            }
-        }
-    }
-
-    // Combine and deduplicate
-    const seen = new Set();
     const related = [];
 
-    // Content references first (more relevant)
-    for (const item of contentRefs) {
-        if (!seen.has(item.slug)) {
-            seen.add(item.slug);
-            related.push(item);
-        }
-    }
-
-    // Then same-category items
-    for (const item of sameCategory) {
-        if (!seen.has(item.slug) && related.length < 12) {
-            seen.add(item.slug);
-            related.push(item);
-        }
+    for (const slug of slugs) {
+        const item = allItems.find(i => i.slug === slug);
+        if (item) related.push(item);
     }
 
     if (related.length === 0) return '';
@@ -320,7 +293,7 @@ async function renderArticle(slug, category) {
     if (item.sources || item.research) {
         footerHtml = `<div class="lore-article-footer">
             <h4><i class="fa-solid fa-scroll" style="margin-right: 6px;"></i>Sources & Research</h4>
-            ${item.sources ? `<div class="footer-section"><strong>Sources:</strong><br>${renderMarkdown(item.sources)}</div>` : ''}
+            ${item.sources ? `<div class="footer-section">${renderMarkdown(item.sources)}</div>` : ''}
             ${item.research ? `<div class="footer-section"><strong>Research Notes:</strong><br>${renderMarkdown(item.research)}</div>` : ''}
         </div>`;
     }

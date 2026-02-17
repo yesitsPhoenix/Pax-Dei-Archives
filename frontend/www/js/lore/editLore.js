@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadAllItems() {
     const { data, error } = await supabase
         .from('lore_items')
-        .select('id, title, slug, category, author, date, titles, association, known_works, sources, research, sort_order, content, created_at, updated_at')
+        .select('id, title, slug, category, author, date, titles, association, known_works, sources, research, related_entries, sort_order, content, created_at, updated_at')
         .order('category', { ascending: true })
         .order('sort_order', { ascending: true })
         .order('title', { ascending: true });
@@ -150,6 +150,8 @@ async function selectItem(item) {
     document.getElementById('field-research').value = item.research || '';
     document.getElementById('field-sort-order').value = item.sort_order ?? 0;
     document.getElementById('field-content').value = item.content || '';
+    document.getElementById('field-related-entries').value = item.related_entries || '';
+    renderRelatedPills();
 
     updateMetaFields();
     updatePreview();
@@ -186,6 +188,8 @@ window.newItem = function() {
     document.getElementById('field-research').value = '';
     document.getElementById('field-sort-order').value = 0;
     document.getElementById('field-content').value = '';
+    document.getElementById('field-related-entries').value = '';
+    renderRelatedPills();
 
     updateMetaFields();
     updatePreview();
@@ -218,14 +222,8 @@ window.autoSlug = function() {
 
 // ── Show/hide meta fields based on category ───────────────────────
 window.updateMetaFields = function() {
-    const cat = document.getElementById('field-category').value.toLowerCase().trim();
-    const figureFields = document.getElementById('meta-figure-fields');
-    const isKnownFigure = cat === 'known figures';
-    if (isKnownFigure) {
-        figureFields.classList.remove('hidden');
-    } else {
-        figureFields.classList.add('hidden');
-    }
+    // Metadata fields are now always visible for all categories.
+    // This function is kept for compatibility with existing onchange handlers.
 };
 
 // ── Markdown preview ──────────────────────────────────────────────
@@ -310,9 +308,10 @@ window.saveItem = async function() {
         association: document.getElementById('field-association').value.trim() || null,
         known_works: document.getElementById('field-known-works').value.trim() || null,
         sources:     document.getElementById('field-sources').value.trim() || null,
-        research:    document.getElementById('field-research').value.trim() || null,
-        sort_order:  parseInt(document.getElementById('field-sort-order').value) || 0,
-        updated_at:  new Date().toISOString()
+        research:        document.getElementById('field-research').value.trim() || null,
+        related_entries: document.getElementById('field-related-entries').value.trim() || null,
+        sort_order:      parseInt(document.getElementById('field-sort-order').value) || 0,
+        updated_at:      new Date().toISOString()
     };
 
     try {
@@ -410,3 +409,118 @@ function showToast(message, type = 'success') {
     toast.classList.add('show');
     setTimeout(() => toast.classList.remove('show'), 3500);
 }
+
+// ── Related Entries Picker ─────────────────────────────────────────
+
+function getRelatedSlugs() {
+    const val = document.getElementById('field-related-entries').value.trim();
+    if (!val) return [];
+    return val.split(',').map(s => s.trim()).filter(Boolean);
+}
+
+function setRelatedSlugs(slugs) {
+    document.getElementById('field-related-entries').value = slugs.join(',');
+}
+
+function renderRelatedPills() {
+    const container = document.getElementById('related-pills');
+    const slugs = getRelatedSlugs();
+    container.innerHTML = '';
+
+    if (slugs.length === 0) {
+        container.innerHTML = '<span style="font-size: 12px; color: #4b5563;">No related entries added yet.</span>';
+        return;
+    }
+
+    slugs.forEach(slug => {
+        const item = allItems.find(i => i.slug === slug);
+        const title = item ? item.title : slug;
+        const cat = item ? item.category : '?';
+
+        const pill = document.createElement('span');
+        pill.className = 'related-pill';
+        pill.innerHTML = `
+            ${title}
+            <span class="pill-cat">${cat}</span>
+            <span class="pill-remove" data-slug="${slug}" title="Remove">&times;</span>
+        `;
+        container.appendChild(pill);
+    });
+
+    // Remove handlers
+    container.querySelectorAll('.pill-remove').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const slug = btn.dataset.slug;
+            const updated = getRelatedSlugs().filter(s => s !== slug);
+            setRelatedSlugs(updated);
+            renderRelatedPills();
+        });
+    });
+}
+
+// Search input
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('related-search');
+    const dropdown = document.getElementById('related-search-results');
+    if (!searchInput || !dropdown) return;
+
+    searchInput.addEventListener('input', () => {
+        const query = searchInput.value.trim().toLowerCase();
+        if (query.length < 2) {
+            dropdown.classList.add('hidden');
+            return;
+        }
+
+        const currentSlugs = getRelatedSlugs();
+        const currentSlug = currentItem?.slug;
+
+        const matches = allItems.filter(item => {
+            if (item.slug === currentSlug) return false;
+            if (currentSlugs.includes(item.slug)) return false;
+            return item.title.toLowerCase().includes(query) ||
+                   item.slug.toLowerCase().includes(query) ||
+                   (item.category && item.category.toLowerCase().includes(query));
+        }).slice(0, 10);
+
+        if (matches.length === 0) {
+            dropdown.innerHTML = '<div style="padding: 10px 14px; font-size: 12px; color: #6b7280;">No matches found.</div>';
+            dropdown.classList.remove('hidden');
+            return;
+        }
+
+        dropdown.innerHTML = '';
+        matches.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'related-search-item';
+            div.innerHTML = `
+                <span>${item.title}</span>
+                <span class="item-cat-badge">${item.category}</span>
+            `;
+            div.addEventListener('click', () => {
+                const slugs = getRelatedSlugs();
+                slugs.push(item.slug);
+                setRelatedSlugs(slugs);
+                renderRelatedPills();
+                searchInput.value = '';
+                dropdown.classList.add('hidden');
+            });
+            dropdown.appendChild(div);
+        });
+        dropdown.classList.remove('hidden');
+    });
+
+    // Close dropdown on click outside
+    document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.add('hidden');
+        }
+    });
+
+    // Close on Escape
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            dropdown.classList.add('hidden');
+            searchInput.value = '';
+        }
+    });
+});
