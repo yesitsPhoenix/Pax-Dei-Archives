@@ -1,9 +1,14 @@
-Before Paradise, before even the first breath of mankind, there were others. Many others.
+**Age:** Pre-Creation (The First through Ninth Creations)
 
-The world we walk upon is not the first. This is the **Tenth** Creation, and we are its children, but not the creations firstborn.
+**Redeemer:** Unknown
 
-**Nine** times before, the Divine shaped the tapestry of existence.
+**Sins from past Creations:** Anger (consumed First Creation), Envy (Leviathan), Gluttony, and Levity
 
-Nine times, it unraveled. 
-
-Each Creation was corrupted by a Deadly Sin, rising from within like rot in the root, and each was answered by a Heavenly Virtue, woven into the next.
+**Notable Events & Characteristics:**
+* Our current world is the Tenth Creation; nine previous Creations were shaped and subsequently unraveled due to corruption.
+* Each fallen Creation was theoretically defined by a specific Deadly Sin and answered by a corresponding Heavenly Virtue in the next iteration.
+* The Fay are the "firstborn of an older grace," survivors from a previous fallen world who now reside in hidden realms.
+* Non-human creatures (trolls, ogres, wyverns) are remnants of these shattered ages, some saved by the Fay and others shaped by ancient sin.
+* Some of the ruins of previous Creations are layered physically and spiritually beneath the current world.
+* When sin takes hold in the Creation, it descends through three layers: Rivulets (cultist lairs), Temples (demonic influences), and finally, the point where Creation ends and Hell begins.
+* Descending into the depths of the world is described as "tumbling through the sins of history."

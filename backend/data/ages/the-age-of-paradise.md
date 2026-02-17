@@ -1,20 +1,16 @@
-# Other names: The Tenth Creation
+The era of Creation and the first garden at the heart of the world (Axis Mundi)
 
-<br>
+**Age:** 0-350
 
-# Corrupted by: Anger, the Dark Lord, the Great Deceiver
+**Redeemer:** Protennoia, the First Redeemer
 
-<br>
+**Sins:** Sloth and Lust
 
-# Redeemer: Protennoia
-
-<br>
-
-# Sins that rose:
-- Sloth
-- Lust
-
-# Other notable occurences:
-- Divine root was violated
-- Wild Firsts born out of the calamity of the fall of paradise fell into shadow
-- Some did not fall into shadow but found sanctuaries
+**Notable Events & Characteristics:**
+* Humanity lived in silent harmony with beasts; communication was through shared thought and feeling
+* The world experienced eternal summer and constant light with no night, hunger, cold, or death
+* The Divine Root/Sacred Tree provided eternal youth through golden fruit
+* The violation of the tree by the Firstborn caused the harmony of Paradise to crack and the tree to wither
+* The arrival of the first night brought the first experience of chill and grief
+* The fall resulted in the rise of the "Wild Firsts" (feral humans) and the founding of hidden sanctuaries that preserved memories of the peace
+* Echoes of this age remain in the world's Ley Lines and ancestral memories

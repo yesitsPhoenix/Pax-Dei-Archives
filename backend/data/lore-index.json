@@ -183,7 +183,7 @@
       {
         "slug": "cultists",
         "title": "Cultists",
-        "file": "known-figures/cultists.md",
+        "file": "known-figures/the-cultists.md",
         "author": null,
         "date": null,
         "sources": null,
@@ -193,6 +193,51 @@
         "slug": "merlin-the-bard-of-lyonnesse",
         "title": "Merlin, The Bard of Lyonnesse",
         "file": "known-figures/merlin-the-bard-of-lyonnesse.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "the-fay",
+        "title": "The Fay",
+        "file": "known-figures/the-fay.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "the-inquisition",
+        "title": "The Inquisition",
+        "file": "known-figures/the-inquisition.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "the-princes-of-hell",
+        "title": "The Princes of Hell",
+        "file": "known-figures/the-princes-of-hell.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "the-sons-of-the-light",
+        "title": "The Sons of the Light",
+        "file": "known-figures/the-sons-of-the-light.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "scions",
+        "title": "Scions",
+        "file": "known-figures/scions.md",
         "author": null,
         "date": null,
         "sources": null,
@@ -303,6 +348,33 @@
         "slug": "of-pax-dei",
         "title": "Of Pax Dei",
         "file": "world/of-pax-dei.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "the-four-kindgoms",
+        "title": "The Four Kindgoms",
+        "file": "world/the-four-kindgoms.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "axis-mundi",
+        "title": "Axis Mundi",
+        "file": "world/axis-mundi.md",
+        "author": null,
+        "date": null,
+        "sources": null,
+        "research": null
+      },
+      {
+        "slug": "the-haunted-lands",
+        "title": "The Haunted Lands",
+        "file": "world/the-haunted-lands.md",
         "author": null,
         "date": null,
         "sources": null,
