@@ -322,20 +322,18 @@ window.saveItem = async function() {
                 .from('lore_items')
                 .update(payload)
                 .eq('id', currentItem.id)
-                .select()
-                .single();
+                .select();
             if (error) throw error;
-            result = data;
+            result = data?.[0] || { ...currentItem, ...payload };
             showToast('Entry updated successfully!', 'success');
         } else {
             // Insert
             const { data, error } = await supabase
                 .from('lore_items')
                 .insert(payload)
-                .select()
-                .single();
+                .select();
             if (error) throw error;
-            result = data;
+            result = data?.[0] || payload;
             showToast('Entry created successfully!', 'success');
         }
 

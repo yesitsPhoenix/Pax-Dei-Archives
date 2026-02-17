@@ -1,6 +1,26 @@
 import { supabase } from '../supabaseClient.js';
 import { initializeCharacterSystem } from '../redemption/characterManager.js';
 
+// Wait for the header template to be loaded into the DOM
+function waitForHeader(timeout = 5000) {
+    return new Promise((resolve) => {
+        // Check if header is already loaded
+        if (document.querySelector('.main-nav')) {
+            resolve(true);
+            return;
+        }
+        const observer = new MutationObserver((mutations, obs) => {
+            if (document.querySelector('.main-nav')) {
+                obs.disconnect();
+                resolve(true);
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+        // Timeout fallback so we don't block forever
+        setTimeout(() => { observer.disconnect(); resolve(false); }, timeout);
+    });
+}
+
 export async function handleAdminAccess(user) {
     const path = window.location.pathname;
     const currentPage = path.split('/').pop().toLowerCase() || 'index.html';
@@ -16,6 +36,9 @@ export async function handleAdminAccess(user) {
         const isAdmin = !error && data && data.length > 0 && data[0].quest_role === 'quest_adder';
 
         if (isAdmin) {
+            // Wait for header to be injected before toggling nav elements
+            await waitForHeader();
+
             const adminElements = [
                 'create-quest-nav',
                 'edit-quest-nav',

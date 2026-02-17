@@ -42,10 +42,11 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
 HOST = os.getenv("LORE_BOT_HOST", "0.0.0.0")
 PORT = int(os.getenv("LORE_BOT_PORT", "8642"))
 
-# Path to the lore data directory
-LORE_DATA_DIR = os.getenv(
-    "LORE_DATA_DIR",
-    str(Path(__file__).parent.parent / "backend" / "data")
+# Supabase connection (reads lore_items table via REST API)
+SUPABASE_URL = os.getenv("SUPABASE_URL", "https://jrjgbnopmfovxwvtbivh.supabase.co")
+SUPABASE_ANON_KEY = os.getenv(
+    "SUPABASE_ANON_KEY",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impyamdibm9wbWZvdnh3dnRiaXZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDgxOTg1MjYsImV4cCI6MjAyMzc3NDUyNn0.za7oUzFhNmBdtcCRBmxwW5FSTFRWVAY6_rsRwlr3iqY"
 )
 
 # CORS - allow all origins for development
@@ -259,107 +260,63 @@ Remember: Be BRIEF. Only state what the entries explicitly say. Cite EVERY sourc
 # ---------------------------------------------------------------------------
 
 full_corpus_prompt: str = ""
-lore_file_count: int = 0
-lore_index: list = []
+lore_entry_count: int = 0
 
 
 def load_lore_corpus() -> str:
-    global full_corpus_prompt, lore_file_count, lore_index, search_index
+    """Fetch all lore entries from Supabase and build the search index."""
+    global full_corpus_prompt, lore_entry_count, search_index
 
     search_index = LoreSearchIndex()
 
-    data_dir = Path(LORE_DATA_DIR)
-    if not data_dir.exists():
-        print(f"[ERROR] Lore data directory not found: {data_dir}")
+    print(f"[INFO] Fetching lore entries from Supabase...")
+
+    try:
+        resp = httpx.get(
+            f"{SUPABASE_URL}/rest/v1/lore_items",
+            params={"select": "*", "order": "category.asc,sort_order.asc,title.asc"},
+            headers={
+                "apikey": SUPABASE_ANON_KEY,
+                "Authorization": f"Bearer {SUPABASE_ANON_KEY}",
+            },
+            timeout=30,
+        )
+        resp.raise_for_status()
+        rows = resp.json()
+    except Exception as e:
+        print(f"[ERROR] Failed to fetch lore from Supabase: {e}")
         return ""
 
-    index_path = data_dir / "lore-index.json"
-    if index_path.exists():
-        with open(index_path, "r", encoding="utf-8") as f:
-            lore_index = json.load(f)
-    else:
-        print(f"[WARN] lore-index.json not found at {index_path}")
-
-    meta_lookup = {}
-    for category in lore_index:
-        for item in category.get("items", []):
-            file_path = item.get("file", "")
-            meta_lookup[file_path] = {
-                "title": item.get("title", ""),
-                "slug": item.get("slug", ""),
-                "category": category.get("category", ""),
-                "author": item.get("author"),
-                "date": item.get("date"),
-            }
-
     corpus_parts = []
-    file_count = 0
     skipped_empty = 0
 
-    for category in lore_index:
-        cat_name = category.get("category", "Unknown")
+    for row in rows:
+        content = (row.get("content") or "").strip()
+        if not content:
+            skipped_empty += 1
+            print(f"[WARN] Skipped empty entry: {row.get('title', '?')}")
+            continue
 
-        for item in category.get("items", []):
-            file_rel = item.get("file", "")
-            file_path = data_dir / file_rel
+        compressed = compress_for_prompt(content)
+        entry = LoreEntry(
+            title=row.get("title", ""),
+            slug=row.get("slug", ""),
+            category=row.get("category", "Uncategorized"),
+            author=row.get("author"),
+            date=row.get("date"),
+            content=content,
+            compressed=compressed,
+        )
+        search_index.add_entry(entry)
+        corpus_parts.append(entry.to_prompt_block())
 
-            if file_path.exists() and file_path.suffix == ".md":
-                try:
-                    raw_content = file_path.read_text(encoding="utf-8").strip()
-                    if raw_content:
-                        meta = meta_lookup.get(file_rel, {})
-                        slug = meta.get('slug', '')
-                        title = meta.get('title', file_rel)
-                        compressed = compress_for_prompt(raw_content)
-
-                        entry = LoreEntry(
-                            title=title, slug=slug, category=cat_name,
-                            author=meta.get("author"), date=meta.get("date"),
-                            content=raw_content, compressed=compressed,
-                        )
-                        search_index.add_entry(entry)
-                        corpus_parts.append(entry.to_prompt_block())
-                        file_count += 1
-                    else:
-                        skipped_empty += 1
-                        print(f"[WARN] Skipped empty file: {file_rel}")
-                except Exception as e:
-                    print(f"[WARN] Failed to read {file_path}: {e}")
-            elif not file_path.exists():
-                print(f"[WARN] File not found: {file_rel}")
-
-    indexed_files = set()
-    for category in lore_index:
-        for item in category.get("items", []):
-            indexed_files.add(item.get("file", ""))
-
-    for md_file in data_dir.rglob("*.md"):
-        rel_path = md_file.relative_to(data_dir).as_posix()
-        if rel_path not in indexed_files:
-            try:
-                raw_content = md_file.read_text(encoding="utf-8").strip()
-                if raw_content:
-                    compressed = compress_for_prompt(raw_content)
-                    entry = LoreEntry(
-                        title=md_file.stem,
-                        slug=md_file.stem.lower().replace(' ', '-'),
-                        category="Uncategorized",
-                        author=None, date=None,
-                        content=raw_content, compressed=compressed,
-                    )
-                    search_index.add_entry(entry)
-                    corpus_parts.append(entry.to_prompt_block())
-                    file_count += 1
-            except Exception as e:
-                print(f"[WARN] Failed to read unindexed file {md_file}: {e}")
-
-    lore_file_count = file_count
+    lore_entry_count = len(corpus_parts)
     full_corpus = "\n\n---\n\n".join(corpus_parts)
     full_corpus_prompt = FULL_CORPUS_PROMPT.format(lore_content=full_corpus)
 
-    print(f"[INFO] Loaded {file_count} lore files into search index")
+    print(f"[INFO] Loaded {lore_entry_count} lore entries from Supabase")
     if skipped_empty > 0:
-        print(f"[INFO] Skipped {skipped_empty} empty files (indexed but no content)")
+        print(f"[INFO] Skipped {skipped_empty} empty entries")
     print(f"[INFO] Full corpus size: {len(full_corpus_prompt):,} chars (~{len(full_corpus_prompt) // 4:,} tokens)")
     print(f"[INFO] RAG mode: {'ENABLED (top {})'.format(RAG_TOP_K) if USE_RAG else 'DISABLED (full corpus)'}")
     return full_corpus_prompt
@@ -424,7 +381,7 @@ async def startup_event():
     print("=" * 60)
     print(f"[INFO] Ollama URL: {OLLAMA_URL}")
     print(f"[INFO] Model: {OLLAMA_MODEL}")
-    print(f"[INFO] Lore data dir: {LORE_DATA_DIR}")
+    print(f"[INFO] Supabase URL: {SUPABASE_URL}")
     print(f"[INFO] RAG mode: {'ON (top {})'.format(RAG_TOP_K) if USE_RAG else 'OFF (full corpus)'}")
     print(f"[INFO] Server will listen on {HOST}:{PORT}")
     print()
@@ -455,7 +412,7 @@ async def health_check():
     return {
         "status": "ok",
         "model": OLLAMA_MODEL,
-        "lore_files_loaded": lore_file_count,
+        "lore_entries_loaded": lore_entry_count,
         "corpus_size_chars": len(full_corpus_prompt),
         "rag_enabled": USE_RAG,
         "rag_top_k": RAG_TOP_K if USE_RAG else None,
@@ -482,7 +439,7 @@ async def chat(request: Request, chat_req: ChatRequest):
     if not check_rate_limit(client_ip):
         raise HTTPException(status_code=429, detail="Too many requests. Please wait a moment.")
 
-    if lore_file_count == 0:
+    if lore_entry_count == 0:
         raise HTTPException(status_code=503, detail="Lore corpus not loaded. Check server logs.")
 
     if not chat_req.messages:
@@ -563,7 +520,7 @@ async def reload_lore():
     load_lore_corpus()
     return {
         "status": "reloaded",
-        "lore_files_loaded": lore_file_count,
+        "lore_entries_loaded": lore_entry_count,
         "corpus_size_chars": len(full_corpus_prompt),
         "rag_enabled": USE_RAG,
     }

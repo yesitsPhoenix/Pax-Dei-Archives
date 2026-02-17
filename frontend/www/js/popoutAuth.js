@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await logout();
                 sessionStorage.removeItem('userAvatarUrl');
                 authModal.classList.remove('open');
-                updateAuthUI();
+                window.location.href = 'index.html';
             });
         } else {
             setFloatingAvatar(DEFAULT_AVATAR_URL, false);

@@ -263,7 +263,7 @@ async function checkServerHealth() {
         if (response.ok) {
             const data = await response.json();
             serverConnected = true;
-            setStatus('connected', `Connected · ${data.lore_files_loaded} lore entries loaded`);
+            setStatus('connected', `Connected · ${data.lore_entries_loaded} lore entries loaded`);
             sendButton.disabled = false;
 
             // Store valid citation keys for validation
