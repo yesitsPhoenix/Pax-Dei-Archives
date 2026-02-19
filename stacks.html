@@ -151,6 +151,11 @@
     <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar js-floating-avatar">
 </div>
 
+<script type="module">
+    import { setupAdminAuthListener } from './frontend/www/js/admin/adminManager.js';
+    setupAdminAuthListener();
+</script>
+
     <div id="footer-placeholder"></div>
     <script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
     <script type="module" src="frontend/www/js/ui/loadFooter.js"></script>

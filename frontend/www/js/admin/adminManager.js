@@ -45,7 +45,8 @@ export async function handleAdminAccess(user) {
                 'character-container',
                 'edit-features-nav',
                 'quest-flow-nav',
-                'edit-lore-nav'
+                'edit-lore-nav',
+                'stacks-nav'
             ];
 
             adminElements.forEach(id => {

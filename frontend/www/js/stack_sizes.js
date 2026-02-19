@@ -24,14 +24,14 @@ const showAccessDeniedModal = () => {
 
     modal.classList.remove('hidden');
 
-    countdownElement.textContent = `Redirecting to Market Trends in ${countdown} seconds...`;
+    countdownElement.textContent = `Redirecting home in ${countdown} seconds...`;
 
     const interval = setInterval(() => {
         countdown -= 1;
-        countdownElement.textContent = `Redirecting to Market Trends in ${countdown} seconds...`;
+        countdownElement.textContent = `Redirecting home in ${countdown} seconds...`;
         if (countdown <= 0) {
             clearInterval(interval);
-            window.location.href = 'trends.html';
+            window.location.href = 'index.html';
         }
     }, 1000);
 };
