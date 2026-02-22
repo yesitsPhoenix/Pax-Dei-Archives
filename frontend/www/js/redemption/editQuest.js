@@ -1,7 +1,6 @@
 import { supabase } from "../supabaseClient.js";
 import { enableSignTooltip, mouseTooltip } from '../ui/signTooltip.js';
 import { questState } from './questStateManager.js';
-import { initializeMarkdownToolbar } from '../ui/markdownToolbar.js';
 import { 
     createAdditionalCategoriesUI, 
     getSelectedAdditionalCategories,
@@ -386,7 +385,6 @@ async function loadEditor(userId, signData) {
     await loadPrerequisiteOptionsForEdit('hard-lock-container', quest.hard_lock_quest_ids || [], 'hard-lock-quest', 'hard-lock-search', 'hard-lock-list');
     await loadPrerequisiteOptionsForEdit('prerequisite-container', quest.prerequisite_quest_ids || [], 'prereq-quest', 'prereq-search', 'prereq-list');
 
-    initializeMarkdownToolbar();
     setupEditorEvents(baseUrl, version);
 }
 
