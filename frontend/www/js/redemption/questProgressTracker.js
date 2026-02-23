@@ -268,7 +268,7 @@ export function renderQuestTracker(quest, container, options = {}) {
                 return;
             }
 
-            // minus / plus / max — discrete clicks, write immediately
+            // minus / plus / max — debounced to batch rapid clicks
             el.addEventListener('click', () => {
                 let newVal = localValues[idx];
                 if (action === 'minus') newVal = Math.max(0, newVal - 1);
@@ -276,7 +276,7 @@ export function renderQuestTracker(quest, container, options = {}) {
                 else if (action === 'max')  newVal = target;
 
                 localValues[idx] = newVal;
-                saveImmediate(idx, newVal);
+                saveDebounced(idx, newVal);
                 renderToContainer();
             });
         });
