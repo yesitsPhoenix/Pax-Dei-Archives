@@ -169,11 +169,11 @@ export function renderQuestTracker(quest, container, options = {}) {
             return `
                 <div class="bg-black/20 border ${borderColor} rounded-lg p-2.5 mb-2">
                     <!-- Label + count -->
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-[10px] uppercase tracking-widest font-bold ${labelColor} tracker-goal-label">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-[10px] uppercase tracking-widest font-bold ${labelColor} tracker-goal-label min-w-0">
                             ${renderLabel(goal.label)}${goal.unit ? ' (' + goal.unit + ')' : ''}
                         </span>
-                        <span class="tracker-count text-sm font-bold ${numColor}">${cur} / ${target}</span>
+                        <span class="tracker-count text-sm font-bold ${numColor} whitespace-nowrap shrink-0 ml-2">${cur} / ${target}</span>
                     </div>
 
                     <!--
