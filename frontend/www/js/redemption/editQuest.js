@@ -44,16 +44,28 @@ function renderGoalList() {
             : 'Checkbox step';
 
         return `
-            <div class="goal-item">
+            <div class="goal-item" data-index="${index}">
                 <span class="goal-type-badge ${goal.type}">${goal.type}</span>
-                <span class="goal-label">${goal.label}</span>
+                <span class="goal-label">${escapeHtml(goal.label)}</span>
                 <span class="goal-meta">${meta}</span>
+                <button class="goal-edit" data-index="${index}" title="Edit goal" style="color:#6b7280;background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:4px;transition:color 0.15s,background 0.15s;flex-shrink:0;">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                </button>
                 <button class="goal-remove" data-index="${index}" title="Remove goal">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
         `;
     }).join('');
+
+    list.querySelectorAll('.goal-edit').forEach(btn => {
+        btn.addEventListener('mouseenter', () => { btn.style.color = '#FFD700'; btn.style.background = 'rgba(255,215,0,0.1)'; });
+        btn.addEventListener('mouseleave', () => { btn.style.color = '#6b7280'; btn.style.background = 'none'; });
+        btn.addEventListener('click', () => {
+            const idx = parseInt(btn.dataset.index);
+            openGoalEditor(idx);
+        });
+    });
 
     list.querySelectorAll('.goal-remove').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -62,6 +74,89 @@ function renderGoalList() {
             renderGoalList();
         });
     });
+}
+
+function escapeHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function openGoalEditor(idx) {
+    const list = document.getElementById('goal-list');
+    const goal = trackingGoals[idx];
+    const row = list.querySelector(`.goal-item[data-index="${idx}"]`);
+    if (!row) return;
+
+    const isCounter = goal.type === 'counter';
+
+    row.innerHTML = `
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;width:100%;">
+            <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">Type</label>
+                <select id="edit-goal-type-${idx}" style="background:#1f2937;border:1px solid #374151;border-radius:6px;padding:4px 8px;color:#fff;font-size:13px;outline:none;">
+                    <option value="counter" ${isCounter ? 'selected' : ''}>Counter</option>
+                    <option value="checkbox" ${!isCounter ? 'selected' : ''}>Checkbox</option>
+                </select>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:120px;">
+                <label style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">Label</label>
+                <input id="edit-goal-label-${idx}" type="text" value="${escapeHtml(goal.label)}" style="background:#1f2937;border:1px solid #374151;border-radius:6px;padding:4px 8px;color:#fff;font-size:13px;outline:none;width:100%;">
+            </div>
+            <div id="edit-goal-target-wrap-${idx}" style="display:${isCounter ? 'flex' : 'none'};flex-direction:column;gap:4px;width:90px;">
+                <label style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">Target</label>
+                <input id="edit-goal-target-${idx}" type="number" min="1" value="${isCounter ? (goal.target || '') : ''}" style="background:#1f2937;border:1px solid #374151;border-radius:6px;padding:4px 8px;color:#fff;font-size:13px;outline:none;width:100%;">
+            </div>
+            <div id="edit-goal-unit-wrap-${idx}" style="display:${isCounter ? 'flex' : 'none'};flex-direction:column;gap:4px;width:90px;">
+                <label style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">Unit</label>
+                <input id="edit-goal-unit-${idx}" type="text" value="${isCounter ? escapeHtml(goal.unit || '') : ''}" style="background:#1f2937;border:1px solid #374151;border-radius:6px;padding:4px 8px;color:#fff;font-size:13px;outline:none;width:100%;">
+            </div>
+            <button id="edit-goal-save-${idx}" style="background:#FFD700;color:#000;border:none;border-radius:6px;padding:5px 12px;font-weight:700;font-size:12px;cursor:pointer;align-self:flex-end;">Save</button>
+            <button id="edit-goal-cancel-${idx}" style="background:#374151;color:#d1d5db;border:none;border-radius:6px;padding:5px 10px;font-weight:600;font-size:12px;cursor:pointer;align-self:flex-end;">Cancel</button>
+        </div>
+    `;
+
+    const typeSelect = document.getElementById(`edit-goal-type-${idx}`);
+    const targetWrap = document.getElementById(`edit-goal-target-wrap-${idx}`);
+    const unitWrap   = document.getElementById(`edit-goal-unit-wrap-${idx}`);
+
+    typeSelect.addEventListener('change', () => {
+        const show = typeSelect.value === 'counter';
+        targetWrap.style.display = show ? 'flex' : 'none';
+        unitWrap.style.display   = show ? 'flex' : 'none';
+    });
+
+    document.getElementById(`edit-goal-save-${idx}`).addEventListener('click', () => {
+        const newType  = typeSelect.value;
+        const newLabel = document.getElementById(`edit-goal-label-${idx}`).value.trim();
+        if (!newLabel) {
+            const labelEl = document.getElementById(`edit-goal-label-${idx}`);
+            labelEl.style.borderColor = '#f87171';
+            setTimeout(() => { labelEl.style.borderColor = '#374151'; }, 1500);
+            return;
+        }
+
+        const updated = { type: newType, label: newLabel };
+        if (newType === 'counter') {
+            const t = parseInt(document.getElementById(`edit-goal-target-${idx}`).value);
+            if (!t || t < 1) {
+                const targetEl = document.getElementById(`edit-goal-target-${idx}`);
+                targetEl.style.borderColor = '#f87171';
+                setTimeout(() => { targetEl.style.borderColor = '#374151'; }, 1500);
+                return;
+            }
+            updated.target = t;
+            const u = document.getElementById(`edit-goal-unit-${idx}`).value.trim();
+            if (u) updated.unit = u;
+        }
+
+        trackingGoals[idx] = updated;
+        renderGoalList();
+    });
+
+    document.getElementById(`edit-goal-cancel-${idx}`).addEventListener('click', () => {
+        renderGoalList();
+    });
+
+    document.getElementById(`edit-goal-label-${idx}`).focus();
 }
 
 function setupTrackingGoals(quest = null) {
