@@ -1,5 +1,21 @@
 import { questState } from './questStateManager.js';
 
+/**
+ * Renders a goal label as inline markdown if marked is available, otherwise plain text.
+ * Uses parseInline so labels in spans don't get wrapped in <p> tags.
+ */
+function renderLabel(text) {
+    if (window.marked && typeof window.marked.parseInline === 'function') {
+        return window.marked.parseInline(String(text));
+    }
+    if (window.marked && typeof window.marked === 'function') {
+        // Older marked versions — strip wrapping <p> tags from a block parse
+        return window.marked(String(text)).replace(/^<p>(.*)<\/p>\n?$/is, '$1');
+    }
+    // No marked available — return escaped plain text
+    return String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
 // Inject slider styles once into the document
 (function injectTrackerStyles() {
     if (document.getElementById('quest-tracker-styles')) return;
@@ -154,8 +170,8 @@ export function renderQuestTracker(quest, container, options = {}) {
                 <div class="bg-black/20 border ${borderColor} rounded-lg p-2.5 mb-2">
                     <!-- Label + count -->
                     <div class="flex justify-between items-center mb-2">
-                        <span class="text-[10px] uppercase tracking-widest font-bold ${labelColor}">
-                            ${goal.label}${goal.unit ? ' (' + goal.unit + ')' : ''}
+                        <span class="text-[10px] uppercase tracking-widest font-bold ${labelColor} tracker-goal-label">
+                            ${renderLabel(goal.label)}${goal.unit ? ' (' + goal.unit + ')' : ''}
                         </span>
                         <span class="tracker-count text-sm font-bold ${numColor}">${cur} / ${target}</span>
                     </div>
@@ -209,7 +225,7 @@ export function renderQuestTracker(quest, container, options = {}) {
                     <input type="checkbox" data-tracker-action="checkbox" data-tracker-goal="${i}"
                            ${checked ? 'checked' : ''}
                            class="w-4 h-4 accent-[#FFD700] cursor-pointer shrink-0">
-                    <span class="text-sm ${textColor} select-none">${goal.label}</span>
+                    <span class="text-sm ${textColor} select-none tracker-goal-label">${renderLabel(goal.label)}</span>
                 </div>
             `;
         }
@@ -296,6 +312,28 @@ export function renderQuestTracker(quest, container, options = {}) {
                 ${goals.map((goal, i) => buildGoalHTML(goal, i)).join('')}
             </div>
         `;
+
+        // Post-process markdown elements inside goal labels to match page styling
+        container.querySelectorAll('.tracker-goal-label a').forEach(a => {
+            a.style.color = '#FFD700';
+            a.style.fontWeight = 'bold';
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+        });
+        container.querySelectorAll('.tracker-goal-label strong').forEach(strong => {
+            strong.style.color = '#FFD700';
+        });
+        container.querySelectorAll('.tracker-goal-label em').forEach(em => {
+            em.style.color = '#e5e7eb';
+            em.style.fontStyle = 'italic';
+        });
+        container.querySelectorAll('.tracker-goal-label code').forEach(code => {
+            code.style.background = 'rgba(0,0,0,0.3)';
+            code.style.padding = '1px 5px';
+            code.style.borderRadius = '4px';
+            code.style.fontSize = '11px';
+            code.style.color = '#FCD34D';
+        });
 
         attachListeners();
 
