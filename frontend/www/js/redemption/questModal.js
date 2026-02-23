@@ -13,7 +13,6 @@ export function initQuestModal() {
         const title = titleEl.textContent || titleEl.innerText;
         const region = document.getElementById('detail-region').innerText;
         const lore = document.getElementById('detail-lore').innerHTML;
-        const location = document.getElementById('detail-location').innerHTML;
         const items = document.getElementById('detail-items').innerText;
         const gold = document.getElementById('detail-gold').innerText;
         const signs = document.getElementById('detail-signs').innerHTML;
@@ -53,12 +52,8 @@ export function initQuestModal() {
                 </section>
             </div>
             <div class="lg:col-span-1 space-y-6">
-                <section>
-                    <h4 class="text-md uppercase tracking-widest text-gray-500 font-bold mb-2">Quest Fulfillment</h4>
-                    <div class="bg-black/20 p-4 rounded-xl border border-gray-700/50 text-gray-300 text-md">
-                        ${location}
-                    </div>
-                </section>
+                <!-- Modal tracker slot -->
+                <div id="modal-tracker-slot"></div>
                 ${hasSignSequence ? `
                 <section>
                     <h4 class="text-md uppercase tracking-widest text-gray-500 font-bold mb-2">Sign Sequence</h4>
@@ -76,14 +71,14 @@ export function initQuestModal() {
                     </div>
                 </section>
                 ` : ''}
+                ${prerequisites ? `
                 <section>
                     <h4 class="text-md uppercase tracking-widest text-gray-500 font-bold mb-2">Required to Complete</h4>
                     <div id="modal-prerequisites" class="bg-black/20 p-4 rounded-xl border border-gray-700/50 flex flex-col gap-1">
                         ${prerequisites}
                     </div>
                 </section>
-                <!-- Modal tracker slot -->
-                <div id="modal-tracker-slot"></div>
+                ` : ''}
                 <section>
                     <div class="flex justify-end pt-4">
                         ${redeemBtnHTML}

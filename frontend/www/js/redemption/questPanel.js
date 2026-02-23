@@ -2,7 +2,6 @@ import { supabase } from "../supabaseClient.js";
 import { enableSignTooltip, mouseTooltip } from '../ui/signTooltip.js';
 import { initializeCharacterSystem } from "./characterManager.js";
 import { questState } from './questStateManager.js';
-import { initializeMarkdownToolbar } from '../ui/markdownToolbar.js';
 import { 
     createAdditionalCategoriesUI, 
     getSelectedAdditionalCategories,
@@ -10,6 +9,214 @@ import {
 } from './additionalCategoriesHelper.js';
 
 const alphabet = "abcdefghijklmnopqrstuvwxyz";
+
+// ---------------------------------------------------------------------------
+// Tracking Goals — editor UI
+// ---------------------------------------------------------------------------
+
+let trackingGoals = [];
+
+function escapeHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderGoalList() {
+    const list = document.getElementById('goal-list');
+    if (!list) return;
+
+    if (trackingGoals.length === 0) {
+        list.innerHTML = '<p class="text-xs text-gray-500 italic">No goals added yet.</p>';
+        return;
+    }
+
+    list.innerHTML = trackingGoals.map((goal, index) => {
+        const meta = goal.type === 'counter'
+            ? `Target: <strong class="text-white">${goal.target}${goal.unit ? ' ' + goal.unit : ''}</strong>`
+            : 'Checkbox step';
+        return `
+            <div class="goal-item" data-index="${index}">
+                <span class="goal-type-badge ${goal.type}">${goal.type}</span>
+                <span class="goal-label">${escapeHtml(goal.label)}</span>
+                <span class="goal-meta">${meta}</span>
+                <button class="goal-edit" data-index="${index}" title="Edit goal" style="color:#6b7280;background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:4px;transition:color 0.15s,background 0.15s;flex-shrink:0;">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+                <button class="goal-remove" data-index="${index}" title="Remove goal">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        `;
+    }).join('');
+
+    list.querySelectorAll('.goal-edit').forEach(btn => {
+        btn.addEventListener('mouseenter', () => { btn.style.color = '#FFD700'; btn.style.background = 'rgba(255,215,0,0.1)'; });
+        btn.addEventListener('mouseleave', () => { btn.style.color = '#6b7280'; btn.style.background = 'none'; });
+        btn.addEventListener('click', () => {
+            const idx = parseInt(btn.dataset.index);
+            openGoalEditor(idx);
+        });
+    });
+
+    list.querySelectorAll('.goal-remove').forEach(btn => {
+        btn.addEventListener('click', () => {
+            trackingGoals.splice(parseInt(btn.dataset.index), 1);
+            renderGoalList();
+        });
+    });
+}
+
+function openGoalEditor(idx) {
+    const list = document.getElementById('goal-list');
+    const goal = trackingGoals[idx];
+    const row = list.querySelector(`.goal-item[data-index="${idx}"]`);
+    if (!row) return;
+
+    const isCounter = goal.type === 'counter';
+
+    row.innerHTML = `
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;width:100%;">
+            <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">Type</label>
+                <select id="edit-goal-type-${idx}" style="background:#1f2937;border:1px solid #374151;border-radius:6px;padding:4px 8px;color:#fff;font-size:13px;outline:none;">
+                    <option value="counter" ${isCounter ? 'selected' : ''}>Counter</option>
+                    <option value="checkbox" ${!isCounter ? 'selected' : ''}>Checkbox</option>
+                </select>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:120px;">
+                <label style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">Label</label>
+                <input id="edit-goal-label-${idx}" type="text" value="${escapeHtml(goal.label)}" style="background:#1f2937;border:1px solid #374151;border-radius:6px;padding:4px 8px;color:#fff;font-size:13px;outline:none;width:100%;">
+            </div>
+            <div id="edit-goal-target-wrap-${idx}" style="display:${isCounter ? 'flex' : 'none'};flex-direction:column;gap:4px;width:90px;">
+                <label style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">Target</label>
+                <input id="edit-goal-target-${idx}" type="number" min="1" value="${isCounter ? (goal.target || '') : ''}" style="background:#1f2937;border:1px solid #374151;border-radius:6px;padding:4px 8px;color:#fff;font-size:13px;outline:none;width:100%;">
+            </div>
+            <div id="edit-goal-unit-wrap-${idx}" style="display:${isCounter ? 'flex' : 'none'};flex-direction:column;gap:4px;width:90px;">
+                <label style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">Unit</label>
+                <input id="edit-goal-unit-${idx}" type="text" value="${isCounter ? escapeHtml(goal.unit || '') : ''}" style="background:#1f2937;border:1px solid #374151;border-radius:6px;padding:4px 8px;color:#fff;font-size:13px;outline:none;width:100%;">
+            </div>
+            <button id="edit-goal-save-${idx}" style="background:#FFD700;color:#000;border:none;border-radius:6px;padding:5px 12px;font-weight:700;font-size:12px;cursor:pointer;align-self:flex-end;">Save</button>
+            <button id="edit-goal-cancel-${idx}" style="background:#374151;color:#d1d5db;border:none;border-radius:6px;padding:5px 10px;font-weight:600;font-size:12px;cursor:pointer;align-self:flex-end;">Cancel</button>
+        </div>
+    `;
+
+    const typeSelect = document.getElementById(`edit-goal-type-${idx}`);
+    const targetWrap = document.getElementById(`edit-goal-target-wrap-${idx}`);
+    const unitWrap   = document.getElementById(`edit-goal-unit-wrap-${idx}`);
+
+    typeSelect.addEventListener('change', () => {
+        const show = typeSelect.value === 'counter';
+        targetWrap.style.display = show ? 'flex' : 'none';
+        unitWrap.style.display   = show ? 'flex' : 'none';
+    });
+
+    document.getElementById(`edit-goal-save-${idx}`).addEventListener('click', () => {
+        const newType  = typeSelect.value;
+        const newLabel = document.getElementById(`edit-goal-label-${idx}`).value.trim();
+        if (!newLabel) {
+            const labelEl = document.getElementById(`edit-goal-label-${idx}`);
+            labelEl.style.borderColor = '#f87171';
+            setTimeout(() => { labelEl.style.borderColor = '#374151'; }, 1500);
+            return;
+        }
+
+        const updated = { type: newType, label: newLabel };
+        if (newType === 'counter') {
+            const t = parseInt(document.getElementById(`edit-goal-target-${idx}`).value);
+            if (!t || t < 1) {
+                const targetEl = document.getElementById(`edit-goal-target-${idx}`);
+                targetEl.style.borderColor = '#f87171';
+                setTimeout(() => { targetEl.style.borderColor = '#374151'; }, 1500);
+                return;
+            }
+            updated.target = t;
+            const u = document.getElementById(`edit-goal-unit-${idx}`).value.trim();
+            if (u) updated.unit = u;
+        }
+
+        trackingGoals[idx] = updated;
+        renderGoalList();
+    });
+
+    document.getElementById(`edit-goal-cancel-${idx}`).addEventListener('click', () => {
+        renderGoalList();
+    });
+
+    document.getElementById(`edit-goal-label-${idx}`).focus();
+}
+
+function setupTrackingGoals() {
+    const enableToggle = document.getElementById('enable-tracking');
+    const panel        = document.getElementById('tracking-goals-panel');
+    const typeSelect   = document.getElementById('new-goal-type');
+    const labelInput   = document.getElementById('new-goal-label');
+    const targetInput  = document.getElementById('new-goal-target');
+    const unitInput    = document.getElementById('new-goal-unit');
+    const targetWrap   = document.getElementById('new-goal-target-wrap');
+    const unitWrap     = document.getElementById('new-goal-unit-wrap');
+    const addBtn       = document.getElementById('add-goal-btn');
+    const typeHint     = document.getElementById('goal-type-hint');
+
+    if (!enableToggle) return;
+
+    trackingGoals = [];
+    renderGoalList();
+
+    enableToggle.addEventListener('change', () => {
+        panel.classList.toggle('hidden', !enableToggle.checked);
+    });
+
+    const syncTypeFields = () => {
+        const isCounter = typeSelect.value === 'counter';
+        targetWrap.style.display = isCounter ? '' : 'none';
+        unitWrap.style.display   = isCounter ? '' : 'none';
+        typeHint.textContent = isCounter
+            ? 'Counter: player increments toward a numeric target. Set target and optional unit (e.g. "ore", "stacks", "level").'
+            : 'Checkbox: a simple done / not-done step. No target needed.';
+    };
+    typeSelect.addEventListener('change', syncTypeFields);
+    syncTypeFields();
+
+    addBtn.addEventListener('click', () => {
+        const type  = typeSelect.value;
+        const label = labelInput.value.trim();
+
+        if (!label) {
+            labelInput.focus();
+            labelInput.classList.add('border-red-500');
+            setTimeout(() => labelInput.classList.remove('border-red-500'), 1500);
+            return;
+        }
+
+        const goal = { type, label };
+
+        if (type === 'counter') {
+            const target = parseInt(targetInput.value);
+            if (!target || target < 1) {
+                targetInput.focus();
+                targetInput.classList.add('border-red-500');
+                setTimeout(() => targetInput.classList.remove('border-red-500'), 1500);
+                return;
+            }
+            goal.target = target;
+            const unit = unitInput.value.trim();
+            if (unit) goal.unit = unit;
+        }
+
+        trackingGoals.push(goal);
+        renderGoalList();
+
+        labelInput.value  = '';
+        targetInput.value = '';
+        unitInput.value   = '';
+        labelInput.focus();
+    });
+
+    [labelInput, targetInput, unitInput].forEach(el => {
+        el.addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); addBtn.click(); }
+        });
+    });
+}
 
 async function prefillAuthor() {
     const characterSelect = document.getElementById('character-select');
@@ -373,7 +580,6 @@ document.getElementById("create-quest").onclick = async () => {
     const author = document.getElementById("quest-author").value.trim();
     let category = document.getElementById("quest-category-select").value;
     const region_id = document.getElementById("region-selection").value;
-    const locationStr = document.getElementById("location").value.trim();
     const keywordRaw = document.getElementById("cipher-keyword-select").value;
     const currentKeyword = (keywordRaw === "none" || !keywordRaw) ? "" : keywordRaw;
     const lore = document.getElementById("lore").value.trim();
@@ -436,7 +642,6 @@ document.getElementById("create-quest").onclick = async () => {
         signs: selected.length > 0 ? selected : null,
         reward_key: reward_keys.length > 0 ? reward_keys.join(",") : null,
         cipher_keyword: currentKeyword || null,
-        location: locationStr,
         lore,
         items,
         gold,
@@ -447,7 +652,9 @@ document.getElementById("create-quest").onclick = async () => {
         unlock_required_count: unlockReqCount,
         prerequisite_quest_ids: selectedPrereqs,
         hard_lock_quest_ids: selectedHardLocks,
-        is_capstone_quest: isCapstoneQuest
+        is_capstone_quest: isCapstoneQuest,
+        tracking_goals: (document.getElementById('enable-tracking')?.checked && trackingGoals.length > 0) ? trackingGoals : null,
+        goals_gate_completion: document.getElementById('enable-tracking')?.checked ? (document.getElementById('goals-gate-completion')?.checked || false) : false
     });
 
     if (error) {
@@ -467,7 +674,7 @@ function init() {
     loadSigns();
     loadPrerequisiteOptions('hard-lock-container', 'hard-lock-quest', 'hard-lock-search', 'hard-lock-list');
     loadPrerequisiteOptions('prerequisite-container', 'prereq-quest', 'prereq-search', 'prereq-list');
-    initializeMarkdownToolbar();
+    setupTrackingGoals();
 }
 
 checkAccess();

@@ -596,7 +596,7 @@ async function loadEditor(userId, signData) {
         additionalCatContainer.appendChild(additionalCategoriesUI);
     }
     document.getElementById('region-selection').value = quest.region_id || "global";
-    document.getElementById('location').value = quest.location || '';
+
     document.getElementById('cipher-keyword-select').value = quest.cipher_keyword || "None";
     document.getElementById('lore').value = quest.lore || '';
     document.getElementById('items').value = Array.isArray(quest.items) ? quest.items.join(', ') : (quest.items || '');
@@ -842,7 +842,6 @@ function setupEditorEvents(baseUrl, version) {
             unlock_prerequisite_category: document.getElementById('unlock-pre-cat').value || null,
             unlock_required_count: parseInt(document.getElementById('unlock-req-count').value) || null,
             region_id: region_id === "global" ? null : region_id,
-            location: document.getElementById('location').value.trim(),
             cipher_keyword: currentKeyword || null,
             lore: document.getElementById('lore').value.trim(),
             items: itemsInput ? itemsInput.split(',').map(i => i.trim()).filter(Boolean) : [],

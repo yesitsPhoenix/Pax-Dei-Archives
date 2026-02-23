@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         #sign-grid button img {
             filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));
@@ -20,6 +21,106 @@
             height: 40px;
             object-fit: contain;
         }
+        .goal-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid #374151;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+        .goal-item .goal-type-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            flex-shrink: 0;
+        }
+        .goal-item .goal-type-badge.counter { background: rgba(99,102,241,0.2); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.3); }
+        .goal-item .goal-type-badge.checkbox { background: rgba(34,197,94,0.15); color: #86efac; border: 1px solid rgba(34,197,94,0.2); }
+        .goal-item .goal-label { flex: 1; color: #e5e7eb; }
+        .goal-item .goal-meta { color: #6b7280; font-size: 12px; flex-shrink: 0; }
+        .goal-item .goal-remove {
+            color: #6b7280;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: color 0.15s, background 0.15s;
+            flex-shrink: 0;
+        }
+        .goal-item .goal-remove:hover { color: #f87171; background: rgba(239,68,68,0.1); }
+        .preview-tabs { display: flex; gap: 4px; margin-bottom: 0; }
+        .preview-tab {
+            padding: 6px 14px;
+            border-radius: 6px 6px 0 0;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid #374151;
+            border-bottom: none;
+            color: #6b7280;
+            background: #111827;
+            transition: all 0.15s;
+        }
+        .preview-tab.active { color: #e5e7eb; background: #1f2937; border-color: #4b5563; }
+        .preview-content {
+            background: #111827;
+            border: 1px solid #374151;
+            border-radius: 0 8px 8px 8px;
+            padding: 16px;
+            min-height: 600px;
+            font-size: 14px;
+            line-height: 1.7;
+            color: #d1d5db;
+            overflow-y: auto;
+        }
+        .split-resize-handle {
+            width: 100%;
+            height: 10px;
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            cursor: ns-resize;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            transition: background 0.15s;
+        }
+        .split-resize-handle:hover { background: #374151; }
+        .split-resize-handle::after {
+            content: '';
+            width: 40px;
+            height: 3px;
+            border-radius: 2px;
+            background: #4b5563;
+        }
+        .split-resize-handle:hover::after { background: #FFD700; }
+        .preview-content h1, .preview-content h2, .preview-content h3,
+        .preview-content h4, .preview-content h5 { color: #f9fafb; font-weight: 700; margin: 16px 0 8px; }
+        .preview-content p { margin: 8px 0; }
+        .preview-content blockquote {
+            border-left: 3px solid #FFD700;
+            margin: 12px 0;
+            padding: 8px 16px;
+            background: #1a202c;
+            color: #9ca3af;
+            font-style: italic;
+            border-radius: 0 8px 8px 0;
+        }
+        .preview-content strong { color: #FFD700; }
+        .preview-content a { color: #60a5fa; }
+        .preview-content hr { border-color: #374151; margin: 16px 0; }
+        .preview-content ul, .preview-content ol { padding-left: 20px; margin: 8px 0; }
+        .preview-content li { margin: 4px 0; }
+        .preview-content code { background: #1f2937; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
     </style>
 </head>
 <body>
@@ -148,10 +249,7 @@
                 </select>
             </div>
 
-            <div>
-                <label class="block text-s font-bold text-gray-400 uppercase mb-2 tracking-wider">Quest Instructions</label>
-                <textarea id="location" class="w-full p-3 rounded-lg bg-[#1f2937] text-white border border-gray-700 focus:border-[#FFD700] outline-none text-base" placeholder="e.g. Near the Great Oak"></textarea>
-            </div>
+
         </div>
 
         <div class="lg:col-span-2 flex flex-col gap-4">
@@ -188,6 +286,63 @@
                             <span class="block text-xs text-gray-400 mt-1">This quest will display with a special glow effect to indicate it's the final quest in a series or chapter</span>
                         </div>
                     </label>
+                </div>
+
+                <div class="bg-black/20 border border-gray-700/50 rounded-xl p-4">
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <input type="checkbox" id="enable-tracking" class="w-5 h-5 rounded border-gray-700 text-[#FFD700] focus:ring-[#FFD700] bg-gray-900 cursor-pointer">
+                        <div class="flex-1">
+                            <span class="block text-sm font-bold text-[#FFD700] uppercase tracking-wider group-hover:text-yellow-400 transition-colors">
+                                <i class="fa-solid fa-list-check mr-2"></i>Enable Progress Tracking
+                            </span>
+                            <span class="block text-xs text-gray-400 mt-1">Add countable goals or checkboxes players can track as they work toward completing this quest</span>
+                        </div>
+                    </label>
+
+                    <div id="tracking-goals-panel" class="hidden mt-5 space-y-4 border-t border-gray-700/50 pt-4">
+
+                        <!-- Gate toggle -->
+                        <div class="flex items-center gap-3 p-3 bg-black/30 rounded-lg border border-gray-700">
+                            <input type="checkbox" id="goals-gate-completion" class="w-4 h-4 rounded border-gray-700 text-[#FFD700] focus:ring-[#FFD700] bg-gray-900 cursor-pointer">
+                            <div>
+                                <span class="block text-xs font-bold text-gray-300 uppercase tracking-wider">Goals gate quest completion</span>
+                                <span class="block text-xs text-gray-500 mt-0.5">All goals must be fully met before the claim button activates (can be toggled later)</span>
+                            </div>
+                        </div>
+
+                        <!-- Goal list -->
+                        <div id="goal-list" class="space-y-2"></div>
+
+                        <!-- Add goal form -->
+                        <div class="bg-black/30 border border-dashed border-gray-600 rounded-lg p-4 space-y-3">
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Add a Goal</p>
+                            <div class="flex gap-2 flex-wrap items-end">
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-[10px] text-gray-500 uppercase tracking-wider">Type</label>
+                                    <select id="new-goal-type" class="bg-[#1f2937] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-[#FFD700] outline-none">
+                                        <option value="counter">Counter</option>
+                                        <option value="checkbox">Checkbox</option>
+                                    </select>
+                                </div>
+                                <div class="flex flex-col gap-1 flex-1 min-w-[140px]">
+                                    <label class="text-[10px] text-gray-500 uppercase tracking-wider">Label</label>
+                                    <input id="new-goal-label" type="text" placeholder="e.g. Tin Ore collected" class="w-full bg-[#1f2937] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-[#FFD700] outline-none">
+                                </div>
+                                <div class="flex flex-col gap-1 w-24" id="new-goal-target-wrap">
+                                    <label class="text-[10px] text-gray-500 uppercase tracking-wider">Target</label>
+                                    <input id="new-goal-target" type="number" placeholder="e.g. 100" min="1" class="w-full bg-[#1f2937] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-[#FFD700] outline-none">
+                                </div>
+                                <div class="flex flex-col gap-1 w-28" id="new-goal-unit-wrap">
+                                    <label class="text-[10px] text-gray-500 uppercase tracking-wider">Unit <span class="normal-case text-gray-600">(opt.)</span></label>
+                                    <input id="new-goal-unit" type="text" placeholder="e.g. ore" class="w-full bg-[#1f2937] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-[#FFD700] outline-none">
+                                </div>
+                                <button id="add-goal-btn" type="button" class="bg-[#FFD700] hover:bg-yellow-400 text-black px-4 py-2 rounded-lg font-bold text-sm transition-all self-end">
+                                    <i class="fa-solid fa-plus mr-1"></i>Add
+                                </button>
+                            </div>
+                            <p id="goal-type-hint" class="text-xs text-gray-500 italic mt-1">Counter: player increments toward a numeric target. Checkbox: a simple done / not-done step.</p>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="border-b border-gray-800 pb-2">
@@ -229,57 +384,26 @@
         <!-- Full Width Lore Section -->
         <div class="mt-8 bg-[#1f2937] rounded-2xl border border-gray-700 p-6">
             <div class="mb-4">
-                <label class="block text-sm font-bold text-[#FFD700] uppercase mb-3 tracking-wider">Lore & Full Instructions</label>
-                <p class="text-xs text-gray-400 italic mb-4">Use Markdown formatting for rich text. This will be displayed to users on the quest details page.</p>
-                
-                <!-- Markdown Toolbar -->
-                <div class="flex flex-wrap gap-2 mb-3 p-3 bg-black/30 rounded-lg border border-gray-700">
-                    <button type="button" class="markdown-btn px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm font-mono transition-colors" data-format="bold" title="Bold">
-                        <i class="fa-solid fa-bold"></i>
-                    </button>
-                    <button type="button" class="markdown-btn px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm font-mono transition-colors" data-format="italic" title="Italic">
-                        <i class="fa-solid fa-italic"></i>
-                    </button>
-                    <button type="button" class="markdown-btn px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm font-mono transition-colors" data-format="heading" title="Heading">
-                        <i class="fa-solid fa-heading"></i>
-                    </button>
-                    <div class="w-px bg-gray-600 mx-1"></div>
-                    <button type="button" class="markdown-btn px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm font-mono transition-colors" data-format="list" title="Bullet List">
-                        <i class="fa-solid fa-list-ul"></i>
-                    </button>
-                    <button type="button" class="markdown-btn px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm font-mono transition-colors" data-format="numbered" title="Numbered List">
-                        <i class="fa-solid fa-list-ol"></i>
-                    </button>
-                    <div class="w-px bg-gray-600 mx-1"></div>
-                    <button type="button" class="markdown-btn px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm font-mono transition-colors" data-format="link" title="Link">
-                        <i class="fa-solid fa-link"></i>
-                    </button>
-                    <button type="button" class="markdown-btn px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm font-mono transition-colors" data-format="quote" title="Blockquote">
-                        <i class="fa-solid fa-quote-left"></i>
-                    </button>
-                    <button type="button" class="markdown-btn px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm font-mono transition-colors" data-format="code" title="Code Block">
-                        <i class="fa-solid fa-code"></i>
-                    </button>
-                    <div class="ml-auto flex gap-2">
-                        <button type="button" id="preview-lore-btn" class="px-3 py-1.5 bg-[#FFD700] hover:bg-yellow-400 text-black rounded text-sm font-bold transition-colors">
-                            <i class="fa-solid fa-eye mr-1"></i> Preview
-                        </button>
-                    </div>
-                </div>
+                <label class="block text-sm font-bold text-[#FFD700] uppercase mb-1 tracking-wider">Lore & Full Instructions</label>
+                <p class="text-xs text-gray-400 italic mb-4">Supports Markdown. Use the tabs below to edit, preview, or view side-by-side.</p>
             </div>
-            
-            <textarea id="lore" class="w-full p-4 rounded-lg bg-[#111827] text-white border border-gray-700 h-96 focus:border-[#FFD700] outline-none text-base leading-relaxed font-mono" placeholder="Write your quest lore and instructions here... Use the toolbar above for markdown formatting."></textarea>
-            
-            <!-- Preview Panel -->
-            <div id="lore-preview" class="hidden mt-4 p-4 rounded-lg bg-black/30 border border-gray-700">
-                <div class="flex justify-between items-center mb-3">
-                    <h4 class="text-sm font-bold text-[#FFD700] uppercase tracking-wider">Preview</h4>
-                    <button type="button" id="close-preview-btn" class="text-gray-400 hover:text-white transition-colors">
-                        <i class="fa-solid fa-times"></i>
-                    </button>
+            <div class="preview-tabs">
+                <button class="preview-tab active" id="lore-tab-edit" onclick="switchLoreTab('edit')"><i class="fa-solid fa-code mr-1"></i>Edit</button>
+                <button class="preview-tab" id="lore-tab-preview" onclick="switchLoreTab('preview')"><i class="fa-solid fa-eye mr-1"></i>Preview</button>
+                <button class="preview-tab" id="lore-tab-split" onclick="switchLoreTab('split')"><i class="fa-solid fa-columns mr-1"></i>Split</button>
+            </div>
+            <div id="lore-edit-mode">
+                <textarea id="lore" class="w-full p-4 bg-[#111827] text-white border border-[#4b5563] border-t-0 rounded-b-lg focus:border-[#FFD700] outline-none text-base leading-relaxed font-mono" style="height:600px; min-height:300px; resize:vertical;" placeholder="Write your quest lore and instructions here... Markdown supported."></textarea>
+            </div>
+            <div id="lore-preview-mode" class="hidden">
+                <div class="preview-content" id="lore-preview-render"></div>
+            </div>
+            <div id="lore-split-mode" class="hidden">
+                <div id="lore-split-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; height:800px;">
+                    <textarea id="lore-split-textarea" class="w-full h-full p-4 bg-[#111827] text-white border border-[#4b5563] rounded-lg focus:border-[#FFD700] outline-none text-base leading-relaxed font-mono" style="resize:none;" oninput="syncLoreSplit()"></textarea>
+                    <div class="preview-content" id="lore-preview-render-split" style="height:100%; min-height:unset; border-radius:8px;"></div>
                 </div>
-                <div id="lore-preview-content" class="prose prose-invert max-w-none text-gray-300">
-                </div>
+                <div class="split-resize-handle" id="lore-split-resize"></div>
             </div>
         </div>
     </div>
@@ -318,6 +442,67 @@
     </script>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script>
+        function switchLoreTab(tab) {
+            ['edit', 'preview', 'split'].forEach(t => {
+                document.getElementById('lore-tab-' + t).classList.remove('active');
+            });
+            document.getElementById('lore-edit-mode').classList.add('hidden');
+            document.getElementById('lore-preview-mode').classList.add('hidden');
+            document.getElementById('lore-split-mode').classList.add('hidden');
+
+            document.getElementById('lore-tab-' + tab).classList.add('active');
+
+            if (tab === 'edit') {
+                document.getElementById('lore-edit-mode').classList.remove('hidden');
+            } else if (tab === 'preview') {
+                document.getElementById('lore-preview-mode').classList.remove('hidden');
+                document.getElementById('lore-preview-render').innerHTML = marked.parse(document.getElementById('lore').value || '');
+            } else if (tab === 'split') {
+                document.getElementById('lore-split-mode').classList.remove('hidden');
+                const editHeight = document.getElementById('lore').offsetHeight;
+                document.getElementById('lore-split-grid').style.height = Math.max(editHeight, 800) + 'px';
+                document.getElementById('lore-split-textarea').value = document.getElementById('lore').value;
+                syncLoreSplit();
+            }
+        }
+
+        function syncLoreSplit() {
+            const content = document.getElementById('lore-split-textarea').value;
+            document.getElementById('lore').value = content;
+            document.getElementById('lore-preview-render-split').innerHTML = marked.parse(content || '');
+        }
+
+        (function() {
+            let dragging = false;
+            let startY = 0;
+            let startHeight = 0;
+
+            document.addEventListener('mousedown', function(e) {
+                const handle = document.getElementById('lore-split-resize');
+                if (!handle || !handle.contains(e.target)) return;
+                dragging = true;
+                startY = e.clientY;
+                startHeight = document.getElementById('lore-split-grid').offsetHeight;
+                document.body.style.userSelect = 'none';
+                document.body.style.cursor = 'ns-resize';
+            });
+
+            document.addEventListener('mousemove', function(e) {
+                if (!dragging) return;
+                const delta = e.clientY - startY;
+                const newHeight = Math.max(200, startHeight + delta);
+                document.getElementById('lore-split-grid').style.height = newHeight + 'px';
+            });
+
+            document.addEventListener('mouseup', function() {
+                if (!dragging) return;
+                dragging = false;
+                document.body.style.userSelect = '';
+                document.body.style.cursor = '';
+            });
+        })();
+    </script>
     <script type="module" src="frontend/www/js/redemption/questPanel.js"></script>
     <script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
     <script type="module" src="frontend/www/js/ui/loadFooter.js"></script>

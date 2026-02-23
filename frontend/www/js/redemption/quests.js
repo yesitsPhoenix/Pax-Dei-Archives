@@ -703,7 +703,6 @@ async function showQuestDetails(quest, userClaimed) {
     };
 
     formatMarkdownContainer('detail-lore', quest.lore, "No lore available.");
-    formatMarkdownContainer('detail-location', quest.location, "No quest fulfillment details exist for this quest.");
 
     // Quest counters temporarily disabled
     // Counter insertion code removed
@@ -803,9 +802,11 @@ async function showQuestDetails(quest, userClaimed) {
     }
 
     // Soft Lock Prerequisites Display (Required to Complete)
+    const prereqSection = document.getElementById('detail-prerequisites-section');
     const prereqContainer = document.getElementById('detail-prerequisites');
     if (prereqContainer) {
         if (prerequisites.length > 0) {
+            if (prereqSection) prereqSection.style.display = '';
             const prereqList = prerequisites.map(id => {
                 const q = allQuests.find(item => item.id === id);
                 const name = q ? q.quest_name : "Unknown Quest";
@@ -847,7 +848,7 @@ async function showQuestDetails(quest, userClaimed) {
                 };
             });
         } else {
-            prereqContainer.innerHTML = `<span class="text-gray-500 italic text-sm">None</span>`;
+            if (prereqSection) prereqSection.style.display = 'none';
         }
     }
 
