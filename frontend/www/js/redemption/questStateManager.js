@@ -15,6 +15,7 @@ class QuestStateManager {
             secretUnlockConfigs: [],
             unlockedCategories: [],
             heroicFeats: [],
+            questProgress: [],
             lastFetch: {}
         };
 
@@ -159,7 +160,7 @@ class QuestStateManager {
     async _loadCharacterData(characterId) {
         this.log(`Loading data for character: ${characterId}`);
 
-        const [charRes, claimsRes, unlocksRes, secretConfigsRes] = await Promise.all([
+        const [charRes, claimsRes, unlocksRes, secretConfigsRes, progressRes] = await Promise.all([
             supabase
                 .from('characters')
                 .select('*')
@@ -178,19 +179,25 @@ class QuestStateManager {
             
             supabase
                 .from('secret_unlock_configs')
+                .select('*'),
+
+            supabase
+                .from('quest_progress')
                 .select('*')
+                .eq('character_id', characterId)
         ]);
 
         this.cache.activeCharacter = charRes.data || null;
         this.cache.userClaims = claimsRes.data || [];
         this.cache.secretUnlockConfigs = secretConfigsRes.data || [];
+        this.cache.questProgress = progressRes.data || [];
         
         const dbUnlocks = unlocksRes.data || [];
         this.cache.unlockedCategories = this._computeUnlockedCategories(dbUnlocks);
         
         this.cache.lastFetch.characterData = Date.now();
 
-        this.log(`Loaded ${this.cache.userClaims.length} claims, ${this.cache.unlockedCategories.length} unlocked categories`);
+        this.log(`Loaded ${this.cache.userClaims.length} claims, ${this.cache.unlockedCategories.length} unlocked categories, ${this.cache.questProgress.length} progress rows`);
     }
 
 
@@ -511,6 +518,55 @@ class QuestStateManager {
         return this.cache.secretUnlockConfigs;
     }
 
+    // --- Quest Progress ---
+
+    getProgressForQuest(questId) {
+        return this.cache.questProgress.filter(p => p.quest_id === questId);
+    }
+
+    async saveGoalProgress(questId, goalIndex, value) {
+        const charId = this.cache.activeCharacterId;
+        if (!charId) return;
+
+        const { error } = await supabase
+            .from('quest_progress')
+            .upsert({
+                character_id: charId,
+                quest_id: questId,
+                goal_index: goalIndex,
+                value: value,
+                updated_at: new Date().toISOString()
+            }, {
+                onConflict: 'character_id,quest_id,goal_index'
+            });
+
+        if (error) {
+            console.error('[QuestState] Failed to save goal progress:', error);
+            return;
+        }
+
+        // Sync local cache so other components see the update immediately
+        const existing = this.cache.questProgress.find(
+            p => p.quest_id === questId && p.goal_index === goalIndex
+        );
+        if (existing) {
+            existing.value = value;
+            existing.updated_at = new Date().toISOString();
+        } else {
+            this.cache.questProgress.push({
+                character_id: charId,
+                quest_id: questId,
+                goal_index: goalIndex,
+                value: value,
+                updated_at: new Date().toISOString()
+            });
+        }
+
+        this.log(`Saved progress for quest ${questId} goal ${goalIndex}: ${value}`);
+    }
+
+    // --- End Quest Progress ---
+
     getQuestById(questId) {
         return this.cache.allQuests.find(q => q.id === questId);
     }
@@ -587,6 +643,7 @@ class QuestStateManager {
             claimCount: this.cache.userClaims.length,
             characterCount: this.cache.characters.length,
             unlockedCategoryCount: this.cache.unlockedCategories.length,
+            progressRows: this.cache.questProgress.length,
             lastFetch: this.cache.lastFetch
         };
     }
@@ -606,6 +663,7 @@ class QuestStateManager {
             secretUnlockConfigs: [],
             unlockedCategories: [],
             heroicFeats: [],
+            questProgress: [],
             lastFetch: {}
         };
 

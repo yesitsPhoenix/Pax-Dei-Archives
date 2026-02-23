@@ -161,6 +161,42 @@
         .preview-content ul, .preview-content ol { padding-left: 20px; margin: 8px 0; }
         .preview-content li { margin: 4px 0; }
         .preview-content code { background: #1f2937; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+
+        /* Goal list items */
+        .goal-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid #374151;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+        .goal-item .goal-type-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            flex-shrink: 0;
+        }
+        .goal-item .goal-type-badge.counter { background: rgba(99,102,241,0.2); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.3); }
+        .goal-item .goal-type-badge.checkbox { background: rgba(34,197,94,0.15); color: #86efac; border: 1px solid rgba(34,197,94,0.2); }
+        .goal-item .goal-label { flex: 1; color: #e5e7eb; }
+        .goal-item .goal-meta { color: #6b7280; font-size: 12px; flex-shrink: 0; }
+        .goal-item .goal-remove {
+            color: #6b7280;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: color 0.15s, background 0.15s;
+            flex-shrink: 0;
+        }
+        .goal-item .goal-remove:hover { color: #f87171; background: rgba(239,68,68,0.1); }
     </style>
 </head>
 <body>
@@ -355,6 +391,7 @@
                     </div>
                 </div>
 
+                <!-- Capstone toggle -->
                 <div class="bg-black/20 border border-[#FFD700]/30 rounded-xl p-4">
                     <label class="flex items-center gap-3 cursor-pointer group">
                         <input type="checkbox" id="is-capstone-quest" class="w-5 h-5 rounded border-gray-700 text-[#FFD700] focus:ring-[#FFD700] bg-gray-900 cursor-pointer">
@@ -365,6 +402,64 @@
                             <span class="block text-xs text-gray-400 mt-1">This quest will display with a special glow effect to indicate it's the final quest in a series or chapter</span>
                         </div>
                     </label>
+                </div>
+
+                <!-- Progress Tracking Section -->
+                <div class="bg-black/20 border border-gray-700/50 rounded-xl p-4">
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <input type="checkbox" id="enable-tracking" class="w-5 h-5 rounded border-gray-700 text-[#FFD700] focus:ring-[#FFD700] bg-gray-900 cursor-pointer">
+                        <div class="flex-1">
+                            <span class="block text-sm font-bold text-[#FFD700] uppercase tracking-wider group-hover:text-yellow-400 transition-colors">
+                                <i class="fa-solid fa-list-check mr-2"></i>Enable Progress Tracking
+                            </span>
+                            <span class="block text-xs text-gray-400 mt-1">Add countable goals or checkboxes players can track as they work toward completing this quest</span>
+                        </div>
+                    </label>
+
+                    <div id="tracking-goals-panel" class="hidden mt-5 space-y-4 border-t border-gray-700/50 pt-4">
+
+                        <!-- Gate toggle -->
+                        <div class="flex items-center gap-3 p-3 bg-black/30 rounded-lg border border-gray-700">
+                            <input type="checkbox" id="goals-gate-completion" class="w-4 h-4 rounded border-gray-700 text-[#FFD700] focus:ring-[#FFD700] bg-gray-900 cursor-pointer">
+                            <div>
+                                <span class="block text-xs font-bold text-gray-300 uppercase tracking-wider">Goals gate quest completion</span>
+                                <span class="block text-xs text-gray-500 mt-0.5">All goals must be fully met before the claim button activates (can be toggled later)</span>
+                            </div>
+                        </div>
+
+                        <!-- Existing goal list -->
+                        <div id="goal-list" class="space-y-2"></div>
+
+                        <!-- Add goal form -->
+                        <div class="bg-black/30 border border-dashed border-gray-600 rounded-lg p-4 space-y-3">
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Add a Goal</p>
+                            <div class="flex gap-2 flex-wrap items-end">
+                                <div class="flex flex-col gap-1">
+                                    <label class="text-[10px] text-gray-500 uppercase tracking-wider">Type</label>
+                                    <select id="new-goal-type" class="bg-[#1f2937] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-[#FFD700] outline-none">
+                                        <option value="counter">Counter</option>
+                                        <option value="checkbox">Checkbox</option>
+                                    </select>
+                                </div>
+                                <div class="flex flex-col gap-1 flex-1 min-w-[140px]">
+                                    <label class="text-[10px] text-gray-500 uppercase tracking-wider">Label</label>
+                                    <input id="new-goal-label" type="text" placeholder="e.g. Tin Ore collected" class="w-full bg-[#1f2937] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-[#FFD700] outline-none">
+                                </div>
+                                <div class="flex flex-col gap-1 w-24" id="new-goal-target-wrap">
+                                    <label class="text-[10px] text-gray-500 uppercase tracking-wider">Target</label>
+                                    <input id="new-goal-target" type="number" placeholder="e.g. 100" min="1" class="w-full bg-[#1f2937] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-[#FFD700] outline-none">
+                                </div>
+                                <div class="flex flex-col gap-1 w-28" id="new-goal-unit-wrap">
+                                    <label class="text-[10px] text-gray-500 uppercase tracking-wider">Unit <span class="normal-case text-gray-600">(opt.)</span></label>
+                                    <input id="new-goal-unit" type="text" placeholder="e.g. ore" class="w-full bg-[#1f2937] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-[#FFD700] outline-none">
+                                </div>
+                                <button id="add-goal-btn" type="button" class="bg-[#FFD700] hover:bg-yellow-400 text-black px-4 py-2 rounded-lg font-bold text-sm transition-all self-end">
+                                    <i class="fa-solid fa-plus mr-1"></i>Add
+                                </button>
+                            </div>
+                            <p id="goal-type-hint" class="text-xs text-gray-500 italic mt-1">Counter: player increments toward a numeric target. Checkbox: a simple done / not-done step.</p>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="border-b border-gray-800 pb-2">
@@ -491,7 +586,6 @@
                 document.getElementById('lore-preview-render').innerHTML = marked.parse(document.getElementById('lore').value || '');
             } else if (tab === 'split') {
                 document.getElementById('lore-split-mode').classList.remove('hidden');
-                // Match split height to whatever the edit textarea is currently at
                 const editHeight = document.getElementById('lore').offsetHeight;
                 document.getElementById('lore-split-grid').style.height = Math.max(editHeight, 800) + 'px';
                 document.getElementById('lore-split-textarea').value = document.getElementById('lore').value;
@@ -501,12 +595,10 @@
 
         function syncLoreSplit() {
             const content = document.getElementById('lore-split-textarea').value;
-            // Keep main textarea in sync so saves always capture the latest content
             document.getElementById('lore').value = content;
             document.getElementById('lore-preview-render-split').innerHTML = marked.parse(content || '');
         }
 
-        // Split view drag-to-resize — moves both panels together
         (function() {
             let dragging = false;
             let startY = 0;

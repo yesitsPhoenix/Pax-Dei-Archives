@@ -18,11 +18,154 @@ function getCipherShift(word) {
 
 let selected = [];
 let allSignIds = [];
+let trackingGoals = [];   // in-memory goal list for the editor
 const urlParams = new URLSearchParams(window.location.search);
 const questId = urlParams.get('id');
 
 const grid = document.getElementById("sign-grid");
 const selectedDisplay = document.getElementById("selected-signs");
+
+// ---------------------------------------------------------------------------
+// Tracking Goals — editor UI
+// ---------------------------------------------------------------------------
+
+function renderGoalList() {
+    const list = document.getElementById('goal-list');
+    if (!list) return;
+
+    if (trackingGoals.length === 0) {
+        list.innerHTML = '<p class="text-xs text-gray-500 italic">No goals added yet.</p>';
+        return;
+    }
+
+    list.innerHTML = trackingGoals.map((goal, index) => {
+        const meta = goal.type === 'counter'
+            ? `Target: <strong class="text-white">${goal.target}${goal.unit ? ' ' + goal.unit : ''}</strong>`
+            : 'Checkbox step';
+
+        return `
+            <div class="goal-item">
+                <span class="goal-type-badge ${goal.type}">${goal.type}</span>
+                <span class="goal-label">${goal.label}</span>
+                <span class="goal-meta">${meta}</span>
+                <button class="goal-remove" data-index="${index}" title="Remove goal">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        `;
+    }).join('');
+
+    list.querySelectorAll('.goal-remove').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const idx = parseInt(btn.dataset.index);
+            trackingGoals.splice(idx, 1);
+            renderGoalList();
+        });
+    });
+}
+
+function setupTrackingGoals(quest = null) {
+    const enableToggle   = document.getElementById('enable-tracking');
+    const panel          = document.getElementById('tracking-goals-panel');
+    const gateToggle     = document.getElementById('goals-gate-completion');
+    const typeSelect     = document.getElementById('new-goal-type');
+    const labelInput     = document.getElementById('new-goal-label');
+    const targetInput    = document.getElementById('new-goal-target');
+    const unitInput      = document.getElementById('new-goal-unit');
+    const targetWrap     = document.getElementById('new-goal-target-wrap');
+    const unitWrap       = document.getElementById('new-goal-unit-wrap');
+    const addBtn         = document.getElementById('add-goal-btn');
+    const typeHint       = document.getElementById('goal-type-hint');
+
+    if (!enableToggle) return;
+
+    // --- Load existing state from quest ---
+    if (quest && quest.tracking_goals && quest.tracking_goals.length > 0) {
+        trackingGoals = JSON.parse(JSON.stringify(quest.tracking_goals)); // deep copy
+        enableToggle.checked = true;
+        panel.classList.remove('hidden');
+    } else {
+        trackingGoals = [];
+        enableToggle.checked = false;
+        panel.classList.add('hidden');
+    }
+
+    if (quest) {
+        gateToggle.checked = quest.goals_gate_completion || false;
+    }
+
+    renderGoalList();
+
+    // --- Enable/disable tracking panel ---
+    enableToggle.addEventListener('change', () => {
+        if (enableToggle.checked) {
+            panel.classList.remove('hidden');
+        } else {
+            panel.classList.add('hidden');
+        }
+    });
+
+    // --- Show/hide counter-only fields based on type ---
+    const syncTypeFields = () => {
+        const isCounter = typeSelect.value === 'counter';
+        targetWrap.style.display = isCounter ? '' : 'none';
+        unitWrap.style.display   = isCounter ? '' : 'none';
+        typeHint.textContent = isCounter
+            ? 'Counter: player increments toward a numeric target. Set target and optional unit (e.g. "ore", "stacks", "level").'
+            : 'Checkbox: a simple done / not-done step. No target needed.';
+    };
+
+    typeSelect.addEventListener('change', syncTypeFields);
+    syncTypeFields(); // run once on load
+
+    // --- Add goal ---
+    addBtn.addEventListener('click', () => {
+        const type  = typeSelect.value;
+        const label = labelInput.value.trim();
+
+        if (!label) {
+            labelInput.focus();
+            labelInput.classList.add('border-red-500');
+            setTimeout(() => labelInput.classList.remove('border-red-500'), 1500);
+            return;
+        }
+
+        const goal = { type, label };
+
+        if (type === 'counter') {
+            const target = parseInt(targetInput.value);
+            if (!target || target < 1) {
+                targetInput.focus();
+                targetInput.classList.add('border-red-500');
+                setTimeout(() => targetInput.classList.remove('border-red-500'), 1500);
+                return;
+            }
+            goal.target = target;
+            const unit = unitInput.value.trim();
+            if (unit) goal.unit = unit;
+        }
+
+        trackingGoals.push(goal);
+        renderGoalList();
+
+        // Clear form
+        labelInput.value  = '';
+        targetInput.value = '';
+        unitInput.value   = '';
+        labelInput.focus();
+    });
+
+    // Allow Enter in label/target/unit to trigger add
+    [labelInput, targetInput, unitInput].forEach(el => {
+        el.addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); addBtn.click(); }
+        });
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Init
+// ---------------------------------------------------------------------------
 
 async function init() {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -32,12 +175,9 @@ async function init() {
         return;
     }
 
-    // Initialize quest state manager
-    //console.log('[EDIT_QUEST.HTML] Initializing quest state manager...');
     if (!questState.isReady()) {
         await questState.initialize();
     }
-    //console.log('[EDIT_QUEST.HTML] Quest state manager initialized');
 
     const signRes = await fetch('frontend/www/assets/signs.json');
     const signData = await signRes.json();
@@ -90,6 +230,7 @@ async function renderQuestManager(userId, config) {
                             <th class="px-4 py-3">Category</th>
                             <th class="px-4 py-3">Additional Categories</th>
                             <th class="px-4 py-3">Claims</th>
+                            <th class="px-4 py-3">Tracking</th>
                             <th class="px-4 py-3 text-right">Actions</th>
                         </tr>
                     </thead>
@@ -122,15 +263,11 @@ async function renderQuestManager(userId, config) {
         return;
     }
 
-    // Load categories from state manager for the filter dropdown
-    //console.log('[EDIT_QUEST.HTML] Loading categories for manager filter dropdown...');
     if (!questState.isReady()) {
         await questState.initialize();
     }
     
     const allCategories = questState.getCategories();
-    //console.log('[EDIT_QUEST.HTML] Categories from state manager for filter:', allCategories);
-    //console.log('[EDIT_QUEST.HTML] Total categories for filter:', allCategories.length);
     
     allCategories.forEach(cat => {
         const opt = document.createElement('option');
@@ -138,7 +275,6 @@ async function renderQuestManager(userId, config) {
         opt.textContent = cat.name;
         filterSelect.appendChild(opt);
     });
-    //console.log('[EDIT_QUEST.HTML] Manager filter dropdown populated with', allCategories.length, 'categories');
 
     const attachTooltip = (el, name) => {
         el.onmouseenter = () => {
@@ -168,6 +304,7 @@ async function renderQuestManager(userId, config) {
         filtered.forEach(quest => {
             const claimCount = claims.filter(c => c.quest_id === quest.id).length;
             const maxClaims = quest.max_claims || 0;
+            const hasTracking = quest.tracking_goals && quest.tracking_goals.length > 0;
             
             const row = document.createElement('tr');
             row.className = 'hover:bg-white/5 transition-colors group';
@@ -203,6 +340,21 @@ async function renderQuestManager(userId, config) {
                 </div>
             `;
 
+            const trackingCell = document.createElement('td');
+            trackingCell.className = 'px-4 py-3';
+            if (hasTracking) {
+                const goalCount = quest.tracking_goals.length;
+                const gated = quest.goals_gate_completion
+                    ? '<i class="fa-solid fa-lock text-[10px] ml-1 text-yellow-500" title="Goals gate completion"></i>'
+                    : '';
+                trackingCell.innerHTML = `
+                    <span class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-indigo-500/15 text-indigo-300 border border-indigo-500/25 rounded font-semibold">
+                        <i class="fa-solid fa-list-check text-[10px]"></i> ${goalCount} goal${goalCount !== 1 ? 's' : ''}${gated}
+                    </span>`;
+            } else {
+                trackingCell.innerHTML = '<span class="text-gray-600 text-xs italic">—</span>';
+            }
+
             const actionsCell = document.createElement('td');
             actionsCell.className = 'px-4 py-3 text-right';
             actionsCell.innerHTML = `
@@ -211,7 +363,7 @@ async function renderQuestManager(userId, config) {
                 </a>
             `;
 
-            row.append(questNameCell, categoryCell, additionalCatCell, claimsCell, actionsCell);
+            row.append(questNameCell, categoryCell, additionalCatCell, claimsCell, trackingCell, actionsCell);
             list.appendChild(row);
         });
     };
@@ -222,19 +374,11 @@ async function renderQuestManager(userId, config) {
 }
 
 async function loadCategories() {
-    //console.log('[EDIT_QUEST.HTML] loadCategories called');
-    
-    // Wait for state manager to be ready
     if (!questState.isReady()) {
-        //console.log('[EDIT_QUEST.HTML] State manager not ready, initializing...');
         await questState.initialize();
     }
 
     const categories = questState.getCategories();
-    //console.log('[EDIT_QUEST.HTML] Categories from state manager:', categories);
-    //console.log('[EDIT_QUEST.HTML] Total categories:', categories.length);
-    //console.log('[EDIT_QUEST.HTML] Category names:', categories.map(c => c.name));
-    
     const catSelect = document.getElementById("quest-category-select");
     const preCatSelect = document.getElementById("unlock-pre-cat");
 
@@ -244,7 +388,6 @@ async function loadCategories() {
             const opt = new Option(cat.name, cat.name);
             catSelect.add(opt);
         });
-        //console.log('[EDIT_QUEST.HTML] Quest category dropdown populated with', catSelect.options.length - 2, 'categories');
     }
 
     if (preCatSelect) {
@@ -253,21 +396,15 @@ async function loadCategories() {
             const opt = new Option(cat.name, cat.name);
             preCatSelect.add(opt);
         });
-        //console.log('[EDIT_QUEST.HTML] Prerequisite category dropdown populated with', preCatSelect.options.length - 1, 'categories');
     }
 }
 
 async function loadRegions() {
-    //console.log('[EDIT_QUEST.HTML] loadRegions called');
-    
-    // Wait for state manager to be ready
     if (!questState.isReady()) {
         await questState.initialize();
     }
 
     const regions = questState.getRegions();
-    //console.log('[EDIT_QUEST.HTML] Regions from state manager:', regions.length);
-
     const select = document.getElementById("region-selection");
     if (!select) return;
 
@@ -284,8 +421,6 @@ async function loadRegions() {
         option.textContent = `${reg.region_name} | ${reg.shard} | ${reg.province} | ${reg.home_valley}`;
         select.appendChild(option);
     });
-    
-    //console.log('[EDIT_QUEST.HTML] Region dropdown populated with', regions.length, 'regions');
 }
 
 async function loadEditor(userId, signData) {
@@ -306,16 +441,13 @@ async function loadEditor(userId, signData) {
         return;
     }
 
-    //console.log('[EDIT_QUEST.HTML] Loading categories for editor...');
     await loadCategories();
-    
-    //console.log('[EDIT_QUEST.HTML] Loading regions for editor...');
     await loadRegions();
 
     grid.innerHTML = "";
     allSignIds.forEach(fullId => {
         const btn = document.createElement("button");
-        btn.className = "p-1 bg-[#374151] rounded hover:bg-[#4b5563] border border-transparent hover:border-[#72e0cc] transition-all relative";
+        btn.className = "p1 bg-[#374151] rounded hover:bg-[#4b5563] border border-transparent hover:border-[#72e0cc] transition-all relative";
 
         const img = document.createElement("img");
         img.src = `${baseUrl}${fullId}.webp?${version}`;
@@ -349,6 +481,7 @@ async function loadEditor(userId, signData) {
         grid.appendChild(btn);
     });
 
+    // --- Populate standard fields ---
     document.getElementById('quest-name').value = quest.quest_name;
     document.getElementById('quest-author').value = quest.author || '';
     document.getElementById('quest-key').value = quest.quest_key;
@@ -356,7 +489,6 @@ async function loadEditor(userId, signData) {
     document.getElementById('unlock-pre-cat').value = quest.unlock_prerequisite_category || '';
     document.getElementById('unlock-req-count').value = quest.unlock_required_count || '';
     
-    // Initialize additional categories UI
     const categories = questState.getCategories();
     const additionalCatContainer = document.getElementById('additional-categories-wrapper');
     if (additionalCatContainer && categories) {
@@ -377,11 +509,16 @@ async function loadEditor(userId, signData) {
     document.getElementById('max-claims').value = quest.max_claims || 1;
     document.getElementById('is-capstone-quest').checked = quest.is_capstone_quest || false;
 
+    // --- Tracking goals ---
+    setupTrackingGoals(quest);
+
+    // --- Signs ---
     selected = [];
     if (quest.signs) {
         selected.push(...quest.signs);
         updateSelected(baseUrl, version);
     }
+
     await loadPrerequisiteOptionsForEdit('hard-lock-container', quest.hard_lock_quest_ids || [], 'hard-lock-quest', 'hard-lock-search', 'hard-lock-list');
     await loadPrerequisiteOptionsForEdit('prerequisite-container', quest.prerequisite_quest_ids || [], 'prereq-quest', 'prereq-search', 'prereq-list');
 
@@ -389,9 +526,6 @@ async function loadEditor(userId, signData) {
 }
 
 async function loadPrerequisiteOptionsForEdit(containerId, existingIds = [], inputName = 'prereq-quest', searchId = 'prereq-search', listId = 'prereq-list') {
-    //console.log('[EDIT_QUEST.HTML] Loading prerequisite options...');
-    
-    // Use state manager to get quests
     if (!questState.isReady()) {
         await questState.initialize();
     }
@@ -405,8 +539,6 @@ async function loadPrerequisiteOptionsForEdit(containerId, existingIds = [], inp
             category: q.category || 'Uncategorized'
         }))
         .sort((a, b) => a.category.localeCompare(b.category));
-    
-    //console.log('[EDIT_QUEST.HTML] Loaded', quests.length, 'quests for prerequisites');
 
     const parent = document.getElementById(containerId);
     if (!parent) return;
@@ -433,16 +565,13 @@ async function loadPrerequisiteOptionsForEdit(containerId, existingIds = [], inp
                 `;
             }).join('');
         
-        // Add event listeners to checkboxes to track state changes
         listContainer.querySelectorAll(`input[name="${inputName}"]`).forEach(checkbox => {
             checkbox.addEventListener('change', (e) => {
                 if (e.target.checked) {
-                    // Add to existingIds if not already there
                     if (!existingIds.includes(e.target.value)) {
                         existingIds.push(e.target.value);
                     }
                 } else {
-                    // Remove from existingIds
                     existingIds = existingIds.filter(id => id !== e.target.value);
                 }
             });
@@ -454,7 +583,6 @@ async function loadPrerequisiteOptionsForEdit(containerId, existingIds = [], inp
     });
 
     renderPrereqs();
-    //console.log('[EDIT_QUEST.HTML] Prerequisite container populated');
 }
 
 function updateSelected(baseUrl, version) {
@@ -534,8 +662,6 @@ function setupEditorEvents(baseUrl, version) {
             newCategoryWrapper.classList.remove("hidden");
         } else {
             newCategoryWrapper.classList.add("hidden");
-            
-            // Update additional categories UI when primary category changes
             const categories = questState.getCategories();
             if (categories) {
                 updateAdditionalCategoriesForPrimaryChange(categories, categorySelect.value);
@@ -585,7 +711,6 @@ function setupEditorEvents(baseUrl, version) {
                 return;
             }
             
-            // Add new category to database
             const { error: catError } = await supabase
                 .from("quest_categories")
                 .upsert({ name: finalCategory, is_secret: false }, { onConflict: 'name' });
@@ -595,7 +720,6 @@ function setupEditorEvents(baseUrl, version) {
                 return;
             }
             
-            // Invalidate the categories cache to pick up the new category
             await questState.invalidate(['categories']);
         }
 
@@ -606,9 +730,13 @@ function setupEditorEvents(baseUrl, version) {
             return allSignIds[encodedIndex].split('_').slice(1).join('_');
         });
 
-        // Get additional categories
         const additionalCategories = getSelectedAdditionalCategories();
         const isCapstoneQuest = document.getElementById('is-capstone-quest')?.checked || false;
+
+        // --- Tracking goals payload ---
+        const trackingEnabled = document.getElementById('enable-tracking')?.checked || false;
+        const goalsGateCompletion = document.getElementById('goals-gate-completion')?.checked || false;
+        const finalTrackingGoals = trackingEnabled && trackingGoals.length > 0 ? trackingGoals : null;
         
         const updatedData = {
             quest_name: document.getElementById('quest-name').value.trim(),
@@ -629,7 +757,9 @@ function setupEditorEvents(baseUrl, version) {
             reward_key: reward_keys.length > 0 ? reward_keys.join(",") : null,
             prerequisite_quest_ids: selectedPrereqs,
             hard_lock_quest_ids: selectedHardLocks,
-            is_capstone_quest: isCapstoneQuest
+            is_capstone_quest: isCapstoneQuest,
+            tracking_goals: finalTrackingGoals,
+            goals_gate_completion: trackingEnabled ? goalsGateCompletion : false
         };
 
         const { error } = await supabase
@@ -640,7 +770,6 @@ function setupEditorEvents(baseUrl, version) {
         if (error) {
             alert(error.message);
         } else {
-            // Invalidate quests cache after updating
             await questState.invalidate(['quests']);
             window.location.href = 'edit_quest.html';
         }

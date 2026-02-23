@@ -3,6 +3,7 @@ import { getUnlockedCategories, applyLockStyles } from "./unlocks.js";
 import { enableSignTooltip } from '../ui/signTooltip.js';
 import { initQuestModal } from './questModal.js';
 import { initializeCharacterSystem, fetchCharacters, populateCharacterRegionDropdowns } from './characterManager.js';
+import { renderQuestTracker } from './questProgressTracker.js';
 
 
 let allQuests = [];
@@ -948,6 +949,39 @@ async function showQuestDetails(quest, userClaimed) {
     const url = new URL(window.location);
     url.searchParams.set('quest', quest.quest_key);
     window.history.replaceState({}, '', url);
+
+    // --- Quest Progress Tracker ---
+    const trackerSlot = document.getElementById('quest-tracker-slot');
+    const hasGoals = quest.tracking_goals && Array.isArray(quest.tracking_goals) && quest.tracking_goals.length > 0;
+
+    if (hasGoals && trackerSlot) {
+        // Capture button state references for the gate callback
+        const gated = quest.goals_gate_completion === true;
+        const canBeGated = !userClaimed && prerequisitesMet && gated;
+
+        renderQuestTracker(quest, trackerSlot, {
+            onGoalsComplete: (allDone) => {
+                if (!canBeGated) return;
+                const btn = document.getElementById('detail-redeem-btn');
+                if (!btn) return;
+                if (allDone) {
+                    btn.disabled = false;
+                    btn.innerText = 'Complete Quest';
+                    btn.className = 'ml-auto bg-[#FFD700] w-52 text-black py-3 rounded-lg font-bold uppercase text-md hover:bg-yellow-400 transition-all';
+                } else {
+                    btn.disabled = true;
+                    btn.innerText = 'Complete Goals First';
+                    btn.className = 'ml-auto bg-gray-900/40 w-52 text-gray-400/50 py-3 rounded-lg font-bold uppercase text-md cursor-not-allowed border border-white/5';
+                }
+            }
+        });
+    } else if (trackerSlot) {
+        trackerSlot.innerHTML = '';
+    }
+    // --- End Quest Progress Tracker ---
+
+    // Store current quest for modal access
+    window.activeQuest = quest;
 
     requestAnimationFrame(() => {
         const scrollEl = document.getElementById('quest-details-scroll');

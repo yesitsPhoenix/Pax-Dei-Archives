@@ -1,3 +1,5 @@
+import { renderQuestTracker } from './questProgressTracker.js';
+
 export function initQuestModal() {
     const modal = document.getElementById('quest-modal');
     const closeBtn = document.getElementById('close-quest-modal');
@@ -17,7 +19,7 @@ export function initQuestModal() {
         const signs = document.getElementById('detail-signs').innerHTML;
         const status = document.getElementById('detail-status-badge').innerHTML;
         const prerequisites = document.getElementById('detail-prerequisites').innerHTML;
-        const hardLocks = document.getElementById('detail-hard-locks').innerHTML;
+        const hardLocks = document.getElementById('detail-hard-locks')?.innerHTML || '';
         
         // Check if quest has rewards
         const rewardsSection = document.querySelector('section:has(#detail-rewards-section)');
@@ -75,17 +77,13 @@ export function initQuestModal() {
                 </section>
                 ` : ''}
                 <section>
-                    <h4 class="text-md uppercase tracking-widest text-gray-500 font-bold mb-2">Required to Unlock</h4>
-                    <div id="modal-hard-locks" class="bg-black/20 p-4 rounded-xl border border-gray-700/50 flex flex-col gap-1">
-                        ${hardLocks}
-                    </div>
-                </section>
-                <section>
                     <h4 class="text-md uppercase tracking-widest text-gray-500 font-bold mb-2">Required to Complete</h4>
                     <div id="modal-prerequisites" class="bg-black/20 p-4 rounded-xl border border-gray-700/50 flex flex-col gap-1">
                         ${prerequisites}
                     </div>
                 </section>
+                <!-- Modal tracker slot -->
+                <div id="modal-tracker-slot"></div>
                 <section>
                     <div class="flex justify-end pt-4">
                         ${redeemBtnHTML}
@@ -93,6 +91,33 @@ export function initQuestModal() {
                 </section>
             </div>
         `;
+
+        // Wire tracker into the modal if the quest has goals
+        const quest = window.activeQuest;
+        if (quest && quest.tracking_goals && Array.isArray(quest.tracking_goals) && quest.tracking_goals.length > 0) {
+            const modalTrackerSlot = document.getElementById('modal-tracker-slot');
+            const modalRedeemBtn = document.querySelector('#modal-quest-body #detail-redeem-btn');
+
+            // Determine if the gate should be active in the modal
+            const isClaimed = redeemBtn && redeemBtn.disabled && redeemBtn.innerText.includes('Completed');
+            const isLocked = redeemBtn && redeemBtn.disabled && redeemBtn.innerText === 'Locked';
+            const canBeGated = !isClaimed && !isLocked && quest.goals_gate_completion === true;
+
+            renderQuestTracker(quest, modalTrackerSlot, {
+                onGoalsComplete: (allDone) => {
+                    if (!canBeGated || !modalRedeemBtn) return;
+                    if (allDone) {
+                        modalRedeemBtn.disabled = false;
+                        modalRedeemBtn.innerText = 'Complete Quest';
+                        modalRedeemBtn.className = 'ml-auto bg-[#FFD700] w-52 text-black py-3 rounded-lg font-bold uppercase text-md hover:bg-yellow-400 transition-all';
+                    } else {
+                        modalRedeemBtn.disabled = true;
+                        modalRedeemBtn.innerText = 'Complete Goals First';
+                        modalRedeemBtn.className = 'ml-auto bg-gray-900/40 w-52 text-gray-400/50 py-3 rounded-lg font-bold uppercase text-md cursor-not-allowed border border-white/5';
+                    }
+                }
+            });
+        }
 
         // Re-attach event listeners for prerequisite links
         document.getElementById('modal-quest-body').querySelectorAll('.prereq-link').forEach(btn => {
