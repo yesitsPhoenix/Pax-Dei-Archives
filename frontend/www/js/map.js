@@ -153,58 +153,7 @@ async function initMap() {
             popupAnchor: [1, -34],
         });
 
-        map.on("click", function(e) {
-            const tempMarker = L.marker(e.latlng, {
-                icon: tempMarkerIcon
-            }).addTo(map);
 
-            const popupDiv = document.createElement("div");
-            const inputField = document.createElement("input");
-            inputField.type = "text";
-            inputField.id = "marker-input";
-            inputField.placeholder = "Enter text";
-
-            const coordinatesText = document.createElement("p");
-            coordinatesText.textContent = `Coordinates: [${e.latlng.lat.toFixed(3)}, ${e.latlng.lng.toFixed(3)}]`;
-
-            const copyButton = document.createElement("button");
-            copyButton.id = "copy-data";
-            copyButton.textContent = "Copy Data";
-
-            popupDiv.appendChild(inputField);
-            popupDiv.appendChild(coordinatesText);
-
-            popupDiv.appendChild(document.createElement("br"));
-            popupDiv.appendChild(copyButton);
-            popupDiv.appendChild(document.createTextNode("\u00A0\u00A0"));
-
-            tempMarker.bindPopup(popupDiv).openPopup();
-
-            tempMarker.on("click", function(event) {
-                if (event.originalEvent.ctrlKey || event.originalEvent.metaKey) {
-                    tempMarker.remove();
-                }
-            });
-
-            const copyDataButton = popupDiv.querySelector("#copy-data");
-            copyDataButton.addEventListener("click", function() {
-                const inputField = document.getElementById("marker-input");
-                const enteredText = inputField.value;
-                const coordinates = ` ${e.latlng.lat.toFixed(3)},${e.latlng.lng.toFixed(3)}`;
-
-                const combinedText = `${enteredText}${coordinates}`;
-                copyToClipboard(combinedText);
-            });
-
-            function copyToClipboard(text) {
-                const textArea = document.createElement("textarea");
-                textArea.value = text;
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand("copy");
-                document.body.removeChild(textArea);
-            }
-        });
 
     } catch (error) {
         console.error("Error initializing map:", error);
