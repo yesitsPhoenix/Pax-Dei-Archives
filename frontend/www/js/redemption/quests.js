@@ -700,6 +700,10 @@ async function showQuestDetails(quest, userClaimed) {
         target.querySelectorAll('li').forEach(li => {
             li.classList.add('mb-1');
         });
+
+        target.querySelectorAll('strong').forEach(strong => {
+            strong.classList.add('text-[#FFD700]');
+        });
     };
 
     formatMarkdownContainer('detail-lore', quest.lore, "No lore available.");
