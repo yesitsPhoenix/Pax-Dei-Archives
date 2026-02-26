@@ -66,8 +66,15 @@
 
             <!-- Main Content -->
             <div class="lore-main-content-area">
-                <!-- Category pill bar -->
-                <div class="lore-category-bar" id="lore-category-bar" style="display: none;"></div>
+                <!-- Category pill bar + Search -->
+                <div class="lore-topbar" id="lore-topbar" style="display: none;">
+                    <div class="lore-category-bar" id="lore-category-bar"></div>
+                    <div class="lore-search-wrapper" id="lore-search-wrapper">
+                        <i class="fa-solid fa-magnifying-glass lore-search-icon"></i>
+                        <input type="text" id="lore-search-input" class="lore-search-input" placeholder="Search lore..." autocomplete="off" />
+                        <div class="lore-search-results" id="lore-search-results"></div>
+                    </div>
+                </div>
 
                 <!-- Breadcrumbs -->
                 <div class="lore-breadcrumbs" id="lore-breadcrumbs" style="display: none;"></div>

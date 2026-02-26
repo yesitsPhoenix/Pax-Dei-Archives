@@ -341,16 +341,17 @@ async function renderHome() {
 // ── Main Display Function ──────────────────────────────────────
 async function displayLoreContent(category, slug) {
     const container = document.getElementById('lore-wiki-container');
-    const categoryBar = document.getElementById('lore-category-bar');
     const breadcrumbs = document.getElementById('lore-breadcrumbs');
 
     // Always show the wiki container
     container.style.display = '';
 
+    const topbar = document.getElementById('lore-topbar');
+
     if (!category && !slug) {
         // Home view — hide sidebar, show category cards in main area
         document.getElementById('lore-sidebar').style.display = 'none';
-        if (categoryBar) categoryBar.style.display = 'none';
+        if (topbar) topbar.style.display = 'none';
         if (breadcrumbs) breadcrumbs.style.display = 'none';
         await renderHome();
         return;
@@ -358,7 +359,7 @@ async function displayLoreContent(category, slug) {
 
     // Show sidebar and bar
     document.getElementById('lore-sidebar').style.display = '';
-    if (categoryBar) categoryBar.style.display = '';
+    if (topbar) topbar.style.display = '';
     if (breadcrumbs) breadcrumbs.style.display = '';
 
     // Build sidebar
@@ -406,4 +407,69 @@ document.addEventListener('DOMContentLoaded', async function () {
         const p = getQueryParams();
         await displayLoreContent(p.category || null, p.item || null);
     };
+
+    // ── Smart Search ──────────────────────────────────────────
+    const searchInput = document.getElementById('lore-search-input');
+    const searchResults = document.getElementById('lore-search-results');
+
+    if (searchInput && searchResults) {
+        let searchDebounce = null;
+
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchDebounce);
+            const query = searchInput.value.trim().toLowerCase();
+
+            if (!query) {
+                searchResults.innerHTML = '';
+                searchResults.classList.remove('active');
+                return;
+            }
+
+            searchDebounce = setTimeout(async () => {
+                const allItems = await fetchAllItems();
+                const matches = allItems.filter(item =>
+                    item.title.toLowerCase().includes(query) ||
+                    item.category.toLowerCase().includes(query)
+                ).slice(0, 10);
+
+                if (!matches.length) {
+                    searchResults.innerHTML = '<div class="lore-search-no-results">No entries found</div>';
+                    searchResults.classList.add('active');
+                    return;
+                }
+
+                searchResults.innerHTML = matches.map(item => {
+                    const icon = getCategoryIcon(item.category);
+                    const idx = item.title.toLowerCase().indexOf(query);
+                    const titleHighlighted = idx >= 0
+                        ? item.title.slice(0, idx) + '<mark>' + item.title.slice(idx, idx + query.length) + '</mark>' + item.title.slice(idx + query.length)
+                        : item.title;
+                    return `<a class="lore-search-result-item" href="lore.html?category=${encodeURIComponent(item.category)}&item=${encodeURIComponent(item.slug)}">
+                        <i class="fa-solid ${icon} lore-search-result-icon"></i>
+                        <span class="lore-search-result-title">${titleHighlighted}</span>
+                        <span class="lore-search-result-category">${item.category}</span>
+                    </a>`;
+                }).join('');
+
+                searchResults.classList.add('active');
+            }, 200);
+        });
+
+        // Close results when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#lore-search-wrapper')) {
+                searchResults.innerHTML = '';
+                searchResults.classList.remove('active');
+            }
+        });
+
+        // Clear on Escape
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                searchInput.value = '';
+                searchResults.innerHTML = '';
+                searchResults.classList.remove('active');
+            }
+        });
+    }
 });

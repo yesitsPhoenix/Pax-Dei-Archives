@@ -391,6 +391,7 @@
     font-style: italic;
     color: #E5E7EB;
     line-height: 1.75;
+    overflow: hidden;
 }
 
 .lore-article-body blockquote p {
@@ -681,4 +682,137 @@
 
 .lore-category-pill i {
     font-size: 11px;
+}
+
+/* ── Top Bar (category pills + search) ─────────────────────────── */
+.lore-topbar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #374151;
+    background: rgba(0, 0, 0, 0.15);
+    flex-wrap: wrap;
+}
+
+.lore-topbar .lore-category-bar {
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    border-bottom: none;
+    background: none;
+    flex-wrap: wrap;
+}
+
+/* ── Search Wrapper ──────────────────────────────────────── */
+.lore-search-wrapper {
+    position: relative;
+    flex-shrink: 0;
+    width: 220px;
+}
+
+.lore-search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6B7280;
+    font-size: 12px;
+    pointer-events: none;
+}
+
+.lore-search-input {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid #374151;
+    border-radius: 6px;
+    color: #E5E7EB;
+    font-size: 15px;
+    padding: 7px 10px 7px 32px;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.lore-search-input::placeholder {
+    color: #4B5563;
+}
+
+.lore-search-input:focus {
+    border-color: #FFD700;
+    box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.15);
+}
+
+/* ── Search Results Dropdown ────────────────────────────── */
+.lore-search-results {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 400px;
+    width: max-content;
+    max-width: 600px;
+    background: #1f2937;
+    border: 1px solid #374151;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+    overflow: hidden;
+}
+
+.lore-search-results.active {
+    display: block;
+}
+
+.lore-search-result-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    color: #D1D5DB;
+    text-decoration: none;
+    font-size: 15px;
+    border-bottom: 1px solid #374151;
+    transition: background 0.1s;
+}
+
+.lore-search-result-item:last-child {
+    border-bottom: none;
+}
+
+.lore-search-result-item:hover {
+    background: rgba(255, 215, 0, 0.08);
+    color: #FFD700;
+}
+
+.lore-search-result-icon {
+    font-size: 11px;
+    color: #6B7280;
+    flex-shrink: 0;
+    width: 14px;
+    text-align: center;
+}
+
+.lore-search-result-title {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+}
+
+.lore-search-result-title mark {
+    background: transparent;
+    color: #FFD700;
+    font-weight: 600;
+}
+
+.lore-search-result-category {
+    font-size: 13px;
+    color: #4B5563;
+    flex-shrink: 0;
+}
+
+.lore-search-no-results {
+    padding: 12px 14px;
+    color: #4B5563;
+    font-size: 15px;
+    text-align: center;
 }
