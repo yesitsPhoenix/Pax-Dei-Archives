@@ -1,5 +1,6 @@
 import { supabase } from '../supabaseClient.js';
 import { initializeCharacterSystem } from '../redemption/characterManager.js';
+import { authSession } from '../authSessionManager.js';
 
 // Wait for the header template to be loaded into the DOM
 function waitForHeader(timeout = 5000) {
@@ -81,14 +82,14 @@ export async function handleAdminAccess(user) {
 }
 
 export function setupAdminAuthListener() {
-    supabase.auth.onAuthStateChange((event, session) => {
+    authSession.onChange((event, user) => {
         const path = window.location.pathname;
         const currentPage = path.split('/').pop().toLowerCase() || 'index.html';
         const publicPages = ['quests.html', 'chronicles.html', 'redeem.html', 'index.html', 'lore.html', 'edit_quest.html', ''];
 
-        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-            if (session?.user) {
-                handleAdminAccess(session.user);
+        if (event === 'SIGNED_IN') {
+            if (user) {
+                handleAdminAccess(user);
             } else if (!publicPages.includes(currentPage)) {
                 window.location.href = 'quests.html';
             }

@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient.js';
 import { authorRoleColors, slugify } from './utils.js';
+import { authSession } from './authSessionManager.js';
 
 // ─────────────────────────────────────────────────────────────
 // State
@@ -702,7 +703,7 @@ async function initAuthAndDashboard() {
     const adminDashboard = document.getElementById('adminDashboardAndForm');
     const loginError     = document.getElementById('loginError');
 
-    const { data: { user } = {} } = await supabase.auth.getUser();
+    const user = await authSession.getUser();
 
     showLoadingOverlay(false);
 
@@ -739,19 +740,17 @@ async function initAuthAndDashboard() {
 // Event Listeners
 // ─────────────────────────────────────────────────────────────
 function setupAuthEventListeners() {
-    supabase.auth.onAuthStateChange(function(event) {
-        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-            initialAuthCheckComplete   = false;
-            isAdminAuthorizedCache     = null;
-            dashboardStatsCache        = null;
-            currentUserIsAdmin         = false;
-            currentUserCanComment      = false;
-            currentUserCanPostArticles = false;
-            currentUserIsLoreEditor    = false;
-            allSiteUsersCache          = [];
-            userRolesLoaded            = false;
-            initAuthAndDashboard();
-        }
+    authSession.onChange(function(event, user) {
+        initialAuthCheckComplete   = false;
+        isAdminAuthorizedCache     = null;
+        dashboardStatsCache        = null;
+        currentUserIsAdmin         = false;
+        currentUserCanComment      = false;
+        currentUserCanPostArticles = false;
+        currentUserIsLoreEditor    = false;
+        allSiteUsersCache          = [];
+        userRolesLoaded            = false;
+        initAuthAndDashboard();
     });
 
     const discordBtn = document.getElementById('discordLoginButton');
