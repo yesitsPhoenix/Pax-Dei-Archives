@@ -77,14 +77,40 @@ export async function getUserProfile() {
     .from('users')
     .select('discord_user_id, username, discriminator, avatar_url, created_at, last_login_at')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
   if (profileError) {
     console.error('Error fetching user profile:', profileError);
     return null;
   }
 
-  return profile || null;
+  // New user — no row yet, create one from Discord OAuth metadata
+  if (!profile) {
+    const meta = user.user_metadata || {};
+    const newUser = {
+      id: user.id,
+      discord_user_id: meta.provider_id || meta.sub || null,
+      username: meta.full_name || meta.name || meta.global_name || 'Unknown',
+      discriminator: meta.custom_claims?.discriminator || meta.discriminator || '0',
+      avatar_url: meta.avatar_url || meta.picture || null,
+    };
+
+    const { data: created, error: createError } = await supabase
+      .from('users')
+      .insert(newUser)
+      .select('discord_user_id, username, discriminator, avatar_url, created_at, last_login_at')
+      .single();
+
+    if (createError) {
+      console.error('Error creating user profile:', createError);
+      return null;
+    }
+
+    console.log('[getUserProfile] New user profile created:', created);
+    return created;
+  }
+
+  return profile;
 }
 
 export async function getDungeonRuns(userId) {
