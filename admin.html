@@ -63,8 +63,10 @@
             padding: 2px 8px; border-radius: 9999px; font-size: 0.7rem; font-weight: 600;
         }
         .role-badge.master  { background: rgba(239,68,68,0.15);  color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+        .role-badge.comments  { background: rgba(105, 175, 120, 0.15);  color: #2dd050; border: 1px solid rgba(68, 239, 171, 0.3); }
         .role-badge.quest   { background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
         .role-badge.lore    { background: rgba(52,211,153,0.15); color: #34d399; border: 1px solid rgba(52,211,153,0.3); }
+        .role-badge.article    { background: rgba(52, 129, 211, 0.15); color: #3469d3; border: 1px solid rgba(52, 129, 211, 0.3); }
         .role-badge.none    { background: rgba(107,114,128,0.15); color: #6b7280; border: 1px solid rgba(107,114,128,0.3); }
 
         /* ── Dev comment form ── */
@@ -184,6 +186,12 @@
       <a href="#user-roles-section" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
         <i class="fas fa-user-shield w-5 h-5 text-gray-400 transition duration-75"></i>
         <span class="ml-3">User Roles</span>
+      </a>
+    </li>
+    <li id="sidebarEditLoreLink" class="hidden">
+      <a href="edit_lore.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+        <i class="fas fa-book-open w-5 h-5 text-gray-400 transition duration-75"></i>
+        <span class="ml-3">Edit Lore</span>
       </a>
     </li>
   </ul>
@@ -625,7 +633,7 @@
 
                 <label class="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg cursor-pointer hover:bg-slate-700 transition-all">
                     <input type="checkbox" id="roleCheck_is_editor" class="rounded text-violet-600 focus:ring-violet-500 w-4 h-4">
-                    <span class="text-white text-sm"><span class="role-badge lore mr-2"><i class="fas fa-user-edit"></i> is_editor</span> General admin page access</span>
+                    <span class="text-white text-sm"><span class="role-badge none mr-2"><i class="fas fa-user-edit"></i> is_editor</span> General admin page access</span>
                 </label>
 
                 <label class="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg cursor-pointer hover:bg-slate-700 transition-all">
@@ -635,12 +643,12 @@
 
                 <label class="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg cursor-pointer hover:bg-slate-700 transition-all">
                     <input type="checkbox" id="roleCheck_can_post_articles" class="rounded text-violet-600 focus:ring-violet-500 w-4 h-4">
-                    <span class="text-white text-sm"><span class="role-badge lore mr-2"><i class="fas fa-newspaper"></i> can_post_articles</span> Can write and publish articles</span>
+                    <span class="text-white text-sm"><span class="role-badge article mr-2"><i class="fas fa-newspaper"></i> can_post_articles</span> Can write and publish articles</span>
                 </label>
 
                 <label class="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg cursor-pointer hover:bg-slate-700 transition-all">
                     <input type="checkbox" id="roleCheck_comment_adder" class="rounded text-violet-600 focus:ring-violet-500 w-4 h-4">
-                    <span class="text-white text-sm"><span class="role-badge master mr-2"><i class="fas fa-message"></i> comment_adder</span> Can add dev comments</span>
+                    <span class="text-white text-sm"><span class="role-badge comments mr-2"><i class="fas fa-message"></i> comment_adder</span> Can add dev comments</span>
                 </label>
 
                 <label class="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg cursor-pointer hover:bg-slate-700 transition-all">

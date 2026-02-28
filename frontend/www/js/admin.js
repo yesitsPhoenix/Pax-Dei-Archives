@@ -13,6 +13,7 @@ let isAdminAuthorizedCache = null;
 let currentUserIsAdmin = false;
 let currentUserCanComment = false;
 let currentUserCanPostArticles = false;
+let currentUserIsLoreEditor = false;
 let adminUsersCache = [];
 let allSiteUsersCache = [];
 
@@ -94,7 +95,7 @@ async function isAuthorizedAdmin(userId) {
     try {
         const { data, error } = await supabase
             .from('admin_users')
-            .select('is_editor, is_admin, role, can_post_articles')
+            .select('is_editor, is_admin, role, can_post_articles, lore_role')
             .eq('user_id', userId)
             .single();
 
@@ -103,7 +104,8 @@ async function isAuthorizedAdmin(userId) {
         currentUserIsAdmin         = data && data.is_admin === true;
         currentUserCanComment      = currentUserIsAdmin || (data && data.role === 'comment_adder');
         currentUserCanPostArticles = currentUserIsAdmin || (data && data.can_post_articles === true);
-        isAdminAuthorizedCache     = data && data.is_editor === true;
+        currentUserIsLoreEditor    = currentUserIsAdmin || (data && data.lore_role === 'lore_editor');
+        isAdminAuthorizedCache     = data && (data.is_editor === true || data.lore_role === 'lore_editor');
         return isAdminAuthorizedCache;
     } catch (e) {
         isAdminAuthorizedCache = false;
@@ -292,15 +294,13 @@ async function fetchAndRenderUserRoles() {
                 ? '<span class="text-lg text-white font-medium flex items-center gap-1"><i class="fab fa-discord text-indigo-400 text-lg"></i>' + username + '</span>'
                 : '')
             + '<div class="flex items-center gap-2">'
-            + '<code class="text-lg text-gray-500 font-mono">' + shortId + '</code>'
-            + '<button class="copy-uid-btn text-gray-600 hover:text-violet-400 transition-colors text-lg" data-uid="' + u.user_id + '" title="Copy full ID"><i class="fas fa-copy"></i></button>'
             + '</div>'
             + '</div>'
             + '</td>';
 
         const commenterCell = '<td class="px-4 py-3">'
             + (isCommenter
-                ? '<span class="role-badge master"><i class="fas fa-message"></i> comment_adder</span>'
+                ? '<span class="role-badge comments"><i class="fas fa-message"></i> comment_adder</span>'
                 : '<span class="role-badge none">\u2014</span>')
             + '</td>';
 
@@ -318,7 +318,7 @@ async function fetchAndRenderUserRoles() {
 
         const canPostArticlesCell = '<td class="px-4 py-3">'
             + (canPostArticles
-                ? '<span class="role-badge lore"><i class="fas fa-newspaper"></i> can_post_articles</span>'
+                ? '<span class="role-badge article"><i class="fas fa-newspaper"></i> can_post_articles</span>'
                 : '<span class="role-badge none">\u2014</span>')
             + '</td>';
 
@@ -330,7 +330,7 @@ async function fetchAndRenderUserRoles() {
 
         const accessCell = '<td class="px-4 py-3">'
             + (hasAccess
-                ? '<span class="role-badge lore"><i class="fas fa-user-edit"></i> editor</span>'
+                ? '<span class="role-badge none"><i class="fas fa-user-edit"></i> editor</span>'
                 : '<span class="role-badge none">\u2014</span>')
             + '</td>';
 
@@ -662,6 +662,27 @@ function applyModalGating() {
     applySidebarLinkState('openDevCommentModalBtn',   currentUserCanComment,      'You do not have the comment_adder role');
     applySidebarLinkState('openArticleModalBtn',      currentUserCanPostArticles, 'You do not have the can_post_articles role');
     applySidebarLinkState('openAddUserRoleModalBtn',  currentUserIsAdmin,         'Only admins can manage user roles');
+
+    // Show/hide Edit Lore sidebar link based on lore role
+    const loreSidebarLi = document.getElementById('sidebarEditLoreLink');
+    if (loreSidebarLi) {
+        if (currentUserIsLoreEditor) {
+            loreSidebarLi.classList.remove('hidden');
+        } else {
+            loreSidebarLi.classList.add('hidden');
+        }
+    }
+
+    // Show/hide Edit Lore link in the header nav dropdown
+    // The header is loaded async but by the time roles resolve it will be in the DOM
+    const editLoreNav = document.getElementById('edit-lore-nav');
+    if (editLoreNav) {
+        if (currentUserIsLoreEditor) {
+            editLoreNav.classList.remove('hidden');
+        } else {
+            editLoreNav.classList.add('hidden');
+        }
+    }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -717,6 +738,7 @@ function setupAuthEventListeners() {
             currentUserIsAdmin         = false;
             currentUserCanComment      = false;
             currentUserCanPostArticles = false;
+            currentUserIsLoreEditor    = false;
             allSiteUsersCache          = [];
             initAuthAndDashboard();
         }
