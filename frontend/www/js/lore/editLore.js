@@ -9,12 +9,39 @@ let categories = [];     // distinct categories
 let activeCatFilter = 'all';
 let currentTab = 'edit';
 
+// ── Auth Guard ───────────────────────────────────────────────────
+async function checkLoreEditAccess() {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        window.location.href = 'lore.html';
+        return false;
+    }
+
+    const { data, error } = await supabase
+        .from('admin_users')
+        .select('lore_role')
+        .eq('user_id', user.id)
+        .single();
+
+    if (error || !data || data.lore_role !== 'lore_editor') {
+        window.location.href = 'lore.html';
+        return false;
+    }
+
+    document.documentElement.style.visibility = 'visible';
+    return true;
+}
+
 // ── Init ──────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
     await loadAllItems();
 });
 
 async function loadAllItems() {
+    const authorized = await checkLoreEditAccess();
+    if (!authorized) return;
+
     const { data, error } = await supabase
         .from('lore_items')
         .select('id, title, slug, category, author, date, titles, association, known_works, sources, research, related_entries, sort_order, content, created_at, updated_at')

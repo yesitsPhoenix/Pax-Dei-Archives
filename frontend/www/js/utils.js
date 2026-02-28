@@ -79,42 +79,12 @@ export async function getUserProfile() {
     .eq('id', user.id)
     .single();
 
-  if (profileError && profileError.code === 'PGRST116') {
-    const discordProfile = user.user_metadata;
-    if (discordProfile && discordProfile.provider_id) {
-      const { data: newProfile, error: insertError } = await supabase
-        .from('users')
-        .insert({
-          id: user.id,
-          discord_user_id: discordProfile.provider_id,
-          username: discordProfile.global_name || discordProfile.full_name || discordProfile.user_name || `discord_user_${discordProfile.provider_id}`,
-          discriminator: discordProfile.discriminator || '0000',
-          avatar_url: discordProfile.avatar_url,
-          last_login_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (insertError) {
-        return null;
-      }
-      return newProfile;
-    }
-  } else if (profileError) {
+  if (profileError) {
+    console.error('Error fetching user profile:', profileError);
     return null;
   }
 
-  if (profile) {
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ last_login_at: new Date().toISOString() })
-      .eq('id', user.id);
-
-    if (updateError) {
-    }
-    return profile;
-  }
-  return null;
+  return profile || null;
 }
 
 export async function getDungeonRuns(userId) {
