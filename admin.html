@@ -381,10 +381,16 @@
                         <i class="fas fa-user-shield text-violet-400"></i>
                         User Role Management
                     </h2>
-                    <button id="openAddUserRoleModalBtn" class="bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-700 hover:to-purple-800 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2">
-                        <i class="fas fa-user-plus"></i>
-                        Grant Role to User
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button id="openAddUserRoleModalBtn" class="bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-700 hover:to-purple-800 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2">
+                            <i class="fas fa-user-plus"></i>
+                            Grant Role to User
+                        </button>
+                        <button id="refreshUserRolesBtn" title="Refresh user roles" class="bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white font-semibold px-3 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 border border-slate-600 hover:border-slate-500">
+                            <i class="fas fa-rotate-right"></i>
+                            Refresh Roles
+                        </button>
+                    </div>
                 </div>
 
                 <div class="mb-4 bg-violet-900/20 border border-violet-500/20 rounded-lg p-3 text-sm text-violet-300 flex items-start gap-2">

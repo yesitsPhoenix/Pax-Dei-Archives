@@ -16,6 +16,7 @@ let currentUserCanPostArticles = false;
 let currentUserIsLoreEditor = false;
 let adminUsersCache = [];
 let allSiteUsersCache = [];
+let userRolesLoaded = false;
 
 // ─────────────────────────────────────────────────────────────
 // Utilities
@@ -236,6 +237,12 @@ async function fetchAndRenderUserRoles() {
 
     if (!tbody) return;
 
+    // Skip re-fetching if data is already loaded — only query when cache is explicitly invalidated
+    if (userRolesLoaded && adminUsersCache.length > 0) {
+        if (tableEl) tableEl.classList.remove('hidden');
+        return;
+    }
+
     if (loadingEl) loadingEl.classList.remove('hidden');
     if (tableEl)   tableEl.classList.add('hidden');
     if (emptyEl)   emptyEl.classList.add('hidden');
@@ -257,6 +264,7 @@ async function fetchAndRenderUserRoles() {
     }
 
     adminUsersCache = data || [];
+    userRolesLoaded = true;
 
     // Fetch usernames from users table separately (no FK relationship)
     const userIds = adminUsersCache.map(function(u) { return u.user_id; }).filter(Boolean);
@@ -400,6 +408,7 @@ async function fetchAndRenderUserRoles() {
             } else {
                 adminUsersCache = adminUsersCache.filter(function(u) { return u.user_id !== uid; });
                 allSiteUsersCache = [];
+                userRolesLoaded = false;
                 fetchAndRenderUserRoles();
                 fetchDashboardStats();
             }
@@ -740,6 +749,7 @@ function setupAuthEventListeners() {
             currentUserCanPostArticles = false;
             currentUserIsLoreEditor    = false;
             allSiteUsersCache          = [];
+            userRolesLoaded            = false;
             initAuthAndDashboard();
         }
     });
@@ -931,6 +941,22 @@ function setupModalHandlers() {
     if (closeRole2)    closeRole2.addEventListener('click',    function() { if (userRoleModal) userRoleModal.classList.add('hidden'); });
     if (userRoleModal) userRoleModal.addEventListener('click', function(e) { if (e.target === userRoleModal) userRoleModal.classList.add('hidden'); });
 
+    // Refresh user roles button
+    const refreshUserRolesBtn = document.getElementById('refreshUserRolesBtn');
+    if (refreshUserRolesBtn) {
+        refreshUserRolesBtn.addEventListener('click', function() {
+            const icon = refreshUserRolesBtn.querySelector('i');
+            if (icon) icon.classList.add('fa-spin');
+            refreshUserRolesBtn.disabled = true;
+            userRolesLoaded = false;
+            allSiteUsersCache = [];
+            fetchAndRenderUserRoles().finally(function() {
+                if (icon) icon.classList.remove('fa-spin');
+                refreshUserRolesBtn.disabled = false;
+            });
+        });
+    }
+
     // Populate the user dropdown when opening the modal
     if (openUserRole) {
         openUserRole.addEventListener('click', async function() {
@@ -961,6 +987,7 @@ function setupModalHandlers() {
             } else {
                 if (roleMsg) { roleMsg.className = 'form-message success'; roleMsg.textContent = 'Roles saved successfully!'; }
                 allSiteUsersCache = [];
+                userRolesLoaded = false;
                 dashboardStatsCache = null;
                 fetchAndRenderUserRoles();
                 fetchDashboardStats();
