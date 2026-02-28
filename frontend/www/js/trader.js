@@ -533,6 +533,11 @@ function initializeAutocomplete(allItems) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Only run trader initialization on the ledger/market page
+    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+    const traderPages = ['ledger.html', 'trader.html'];
+    if (!traderPages.includes(currentPage)) return;
+
     window.customModalElements = initCustomModal();
 
     await checkUser();

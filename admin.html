@@ -5,194 +5,690 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pax Dei Archives - Admin</title>
     <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="frontend/www/css/sidebar.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
     <script type="module" src="frontend/www/js/supabaseClient.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.min.js"></script>
+    <style>
+        /* ── Purple admin sidebar theme ── */
+        #sidebar {
+            box-shadow: 0 0 10px 3px rgba(139, 92, 246, 0.55),
+                        0 0 20px 7px rgba(109, 40, 217, 0.35) !important;
+            animation: admin-glow-pulse 3s 2 alternate ease-in-out !important;
+        }
+        @keyframes admin-glow-pulse {
+            0%   { box-shadow: 0 0 10px 3px rgba(139,92,246,0.55), 0 0 20px 7px rgba(109,40,217,0.35); }
+            50%  { box-shadow: 0 12px 14px 4px rgba(139,92,246,0.5), 0 20px 24px 8px rgba(109,40,217,0.3); }
+            100% { box-shadow: 0 0 10px 3px rgba(139,92,246,0.55), 0 0 20px 7px rgba(109,40,217,0.35); }
+        }
+        #sidebar a.active,
+        #sidebar a.active:hover {
+            background-color: #7c3aed;
+            color: white;
+        }
+        #sidebar a.active i { color: white; }
+
+        /* ── Stat card hover ── */
+        .stat-card { transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 16px 24px -6px rgba(139,92,246,0.18);
+        }
+
+        /* ── Smooth transitions ── */
+        * { transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease; }
+
+        /* ── Table rows ── */
+        tbody tr { transition: background-color 0.2s ease; }
+        tbody tr:hover {
+            background-color: rgba(139,92,246,0.06) !important;
+            box-shadow: inset 3px 0 0 #8b5cf6;
+        }
+
+        /* ── Modal backdrop ── */
+        .modal-backdrop { backdrop-filter: blur(6px); }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1a1a1a; }
+        ::-webkit-scrollbar-thumb { background: #7c3aed; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6d28d9; }
+
+        /* ── Role badge ── */
+        .role-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 2px 8px; border-radius: 9999px; font-size: 0.7rem; font-weight: 600;
+        }
+        .role-badge.master  { background: rgba(239,68,68,0.15);  color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+        .role-badge.quest   { background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
+        .role-badge.lore    { background: rgba(52,211,153,0.15); color: #34d399; border: 1px solid rgba(52,211,153,0.3); }
+        .role-badge.none    { background: rgba(107,114,128,0.15); color: #6b7280; border: 1px solid rgba(107,114,128,0.3); }
+
+        /* ── Dev comment form ── */
+        #devCommentForm label,
+        #addLoreItemForm label { display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #9ca3af; margin-bottom: 0.25rem; margin-top: 0.75rem; }
+        #devCommentForm input[type="text"],
+        #devCommentForm input[type="datetime-local"],
+        #devCommentForm textarea,
+        #devCommentForm select {
+            width: 100%; padding: 0.5rem 0.75rem; border-radius: 0.5rem;
+            background: #1e293b; border: 1px solid #334155; color: white;
+            outline: none; font-size: 0.875rem;
+        }
+        #devCommentForm input:focus,
+        #devCommentForm textarea:focus,
+        #devCommentForm select:focus { border-color: #8b5cf6; }
+        #devCommentForm input[readonly],
+        #devCommentForm textarea[readonly] { background: #0f172a; color: #6b7280; cursor: not-allowed; }
+        #parseError { color: #f87171; font-size: 0.8rem; margin-top: 0.5rem; display: none; }
+
+        /* ── Form message ── */
+        .form-message { padding: 0.5rem 0.75rem; border-radius: 0.5rem; font-size: 0.85rem; }
+        .form-message.success { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
+        .form-message.error   { background: rgba(239,68,68,0.15);  color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+        .form-message.info    { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+        .form-message.warning { background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
+
+        /* ── Tag select ── */
+        #tagSelect { background: #1e293b; border: 1px solid #334155; border-radius: 0.5rem; color: white; width: 100%; padding: 0.25rem; }
+        #tagSelect option { color: white; background: #334155; }
+
+        /* ── Global modal input/select/option colour fixes ── */
+        #devCommentModal input,
+        #devCommentModal textarea,
+        #devCommentModal select { color: white !important; }
+        #devCommentModal select option { color: white; background: #1e293b; }
+        #devCommentModal input[readonly],
+        #devCommentModal textarea[readonly] { color: #6b7280 !important; }
+        #articleModal input,
+        #articleModal textarea,
+        #articleModal select { color: white !important; }
+        #articleModal select option { color: white; background: #1e293b; }
+        #articleModal input[readonly] { color: #6b7280 !important; }
+        #addUserRoleModal input { color: white !important; }
+        /* datetime-local calendar icon fix */
+        input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
+
+        /* ── Global colour baseline ── */
+        body { color: #e2e8f0; }
+
+        /* ── Ensure option elements in modals are always white on dark bg ── */
+        #articleModal select,
+        #articleModal select option,
+        #articleModal select optgroup { color: white !important; background-color: #1e293b !important; }
+
+        /* ── Article & form status messages ── */
+        #addArticleMessage { color: #e2e8f0; }
+        #formMessage { color: #e2e8f0; }
+
+        /* ── Placeholder colours ── */
+        #devCommentModal ::placeholder { color: #64748b; }
+        #articleModal    ::placeholder { color: #64748b; }
+        #addUserRoleModal ::placeholder { color: #64748b; }
+    </style>
 </head>
+
 <body>
-    <div id="header-placeholder"></div>
+<div id="header-placeholder"></div>
 
-    <div class="container">
-        <div class="row">
-            <div class="col-lg-12">
-                <div class="page-content">
-                    
-                    <div class="heading-section" id="loginHeading">
-                        <h4>Admin <em>Login</em></h4>
-                    </div>
-                    <div id="loginFormContainer" class="admin-form-container">
-                        <p>Please log in using your Discord account.</p>
-                        <button id="discordLoginButton" class="discord-button">
-                            <i class="fab fa-discord"></i> Login with Discord
-                        </button>
-                        <p id="loginError" style="color: red; display: none;"></p>
-                    </div>
-
-                    <div id="adminDashboardAndForm" style="display: none;">
-                        <div class="heading-section">
-                            <h4>Admin <em>Dashboard</em></h4>
-                        </div>
-                        
-                        <div id="dashboard" class="row">
-                            <div class="col-sm-6 col-md-4">
-                                <div class="admin-dashboard-card">
-                                    <h6>Total Dev Comments</h6>
-                                    <p id="totalCommentsCount">--</p>
-                                    <i class="fas fa-comments"></i>
-                                </div>
-                            </div>
-                            <div class="col-sm-6 col-md-4">
-                                <div class="admin-dashboard-card">
-                                    <h6>Comments This Month</h6>
-                                    <p id="commentsMonthCount">--</p>
-                                    <i class="fas fa-calendar-alt"></i>
-                                </div>
-                            </div>
-                            <div class="col-sm-6 col-md-4">
-                                <div class="admin-dashboard-card">
-                                    <h6>Total Lore Items</h6>
-                                    <p id="totalLoreCount">--</p>
-                                    <i class="fas fa-book"></i> 
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-12">
-                            <div class="flex flex-col">
-                                <div class="heading-section">
-                                    <h4>Add New <em>Dev Comment</em></h4>
-                                </div>
-                                <div id="commentFormSection" class="admin-form-container h-full">
-                                    <p>Paste the developer comment block below to parse it.</p>
-                                    <textarea id="commentInput" rows="10" placeholder="Paste comment here..."></textarea>
-                                    <button id="parseButton" class="main-button">Parse & Preview</button>
-                                    
-                                    <div id="formMessage" role="alert"></div>
-
-                                    <form id="devCommentForm" style="display: none;">
-                                        <h5 class="mt-4 mb-2">Parsed Data Preview:</h5>
-                                        <label>Author:</label>
-                                        <input type="text" id="author" name="author" readonly>
-                                        <label>Author Type:</label>
-                                        <select id="author_type" name="author_type" required></select>
-                                        <label>Source:</label>
-                                        <input type="text" id="source" name="source" readonly>
-                                        <label>Timestamp:</label>
-                                        <input type="datetime-local" id="timestamp" name="timestamp" readonly>
-                                        <label>Content:</label>
-                                        <textarea id="commentContent" name="content" rows="10" readonly></textarea>
-                                        
-                                        <label>Tags:</label>
-                                        <select id="tagSelect" name="tag" multiple size="5"></select>
-                                        <div class="flex gap-2 mt-2">
-                                            <input type="text" id="newTagInput" placeholder="Add new tag" class="flex-grow">
-                                            <button type="button" id="addNewTagButton" class="main-button py-2 px-4 text-sm">Add</button>
-                                        </div>
-                                        
-                                        <div class="form-actions mt-4">
-                                            <button type="submit" class="main-button submit-button">Add to DB</button>
-                                            <button type="button" id="editButton" class="main-button secondary-button">Edit Raw</button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-
-                            <div class="flex flex-col">
-                                <div class="heading-section">
-                                    <h4>Add New <em>Article</em></h4>
-                                </div>
-                                <div class="admin-form-container h-full">
-                                    <p class="text-gray-400 mb-6">Create new site articles using Markdown.</p>
-                                    <form id="addArticleForm" class="space-y-4">
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div class="flex flex-col">
-                                                <label class="text-xs uppercase font-bold text-gray-400 mb-1">Title</label>
-                                                <input type="text" id="articleTitle" required class="bg-[#1f2122] border border-gray-700 rounded-lg p-2 text-white outline-none focus:border-[#e75e8d]">
-                                            </div>
-                                            <div class="flex flex-col">
-                                                <label class="text-xs uppercase font-bold text-gray-500 mb-1">Slug (Auto)</label>
-                                                <input type="text" id="articleSlug" readonly class="bg-[#343637] border border-gray-700 rounded-lg p-2 text-gray-500 cursor-not-allowed">
-                                            </div>
-                                        </div>
-
-                                        <div class="flex flex-col">
-                                            <label class="text-xs uppercase font-bold text-gray-400 mb-1">Summary</label>
-                                            <textarea id="articleSummary" rows="2" required class="bg-[#1f2122] border border-gray-700 rounded-lg p-2 text-white outline-none focus:border-[#e75e8d]"></textarea>
-                                        </div>
-
-                                        <div class="flex flex-col">
-                                            <label class="text-xs uppercase font-bold text-gray-400 mb-1">Content (Markdown)</label>
-                                            <textarea id="articleContent" rows="12" required class="bg-[#1f2122] border border-gray-700 rounded-lg p-2 text-white font-mono text-sm outline-none focus:border-[#e75e8d]"></textarea>
-                                        </div>
-
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div class="flex flex-col">
-                                                <label class="text-xs uppercase font-bold text-gray-400 mb-1">Author</label>
-                                                <input type="text" id="articleAuthor" required class="bg-[#1f2122] border border-gray-700 rounded-lg p-2 text-white outline-none focus:border-[#e75e8d]">
-                                            </div>
-                                            <div class="flex flex-col">
-                                                <label class="text-xs uppercase font-bold text-gray-400 mb-1">Date</label>
-                                                <input type="datetime-local" id="articlePublicationDate" class="bg-[#1f2122] border border-gray-700 rounded-lg p-2 text-white outline-none focus:border-[#e75e8d]">
-                                            </div>
-                                        </div>
-
-                                            <div class="flex flex-col sm:flex-row gap-3">
-                                                <select
-                                                    id="articleCategory"
-                                                    required
-                                                    class="flex-grow bg-[#1f2122] border border-gray-700 rounded-lg p-2 h-[42px] text-white outline-none focus:border-[#e75e8d]">
-                                                </select>
-
-                                                <div class="flex ml-1">
-                                                    <input
-                                                        type="text"
-                                                        id="addNewArticleCategoryInput"
-                                                        placeholder="New category"
-                                                        class="flex bg-[#1f2122] border border-gray-700 rounded-l-lg p-2 h-[42px] text-white outline-none focus:border-[#e75e8d] border-r-0">
-                                                    <button
-                                                        type="button"
-                                                        id="addNewArticleCategoryButton"
-                                                        class="main-button py-2 px-4 text-sm h-[42px] rounded-l-none padding-left-100px">
-                                                        Add
-                                                    </button>
-                                                </div>
-                                            </div>
-
-
-                                        <div class="pt-4 border-t border-gray-700">
-                                            <button type="submit" class="main-button w-full">Publish Article</button>
-                                            <div id="addArticleMessage" style="display:none;" class="mt-4 text-sm"></div>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
+<!-- 
+     LOADING OVERLAY
+ -->
+<div id="adminLoadingOverlay" class="fixed inset-0 bg-gray-900/85 backdrop-blur-sm z-50 flex items-center justify-center">
+    <div class="bg-gray-800 rounded-xl p-8 shadow-2xl border border-violet-600/30 max-w-sm w-full">
+        <div class="flex flex-col items-center space-y-4">
+            <div class="relative">
+                <div class="w-14 h-14 border-4 border-violet-500 border-t-transparent rounded-full animate-spin"></div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <i class="fas fa-shield-halved text-violet-400 text-xl"></i>
                 </div>
+            </div>
+            <div class="text-center">
+                <h3 class="text-lg font-semibold text-violet-400 mb-1">Loading Admin Panel</h3>
+                <p class="text-gray-400 text-sm">Verifying credentials...</p>
+            </div>
+            <div class="w-full bg-gray-700 rounded-full h-1.5 overflow-hidden">
+                <div class="bg-gradient-to-r from-violet-600 to-purple-500 h-full rounded-full animate-pulse" style="width:100%"></div>
             </div>
         </div>
     </div>
+</div>
 
+<!-- 
+     SIDEBAR
+ -->
+<aside id="sidebar" class="w-64 bg-[#1c1c1c] border-r-4 border-violet-500 shadow-lg transition-all duration-300 hover:bg-slate-700 px-3 py-4 cursor-pointer fixed h-auto z-50 top-[220px] collapsed">
+  <ul class="space-y-2 font-medium">
+    <li>
+      <a href="#admin-dashboard-section" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+        <i class="fas fa-gauge w-5 h-5 text-gray-400 transition duration-75"></i>
+        <span class="ml-3">Dashboard</span>
+      </a>
+    </li>
+    <li>
+      <a href="#" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900" id="openDevCommentModalBtn">
+        <i class="fas fa-comment-medical w-5 h-5 text-gray-400 transition duration-75"></i>
+        <span class="ml-3">Add Dev Comment</span>
+      </a>
+    </li>
+    <li>
+      <a href="#" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900" id="openArticleModalBtn">
+        <i class="fas fa-newspaper w-5 h-5 text-gray-400 transition duration-75"></i>
+        <span class="ml-3">Add Article</span>
+      </a>
+    </li>
+    <li>
+      <a href="#user-roles-section" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+        <i class="fas fa-user-shield w-5 h-5 text-gray-400 transition duration-75"></i>
+        <span class="ml-3">User Roles</span>
+      </a>
+    </li>
+  </ul>
+</aside>
+
+<!-- 
+     MAIN
+ -->
+<main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- Login Container -->
+    <div id="loginFormContainer" class="hidden max-w-md mx-auto mt-16">
+        <div class="bg-gradient-to-br from-slate-800 to-slate-900 p-8 rounded-2xl shadow-2xl border border-violet-500/20 text-center">
+            <i class="fas fa-lock text-violet-400 text-5xl mb-4"></i>
+            <h2 class="text-xl font-bold text-white mb-2">Admin Access Required</h2>
+            <p class="text-gray-400 mb-6 text-sm">Please log in with an authorised Discord account.</p>
+            <button id="discordLoginButton" class="w-full bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-3">
+                <i class="fab fa-discord text-xl"></i>
+                Login with Discord
+            </button>
+            <p id="loginError" class="text-red-400 text-sm mt-4 hidden"></p>
+        </div>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div id="adminDashboardAndForm" style="display:none;">
+
+        <!-- Page Header -->
+        <div id="admin-dashboard-section" class="text-center mb-8">
+            <h1 class="text-xl font-semibold mt-4 mb-2 text-white flex items-center justify-center gap-3">
+                <i class="fas fa-shield-halved text-violet-400"></i>
+                Admin Panel
+            </h1>
+            <div class="h-1 w-24 bg-violet-500 mx-auto rounded-full"></div>
+            <p class="text-gray-500 text-sm mt-3 italic">Restricted access</p>
+        </div>
+
+        <!-- ── ROW 1: Content Stats ── -->
+        <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
+
+            <div class="stat-card bg-gradient-to-br from-violet-900/40 to-violet-800/40 rounded-xl p-5 border border-violet-500/30 shadow-lg">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-violet-300 text-md font-semibold uppercase leading-tight">Total Quests</h3>
+                    <i class="fas fa-scroll text-violet-400 text-lg flex-shrink-0"></i>
+                </div>
+                <p id="stat-total-quests" class="text-white text-2xl font-bold">--</p>
+                <p class="text-gray-500 text-md mt-1">cipher_quests</p>
+            </div>
+
+            <div class="stat-card bg-gradient-to-br from-indigo-900/40 to-indigo-800/40 rounded-xl p-5 border border-indigo-500/30 shadow-lg">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-indigo-300 text-md font-semibold uppercase leading-tight">Quest Categories</h3>
+                    <i class="fas fa-layer-group text-indigo-400 text-lg flex-shrink-0"></i>
+                </div>
+                <p id="stat-quest-categories" class="text-white text-2xl font-bold">--</p>
+                <p class="text-gray-500 text-md mt-1">active categories</p>
+            </div>
+
+            <div class="stat-card bg-gradient-to-br from-blue-900/40 to-blue-800/40 rounded-xl p-5 border border-blue-500/30 shadow-lg">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-blue-300 text-md font-semibold uppercase leading-tight">Dev Comments</h3>
+                    <i class="fas fa-comments text-blue-400 text-lg flex-shrink-0"></i>
+                </div>
+                <p id="stat-total-comments" class="text-white text-2xl font-bold">--</p>
+                <p id="stat-comments-month" class="text-gray-500 text-md mt-1">-- this month</p>
+            </div>
+
+            <div class="stat-card bg-gradient-to-br from-emerald-900/40 to-emerald-800/40 rounded-xl p-5 border border-emerald-500/30 shadow-lg">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-emerald-300 text-md font-semibold uppercase leading-tight">Lore Entries</h3>
+                    <i class="fas fa-book-open text-emerald-400 text-lg flex-shrink-0"></i>
+                </div>
+                <p id="stat-total-lore" class="text-white text-2xl font-bold">--</p>
+                <p class="text-gray-500 text-md mt-1">lore entries</p>
+            </div>
+
+            <div class="stat-card bg-gradient-to-br from-amber-900/40 to-amber-800/40 rounded-xl p-5 border border-amber-500/30 shadow-lg">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-amber-300 text-md font-semibold uppercase leading-tight">Articles</h3>
+                    <i class="fas fa-newspaper text-amber-400 text-lg flex-shrink-0"></i>
+                </div>
+                <p id="stat-total-articles" class="text-white text-2xl font-bold">--</p>
+                <p class="text-gray-500 text-md mt-1">published</p>
+            </div>
+
+            <!-- <div class="stat-card bg-gradient-to-br from-rose-900/40 to-rose-800/40 rounded-xl p-5 border border-rose-500/30 shadow-lg">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-rose-300 text-md font-semibold uppercase leading-tight">Admin Users</h3>
+                    <i class="fas fa-user-shield text-rose-400 text-lg flex-shrink-0"></i>
+                </div>
+                <p id="stat-admin-users" class="text-white text-2xl font-bold">--</p>
+                <p class="text-gray-500 text-md mt-1">role holders</p>
+            </div> -->
+
+        </section>
+
+        <!-- ── ROW 2: Site Activity Stats ── -->
+        <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-4 mb-4">
+
+            <div class="stat-card bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-5 border border-violet-400/20 shadow-lg">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-violet-300 text-md font-semibold uppercase leading-tight">Characters</h3>
+                    <i class="fas fa-users text-violet-400 text-lg flex-shrink-0"></i>
+                </div>
+                <p id="stat-total-characters" class="text-white text-2xl font-bold">--</p>
+                <p class="text-gray-500 text-md mt-1">site-wide</p>
+            </div>
+
+            <!-- <div class="stat-card bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-5 border border-violet-400/20 shadow-lg">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-cyan-300 text-md font-semibold uppercase leading-tight">Items in DB</h3>
+                    <i class="fas fa-box text-cyan-400 text-lg flex-shrink-0"></i>
+                </div>
+                <p id="stat-total-items" class="text-white text-2xl font-bold">--</p>
+                <p class="text-gray-500 text-md mt-1">market items</p>
+            </div> -->
+
+            <div class="stat-card bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-5 border border-violet-400/20 shadow-lg">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-orange-300 text-md font-semibold uppercase leading-tight">Market Listings</h3>
+                    <i class="fas fa-store text-orange-400 text-lg flex-shrink-0"></i>
+                </div>
+                <p id="stat-total-listings" class="text-white text-2xl font-bold">--</p>
+                <p id="stat-active-listings" class="text-gray-500 text-md mt-1">-- active</p>
+            </div>
+
+            <div class="stat-card bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-5 border border-violet-400/20 shadow-lg">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-green-300 text-md font-semibold uppercase leading-tight">Total Sales</h3>
+                    <i class="fas fa-sack-dollar text-green-400 text-lg flex-shrink-0"></i>
+                </div>
+                <p id="stat-total-sales" class="text-white text-2xl font-bold">--</p>
+                <p id="stat-sales-revenue" class="text-gray-500 text-md mt-1">-- gold revenue</p>
+            </div>
+
+            <!-- <div class="stat-card bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-5 border border-violet-400/20 shadow-lg">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-purple-300 text-md font-semibold uppercase leading-tight">PVE Transactions</h3>
+                    <i class="fas fa-chess-rook text-purple-400 text-lg flex-shrink-0"></i>
+                </div>
+                <p id="stat-total-pve" class="text-white text-2xl font-bold">--</p>
+                <p class="text-gray-500 text-md mt-1">logged events</p>
+            </div> -->
+
+        </section>
+
+        <!-- ── ROW 3: Recent Activity ── -->
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-5 border border-violet-400/20 shadow-lg">
+                <div class="flex items-center gap-2 mb-3">
+                    <i class="fas fa-clock-rotate-left text-blue-400"></i>
+                    <h3 class="text-blue-300 text-md font-semibold uppercase">Latest Dev Comment</h3>
+                </div>
+                <p id="recent-comment-author" class="text-white font-semibold text-sm">--</p>
+                <p id="recent-comment-date" class="text-gray-500 text-md mt-1">--</p>
+                <p id="recent-comment-preview" class="text-gray-400 text-md mt-2 line-clamp-2">--</p>
+            </div>
+
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-5 border border-violet-400/20 shadow-lg">
+                <div class="flex items-center gap-2 mb-3">
+                    <i class="fas fa-clock-rotate-left text-emerald-400"></i>
+                    <h3 class="text-emerald-300 text-md font-semibold uppercase">Latest Lore Item</h3>
+                </div>
+                <p id="recent-lore-title" class="text-white font-semibold text-sm">--</p>
+                <p id="recent-lore-date" class="text-gray-500 text-md mt-1">--</p>
+                <p id="recent-lore-category" class="text-gray-400 text-md mt-2">--</p>
+            </div>
+
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-5 border border-violet-400/20 shadow-lg">
+                <div class="flex items-center gap-2 mb-3">
+                    <i class="fas fa-clock-rotate-left text-amber-400"></i>
+                    <h3 class="text-amber-300 text-md font-semibold uppercase">Latest Article</h3>
+                </div>
+                <p id="recent-article-title" class="text-white font-semibold text-sm">--</p>
+                <p id="recent-article-date" class="text-gray-500 text-md mt-1">--</p>
+                <p id="recent-article-author" class="text-gray-400 text-md mt-2">--</p>
+            </div>
+
+        </section>
+
+        <!-- ── User Role Management ── -->
+        <section id="user-roles-section" class="mb-10">
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 shadow-2xl border border-violet-500/20">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <h2 class="text-xl font-bold text-white flex items-center gap-3">
+                        <i class="fas fa-user-shield text-violet-400"></i>
+                        User Role Management
+                    </h2>
+                    <button id="openAddUserRoleModalBtn" class="bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-700 hover:to-purple-800 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2">
+                        <i class="fas fa-user-plus"></i>
+                        Grant Role to User
+                    </button>
+                </div>
+
+                <div class="mb-4 bg-violet-900/20 border border-violet-500/20 rounded-lg p-3 text-sm text-violet-300 flex items-start gap-2">
+                    <i class="fas fa-info-circle mt-0.5 flex-shrink-0"></i>
+                    <span>User IDs are Discord OAuth identifiers from Supabase. Find a user's ID in the Supabase Auth dashboard. The <strong>is_admin</strong> (master admin) role can only be managed directly in the database.</span>
+                </div>
+
+                <div id="userRolesLoadingIndicator" class="text-center py-8">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-violet-500 border-t-transparent"></div>
+                    <p class="text-gray-400 mt-3 text-sm">Loading users...</p>
+                </div>
+
+                <div id="userRolesTableContainer" class="hidden overflow-x-auto rounded-xl">
+                    <table class="w-full">
+                        <thead class="bg-slate-700">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">User ID</th>
+                                <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Admin</th>
+                                <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Dev Comments</th>
+                                <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Quest Adder</th>
+                                <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Article Poster</th>
+                                <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Lore Editor</th>
+                                <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">General Access</th>
+                                <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userRolesTableBody" class="bg-slate-800/50 divide-y divide-slate-700 text-sm">
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="userRolesEmptyState" class="hidden text-center py-10">
+                    <i class="fas fa-users-slash text-gray-600 text-4xl mb-3"></i>
+                    <p class="text-gray-400">No role users found.</p>
+                </div>
+
+                <p id="userRolesMessage" class="mt-3 text-sm hidden"></p>
+            </div>
+        </section>
+
+    </div><!-- /adminDashboardAndForm -->
+</main>
+
+<!-- 
+     MODAL: Confirm Dialog (reusable)
+ -->
+<div id="confirmModal" class="hidden fixed inset-0 bg-gray-900/80 flex items-center justify-center z-[60] modal-backdrop px-4">
+    <div class="bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm border border-red-500/30">
+        <div class="flex items-center justify-between p-5 border-b border-slate-700">
+            <h3 id="confirmModalTitle" class="text-lg font-bold text-white flex items-center gap-2">
+                <i class="fas fa-triangle-exclamation text-red-400"></i>
+                Confirm Action
+            </h3>
+        </div>
+        <div class="p-5">
+            <p id="confirmModalMessage" class="text-gray-300 text-sm mb-6">Are you sure?</p>
+            <div class="flex gap-3 justify-end">
+                <button id="confirmModalCancel" class="bg-slate-600 hover:bg-slate-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all">
+                    Cancel
+                </button>
+                <button id="confirmModalConfirm" class="bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all">
+                    <i class="fas fa-trash mr-1"></i> Remove
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 
+     MODAL: Add Dev Comment
+ -->
+<div id="devCommentModal" class="hidden fixed inset-0 bg-gray-900/80 flex items-center justify-center z-50 modal-backdrop overflow-y-auto px-4 py-6">
+    <div class="bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl border border-blue-500/30">
+        <div class="flex items-center justify-between p-6 border-b border-slate-700">
+            <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                <i class="fas fa-comment-medical text-blue-400"></i>
+                Add Dev Comment
+            </h3>
+            <button id="closeDevCommentModalBtn" class="text-gray-400 hover:text-white transition-colors">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div class="p-6">
+            <p class="text-gray-400 text-sm mb-4">Paste the developer comment block below to parse it.</p>
+
+            <div id="formMessage" class="mb-4 hidden"></div>
+
+            <textarea id="commentInput" rows="6"
+                class="w-full bg-[#1e293b] border border-slate-600 rounded-lg p-3 text-white text-sm outline-none focus:border-violet-500 font-mono resize-none"
+                placeholder="Author — Timestamp&#10;Content&#10;https://source-url.com"></textarea>
+
+            <div class="flex gap-3 mt-3">
+                <button id="parseButton" class="bg-violet-600 hover:bg-violet-700 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-all duration-300">
+                    <i class="fas fa-wand-magic-sparkles mr-1"></i> Parse &amp; Preview
+                </button>
+            </div>
+            <p id="parseError" class="text-red-400 text-md mt-2 hidden"></p>
+
+            <form id="devCommentForm" style="display:none;" class="mt-4 space-y-1">
+                <h5 class="text-violet-300 text-sm font-semibold mb-2">Parsed Preview:</h5>
+
+                <label>Author</label>
+                <input type="text" id="author" name="author" readonly>
+
+                <label>Author Type</label>
+                <select id="author_type" name="author_type" required></select>
+
+                <label>Source</label>
+                <input type="text" id="source" name="source" readonly>
+
+                <label>Timestamp</label>
+                <input type="datetime-local" id="timestamp" name="timestamp" readonly>
+
+                <label>Content</label>
+                <textarea id="commentContent" name="content" rows="8" readonly></textarea>
+
+                <label>Tags</label>
+                <select id="tagSelect" name="tag" multiple size="4"></select>
+                <div class="flex gap-2 mt-2">
+                    <input type="text" id="newTagInput" placeholder="Add new tag"
+                        class="flex-1 bg-[#1e293b] border border-slate-600 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-violet-500">
+                    <button type="button" id="addNewTagButton"
+                        class="bg-slate-600 hover:bg-slate-500 text-white text-sm px-3 py-2 rounded-lg transition-all">Add</button>
+                </div>
+
+                <div class="flex gap-3 pt-4 border-t border-slate-700 mt-4">
+                    <button type="submit" class="bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-700 hover:to-purple-800 text-white font-semibold px-6 py-2 rounded-lg text-sm transition-all duration-300">
+                        <i class="fas fa-database mr-1"></i> Add to DB
+                    </button>
+                    <button type="button" id="editButton" class="bg-slate-600 hover:bg-slate-500 text-white text-sm px-4 py-2 rounded-lg transition-all">
+                        <i class="fas fa-pen mr-1"></i> Edit Raw
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 
+     MODAL: Add Article
+ -->
+<div id="articleModal" class="hidden fixed inset-0 bg-gray-900/80 flex items-center justify-center z-50 modal-backdrop overflow-y-auto px-4 py-6">
+    <div class="bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl border border-amber-500/30">
+        <div class="flex items-center justify-between p-6 border-b border-slate-700">
+            <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                <i class="fas fa-newspaper text-amber-400"></i>
+                Add New Article
+            </h3>
+            <button id="closeArticleModalBtn" class="text-gray-400 hover:text-white transition-colors">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div class="p-6">
+            <form id="addArticleForm" class="space-y-4">
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="flex flex-col">
+                        <label class="text-md uppercase font-bold text-gray-400 mb-1">Title</label>
+                        <input type="text" id="articleTitle" required
+                            class="bg-[#1e293b] border border-slate-600 rounded-lg p-2 text-white outline-none focus:border-amber-500">
+                    </div>
+                    <div class="flex flex-col">
+                        <label class="text-md uppercase font-bold text-gray-500 mb-1">Slug (Auto)</label>
+                        <input type="text" id="articleSlug" readonly
+                            class="bg-[#0f172a] border border-slate-700 rounded-lg p-2 text-gray-500 cursor-not-allowed">
+                    </div>
+                </div>
+
+                <div class="flex flex-col">
+                    <label class="text-md uppercase font-bold text-gray-400 mb-1">Summary</label>
+                    <textarea id="articleSummary" rows="2" required
+                        class="bg-[#1e293b] border border-slate-600 rounded-lg p-2 text-white outline-none focus:border-amber-500 resize-none"></textarea>
+                </div>
+
+                <div class="flex flex-col">
+                    <label class="text-md uppercase font-bold text-gray-400 mb-1">Content (Markdown)</label>
+                    <textarea id="articleContent" rows="10" required
+                        class="bg-[#1e293b] border border-slate-600 rounded-lg p-2 text-white font-mono text-sm outline-none focus:border-amber-500 resize-y"></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="flex flex-col">
+                        <label class="text-md uppercase font-bold text-gray-400 mb-1">Author</label>
+                        <input type="text" id="articleAuthor" required
+                            class="bg-[#1e293b] border border-slate-600 rounded-lg p-2 text-white outline-none focus:border-amber-500">
+                    </div>
+                    <div class="flex flex-col">
+                        <label class="text-md uppercase font-bold text-gray-400 mb-1">Date</label>
+                        <input type="datetime-local" id="articlePublicationDate"
+                            class="bg-[#1e293b] border border-slate-600 rounded-lg p-2 text-white outline-none focus:border-amber-500">
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <select id="articleCategory" required
+                        class="flex-grow bg-[#1e293b] border border-slate-600 rounded-lg p-2 text-white outline-none focus:border-amber-500">
+                    </select>
+                    <div class="flex">
+                        <input type="text" id="addNewArticleCategoryInput" placeholder="New category"
+                            class="bg-[#1e293b] border border-slate-600 rounded-l-lg p-2 text-white outline-none focus:border-amber-500 border-r-0 w-36">
+                        <button type="button" id="addNewArticleCategoryButton"
+                            class="bg-slate-600 hover:bg-slate-500 text-white text-sm px-3 py-2 rounded-r-lg transition-all">Add</button>
+                    </div>
+                </div>
+
+                <div id="addArticleMessage" class="hidden text-sm text-gray-200"></div>
+
+                <div class="pt-4 border-t border-slate-700">
+                    <button type="submit"
+                        class="w-full bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 text-white font-bold py-3 rounded-lg transition-all duration-300">
+                        <i class="fas fa-paper-plane mr-2"></i> Publish Article
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 
+     MODAL: Manage User Roles (Grant / Edit)
+ -->
+<div id="addUserRoleModal" class="hidden fixed inset-0 bg-gray-900/80 flex items-center justify-center z-50 modal-backdrop px-4 overflow-y-auto py-6">
+    <div class="bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg border border-violet-500/30">
+        <div class="flex items-center justify-between p-6 border-b border-slate-700">
+            <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                <i class="fas fa-user-shield text-violet-400"></i>
+                Manage User Roles
+            </h3>
+            <button id="closeAddUserRoleModalBtn" class="text-gray-400 hover:text-white transition-colors">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div class="p-6 space-y-4">
+            <div class="flex flex-col">
+                <label class="text-md uppercase font-bold text-gray-400 mb-1">Select User</label>
+                <select id="roleUserSelect"
+                    class="bg-[#1e293b] border border-slate-600 rounded-lg p-2 text-white text-sm outline-none focus:border-violet-500">
+                    <option value="">-- Select a user --</option>
+                </select>
+                <p class="text-gray-500 text-sm mt-1">Shows all users who have logged in via Discord. Editing a row pre-selects the user.</p>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <label class="text-md uppercase font-bold text-gray-400 mb-1">Roles &amp; Permissions</label>
+
+                <label class="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg cursor-pointer hover:bg-slate-700 transition-all">
+                    <input type="checkbox" id="roleCheck_is_editor" class="rounded text-violet-600 focus:ring-violet-500 w-4 h-4">
+                    <span class="text-white text-sm"><span class="role-badge lore mr-2"><i class="fas fa-user-edit"></i> is_editor</span> General admin page access</span>
+                </label>
+
+                <label class="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg cursor-pointer hover:bg-slate-700 transition-all">
+                    <input type="checkbox" id="roleCheck_is_admin" class="rounded text-violet-600 focus:ring-violet-500 w-4 h-4">
+                    <span class="text-white text-sm"><span class="role-badge master mr-2"><i class="fas fa-user-shield"></i> is_admin</span> Full admin — manage users &amp; roles</span>
+                </label>
+
+                <label class="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg cursor-pointer hover:bg-slate-700 transition-all">
+                    <input type="checkbox" id="roleCheck_can_post_articles" class="rounded text-violet-600 focus:ring-violet-500 w-4 h-4">
+                    <span class="text-white text-sm"><span class="role-badge lore mr-2"><i class="fas fa-newspaper"></i> can_post_articles</span> Can write and publish articles</span>
+                </label>
+
+                <label class="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg cursor-pointer hover:bg-slate-700 transition-all">
+                    <input type="checkbox" id="roleCheck_comment_adder" class="rounded text-violet-600 focus:ring-violet-500 w-4 h-4">
+                    <span class="text-white text-sm"><span class="role-badge master mr-2"><i class="fas fa-message"></i> comment_adder</span> Can add dev comments</span>
+                </label>
+
+                <label class="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg cursor-pointer hover:bg-slate-700 transition-all">
+                    <input type="checkbox" id="roleCheck_quest_adder" class="rounded text-violet-600 focus:ring-violet-500 w-4 h-4">
+                    <span class="text-white text-sm"><span class="role-badge quest mr-2"><i class="fas fa-scroll"></i> quest_adder</span> Can create and edit quests</span>
+                </label>
+
+                <label class="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg cursor-pointer hover:bg-slate-700 transition-all">
+                    <input type="checkbox" id="roleCheck_lore_editor" class="rounded text-violet-600 focus:ring-violet-500 w-4 h-4">
+                    <span class="text-white text-sm"><span class="role-badge lore mr-2"><i class="fas fa-book"></i> lore_editor</span> Can add and edit lore items</span>
+                </label>
+            </div>
+
+            <p id="addUserRoleMessage" class="text-sm hidden"></p>
+
+            <div class="pt-2 border-t border-slate-700 flex gap-3">
+                <button id="submitGrantRoleBtn"
+                    class="flex-1 bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-700 hover:to-purple-800 text-white font-semibold py-2 rounded-lg text-sm transition-all duration-300">
+                    <i class="fas fa-save mr-1"></i> Save Roles
+                </button>
+                <button id="closeAddUserRoleModalBtn2"
+                    class="bg-slate-600 hover:bg-slate-500 text-white text-sm px-4 py-2 rounded-lg transition-all">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ─── Standard page elements ─── -->
 <div id="footer-placeholder"></div>
-    <script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
-    <script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
 
-    <div id="floating-avatar-container">
-        <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar js-floating-avatar">
-    </div>
+<div id="floating-avatar-container">
+    <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar js-floating-avatar">
+</div>
 
-    <div id="auth-modal">
-        <div class="modal-content-wrapper" id="modal-content-wrapper"></div>
-    </div>
+<div id="auth-modal">
+    <div class="modal-content-wrapper" id="modal-content-wrapper"></div>
+</div>
 
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script type="module" src="frontend/www/js/admin.js"></script>
-    <script type="module" src="frontend/www/js/articles/articlePosts.js"></script>
-    <script type="module" src="frontend/www/js/main.js"></script>
-    <script type="module" src="frontend/www/js/popoutAuth.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
+<script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
+<script type="module" src="frontend/www/js/admin.js"></script>
+<script type="module" src="frontend/www/js/articles/articlePosts.js"></script>
+<script type="module" src="frontend/www/js/main.js"></script>
+<script type="module" src="frontend/www/js/popoutAuth.js"></script>
+<script type="module" src="frontend/www/js/sidebar.js"></script>
+
 </body>
 </html>

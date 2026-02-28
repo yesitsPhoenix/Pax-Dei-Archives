@@ -1,14 +1,52 @@
 import { supabase } from './supabaseClient.js';
 import { authorRoleColors, slugify } from './utils.js';
 
-
+// ─────────────────────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────────────────────
 let initialAuthCheckComplete = false;
 let dashboardStatsCache = null;
 let lastStatsFetchTime = 0;
-const STATS_CACHE_DURATION = 60 * 5000;
+const STATS_CACHE_DURATION = 5 * 60 * 1000;
 let tagListCache = null;
 let isAdminAuthorizedCache = null;
-let loreItemsCache = [];
+let currentUserIsAdmin = false;
+let currentUserCanComment = false;
+let currentUserCanPostArticles = false;
+let adminUsersCache = [];
+let allSiteUsersCache = [];
+
+// ─────────────────────────────────────────────────────────────
+// Utilities
+// ─────────────────────────────────────────────────────────────
+// Returns a Promise<boolean> — resolves true if confirmed, false if cancelled
+function showConfirmModal(message, title) {
+    return new Promise(function(resolve) {
+        const modal   = document.getElementById('confirmModal');
+        const titleEl = document.getElementById('confirmModalTitle');
+        const msgEl   = document.getElementById('confirmModalMessage');
+        const confirmBtn = document.getElementById('confirmModalConfirm');
+        const cancelBtn  = document.getElementById('confirmModalCancel');
+        if (!modal) { resolve(false); return; }
+
+        if (titleEl) titleEl.innerHTML = '<i class="fas fa-triangle-exclamation text-red-400"></i> ' + (title || 'Confirm Action');
+        if (msgEl)   msgEl.textContent = message || 'Are you sure?';
+
+        modal.classList.remove('hidden');
+
+        function cleanup(result) {
+            modal.classList.add('hidden');
+            confirmBtn.removeEventListener('click', onConfirm);
+            cancelBtn.removeEventListener('click', onCancel);
+            resolve(result);
+        }
+        function onConfirm() { cleanup(true); }
+        function onCancel()  { cleanup(false); }
+
+        confirmBtn.addEventListener('click', onConfirm);
+        cancelBtn.addEventListener('click', onCancel);
+    });
+}
 
 function showFormMessage(messageElement, message, type) {
     if (!messageElement) return;
@@ -17,7 +55,6 @@ function showFormMessage(messageElement, message, type) {
     if (type) {
         messageElement.classList.add('form-message', type);
         messageElement.style.display = 'block';
-
         if (message) {
             setTimeout(() => {
                 messageElement.style.display = 'none';
@@ -30,866 +67,897 @@ function showFormMessage(messageElement, message, type) {
     }
 }
 
-const authorTypeDropdown = document.getElementById('author_type');
-const formMessage = document.getElementById('formMessage');
-
-if (authorTypeDropdown) {
-    authorTypeDropdown.style.color = "black";
-    const defaultOption = document.createElement('option');
-    defaultOption.value = "";
-    defaultOption.textContent = "Select Author Type";
-    defaultOption.style.color = "black";
-    defaultOption.selected = true;
-    authorTypeDropdown.appendChild(defaultOption);
-
-    for (const type in authorRoleColors) {
-        if (authorRoleColors.hasOwnProperty(type) && type !== 'default') {
-            const option = document.createElement('option');
-            option.value = type;
-            option.textContent = type;
-            option.style.color = "black";
-            authorTypeDropdown.appendChild(option);
-        }
-    }
-    
-    authorTypeDropdown.addEventListener('change', () => {
-        authorTypeDropdown.style.color = "black";
-    });
+function showLoadingOverlay(show) {
+    const overlay = document.getElementById('adminLoadingOverlay');
+    if (overlay) overlay.style.display = show ? 'flex' : 'none';
 }
 
-const devCommentForm = document.getElementById('devCommentForm');
-const tagSelect = document.getElementById('tagSelect');
-
-if (devCommentForm) {
-    devCommentForm.addEventListener('submit', async function(event) {
-        event.preventDefault();
-
-        if (formMessage) {
-            formMessage.textContent = '';
-            formMessage.className = '';
-        }
-
-        const author = document.getElementById('author').value;
-        const source = document.getElementById('source').value;
-        const timestamp = document.getElementById('timestamp').value;
-        const content = document.getElementById('commentContent').value;
-        const selectedTags = Array.from(tagSelect.selectedOptions).map(option => option.value);
-        const author_type = authorTypeDropdown ? authorTypeDropdown.value : '';
-
-        let utcTimestamp = null;
-        if (timestamp) {
-            const localDate = new Date(timestamp);
-            utcTimestamp = localDate.toISOString();
-        }
-
-        const submitButton = devCommentForm.querySelector('button[type="submit"]');
-        if (submitButton) {
-            submitButton.disabled = true;
-            submitButton.textContent = 'Submitting...';
-        }
-
-        if (!author_type) {
-            showFormMessage(formMessage, 'Please select an Author Type.', 'error');
-            if (authorTypeDropdown) {
-                authorTypeDropdown.focus();
-            }
-            if (submitButton) {
-                submitButton.disabled = false;
-                submitButton.textContent = 'Add Comment to DB';
-            }
-            return;
-        }
-
-        const commentData = {
-            author: author,
-            source: source,
-            comment_date: utcTimestamp,
-            content: content,
-            tag: selectedTags.length > 0 ? selectedTags : null,
-            author_type: author_type,
-        };
-
-        showFormMessage(formMessage, 'Submitting comment...', 'info');
-
-        try {
-            const { data: { user }, error: authError } = await supabase.auth.getUser();
-            if (authError || !user) {
-                showFormMessage(formMessage, 'Please log in to submit comments.', 'error');
-                if (submitButton) {
-                    submitButton.disabled = false;
-                    submitButton.textContent = 'Add Comment to DB';
-                }
-                return;
-            }
-
-            const { data, error, status } = await supabase
-                .from('developer_comments')
-                .insert([commentData])
-                .select();
-
-            if (error) {
-                console.error('Error inserting comment:', error);
-                showFormMessage(formMessage, `Error saving comment: ${error.message}`, 'error');
-            } else {
-                showFormMessage(formMessage, 'Developer comment added successfully!', 'success');
-
-                devCommentForm.reset();
-                if (authorTypeDropdown) {
-                    authorTypeDropdown.value = "";
-                    authorTypeDropdown.style.color = "black";
-                }
-                if (tagSelect) {
-                    Array.from(tagSelect.options).forEach(option => option.selected = false);
-                }
-
-                if(document.getElementById('devCommentForm')) document.getElementById('devCommentForm').style.display = 'none';
-                if(document.getElementById('commentInput')) document.getElementById('commentInput').style.display = 'block';
-                if(document.getElementById('parseButton')) document.getElementById('parseButton').style.display = 'block';
-                if(document.getElementById('parseError')) document.getElementById('parseError').style.display = 'none';
-
-                const currentPage = window.location.pathname.split('/').pop();
-                if (currentPage === 'developer-comments.html' && typeof fetchAndRenderDeveloperComments === 'function' && document.getElementById('dev-comments-container')) {
-                    fetchAndRenderDeveloperComments('dev-comments-container');
-                } else if ((currentPage === 'index.html' || currentPage === '') && typeof fetchAndRenderDeveloperComments === 'function' && document.getElementById('recent-comments-home')) {
-                    fetchAndRenderDeveloperComments('recent-comments-home', 6);
-                }
-                fetchDashboardStats();
-            }
-        } catch (err) {
-            console.error('Unexpected error submitting comment:', err);
-            showFormMessage(formMessage, 'An unexpected error occurred. Please try again.', 'error');
-        } finally {
-            if (submitButton) {
-                submitButton.disabled = false;
-                submitButton.textContent = 'Add Comment to DB';
-            }
-        }
-    });
+function formatNumber(n) {
+    if (n === null || n === undefined) return '--';
+    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+    if (n >= 1_000) return (n / 1_000).toFixed(1) + 'k';
+    return n.toLocaleString();
 }
 
+function formatDate(dateStr) {
+    if (!dateStr) return '--';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+// ─────────────────────────────────────────────────────────────
+// Auth
+// ─────────────────────────────────────────────────────────────
 async function isAuthorizedAdmin(userId) {
-    if (!userId) {
-        isAdminAuthorizedCache = false;
-        return false;
-    }
-    if (isAdminAuthorizedCache !== null) {
-        return isAdminAuthorizedCache;
-    }
+    if (!userId) { isAdminAuthorizedCache = false; return false; }
+    if (isAdminAuthorizedCache !== null) return isAdminAuthorizedCache;
     try {
         const { data, error } = await supabase
             .from('admin_users')
-            .select('role')
+            .select('is_editor, is_admin, role, can_post_articles')
             .eq('user_id', userId)
             .single();
 
-        if (error && error.code === 'PGRST116') {
-            isAdminAuthorizedCache = false;
-            return false;
-        }
-        if (error) {
-            console.error('Error checking admin authorization:', error.message);
-            isAdminAuthorizedCache = false;
-            return false;
-        }
-
-        isAdminAuthorizedCache = data && data.role === 'comment_adder';
+        if (error && error.code === 'PGRST116') { isAdminAuthorizedCache = false; return false; }
+        if (error) { isAdminAuthorizedCache = false; return false; }
+        currentUserIsAdmin         = data && data.is_admin === true;
+        currentUserCanComment      = currentUserIsAdmin || (data && data.role === 'comment_adder');
+        currentUserCanPostArticles = currentUserIsAdmin || (data && data.can_post_articles === true);
+        isAdminAuthorizedCache     = data && data.is_editor === true;
         return isAdminAuthorizedCache;
     } catch (e) {
-        console.error('Unexpected error in isAuthorizedAdmin:', e);
         isAdminAuthorizedCache = false;
         return false;
     }
 }
 
+// ─────────────────────────────────────────────────────────────
+// Dashboard Stats
+// ─────────────────────────────────────────────────────────────
 async function fetchDashboardStats() {
-    const totalCommentsCount = document.getElementById('totalCommentsCount');
-    const commentsMonthCount = document.getElementById('commentsMonthCount');
-    const totalLoreCount = document.getElementById('totalLoreCount');
-
-    if (!totalCommentsCount || !commentsMonthCount || !totalLoreCount) {
-        return;
-    }
-
     const now = Date.now();
     if (dashboardStatsCache && (now - lastStatsFetchTime < STATS_CACHE_DURATION)) {
-        totalCommentsCount.textContent = dashboardStatsCache.commentsTotal;
-        commentsMonthCount.textContent = dashboardStatsCache.commentsThisMonth;
-        totalLoreCount.textContent = dashboardStatsCache.loreTotal;
+        applyStatsToDOM(dashboardStatsCache);
         return;
     }
 
     const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-    const endOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59, 999).toISOString();
+    const endOfMonth   = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59, 999).toISOString();
 
-    const [{ count: commentsTotal, error: commentsTotalError },
-        { count: commentsThisMonth, error: commentsMonthError },
-        { count: loreTotal, error: loreTotalError }] = await Promise.all([
+    const [
+        { count: totalQuests },
+        { count: questCategories },
+        { count: totalComments },
+        { count: commentsThisMonth },
+        { count: totalLore },
+        { count: totalArticles },
+        { count: adminUsers },
+        { count: totalCharacters },
+        { count: totalItems },
+        { count: totalListings },
+        { count: activeListings },
+        { count: totalSales },
+        { data: salesRevData },
+        { count: totalPve },
+    ] = await Promise.all([
+        supabase.from('cipher_quests').select('*', { count: 'exact', head: true }).eq('active', true),
+        supabase.from('quest_categories').select('*', { count: 'exact', head: true }),
         supabase.from('developer_comments').select('*', { count: 'exact', head: true }),
         supabase.from('developer_comments').select('*', { count: 'exact', head: true }).gte('comment_date', startOfMonth).lte('comment_date', endOfMonth),
-        supabase.from('lore_items').select('*', { count: 'exact', head: true })
+        supabase.from('lore_items').select('*', { count: 'exact', head: true }),
+        supabase.from('articles').select('*', { count: 'exact', head: true }),
+        supabase.from('admin_users').select('*', { count: 'exact', head: true }),
+        supabase.from('characters').select('*', { count: 'exact', head: true }),
+        supabase.from('items').select('*', { count: 'exact', head: true }),
+        supabase.from('market_listings').select('*', { count: 'exact', head: true }),
+        supabase.from('market_listings').select('*', { count: 'exact', head: true }).eq('is_fully_sold', false).eq('is_cancelled', false),
+        supabase.from('sales').select('*', { count: 'exact', head: true }),
+        supabase.from('sales').select('total_sale_price'),
+        supabase.from('pve_transactions').select('*', { count: 'exact', head: true }),
     ]);
 
-    if (commentsTotalError || commentsMonthError || loreTotalError) {
-        console.error('Error fetching dashboard stats:', commentsTotalError || commentsMonthError || loreTotalError);
-        totalCommentsCount.textContent = 'Error';
-        commentsMonthCount.textContent = 'Error';
-        totalLoreCount.textContent = 'Error';
-        dashboardStatsCache = null;
-    } else {
-        dashboardStatsCache = {
-            commentsTotal,
-            commentsThisMonth,
-            loreTotal
-        };
-        lastStatsFetchTime = now;
+    const totalRevenue = salesRevData ? salesRevData.reduce((sum, r) => sum + (r.total_sale_price || 0), 0) : 0;
 
-        totalCommentsCount.textContent = commentsTotal;
-        commentsMonthCount.textContent = commentsThisMonth;
-        totalLoreCount.textContent = loreTotal;
+    dashboardStatsCache = {
+        totalQuests, questCategories,
+        totalComments, commentsThisMonth,
+        totalLore, totalArticles,
+        adminUsers, totalCharacters,
+        totalItems, totalListings, activeListings,
+        totalSales, totalRevenue,
+        totalPve,
+    };
+    lastStatsFetchTime = now;
+    applyStatsToDOM(dashboardStatsCache);
+}
+
+function applyStatsToDOM(s) {
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+
+    set('stat-total-quests',      formatNumber(s.totalQuests));
+    set('stat-quest-categories',  formatNumber(s.questCategories));
+    set('stat-total-comments',    formatNumber(s.totalComments));
+    set('stat-comments-month',    formatNumber(s.commentsThisMonth) + ' this month');
+    set('stat-total-lore',        formatNumber(s.totalLore));
+    set('stat-total-articles',    formatNumber(s.totalArticles));
+    set('stat-admin-users',       formatNumber(s.adminUsers));
+    set('stat-total-characters',  formatNumber(s.totalCharacters));
+    set('stat-total-items',       formatNumber(s.totalItems));
+    set('stat-total-listings',    formatNumber(s.totalListings));
+    set('stat-active-listings',   formatNumber(s.activeListings) + ' active');
+    set('stat-total-sales',       formatNumber(s.totalSales));
+    set('stat-sales-revenue',     formatNumber(Math.round(s.totalRevenue)) + ' gold');
+    set('stat-total-pve',         formatNumber(s.totalPve));
+}
+
+// ─────────────────────────────────────────────────────────────
+// Recent Activity
+// ─────────────────────────────────────────────────────────────
+async function fetchRecentActivity() {
+    const [
+        { data: lastComment },
+        { data: lastLore },
+        { data: lastArticle },
+    ] = await Promise.all([
+        supabase.from('developer_comments').select('author, comment_date, content').order('comment_date', { ascending: false }).limit(1).single(),
+        supabase.from('lore_items').select('title, created_at, category').order('created_at', { ascending: false }).limit(1).single(),
+        supabase.from('articles').select('title, publication_date, author').order('publication_date', { ascending: false }).limit(1).single(),
+    ]);
+
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || '--'; };
+
+    if (lastComment) {
+        set('recent-comment-author',  lastComment.author || '(unknown)');
+        set('recent-comment-date',    formatDate(lastComment.comment_date));
+        set('recent-comment-preview', lastComment.content ? lastComment.content.substring(0, 120) + (lastComment.content.length > 120 ? '\u2026' : '') : '--');
+    }
+    if (lastLore) {
+        set('recent-lore-title',    lastLore.title || '--');
+        set('recent-lore-date',     formatDate(lastLore.created_at));
+        set('recent-lore-category', lastLore.category ? 'Category: ' + lastLore.category : '--');
+    }
+    if (lastArticle) {
+        set('recent-article-title',  lastArticle.title || '--');
+        set('recent-article-date',   formatDate(lastArticle.publication_date));
+        set('recent-article-author', lastArticle.author ? 'By ' + lastArticle.author : '--');
     }
 }
 
-function parseComment(text) {
-    const mainRegex = /^(.*?)\s*—\s*([\s\S]*?)(https?:\/\/[^\s]+)?$/;
-    const match = text.match(mainRegex);
+// ─────────────────────────────────────────────────────────────
+// User Role Management
+// ─────────────────────────────────────────────────────────────
+async function fetchAndRenderUserRoles() {
+    const loadingEl = document.getElementById('userRolesLoadingIndicator');
+    const tableEl   = document.getElementById('userRolesTableContainer');
+    const emptyEl   = document.getElementById('userRolesEmptyState');
+    const tbody     = document.getElementById('userRolesTableBody');
 
-    if (!match) {
-        return null;
-    }
+    if (!tbody) return;
 
-    try {
-        const author = match[1].trim();
-        let fullContentAndPotentialTimestamp = match[2].trim();
-        const url = match[3] ? match[3].trim() : '';
-        const finalSource = url;
+    if (loadingEl) loadingEl.classList.remove('hidden');
+    if (tableEl)   tableEl.classList.add('hidden');
+    if (emptyEl)   emptyEl.classList.add('hidden');
 
-        let parsedDate = new Date();
-        let content = fullContentAndPotentialTimestamp;
+    const { data, error } = await supabase
+        .from('admin_users')
+        .select('user_id, role, quest_role, lore_role, is_admin, is_editor, can_post_articles')
+        .order('user_id', { ascending: true });
 
-        const lines = fullContentAndPotentialTimestamp.split('\n').map(line => line.trim()).filter(Boolean);
-        let firstLine = lines.length > 0 ? lines[0] : '';
-        let timestampMatchFound = false;
+    if (loadingEl) loadingEl.classList.add('hidden');
 
-        let timestampMatch;
-
-        const fullDateTimePattern = /^(\d{1,2}\/\d{1,2}\/\d{2,4})(?:,\s*|\s+)(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
-        timestampMatch = firstLine.match(fullDateTimePattern);
-
-        if (timestampMatch) {
-            const datePart = timestampMatch[1];
-            const timePart = timestampMatch[2];
-            const remainingFirstLineContent = timestampMatch[3].trim();
-
-            let [month, day, year] = datePart.split('/').map(Number);
-            if (year < 100) {
-                year += (year > 50) ? 1900 : 2000;
-            }
-            parsedDate = new Date(year, month - 1, day);
-            parseTimeIntoDate(timePart, parsedDate);
-            timestampMatchFound = true;
-
-            content = [remainingFirstLineContent, ...lines.slice(1)].filter(Boolean).join('\n').trim();
-
-        } else {
-            const yesterdayPattern = /^yesterday at\s*(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
-            timestampMatch = firstLine.match(yesterdayPattern);
-
-            if (timestampMatch) {
-                const timePart = timestampMatch[1];
-                const remainingFirstLineContent = timestampMatch[2].trim();
-
-                parsedDate = new Date();
-                parsedDate.setDate(parsedDate.getDate() - 1);
-                parseTimeIntoDate(timePart, parsedDate);
-                timestampMatchFound = true;
-
-                content = [remainingFirstLineContent, ...lines.slice(1)].filter(Boolean).join('\n').trim();
-
-            } else {
-                const todayPattern = /^today at\s*(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
-                timestampMatch = firstLine.match(todayPattern);
-
-                if (timestampMatch) {
-                    const timePart = timestampMatch[1];
-                    const remainingFirstLineContent = timestampMatch[2].trim();
-
-                    parsedDate = new Date();
-                    parseTimeIntoDate(timePart, parsedDate);
-                    timestampMatchFound = true;
-
-                    content = [remainingFirstLineContent, ...lines.slice(1)].filter(Boolean).join('\n').trim();
-
-                } else {
-
-                    const timeOnlyPattern = /^(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i;
-                    timestampMatch = firstLine.match(timeOnlyPattern);
-
-                    if (timestampMatch) {
-                        const timePart = timestampMatch[1];
-                        const remainingFirstLineContent = timestampMatch[2].trim();
-
-                        parsedDate = new Date();
-                        parseTimeIntoDate(timePart, parsedDate);
-                        timestampMatchFound = true;
-
-                        content = [remainingFirstLineContent, ...lines.slice(1)].filter(Boolean).join('\n').trim();
-                    }
-                }
-            }
+    if (error) {
+        console.error('Error fetching admin users:', error);
+        if (emptyEl) {
+            emptyEl.classList.remove('hidden');
+            emptyEl.querySelector('p').textContent = 'Error loading users: ' + error.message;
         }
-
-        if (!timestampMatchFound) {
-            console.warn("No specific timestamp format recognized from the first line. Assuming content is the full string and using current date/time.");
-        }
-
-        function parseTimeIntoDate(timePart, dateObject) {
-            const timeRegex = /(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)/i;
-            const timeMatchResult = timePart.match(timeRegex);
-
-            if (timeMatchResult) {
-                let hours = parseInt(timeMatchResult[1]);
-                const minutes = parseInt(timeMatchResult[2]);
-                const ampm = timeMatchResult[3].toLowerCase();
-                if (ampm === 'pm' && hours < 12) { hours += 12; }
-                if (ampm === 'am' && hours === 12) { hours = 0; }
-                dateObject.setHours(hours, minutes, 0, 0);
-            } else {
-                dateObject.setHours(0, 0, 0, 0);
-            }
-        }
-
-        const yearFormatted = parsedDate.getFullYear();
-        const monthFormatted = (parsedDate.getMonth() + 1).toString().padStart(2, '0');
-        const dayFormatted = parsedDate.getDate().toString().padStart(2, '0');
-        const hoursFormatted = parsedDate.getHours().toString().padStart(2, '0');
-        const minutesFormatted = parsedDate.getMinutes().toString().padStart(2, '0');
-
-        const formattedTimestamp = `${yearFormatted}-${monthFormatted}-${dayFormatted}T${hoursFormatted}:${minutesFormatted}`;
-
-        return { author, source: finalSource, timestamp: formattedTimestamp, content };
-
-    } catch (e) {
-        console.error("Error during comment parsing:", e);
-        return null;
-    }
-}
-
-async function populateTagSelect(tagSelectElement) {
-    if (!tagSelectElement) {
         return;
     }
-    tagSelectElement.innerHTML = '';
-    tagSelectElement.style.color = 'black';
 
-    if (!tagSelectElement.multiple && tagSelectElement.id === 'loreCategory') {
-        const defaultOption = document.createElement('option');
-        defaultOption.value = '';
-        defaultOption.textContent = 'Select a category';
-        defaultOption.style.color = 'black';
-        tagSelectElement.appendChild(defaultOption);
-    }
+    adminUsersCache = data || [];
 
-    if (!tagListCache) {
-        try {
-            const { data, error } = await supabase
-                .from('tag_list')
-                .select('tag_name')
-                .order('tag_name', { ascending: true });
-
-            if (error) {
-                console.error('Error fetching tags for admin form:', error.message);
-                return;
-            }
-            tagListCache = data;
-        } catch (e) {
-            console.error('Unexpected error populating tags for admin form:', e);
-            return;
+    // Fetch usernames from users table separately (no FK relationship)
+    const userIds = adminUsersCache.map(function(u) { return u.user_id; }).filter(Boolean);
+    const usernameMap = {};
+    if (userIds.length > 0) {
+        const { data: usersData } = await supabase
+            .from('users')
+            .select('id, username')
+            .in('id', userIds);
+        if (usersData) {
+            usersData.forEach(function(u) { usernameMap[u.id] = u.username; });
         }
     }
 
-    if (tagListCache && tagListCache.length > 0) {
-        tagListCache.forEach(tag => {
+    if (adminUsersCache.length === 0) {
+        if (emptyEl) emptyEl.classList.remove('hidden');
+        return;
+    }
+
+    tbody.innerHTML = '';
+
+    adminUsersCache.forEach(function(u) {
+        const isCommenter     = u.role === 'comment_adder';
+        const isQuestAdder    = u.quest_role === 'quest_adder';
+        const isLoreEditor    = u.lore_role === 'lore_editor';
+        const isAdmin         = u.is_admin === true;
+        const hasAccess       = u.is_editor === true;
+        const canPostArticles = u.can_post_articles === true;
+        const shortId         = u.user_id ? u.user_id.substring(0, 8) + '\u2026' : '--';
+        const username        = usernameMap[u.user_id] || null;
+
+        const userCell = '<td class="px-4 py-3">'
+            + '<div class="flex flex-col gap-0.5">'
+            + (username
+                ? '<span class="text-lg text-white font-medium flex items-center gap-1"><i class="fab fa-discord text-indigo-400 text-lg"></i>' + username + '</span>'
+                : '')
+            + '<div class="flex items-center gap-2">'
+            + '<code class="text-lg text-gray-500 font-mono">' + shortId + '</code>'
+            + '<button class="copy-uid-btn text-gray-600 hover:text-violet-400 transition-colors text-lg" data-uid="' + u.user_id + '" title="Copy full ID"><i class="fas fa-copy"></i></button>'
+            + '</div>'
+            + '</div>'
+            + '</td>';
+
+        const commenterCell = '<td class="px-4 py-3">'
+            + (isCommenter
+                ? '<span class="role-badge master"><i class="fas fa-message"></i> comment_adder</span>'
+                : '<span class="role-badge none">\u2014</span>')
+            + '</td>';
+
+        const questCell = '<td class="px-4 py-3">'
+            + (isQuestAdder
+                ? '<span class="role-badge quest"><i class="fas fa-scroll"></i> quest_adder</span>'
+                : '<span class="role-badge none">\u2014</span>')
+            + '</td>';
+
+        const adminCell = '<td class="px-4 py-3">'
+            + (isAdmin
+                ? '<span class="role-badge master"><i class="fas fa-user-shield"></i> admin</span>'
+                : '<span class="role-badge none">\u2014</span>')
+            + '</td>';
+
+        const canPostArticlesCell = '<td class="px-4 py-3">'
+            + (canPostArticles
+                ? '<span class="role-badge lore"><i class="fas fa-newspaper"></i> can_post_articles</span>'
+                : '<span class="role-badge none">\u2014</span>')
+            + '</td>';
+
+        const loreCell = '<td class="px-4 py-3">'
+            + (isLoreEditor
+                ? '<span class="role-badge lore"><i class="fas fa-book"></i> lore_editor</span>'
+                : '<span class="role-badge none">\u2014</span>')
+            + '</td>';
+
+        const accessCell = '<td class="px-4 py-3">'
+            + (hasAccess
+                ? '<span class="role-badge lore"><i class="fas fa-user-edit"></i> editor</span>'
+                : '<span class="role-badge none">\u2014</span>')
+            + '</td>';
+
+        // Action buttons: only logged-in admins see Edit / Delete buttons
+        var actionsContent = '';
+        if (currentUserIsAdmin) {
+            actionsContent = '<button class="edit-role-btn text-lg px-3 py-1 rounded transition-all bg-violet-900/40 text-violet-300 hover:bg-violet-900/70 border border-violet-500/30"'
+                + ' data-uid="' + u.user_id + '"'
+                + ' data-is-admin="' + isAdmin + '"'
+                + ' data-is-editor="' + hasAccess + '"'
+                + ' data-can-post-articles="' + canPostArticles + '"'
+                + ' data-is-commenter="' + isCommenter + '"'
+                + ' data-is-quest-adder="' + isQuestAdder + '"'
+                + ' data-is-lore-editor="' + isLoreEditor + '"'
+                + '>'
+                + '<i class="fas fa-pen mr-1"></i>Edit Roles'
+                + '</button>'
+                + '<button class="delete-user-btn text-lg px-3 py-1 rounded transition-all bg-red-900/40 text-red-300 hover:bg-red-900/70 border border-red-500/30"'
+                + ' data-uid="' + u.user_id + '"'
+                + ' data-username="' + (username || shortId) + '"'
+                + '>'
+                + '<i class="fas fa-trash mr-1"></i>Remove'
+                + '</button>';
+        }
+
+        const actionsCell = '<td class="px-4 py-3"><div class="flex gap-2 flex-wrap">' + actionsContent + '</div></td>';
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = userCell + adminCell + commenterCell + questCell + canPostArticlesCell + loreCell + accessCell + actionsCell;
+        tbody.appendChild(tr);
+    });
+
+    // Copy UID buttons
+    tbody.querySelectorAll('.copy-uid-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            navigator.clipboard.writeText(btn.dataset.uid).then(function() {
+                btn.innerHTML = '<i class="fas fa-check"></i>';
+                setTimeout(function() { btn.innerHTML = '<i class="fas fa-copy"></i>'; }, 1500);
+            });
+        });
+    });
+
+    // Delete user buttons
+    tbody.querySelectorAll('.delete-user-btn').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+            const uid      = btn.dataset.uid;
+            const username = btn.dataset.username;
+            const confirmed = await showConfirmModal(
+                'Remove "' + username + '" from the admin users table? This cannot be undone.',
+                'Remove User'
+            );
+            if (!confirmed) return;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Removing...';
+
+            const { error } = await supabase
+                .from('admin_users')
+                .delete()
+                .eq('user_id', uid);
+
+            if (error) {
+                console.error('Error deleting admin user:', error);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-trash mr-1"></i>Remove';
+                alert('Error: ' + error.message);
+            } else {
+                adminUsersCache = adminUsersCache.filter(function(u) { return u.user_id !== uid; });
+                allSiteUsersCache = [];
+                fetchAndRenderUserRoles();
+                fetchDashboardStats();
+            }
+        });
+    });
+
+    // Edit role buttons
+    tbody.querySelectorAll('.edit-role-btn').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+            await populateRoleUserDropdown(btn.dataset.uid);
+            openManageUserRoleModal({
+                userId: btn.dataset.uid,
+                isAdmin: btn.dataset.isAdmin === 'true',
+                isEditor: btn.dataset.isEditor === 'true',
+                canPostArticles: btn.dataset.canPostArticles === 'true',
+                isCommenter: btn.dataset.isCommenter === 'true',
+                isQuestAdder: btn.dataset.isQuestAdder === 'true',
+                isLoreEditor: btn.dataset.isLoreEditor === 'true'
+            });
+        });
+    });
+
+    if (tableEl) tableEl.classList.remove('hidden');
+}
+
+// Opens the shared Grant/Edit modal, pre-filling if editing an existing user
+function openManageUserRoleModal(opts) {
+    const modal = document.getElementById('addUserRoleModal');
+    if (!modal) return;
+
+    const userSelect    = document.getElementById('roleUserSelect');
+    const ckAdmin       = document.getElementById('roleCheck_is_admin');
+    const ckEditor      = document.getElementById('roleCheck_is_editor');
+    const ckArticles    = document.getElementById('roleCheck_can_post_articles');
+    const ckCommenter   = document.getElementById('roleCheck_comment_adder');
+    const ckQuest       = document.getElementById('roleCheck_quest_adder');
+    const ckLore        = document.getElementById('roleCheck_lore_editor');
+    const msgEl         = document.getElementById('addUserRoleMessage');
+
+    if (msgEl) { msgEl.classList.add('hidden'); msgEl.textContent = ''; }
+
+    if (opts && opts.userId) {
+        // Edit mode — select the existing user
+        if (userSelect) userSelect.value = opts.userId;
+        if (ckAdmin)     ckAdmin.checked     = opts.isAdmin     || false;
+        if (ckEditor)    ckEditor.checked    = opts.isEditor    || false;
+        if (ckArticles)  ckArticles.checked  = opts.canPostArticles || false;
+        if (ckCommenter) ckCommenter.checked = opts.isCommenter || false;
+        if (ckQuest)     ckQuest.checked     = opts.isQuestAdder || false;
+        if (ckLore)      ckLore.checked      = opts.isLoreEditor || false;
+    } else {
+        // Grant mode — reset form
+        if (userSelect) userSelect.value = '';
+        if (ckAdmin)     ckAdmin.checked     = false;
+        if (ckEditor)    ckEditor.checked    = false;
+        if (ckArticles)  ckArticles.checked  = false;
+        if (ckCommenter) ckCommenter.checked = false;
+        if (ckQuest)     ckQuest.checked     = false;
+        if (ckLore)      ckLore.checked      = false;
+    }
+
+    modal.classList.remove('hidden');
+}
+
+async function saveUserRoles(userId, roles) {
+    if (!userId) return { error: 'Please select a user.' };
+
+    const upsertData = {
+        user_id:          userId,
+        is_admin:         roles.isAdmin,
+        is_editor:        roles.isEditor,
+        can_post_articles: roles.canPostArticles,
+        role:             roles.isCommenter ? 'comment_adder' : '',
+        quest_role:       roles.isQuestAdder ? 'quest_adder' : null,
+        lore_role:        roles.isLoreEditor ? 'lore_editor'  : null
+    };
+
+    const { error } = await supabase
+        .from('admin_users')
+        .upsert(upsertData, { onConflict: 'user_id' });
+
+    if (error) return { error: error.message };
+    return { success: true };
+}
+
+async function fetchAllSiteUsers() {
+    if (allSiteUsersCache.length > 0) return allSiteUsersCache;
+    const { data, error } = await supabase
+        .from('users')
+        .select('id, username')
+        .order('username', { ascending: true });
+    if (error) { console.error('Error fetching site users:', error); return []; }
+    allSiteUsersCache = data || [];
+    return allSiteUsersCache;
+}
+
+async function populateRoleUserDropdown(editingUserId) {
+    const sel = document.getElementById('roleUserSelect');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">-- Select a user --</option>';
+    const users = await fetchAllSiteUsers();
+
+    // Build a set of user_ids already managed in the table,
+    // but exclude the one currently being edited so it still appears
+    const managedIds = new Set(adminUsersCache.map(function(u) { return u.user_id; }));
+    if (editingUserId) managedIds.delete(editingUserId);
+
+    const filtered = users.filter(function(u) { return !managedIds.has(u.id); });
+
+    if (filtered.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.disabled = true;
+        opt.textContent = '-- All site users already have roles assigned --';
+        sel.appendChild(opt);
+        return;
+    }
+
+    filtered.forEach(function(u) {
+        const opt = document.createElement('option');
+        opt.value = u.id;
+        opt.textContent = (u.username || '(no username)') + '  [' + u.id.substring(0, 8) + '\u2026]';
+        sel.appendChild(opt);
+    });
+}
+
+// ─────────────────────────────────────────────────────────────
+// Tag management
+// ─────────────────────────────────────────────────────────────
+async function populateTagSelect(tagSelectElement) {
+    if (!tagSelectElement) return;
+    tagSelectElement.innerHTML = '';
+    tagSelectElement.style.color = 'white';
+
+    if (!tagListCache) {
+        const { data, error } = await supabase
+            .from('tag_list')
+            .select('tag_name')
+            .order('tag_name', { ascending: true });
+        if (error) { console.error('Error fetching tags:', error.message); return; }
+        tagListCache = data;
+    }
+
+    if (tagListCache) {
+        tagListCache.forEach(function(tag) {
             const option = document.createElement('option');
             option.value = tag.tag_name;
             option.textContent = tag.tag_name;
-            option.style.color = 'black';
             tagSelectElement.appendChild(option);
         });
     }
 }
 
-
-async function handleAddNewTag(newTagValue, inputElement, messageElement, tagSelectElement, loreCategorySelectElement, tagType = 'Tag') {
-    if (newTagValue) {
-        try {
-            const { error } = await supabase
-                .from('tag_list')
-                .insert([{ tag_name: newTagValue }]);
-
-            if (error && error.code !== '23505') {
-                showFormMessage(messageElement, `Error adding ${tagType}: ` + error.message, 'error');
-            } else {
-                if (error && error.code === '23505') {
-                    showFormMessage(messageElement, `${tagType} '${newTagValue}' already exists.`, 'warning');
-                } else {
-                    showFormMessage(messageElement, `${tagType} '${newTagValue}' added successfully!`, 'success');
-                    tagListCache.push({ tag_name: newTagValue });
-                    tagListCache.sort((a, b) => a.tag_name.localeCompare(b.tag_name));
-                }
-                inputElement.value = '';
-                populateTagSelect(tagSelectElement);
-                populateTagSelect(loreCategorySelectElement);
-            }
-        } catch (e) {
-            showFormMessage(messageElement, `An unexpected error occurred while adding ${tagType}.`, 'error');
-        }
-    } else {
-        showFormMessage(messageElement, `Please enter a ${tagType.toLowerCase()} name.`, 'warning');
-    }
-}
-
-function renderLoreItems(containerId) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    if (loreItemsCache.length === 0) {
-        container.innerHTML = 'No lore items found.';
-        return;
-    }
-
-    container.innerHTML = '';
-    const list = document.createElement('ul');
-    list.classList.add('lore-item-list');
-    loreItemsCache.forEach(item => {
-        const listItem = document.createElement('li');
-        listItem.classList.add('lore-item');
-        listItem.innerHTML = `
-            <div class="lore-item-header">
-                <h3>${item.title}</h3>
-                <span class="lore-item-category">${item.category}</span>
-            </div>
-            <p class="lore-item-slug">Slug: ${item.slug}</p>
-            <div class="lore-item-content">
-                <p>${item.content.substring(0, 150)}...</p>
-            </div>
-            <div class="lore-item-actions">
-                <button class="edit-lore-item" data-id="${item.id}">Edit</button>
-                <button class="delete-lore-item" data-id="${item.id}">Delete</button>
-            </div>
-        `;
-        list.appendChild(listItem);
-    });
-    container.appendChild(list);
-
-    container.querySelectorAll('.edit-lore-item').forEach(button => {
-        button.addEventListener('click', (e) => editLoreItem(e.target.dataset.id));
-    });
-    container.querySelectorAll('.delete-lore-item').forEach(button => {
-        button.addEventListener('click', (e) => deleteLoreItem(e.target.dataset.id));
-    });
-}
-
-async function fetchAndSetLoreItemsCache(containerId) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    container.innerHTML = 'Loading lore items...';
+// ─────────────────────────────────────────────────────────────
+// Comment parsing
+// ─────────────────────────────────────────────────────────────
+function parseComment(text) {
+    const mainRegex = /^(.*?)\s*—\s*([\s\S]*?)(https?:\/\/[^\s]+)?$/;
+    const match = text.match(mainRegex);
+    if (!match) return null;
 
     try {
-        const { data, error } = await supabase
-            .from('lore_items')
-            .select('*')
-            .order('created_at', { ascending: false });
+        const author = match[1].trim();
+        const fullContent = match[2].trim();
+        const url = match[3] ? match[3].trim() : '';
 
-        if (error) {
-            container.innerHTML = `Error loading lore items: ${error.message}`;
-            console.error('Error fetching lore items:', error.message);
-            loreItemsCache = [];
-            return;
+        let parsedDate = new Date();
+        let content = fullContent;
+        const lines = fullContent.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
+        const firstLine = lines.length > 0 ? lines[0] : '';
+        let timestampMatchFound = false;
+
+        function parseTimeIntoDate(timePart, dateObject) {
+            const m = timePart.match(/(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)/i);
+            if (m) {
+                let h = parseInt(m[1]);
+                const mins = parseInt(m[2]);
+                const ampm = m[3].toLowerCase();
+                if (ampm === 'pm' && h < 12) h += 12;
+                if (ampm === 'am' && h === 12) h = 0;
+                dateObject.setHours(h, mins, 0, 0);
+            } else {
+                dateObject.setHours(0, 0, 0, 0);
+            }
         }
 
-        loreItemsCache = data;
-        renderLoreItems(containerId);
+        const fullDT = firstLine.match(/^(\d{1,2}\/\d{1,2}\/\d{2,4})(?:,\s*|\s+)(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i);
+        if (fullDT) {
+            let parts = fullDT[1].split('/').map(Number);
+            let month = parts[0], day = parts[1], year = parts[2];
+            if (year < 100) year += year > 50 ? 1900 : 2000;
+            parsedDate = new Date(year, month - 1, day);
+            parseTimeIntoDate(fullDT[2], parsedDate);
+            timestampMatchFound = true;
+            content = [fullDT[3].trim()].concat(lines.slice(1)).filter(Boolean).join('\n').trim();
+        }
 
+        if (!timestampMatchFound) {
+            const yesterday = firstLine.match(/^yesterday at\s*(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i);
+            if (yesterday) {
+                parsedDate = new Date();
+                parsedDate.setDate(parsedDate.getDate() - 1);
+                parseTimeIntoDate(yesterday[1], parsedDate);
+                timestampMatchFound = true;
+                content = [yesterday[2].trim()].concat(lines.slice(1)).filter(Boolean).join('\n').trim();
+            }
+        }
+
+        if (!timestampMatchFound) {
+            const today = firstLine.match(/^today at\s*(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i);
+            if (today) {
+                parsedDate = new Date();
+                parseTimeIntoDate(today[1], parsedDate);
+                timestampMatchFound = true;
+                content = [today[2].trim()].concat(lines.slice(1)).filter(Boolean).join('\n').trim();
+            }
+        }
+
+        if (!timestampMatchFound) {
+            const timeOnly = firstLine.match(/^(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\s*(.*)$/i);
+            if (timeOnly) {
+                parsedDate = new Date();
+                parseTimeIntoDate(timeOnly[1], parsedDate);
+                timestampMatchFound = true;
+                content = [timeOnly[2].trim()].concat(lines.slice(1)).filter(Boolean).join('\n').trim();
+            }
+        }
+
+        const yr = parsedDate.getFullYear();
+        const mo = (parsedDate.getMonth() + 1).toString().padStart(2, '0');
+        const dy = parsedDate.getDate().toString().padStart(2, '0');
+        const hr = parsedDate.getHours().toString().padStart(2, '0');
+        const mn = parsedDate.getMinutes().toString().padStart(2, '0');
+
+        return { author: author, source: url, timestamp: yr + '-' + mo + '-' + dy + 'T' + hr + ':' + mn, content: content };
     } catch (e) {
-        container.innerHTML = `An unexpected error occurred: ${e.message}`;
-        console.error('Unexpected error in fetchAndSetLoreItemsCache:', e);
-        loreItemsCache = [];
+        console.error('Error parsing comment:', e);
+        return null;
     }
 }
 
-async function editLoreItem(id) {
-    const loreItem = loreItemsCache.find(item => item.id == id);
-
-    if (!loreItem) {
-        console.error('Lore item not found in cache for edit:', id);
-        showFormMessage(document.getElementById('addLoreItemMessage'), `Error: Lore item not found.`, 'error');
-        return;
-    }
-
-    document.getElementById('loreTitle').value = loreItem.title;
-    document.getElementById('loreSlug').value = loreItem.slug;
-    document.getElementById('loreCategory').value = loreItem.category;
-    document.getElementById('loreCategory').style.color = "black";
-    document.getElementById('loreContent').value = loreItem.content;
-    document.getElementById('addLoreItemForm').dataset.editingId = loreItem.id;
-    document.getElementById('addLoreItemForm').querySelector('button[type="submit"]').textContent = 'Update Lore Item';
-    document.getElementById('cancelEditLoreItemButton').style.display = 'inline-block';
-    document.getElementById('newLoreCategoryInput').style.display = 'none';
-    document.getElementById('addNewLoreCategoryButton').style.display = 'none';
-
-    const addLoreItemMessage = document.getElementById('addLoreItemMessage');
-    if (addLoreItemMessage) {
-        addLoreItemMessage.textContent = 'Editing Lore Item';
-        addLoreItemMessage.className = 'form-message info';
-        addLoreItemMessage.style.display = 'block';
-    }
-}
-
-async function deleteLoreItem(id) {
-    if (!confirm('Are you sure you want to delete this lore item?')) {
-        return;
-    }
-
-    const { error } = await supabase
-        .from('lore_items')
-        .delete()
-        .eq('id', id);
-
-    if (error) {
-        console.error('Error deleting lore item:', error.message);
-        showFormMessage(document.getElementById('addLoreItemMessage'), `Error deleting lore item: ${error.message}`, 'error');
+// ─────────────────────────────────────────────────────────────
+// Modal gating
+// ─────────────────────────────────────────────────────────────
+function applySidebarLinkState(btnId, allowed, disabledTitle) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    if (allowed) {
+        btn.classList.remove('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+        btn.removeAttribute('title');
+        btn.removeAttribute('aria-disabled');
     } else {
-        loreItemsCache = loreItemsCache.filter(item => item.id != id);
-        renderLoreItems('loreItemsList');
-        showFormMessage(document.getElementById('addLoreItemMessage'), 'Lore item deleted successfully!', 'success');
-        fetchDashboardStats();
+        btn.classList.add('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+        btn.setAttribute('title', disabledTitle);
+        btn.setAttribute('aria-disabled', 'true');
     }
 }
 
-function resetLoreForm() {
-    const addLoreItemForm = document.getElementById('addLoreItemForm');
-    addLoreItemForm.reset();
-    addLoreItemForm.removeAttribute('data-editing-id');
-    addLoreItemForm.querySelector('button[type="submit"]').textContent = 'Add Lore Item';
-    document.getElementById('cancelEditLoreItemButton').style.display = 'none';
-    document.getElementById('newLoreCategoryInput').style.display = 'block';
-    document.getElementById('addNewLoreCategoryButton').style.display = 'inline-block';
-    const loreCategory = document.getElementById('loreCategory');
-    if (loreCategory) loreCategory.style.color = "black";
-    showFormMessage(document.getElementById('addLoreItemMessage'), '', '');
+function applyModalGating() {
+    applySidebarLinkState('openDevCommentModalBtn',   currentUserCanComment,      'You do not have the comment_adder role');
+    applySidebarLinkState('openArticleModalBtn',      currentUserCanPostArticles, 'You do not have the can_post_articles role');
+    applySidebarLinkState('openAddUserRoleModalBtn',  currentUserIsAdmin,         'Only admins can manage user roles');
 }
 
-function hideAllAdminElements() {
-    const loginFormContainer = document.getElementById('loginFormContainer');
-    const loginHeading = document.getElementById('loginHeading');
-    const adminDashboardAndForm = document.getElementById('adminDashboardAndForm');
-    const loginError = document.getElementById('loginError');
-
-    if (loginFormContainer) loginFormContainer.style.display = 'none';
-    if (loginHeading) loginHeading.style.display = 'none';
-    if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none';
-    if (loginError) loginError.style.display = 'none';
-}
-
+// ─────────────────────────────────────────────────────────────
+// Init auth + dashboard
+// ─────────────────────────────────────────────────────────────
 async function initAuthAndDashboard() {
-    const loginFormContainer = document.getElementById('loginFormContainer');
-    const loginHeading = document.getElementById('loginHeading');
-    const adminDashboardAndForm = document.getElementById('adminDashboardAndForm');
-    const loginError = document.getElementById('loginError');
+    const loginContainer = document.getElementById('loginFormContainer');
+    const adminDashboard = document.getElementById('adminDashboardAndForm');
+    const loginError     = document.getElementById('loginError');
 
     const { data: { user } = {} } = await supabase.auth.getUser();
 
+    showLoadingOverlay(false);
+
     if (user) {
         const authorized = await isAuthorizedAdmin(user.id);
-
         if (authorized) {
-            if (loginFormContainer) loginFormContainer.style.display = 'none';
-            if (loginHeading) loginHeading.style.display = 'none';
-            if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'block';
+            if (loginContainer) loginContainer.classList.add('hidden');
+            if (adminDashboard) adminDashboard.style.display = 'block';
+
+            applyModalGating();
             fetchDashboardStats();
+            fetchRecentActivity();
+            fetchAndRenderUserRoles();
+
             if (!initialAuthCheckComplete) {
                 populateTagSelect(document.getElementById('tagSelect'));
-                populateTagSelect(document.getElementById('loreCategory'));
-                fetchAndSetLoreItemsCache('loreItemsList');
                 initialAuthCheckComplete = true;
             }
         } else {
-            if (loginFormContainer) loginFormContainer.style.display = 'block';
-            if (loginHeading) loginHeading.style.display = 'none';
-            if (loginError) {
-                loginError.textContent = 'You are logged in but not authorized to view this page. Redirecting to home...';
-                loginError.style.display = 'block';
-            }
-            if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none';
-            
-            setTimeout(() => {
-                window.location.href = 'index.html';
-            }, 8000);
+            if (loginContainer) loginContainer.classList.remove('hidden');
+            if (adminDashboard) adminDashboard.style.display = 'none';
+            if (loginError) { loginError.textContent = 'You are not authorized. Redirecting\u2026'; loginError.classList.remove('hidden'); }
+            setTimeout(function() { window.location.href = 'index.html'; }, 6000);
         }
     } else {
-        if (loginFormContainer) loginFormContainer.style.display = 'block';
-        if (loginHeading) loginHeading.style.display = 'block';
-        if (adminDashboardAndForm) adminDashboardAndForm.style.display = 'none';
-        if (loginError) {
-             loginError.textContent = 'Please log in to view this page. Redirecting to home...';
-             loginError.style.display = 'block';
-        }
-       
-        setTimeout(() => {
-            window.location.href = 'index.html';
-        }, 8000);
+        if (loginContainer) loginContainer.classList.remove('hidden');
+        if (adminDashboard) adminDashboard.style.display = 'none';
+        if (loginError) { loginError.textContent = 'Please log in. Redirecting\u2026'; loginError.classList.remove('hidden'); }
+        setTimeout(function() { window.location.href = 'index.html'; }, 6000);
     }
 }
 
+// ─────────────────────────────────────────────────────────────
+// Event Listeners
+// ─────────────────────────────────────────────────────────────
 function setupAuthEventListeners() {
-    const discordLoginButton = document.getElementById('discordLoginButton');
-    const loginError = document.getElementById('loginError');
-
-    supabase.auth.onAuthStateChange((event, session) => {
+    supabase.auth.onAuthStateChange(function(event) {
         if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-            initialAuthCheckComplete = false;
-            isAdminAuthorizedCache = null;
+            initialAuthCheckComplete   = false;
+            isAdminAuthorizedCache     = null;
+            dashboardStatsCache        = null;
+            currentUserIsAdmin         = false;
+            currentUserCanComment      = false;
+            currentUserCanPostArticles = false;
+            allSiteUsersCache          = [];
             initAuthAndDashboard();
         }
     });
 
-    if (discordLoginButton) {
-        discordLoginButton.addEventListener('click', async () => {
-            const { data, error } = await supabase.auth.signInWithOAuth({
+    const discordBtn = document.getElementById('discordLoginButton');
+    if (discordBtn) {
+        discordBtn.addEventListener('click', async function() {
+            const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'discord',
-                options: {
-                    redirectTo: 'https://yesitsphoenix.github.io/Pax-Dei-Archives/admin.html'
-                }
+                options: { redirectTo: 'https://yesitsphoenix.github.io/Pax-Dei-Archives/admin.html' }
             });
-
             if (error) {
-                console.error('Discord login error:', error);
-                if (loginError) {
-                    loginError.textContent = 'Login failed: ' + error.message;
-                    loginError.style.display = 'block';
-                }
+                const el = document.getElementById('loginError');
+                if (el) { el.textContent = 'Login failed: ' + error.message; el.classList.remove('hidden'); }
             }
         });
     }
 }
 
 function setupCommentFormHandlers() {
-    const commentInput = document.getElementById('commentInput');
-    const parseButton = document.getElementById('parseButton');
-    const devCommentForm = document.getElementById('devCommentForm');
-    const parseError = document.getElementById('parseError');
-    const authorField = document.getElementById('author');
-    const sourceField = document.getElementById('source');
-    const timestampField = document.getElementById('timestamp');
+    const commentInput        = document.getElementById('commentInput');
+    const parseButton         = document.getElementById('parseButton');
+    const devCommentForm      = document.getElementById('devCommentForm');
+    const parseError          = document.getElementById('parseError');
+    const authorField         = document.getElementById('author');
+    const sourceField         = document.getElementById('source');
+    const timestampField      = document.getElementById('timestamp');
     const commentContentField = document.getElementById('commentContent');
-    const editButton = document.getElementById('editButton');
-    const formMessage = document.getElementById('formMessage');
+    const editButton          = document.getElementById('editButton');
+    const formMessage         = document.getElementById('formMessage');
+    const authorTypeDropdown  = document.getElementById('author_type');
+
+    if (authorTypeDropdown) {
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = ''; defaultOpt.textContent = 'Select Author Type'; defaultOpt.selected = true;
+        authorTypeDropdown.appendChild(defaultOpt);
+        for (const type in authorRoleColors) {
+            if (authorRoleColors.hasOwnProperty(type) && type !== 'default') {
+                const opt = document.createElement('option');
+                opt.value = type; opt.textContent = type;
+                authorTypeDropdown.appendChild(opt);
+            }
+        }
+    }
 
     if (parseButton && commentInput && devCommentForm) {
-        parseButton.addEventListener('click', () => {
+        parseButton.addEventListener('click', function() {
             showFormMessage(formMessage, '', '');
-            const inputText = commentInput.value;
-            const parsedData = parseComment(inputText);
-
-            if (parsedData) {
-                if (authorField) authorField.value = parsedData.author;
-                if (sourceField) sourceField.value = parsedData.source;
-                if (timestampField) timestampField.value = parsedData.timestamp;
-                if (commentContentField) commentContentField.value = parsedData.content;
-
+            const parsed = parseComment(commentInput.value);
+            if (parsed) {
+                if (authorField)         authorField.value         = parsed.author;
+                if (sourceField)         sourceField.value         = parsed.source;
+                if (timestampField)      timestampField.value      = parsed.timestamp;
+                if (commentContentField) commentContentField.value = parsed.content;
                 devCommentForm.style.display = 'block';
-                commentInput.style.display = 'none';
-                parseButton.style.display = 'none';
+                commentInput.style.display   = 'none';
+                parseButton.style.display    = 'none';
                 if (parseError) parseError.style.display = 'none';
-                if (authorTypeDropdown) authorTypeDropdown.style.color = "black";
-            } else if (parseError) {
-                parseError.textContent = 'Could not parse the input. Please ensure it matches one of the expected formats: "Author — Timestamp Content [Optional URL]" or "Author — Content [Optional URL]"';
-                parseError.style.display = 'block';
-                devCommentForm.style.display = 'none';
-                commentInput.style.display = 'block';
-                parseError.style.display = 'none';
+            } else {
+                if (parseError) {
+                    parseError.textContent = 'Could not parse. Expected: "Author \u2014 Timestamp Content [Optional URL]"';
+                    parseError.style.display = 'block';
+                }
             }
         });
     }
 
-    if (editButton && devCommentForm && commentInput && parseButton) {
-        editButton.addEventListener('click', () => {
+    if (editButton) {
+        editButton.addEventListener('click', function() {
             showFormMessage(formMessage, '', '');
-            devCommentForm.style.display = 'none';
-            commentInput.style.display = 'block';
-            parseButton.style.display = 'block';
-            if (parseError) parseError.style.display = 'none';
-        });
-    }
-}
-
-function setupTagManagementHandlers() {
-    const newTagInput = document.getElementById('newTagInput');
-    const addNewTagButton = document.getElementById('addNewTagButton');
-    const tagSelect = document.getElementById('tagSelect');
-    const formMessage = document.getElementById('formMessage');
-
-    if (addNewTagButton && newTagInput && tagSelect) {
-        addNewTagButton.addEventListener('click', async () => {
-            const newTag = newTagInput.value.trim();
-            if (newTag) {
-                try {
-                    const { error } = await supabase
-                        .from('tag_list')
-                        .insert([{ tag_name: newTag }]);
-
-                    if (error && error.code !== '23505') {
-                        showFormMessage(formMessage, `Error adding Tag: ` + error.message, 'error');
-                    } else {
-                        if (error && error.code === '23505') {
-                            showFormMessage(formMessage, `Tag '${newTag}' already exists.`, 'warning');
-                        } else {
-                            showFormMessage(formMessage, `Tag '${newTag}' added successfully!`, 'success');
-                            tagListCache.push({ tag_name: newTag });
-                            tagListCache.sort((a, b) => a.tag_name.localeCompare(b.tag_name));
-                        }
-                        newTagInput.value = '';
-                        populateTagSelect(tagSelect);
-                    }
-                } catch (e) {
-                    showFormMessage(formMessage, `An unexpected error occurred while adding Tag.`, 'error');
-                }
-            } else {
-                showFormMessage(formMessage, `Please enter a tag name.`, 'warning');
-            }
+            if (devCommentForm) devCommentForm.style.display = 'none';
+            if (commentInput)   commentInput.style.display   = 'block';
+            if (parseButton)    parseButton.style.display    = 'block';
+            if (parseError)     parseError.style.display     = 'none';
         });
     }
 
-    const newLoreCategoryInput = document.getElementById('newLoreCategoryInput');
-    const addNewLoreCategoryButton = document.getElementById('addNewLoreCategoryButton');
-    const loreCategorySelect = document.getElementById('loreCategory');
-    const addLoreItemMessage = document.getElementById('addLoreItemMessage');
-
-    if (addNewLoreCategoryButton && newLoreCategoryInput && loreCategorySelect) {
-        addNewLoreCategoryButton.addEventListener('click', async () => {
-            const newCategory = newLoreCategoryInput.value.trim();
-            if (newCategory) {
-                try {
-                    const { error } = await supabase
-                        .from('tag_list')
-                        .insert([{ tag_name: newCategory }]);
-
-                    if (error && error.code !== '23505') {
-                        showFormMessage(addLoreItemMessage, `Error adding Category: ` + error.message, 'error');
-                    } else {
-                        if (error && error.code === '23505') {
-                            showFormMessage(addLoreItemMessage, `Category '${newCategory}' already exists.`, 'warning');
-                        } else {
-                            showFormMessage(addLoreItemMessage, `Category '${newCategory}' added successfully!`, 'success');
-                            tagListCache.push({ tag_name: newCategory });
-                            tagListCache.sort((a, b) => a.tag_name.localeCompare(b.tag_name));
-                        }
-                        newLoreCategoryInput.value = '';
-                        populateTagSelect(loreCategorySelect);
-                    }
-                } catch (e) {
-                    showFormMessage(addLoreItemMessage, `An unexpected error occurred while adding Category.`, 'error');
-                }
-            } else {
-                showFormMessage(addLoreItemMessage, `Please enter a category name.`, 'warning');
-            }
-        });
-    }
-}
-
-function setupLoreItemFormHandlers() {
-    const addLoreItemForm = document.getElementById('addLoreItemForm');
-    const loreTitleInput = document.getElementById('loreTitle');
-    const loreSlugInput = document.getElementById('loreSlug');
-    const loreCategorySelect = document.getElementById('loreCategory');
-    const loreContentInput = document.getElementById('loreContent');
-    const addLoreItemMessage = document.getElementById('addLoreItemMessage');
-    const cancelEditLoreItemButton = document.getElementById('cancelEditLoreItemButton');
-
-    if (loreTitleInput && loreSlugInput && addLoreItemForm) {
-        loreTitleInput.addEventListener('input', () => {
-            loreSlugInput.value = slugify(loreTitleInput.value);
-        });
-    }
-
-    if (addLoreItemForm) {
-        addLoreItemForm.addEventListener('submit', async (event) => {
+    if (devCommentForm) {
+        devCommentForm.addEventListener('submit', async function(event) {
             event.preventDefault();
-            showFormMessage(addLoreItemMessage, '', '');
 
-            const title = loreTitleInput.value.trim();
-            const slug = loreSlugInput.value.trim() || slugify(title);
-            const category = loreCategorySelect.value;
-            const content = loreContentInput.value.trim();
-            const editingId = addLoreItemForm.dataset.editingId;
+            const author       = document.getElementById('author').value;
+            const source       = document.getElementById('source').value;
+            const timestamp    = document.getElementById('timestamp').value;
+            const content      = document.getElementById('commentContent').value;
+            const tagSelect    = document.getElementById('tagSelect');
+            const selectedTags = tagSelect ? Array.from(tagSelect.selectedOptions).map(function(o) { return o.value; }) : [];
+            const aDropdown    = document.getElementById('author_type');
+            const author_type  = aDropdown ? aDropdown.value : '';
+            const submitBtn    = devCommentForm.querySelector('button[type="submit"]');
 
-            if (!title || !slug || !category || !content) {
-                showFormMessage(addLoreItemMessage, 'Please fill in all required lore item fields (Title, Slug, Category, Content).', 'error');
+            if (!author_type) {
+                showFormMessage(formMessage, 'Please select an Author Type.', 'error');
                 return;
             }
 
-            const loreItemData = {
-                title: loreTitleInput.value,
-                slug: loreSlugInput.value,
-                category: loreCategorySelect.value,
-                content: loreContentInput.value
-            };
+            let utcTimestamp = null;
+            if (timestamp) utcTimestamp = new Date(timestamp).toISOString();
 
-            let error;
-            let insertedData;
-            if (editingId) {
-                const { data, error: updateError } = await supabase
-                    .from('lore_items')
-                    .update(loreItemData)
-                    .eq('id', editingId)
-                    .select();
-                error = updateError;
-                insertedData = data ? data[0] : null;
-            } else {
-                const { data, error: insertError } = await supabase
-                    .from('lore_items')
-                    .insert([loreItemData])
-                    .select();
-                error = insertError;
-                insertedData = data ? data[0] : null;
-            }
+            if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Submitting\u2026'; }
 
-            if (error) {
-                console.error('Error saving lore item:', error);
-                showFormMessage(addLoreItemMessage, 'Error saving lore item: ' + error.message, 'error');
-            } else {
-                if (editingId) {
-                    const index = loreItemsCache.findIndex(item => item.id == editingId);
-                    if (index !== -1) {
-                        loreItemsCache[index] = { ...loreItemsCache[index], ...loreItemData };
-                    }
+            try {
+                const { error } = await supabase
+                    .from('developer_comments')
+                    .insert([{ author: author, source: source, comment_date: utcTimestamp, content: content, tag: selectedTags.length ? selectedTags : null, author_type: author_type }]);
+
+                if (error) {
+                    showFormMessage(formMessage, 'Error: ' + error.message, 'error');
                 } else {
-                    loreItemsCache.unshift(insertedData);
+                    showFormMessage(formMessage, 'Dev comment added successfully!', 'success');
+                    devCommentForm.reset();
+                    devCommentForm.style.display = 'none';
+                    if (commentInput) { commentInput.value = ''; commentInput.style.display = 'block'; }
+                    if (parseButton)  parseButton.style.display = 'block';
+                    dashboardStatsCache = null;
+                    fetchDashboardStats();
+                    fetchRecentActivity();
                 }
-                renderLoreItems('loreItemsList');
-                showFormMessage(addLoreItemMessage, `Lore item ${editingId ? 'updated' : 'added'} successfully!`, 'success');
-                resetLoreForm();
-                fetchDashboardStats();
+            } catch (err) {
+                showFormMessage(formMessage, 'Unexpected error. Please try again.', 'error');
+            } finally {
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Add to DB'; }
             }
         });
     }
 
-    if (cancelEditLoreItemButton) {
-        cancelEditLoreItemButton.addEventListener('click', resetLoreForm);
+    const addNewTagButton = document.getElementById('addNewTagButton');
+    const newTagInput     = document.getElementById('newTagInput');
+    const tagSelect       = document.getElementById('tagSelect');
+    if (addNewTagButton && newTagInput && tagSelect) {
+        addNewTagButton.addEventListener('click', async function() {
+            const newTag = newTagInput.value.trim();
+            if (!newTag) { showFormMessage(formMessage, 'Please enter a tag name.', 'warning'); return; }
+            const { error } = await supabase.from('tag_list').insert([{ tag_name: newTag }]);
+            if (error && error.code !== '23505') {
+                showFormMessage(formMessage, 'Error: ' + error.message, 'error');
+            } else {
+                if (error && error.code === '23505') {
+                    showFormMessage(formMessage, "Tag '" + newTag + "' already exists.", 'warning');
+                } else {
+                    showFormMessage(formMessage, "Tag '" + newTag + "' added!", 'success');
+                    if (!tagListCache) tagListCache = [];
+                    tagListCache.push({ tag_name: newTag });
+                    tagListCache.sort(function(a, b) { return a.tag_name.localeCompare(b.tag_name); });
+                }
+                newTagInput.value = '';
+                populateTagSelect(tagSelect);
+            }
+        });
     }
 }
 
-$(document).ready(async function() {
-    const currentPage = window.location.pathname.split('/').pop();
-    if (currentPage !== 'admin.html') {
-        return;
+function setupModalHandlers() {
+    // Dev Comment modal
+    const openDevComment  = document.getElementById('openDevCommentModalBtn');
+    const devCommentModal = document.getElementById('devCommentModal');
+    const closeDevComment = document.getElementById('closeDevCommentModalBtn');
+
+    if (openDevComment) {
+        openDevComment.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (!currentUserCanComment) return;
+            if (devCommentModal) devCommentModal.classList.remove('hidden');
+            populateTagSelect(document.getElementById('tagSelect'));
+        });
+    }
+    if (closeDevComment) closeDevComment.addEventListener('click', function() { if (devCommentModal) devCommentModal.classList.add('hidden'); });
+    if (devCommentModal) devCommentModal.addEventListener('click', function(e) { if (e.target === devCommentModal) devCommentModal.classList.add('hidden'); });
+
+    // Article modal
+    const openArticle  = document.getElementById('openArticleModalBtn');
+    const articleModal = document.getElementById('articleModal');
+    const closeArticle = document.getElementById('closeArticleModalBtn');
+
+    if (openArticle)  openArticle.addEventListener('click',  function(e) { e.preventDefault(); if (!currentUserCanPostArticles) return; if (articleModal) articleModal.classList.remove('hidden'); });
+    if (closeArticle) closeArticle.addEventListener('click', function()  { if (articleModal) articleModal.classList.add('hidden'); });
+    if (articleModal) articleModal.addEventListener('click', function(e) { if (e.target === articleModal) articleModal.classList.add('hidden'); });
+
+    // Add User Role modal
+    const openUserRole  = document.getElementById('openAddUserRoleModalBtn');
+    const userRoleModal = document.getElementById('addUserRoleModal');
+    const closeRole1    = document.getElementById('closeAddUserRoleModalBtn');
+    const closeRole2    = document.getElementById('closeAddUserRoleModalBtn2');
+    const submitRoleBtn = document.getElementById('submitGrantRoleBtn');
+    const roleMsg       = document.getElementById('addUserRoleMessage');
+
+    // openUserRole click is handled below after submitRoleBtn section (needs populateRoleUserDropdown)
+    if (closeRole1)    closeRole1.addEventListener('click',    function() { if (userRoleModal) userRoleModal.classList.add('hidden'); });
+    if (closeRole2)    closeRole2.addEventListener('click',    function() { if (userRoleModal) userRoleModal.classList.add('hidden'); });
+    if (userRoleModal) userRoleModal.addEventListener('click', function(e) { if (e.target === userRoleModal) userRoleModal.classList.add('hidden'); });
+
+    // Populate the user dropdown when opening the modal
+    if (openUserRole) {
+        openUserRole.addEventListener('click', async function() {
+            if (!currentUserIsAdmin) return; // blocked
+            await populateRoleUserDropdown(null); // grant mode — exclude all already-managed users
+            openManageUserRoleModal(null);
+        });
     }
 
-    hideAllAdminElements();
-    initAuthAndDashboard();
+    if (submitRoleBtn) {
+        submitRoleBtn.addEventListener('click', async function() {
+            const userId = document.getElementById('roleUserSelect') ? document.getElementById('roleUserSelect').value : '';
+            const roles = {
+                isAdmin:         document.getElementById('roleCheck_is_admin')         ? document.getElementById('roleCheck_is_admin').checked         : false,
+                isEditor:        document.getElementById('roleCheck_is_editor')        ? document.getElementById('roleCheck_is_editor').checked        : false,
+                canPostArticles: document.getElementById('roleCheck_can_post_articles') ? document.getElementById('roleCheck_can_post_articles').checked : false,
+                isCommenter:     document.getElementById('roleCheck_comment_adder')    ? document.getElementById('roleCheck_comment_adder').checked    : false,
+                isQuestAdder:    document.getElementById('roleCheck_quest_adder')      ? document.getElementById('roleCheck_quest_adder').checked      : false,
+                isLoreEditor:    document.getElementById('roleCheck_lore_editor')      ? document.getElementById('roleCheck_lore_editor').checked      : false
+            };
+
+            if (roleMsg) { roleMsg.className = 'form-message info'; roleMsg.textContent = 'Saving\u2026'; roleMsg.classList.remove('hidden'); }
+
+            const result = await saveUserRoles(userId, roles);
+
+            if (result.error) {
+                if (roleMsg) { roleMsg.className = 'form-message error'; roleMsg.textContent = result.error; }
+            } else {
+                if (roleMsg) { roleMsg.className = 'form-message success'; roleMsg.textContent = 'Roles saved successfully!'; }
+                allSiteUsersCache = [];
+                dashboardStatsCache = null;
+                fetchAndRenderUserRoles();
+                fetchDashboardStats();
+                setTimeout(function() { if (userRoleModal) userRoleModal.classList.add('hidden'); }, 1500);
+            }
+        });
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Bootstrap
+// ─────────────────────────────────────────────────────────────
+$(document).ready(async function() {
+    const currentPage = window.location.pathname.split('/').pop();
+    if (currentPage !== 'admin.html') return;
+
+    showLoadingOverlay(true);
     setupAuthEventListeners();
     setupCommentFormHandlers();
-    setupTagManagementHandlers();
-    setupLoreItemFormHandlers();
+    setupModalHandlers();
+    initAuthAndDashboard();
 });
