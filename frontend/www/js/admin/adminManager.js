@@ -70,8 +70,6 @@ export async function handleAdminAccess(user) {
     const path        = window.location.pathname;
     const currentPage = path.split('/').pop().toLowerCase() || 'index.html';
 
-    const publicPages = ['quests.html', 'chronicles.html', 'redeem.html', 'index.html', 'lore.html', ''];
-
     try {
         const { data, error } = await supabase
             .from('admin_users')
@@ -94,8 +92,9 @@ export async function handleAdminAccess(user) {
         _roleCache.loreRole  = loreRole;
         _roleCache.resolved  = true;
 
-        // ── Build the set of pages this user may visit ────────────────────────
-        const allowedPages = new Set(publicPages);
+        // ── Check if current page requires a role the user doesn't have ─────────
+        // Only protected pages are gated; all other pages are freely accessible.
+        const allowedPages = new Set();
 
         // admin.html access is controlled solely by is_editor
         if (isEditor) {
@@ -151,7 +150,8 @@ export async function handleAdminAccess(user) {
         }
 
         // ── Enforce page access ───────────────────────────────────────────────
-        if (!allowedPages.has(currentPage)) {
+        // Only redirect if this is a protected page the user doesn't have access to.
+        if (protectedPages.includes(currentPage) && !allowedPages.has(currentPage)) {
             window.location.href = getUnauthorizedRedirect(currentPage);
             return;
         }
@@ -160,8 +160,7 @@ export async function handleAdminAccess(user) {
 
     } catch (err) {
         await initializeCharacterSystem(user.id);
-        const safePages = [...publicPages, 'edit_quest.html'];
-        if (!safePages.includes(currentPage)) {
+        if (protectedPages.includes(currentPage)) {
             window.location.href = getUnauthorizedRedirect(currentPage);
         }
     }
@@ -169,16 +168,18 @@ export async function handleAdminAccess(user) {
 
 // ── Auth listener bootstrap ───────────────────────────────────────────────────
 
+// Pages that require specific roles to access. Everything else is freely accessible.
+const protectedPages = ['admin.html', 'edit_lore.html', 'edit_quest.html', 'panel.html', 'quest_flow.html'];
+
 export function setupAdminAuthListener() {
     const path        = window.location.pathname;
     const currentPage = path.split('/').pop().toLowerCase() || 'index.html';
-    const publicPages = ['quests.html', 'chronicles.html', 'redeem.html', 'index.html', 'lore.html', 'edit_quest.html', ''];
 
     // Handle the initial session (INITIAL_SESSION fires before onChange subscribers)
     authSession.getUser().then(user => {
         if (user) {
             handleAdminAccess(user);
-        } else if (!publicPages.includes(currentPage)) {
+        } else if (protectedPages.includes(currentPage)) {
             window.location.href = getUnauthorizedRedirect(currentPage);
         }
     });
@@ -188,11 +189,9 @@ export function setupAdminAuthListener() {
         if (event === 'SIGNED_IN') {
             if (user) {
                 handleAdminAccess(user);
-            } else if (!publicPages.includes(currentPage)) {
-                window.location.href = getUnauthorizedRedirect(currentPage);
             }
         } else if (event === 'SIGNED_OUT') {
-            if (!publicPages.includes(currentPage)) {
+            if (protectedPages.includes(currentPage)) {
                 window.location.href = getUnauthorizedRedirect(currentPage);
             }
         }
