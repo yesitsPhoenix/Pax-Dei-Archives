@@ -51,6 +51,12 @@
         <div class="modal-content-wrapper" id="modal-content-wrapper">
         </div>
     </div>
+
+    <script type="module">
+    import { setupAdminAuthListener } from './frontend/www/js/admin/adminManager.js';
+    setupAdminAuthListener();
+    </script>
+
     <div id="ability-popup-overlay" class="popup-overlay"></div>
     <div id="footer-placeholder"></div>
     <script type="module" src="frontend/www/js/ui/loadHeader.js"></script>

@@ -66,6 +66,11 @@
     <div id="auth-modal">
         <div class="modal-content-wrapper" id="modal-content-wrapper"></div>
     </div>
+
+    <script type="module">
+    import { setupAdminAuthListener } from './frontend/www/js/admin/adminManager.js';
+    setupAdminAuthListener();
+    </script>
     <script type="module" src="frontend/www/js/main.js"></script>
     <script type="module" src="frontend/www/js/articles/articles.js"></script>
     <script type="module" src="frontend/www/js/popoutAuth.js"></script>
