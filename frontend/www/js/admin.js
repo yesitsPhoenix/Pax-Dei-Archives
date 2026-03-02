@@ -15,6 +15,7 @@ let currentUserIsAdmin = false;
 let currentUserCanComment = false;
 let currentUserCanPostArticles = false;
 let currentUserIsLoreEditor = false;
+let currentUserHasQuestAccess = false;
 let adminUsersCache = [];
 let allSiteUsersCache = [];
 let userRolesLoaded = false;
@@ -97,16 +98,17 @@ async function isAuthorizedAdmin(userId) {
     try {
         const { data, error } = await supabase
             .from('admin_users')
-            .select('is_editor, is_admin, role, can_post_articles, lore_role')
+            .select('is_editor, is_admin, role, can_post_articles, lore_role, quest_role')
             .eq('user_id', userId)
             .single();
 
         if (error && error.code === 'PGRST116') { isAdminAuthorizedCache = false; return false; }
         if (error) { isAdminAuthorizedCache = false; return false; }
-        currentUserIsAdmin         = data && data.is_admin === true;
-        currentUserCanComment      = currentUserIsAdmin || (data && data.role === 'comment_adder');
-        currentUserCanPostArticles = currentUserIsAdmin || (data && data.can_post_articles === true);
-        currentUserIsLoreEditor    = currentUserIsAdmin || (data && data.lore_role === 'lore_editor');
+        currentUserIsAdmin          = data && data.is_admin === true;
+        currentUserCanComment       = currentUserIsAdmin || (data && data.role === 'comment_adder');
+        currentUserCanPostArticles  = currentUserIsAdmin || (data && data.can_post_articles === true);
+        currentUserIsLoreEditor     = currentUserIsAdmin || (data && data.lore_role === 'lore_editor');
+        currentUserHasQuestAccess   = currentUserIsAdmin || (data && (data.quest_role === 'quest_admin' || data.quest_role === 'quest_editor'));
         isAdminAuthorizedCache     = data && (data.is_editor === true || data.lore_role === 'lore_editor');
         return isAdminAuthorizedCache;
     } catch (e) {
@@ -685,6 +687,8 @@ function applyModalGating() {
         }
     }
 
+    applySidebarLinkState('sidebarEditQuestLink', currentUserHasQuestAccess, 'You do not have a quest editor role');
+
     // Show/hide Edit Lore link in the header nav dropdown
     // The header is loaded async but by the time roles resolve it will be in the DOM
     const editLoreNav = document.getElementById('edit-lore-nav');
@@ -750,6 +754,7 @@ function setupAuthEventListeners() {
         currentUserCanComment      = false;
         currentUserCanPostArticles = false;
         currentUserIsLoreEditor    = false;
+        currentUserHasQuestAccess  = false;
         allSiteUsersCache          = [];
         userRolesLoaded            = false;
         initAuthAndDashboard();

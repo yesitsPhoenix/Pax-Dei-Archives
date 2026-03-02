@@ -2,31 +2,24 @@ import { supabase } from '../supabaseClient.js';
 import { initializeCharacterSystem } from '../redemption/characterManager.js';
 import { authSession } from '../authSessionManager.js';
 
-// Wait for the header template to be loaded into the DOM
-function waitForHeader(timeout = 5000) {
-    return new Promise((resolve) => {
-        // Check if header is already loaded
-        if (document.querySelector('.main-nav')) {
-            resolve(true);
-            return;
-        }
-        const observer = new MutationObserver((mutations, obs) => {
-            if (document.querySelector('.main-nav')) {
-                obs.disconnect();
-                resolve(true);
-            }
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
-        // Timeout fallback so we don't block forever
-        setTimeout(() => { observer.disconnect(); resolve(false); }, timeout);
-    });
-}
+const _roleCache = {
+    questRole: null,
+    loreRole: null,
+    resolved: false
+};
 
-export async function handleAdminAccess(user) {
-    const path = window.location.pathname;
-    const currentPage = path.split('/').pop().toLowerCase() || 'index.html';
-    
-    const publicPages = ['quests.html', 'chronicles.html', 'redeem.html', 'index.html', 'lore.html', ''];
+export async function getAdminRoles() {
+    if (_roleCache.resolved) {
+        return { questRole: _roleCache.questRole, loreRole: _roleCache.loreRole };
+    }
+
+    const user = await authSession.getUser();
+    if (!user) {
+        _roleCache.questRole = null;
+        _roleCache.loreRole  = null;
+        _roleCache.resolved  = true;
+        return { questRole: null, loreRole: null };
+    }
 
     try {
         const { data, error } = await supabase
@@ -34,107 +27,173 @@ export async function handleAdminAccess(user) {
             .select('quest_role, lore_role')
             .eq('user_id', user.id);
 
-        const questRole = (!error && data && data.length > 0) ? data[0].quest_role : null;
-        const isAdmin = questRole === 'quest_admin';
-        const isQuestEditor = questRole === 'quest_editor';
-        const isLoreEditor = !error && data && data.length > 0 && data[0].lore_role === 'lore_editor';
+        _roleCache.questRole = (!error && data && data.length > 0) ? data[0].quest_role : null;
+        _roleCache.loreRole  = (!error && data && data.length > 0) ? data[0].lore_role  : null;
+        _roleCache.resolved  = true;
+    } catch (err) {
+        _roleCache.questRole = null;
+        _roleCache.loreRole  = null;
+        _roleCache.resolved  = true;
+    }
 
-        if (isAdmin) {
-            // Wait for header to be injected before toggling nav elements
-            await waitForHeader();
+    return { questRole: _roleCache.questRole, loreRole: _roleCache.loreRole };
+}
 
-            const adminElements = [
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function waitForHeader(timeout = 5000) {
+    return new Promise((resolve) => {
+        if (document.querySelector('.main-nav')) { resolve(true); return; }
+        const observer = new MutationObserver((mutations, obs) => {
+            if (document.querySelector('.main-nav')) { obs.disconnect(); resolve(true); }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+        setTimeout(() => { observer.disconnect(); resolve(false); }, timeout);
+    });
+}
+
+/**
+ * Returns the appropriate fallback URL when a user is denied access to a page.
+ * - edit_lore.html → lore.html    (unauthorized lore access stays in lore)
+ * - admin.html     → index.html   (unauthorized admin access goes home)
+ * - everything else → quests.html
+ */
+function getUnauthorizedRedirect(page) {
+    if (page === 'edit_lore.html') return 'lore.html';
+    if (page === 'admin.html')     return 'index.html';
+    return 'quests.html';
+}
+
+// ── Core access handler ───────────────────────────────────────────────────────
+
+export async function handleAdminAccess(user) {
+    const path        = window.location.pathname;
+    const currentPage = path.split('/').pop().toLowerCase() || 'index.html';
+
+    const publicPages = ['quests.html', 'chronicles.html', 'redeem.html', 'index.html', 'lore.html', ''];
+
+    try {
+        const { data, error } = await supabase
+            .from('admin_users')
+            .select('is_admin, is_editor, quest_role, lore_role')
+            .eq('user_id', user.id);
+
+        const record = (!error && data && data.length > 0) ? data[0] : null;
+
+        const isAdmin       = record?.is_admin  === true;   // user management within admin panel
+        const isEditor      = record?.is_editor === true;   // grants access to admin.html
+        const questRole     = record?.quest_role ?? null;
+        const loreRole      = record?.lore_role  ?? null;
+
+        const isQuestAdmin  = questRole === 'quest_admin';  // full quest access incl. flow/features
+        const isQuestEditor = questRole === 'quest_editor'; // add/edit quests only
+        const isLoreEditor  = loreRole  === 'lore_editor';  // add/edit lore only
+
+        // Populate shared cache so getAdminRoles() is free for the rest of this session
+        _roleCache.questRole = questRole;
+        _roleCache.loreRole  = loreRole;
+        _roleCache.resolved  = true;
+
+        // ── Build the set of pages this user may visit ────────────────────────
+        const allowedPages = new Set(publicPages);
+
+        // admin.html access is controlled solely by is_editor
+        if (isEditor) {
+            allowedPages.add('admin.html');
+        }
+
+        // Quest editor: add/edit quests
+        if (isQuestEditor || isQuestAdmin) {
+            allowedPages.add('panel.html');
+            allowedPages.add('edit_quest.html');
+        }
+
+        // Quest admin: additionally gets edit features and quest flow
+        if (isQuestAdmin) {
+            allowedPages.add('quest_flow.html');
+        }
+
+        // Lore editor: edit lore only
+        if (isLoreEditor) {
+            allowedPages.add('edit_lore.html');
+        }
+
+        // ── Show nav elements based on roles ─────────────────────────────────
+        await waitForHeader();
+
+        if (isQuestAdmin) {
+            [
                 'create-quest-nav',
                 'edit-quest-nav',
                 'character-container',
                 'edit-features-nav',
                 'quest-flow-nav',
-                'edit-lore-nav',
                 'stacks-nav'
-            ];
-
-            adminElements.forEach(id => {
+            ].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.classList.remove('hidden');
             });
         } else if (isQuestEditor) {
-            await waitForHeader();
-
-            const editorElements = [
-                'create-quest-nav',
-                'edit-quest-nav',
-                'character-container'
-            ];
-
-            editorElements.forEach(id => {
+            ['create-quest-nav', 'edit-quest-nav', 'character-container'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.classList.remove('hidden');
             });
-
-            // Explicitly keep restricted nav items hidden for quest editors
-            const restrictedElements = ['edit-features-nav', 'quest-flow-nav'];
-            restrictedElements.forEach(id => {
+            // Keep advanced quest features hidden for editors
+            ['edit-features-nav', 'quest-flow-nav'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.classList.add('hidden');
             });
+        }
 
-            // Quest editors can only access public pages, the quest panel, and edit quest
-            const questEditorPages = [...publicPages, 'panel.html', 'edit_quest.html'];
-            if (!questEditorPages.includes(currentPage)) {
-                window.location.href = 'quests.html';
-            }
-        } else if (isLoreEditor) {
-            await waitForHeader();
+        if (isLoreEditor) {
             const el = document.getElementById('edit-lore-nav');
             if (el) el.classList.remove('hidden');
+        }
 
-            // Lore editors can only access public pages and edit_lore.html
-            const loreEditorPages = [...publicPages, 'edit_lore.html'];
-            if (!loreEditorPages.includes(currentPage)) {
-                window.location.href = 'quests.html';
-            }
-        } else {
-            if (!publicPages.includes(currentPage)) {
-                window.location.href = 'quests.html';
-            }
+        // ── Enforce page access ───────────────────────────────────────────────
+        if (!allowedPages.has(currentPage)) {
+            window.location.href = getUnauthorizedRedirect(currentPage);
+            return;
         }
 
         await initializeCharacterSystem(user.id);
-        
+
     } catch (err) {
         await initializeCharacterSystem(user.id);
-        if (!publicPages.includes(currentPage)) {
-            window.location.href = 'quests.html';
+        const safePages = [...publicPages, 'edit_quest.html'];
+        if (!safePages.includes(currentPage)) {
+            window.location.href = getUnauthorizedRedirect(currentPage);
         }
     }
 }
 
+// ── Auth listener bootstrap ───────────────────────────────────────────────────
+
 export function setupAdminAuthListener() {
-    const path = window.location.pathname;
+    const path        = window.location.pathname;
     const currentPage = path.split('/').pop().toLowerCase() || 'index.html';
     const publicPages = ['quests.html', 'chronicles.html', 'redeem.html', 'index.html', 'lore.html', 'edit_quest.html', ''];
 
-    // INITIAL_SESSION fires before onChange subscribers are registered,
-    // so we always do an immediate getUser() check to handle that case.
+    // Handle the initial session (INITIAL_SESSION fires before onChange subscribers)
     authSession.getUser().then(user => {
         if (user) {
             handleAdminAccess(user);
         } else if (!publicPages.includes(currentPage)) {
-            window.location.href = 'quests.html';
+            window.location.href = getUnauthorizedRedirect(currentPage);
         }
     });
 
-    // Listen for future auth changes (sign in / sign out after page load)
+    // Handle future auth changes (sign in / sign out after page load)
     authSession.onChange((event, user) => {
         if (event === 'SIGNED_IN') {
             if (user) {
                 handleAdminAccess(user);
             } else if (!publicPages.includes(currentPage)) {
-                window.location.href = 'quests.html';
+                window.location.href = getUnauthorizedRedirect(currentPage);
             }
         } else if (event === 'SIGNED_OUT') {
             if (!publicPages.includes(currentPage)) {
-                window.location.href = 'quests.html';
+                window.location.href = getUnauthorizedRedirect(currentPage);
             }
         }
     });

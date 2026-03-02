@@ -4,6 +4,7 @@ import { enableSignTooltip } from '../ui/signTooltip.js';
 import { initQuestModal } from './questModal.js';
 import { initializeCharacterSystem, fetchCharacters, populateCharacterRegionDropdowns } from './characterManager.js';
 import { renderQuestTracker } from './questProgressTracker.js';
+import { getAdminRoles } from '../admin/adminManager.js';
 
 
 let allQuests = [];
@@ -158,7 +159,7 @@ function renderCountersUI(questId) {
 window.updateQuestCounter = updateQuestCounter;
 window.renderCountersUI = renderCountersUI;
 
-async function updateSidebarPermissions() {
+async function applyQuestNavPermissions() {
     const createBtn = document.getElementById("create-quest-nav");
     const editBtn = document.getElementById("edit-quest-nav");
     const featuresBtn = document.getElementById("edit-features-nav");
@@ -171,51 +172,15 @@ async function updateSidebarPermissions() {
     if (featuresBtn) featuresBtn.classList.add("hidden");
     if (flowBtn) flowBtn.classList.add("hidden");
 
-    try {
-        const user = questState.getUser();
-        if (!user) {
-            sessionStorage.removeItem("user_quest_role");
-            return;
+    const { questRole } = await getAdminRoles();
+
+    if (questRole === "quest_admin" || questRole === "quest_editor") {
+        createBtn.classList.remove("hidden");
+        editBtn.classList.remove("hidden");
+        if (questRole === "quest_admin") {
+            if (featuresBtn) featuresBtn.classList.remove("hidden");
+            if (flowBtn) flowBtn.classList.remove("hidden");
         }
-
-        const cachedRole = sessionStorage.getItem("user_quest_role");
-
-        if (cachedRole === "quest_admin" || cachedRole === "quest_editor") {
-            createBtn.classList.remove("hidden");
-            editBtn.classList.remove("hidden");
-            if (cachedRole === "quest_admin") {
-                if (featuresBtn) featuresBtn.classList.remove("hidden");
-                if (flowBtn) flowBtn.classList.remove("hidden");
-            }
-            return;
-        }
-
-        const { supabase } = await import("../supabaseClient.js");
-        const { data, error } = await supabase
-            .from("admin_users")
-            .select("quest_role")
-            .eq("user_id", user.id)
-            .maybeSingle();
-
-        if (error || !data) {
-            sessionStorage.removeItem("user_quest_role");
-            return;
-        }
-
-        const role = data.quest_role;
-        if (role === "quest_admin" || role === "quest_editor") {
-            sessionStorage.setItem("user_quest_role", role);
-            createBtn.classList.remove("hidden");
-            editBtn.classList.remove("hidden");
-            if (role === "quest_admin") {
-                if (featuresBtn) featuresBtn.classList.remove("hidden");
-                if (flowBtn) flowBtn.classList.remove("hidden");
-            }
-        } else {
-            sessionStorage.removeItem("user_quest_role");
-        }
-    } catch (err) {
-        sessionStorage.removeItem("user_quest_role");
     }
 }
 
@@ -1371,7 +1336,7 @@ window.addEventListener('characterChanged', async (e) => {
 
         const characters = questState.getCharacters();
         if (characters && characters.length === 1) {
-            updateSidebarPermissions();
+            applyQuestNavPermissions();
             populateFilters(regionsData);
             initQuestModal();
         }
@@ -1468,7 +1433,7 @@ async function init() {
             await loadCharacterBanner(characterId);
         }
 
-        updateSidebarPermissions();
+        applyQuestNavPermissions();
         populateFilters(regionsData);
         initQuestModal();
 
