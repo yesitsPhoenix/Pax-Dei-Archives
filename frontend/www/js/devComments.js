@@ -8,7 +8,8 @@ import DOMPurify from 'https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.
 let currentFilters = {
     author: '',
     tags: [],
-    date: ''
+    date: '',
+    searchTerm: ''
 };
 
 let currentPage = 1;
@@ -202,6 +203,8 @@ function toggleTagFilter(tag, button) {
 
 // Apply filters to comments
 function applyFilters() {
+    const search = currentFilters.searchTerm.toLowerCase().trim();
+
     filteredComments = allComments.filter(comment => {
         // Author filter
         if (currentFilters.author && comment.author !== currentFilters.author) {
@@ -227,6 +230,17 @@ function applyFilters() {
             }
         }
 
+        // Search filter — matches content or any tag name
+        if (search) {
+            const contentMatch = (comment.content || '').toLowerCase().includes(search);
+            const tagMatch = comment.tag && Array.isArray(comment.tag)
+                ? comment.tag.some(tag => tag.toLowerCase().includes(search))
+                : false;
+            if (!contentMatch && !tagMatch) {
+                return false;
+            }
+        }
+
         return true;
     });
 
@@ -239,16 +253,19 @@ function clearFilters() {
     currentFilters = {
         author: '',
         tags: [],
-        date: ''
+        date: '',
+        searchTerm: ''
     };
 
     // Reset UI
     const authorSelect = document.getElementById('filterAuthor');
     const dateInput = document.getElementById('filterDate');
+    const searchInput = document.getElementById('filterSearch');
     const tagButtons = document.querySelectorAll('.tag-button');
 
     if (authorSelect) authorSelect.value = '';
     if (dateInput) dateInput.value = '';
+    if (searchInput) searchInput.value = '';
     tagButtons.forEach(btn => btn.classList.remove('selected'));
 
     filteredComments = [...allComments];
@@ -330,17 +347,27 @@ function setupFilterEventListeners() {
     const clearBtn = document.getElementById('clearFilters');
     const authorSelect = document.getElementById('filterAuthor');
     const dateInput = document.getElementById('filterDate');
+    const searchInput = document.getElementById('filterSearch');
 
     if (applyBtn) {
         applyBtn.addEventListener('click', () => {
             currentFilters.author = authorSelect?.value || '';
             currentFilters.date = dateInput?.value || '';
+            currentFilters.searchTerm = searchInput?.value || '';
             applyFilters();
         });
     }
 
     if (clearBtn) {
         clearBtn.addEventListener('click', clearFilters);
+    }
+
+    // Live search on input
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            currentFilters.searchTerm = searchInput.value;
+            applyFilters();
+        });
     }
 }
 

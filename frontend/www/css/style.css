@@ -860,7 +860,7 @@ body.modal-open {
 	color: #a0aec0;
 	font-size: 0.95rem;
 }
-.filters-section select, .filters-section input[type="date"] {
+.filters-section select, .filters-section input[type="date"], .filters-section input[type="text"] {
 	width: 100%;
 	padding: 10px 12px;
 	border-radius: 6px;
@@ -871,7 +871,7 @@ body.modal-open {
 	outline: none;
 	transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
-.filters-section select:focus, .filters-section input[type="date"]:focus {
+.filters-section select:focus, .filters-section input[type="date"]:focus, .filters-section input[type="text"]:focus {
 	border-color: #63b3ed;
 	box-shadow: 0 0 0 3px rgba(99, 179, 237, 0.5);
 }
@@ -1040,6 +1040,29 @@ body.modal-open {
 }
 
 
+
+.filter-group--search {
+    flex: 1 1 100%;
+    width: 100%;
+}
+
+.filter-search-wrapper {
+    position: relative;
+}
+
+.filter-search-wrapper input[type="text"] {
+    padding-right: 2.5rem;
+}
+
+.filter-search-icon {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #a0aec0;
+    pointer-events: none;
+    font-size: 0.9rem;
+}
 
 .tag-cloud {
     display: flex;
