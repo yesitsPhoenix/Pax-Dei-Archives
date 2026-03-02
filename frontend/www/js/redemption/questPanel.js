@@ -244,7 +244,8 @@ async function checkAccess() {
         .eq("user_id", user.id)
         .maybeSingle();
 
-    if (adminError || !adminData || adminData.quest_role !== "quest_adder") {
+    const validRoles = ['quest_admin', 'quest_editor'];
+    if (adminError || !adminData || !validRoles.includes(adminData.quest_role)) {
         window.location.href = "quests.html";
         return;
     }

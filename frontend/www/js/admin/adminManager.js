@@ -34,7 +34,9 @@ export async function handleAdminAccess(user) {
             .select('quest_role, lore_role')
             .eq('user_id', user.id);
 
-        const isAdmin = !error && data && data.length > 0 && data[0].quest_role === 'quest_adder';
+        const questRole = (!error && data && data.length > 0) ? data[0].quest_role : null;
+        const isAdmin = questRole === 'quest_admin';
+        const isQuestEditor = questRole === 'quest_editor';
         const isLoreEditor = !error && data && data.length > 0 && data[0].lore_role === 'lore_editor';
 
         if (isAdmin) {
@@ -55,6 +57,32 @@ export async function handleAdminAccess(user) {
                 const el = document.getElementById(id);
                 if (el) el.classList.remove('hidden');
             });
+        } else if (isQuestEditor) {
+            await waitForHeader();
+
+            const editorElements = [
+                'create-quest-nav',
+                'edit-quest-nav',
+                'character-container'
+            ];
+
+            editorElements.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.remove('hidden');
+            });
+
+            // Explicitly keep restricted nav items hidden for quest editors
+            const restrictedElements = ['edit-features-nav', 'quest-flow-nav'];
+            restrictedElements.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.add('hidden');
+            });
+
+            // Quest editors can only access public pages, the quest panel, and edit quest
+            const questEditorPages = [...publicPages, 'panel.html', 'edit_quest.html'];
+            if (!questEditorPages.includes(currentPage)) {
+                window.location.href = 'quests.html';
+            }
         } else if (isLoreEditor) {
             await waitForHeader();
             const el = document.getElementById('edit-lore-nav');
@@ -82,11 +110,22 @@ export async function handleAdminAccess(user) {
 }
 
 export function setupAdminAuthListener() {
-    authSession.onChange((event, user) => {
-        const path = window.location.pathname;
-        const currentPage = path.split('/').pop().toLowerCase() || 'index.html';
-        const publicPages = ['quests.html', 'chronicles.html', 'redeem.html', 'index.html', 'lore.html', 'edit_quest.html', ''];
+    const path = window.location.pathname;
+    const currentPage = path.split('/').pop().toLowerCase() || 'index.html';
+    const publicPages = ['quests.html', 'chronicles.html', 'redeem.html', 'index.html', 'lore.html', 'edit_quest.html', ''];
 
+    // INITIAL_SESSION fires before onChange subscribers are registered,
+    // so we always do an immediate getUser() check to handle that case.
+    authSession.getUser().then(user => {
+        if (user) {
+            handleAdminAccess(user);
+        } else if (!publicPages.includes(currentPage)) {
+            window.location.href = 'quests.html';
+        }
+    });
+
+    // Listen for future auth changes (sign in / sign out after page load)
+    authSession.onChange((event, user) => {
         if (event === 'SIGNED_IN') {
             if (user) {
                 handleAdminAccess(user);

@@ -179,15 +179,17 @@ async function updateSidebarPermissions() {
         }
 
         const cachedRole = sessionStorage.getItem("user_quest_role");
-        
-        if (cachedRole === "quest_adder") {
+
+        if (cachedRole === "quest_admin" || cachedRole === "quest_editor") {
             createBtn.classList.remove("hidden");
             editBtn.classList.remove("hidden");
-            if (featuresBtn) featuresBtn.classList.remove("hidden");
-            if (flowBtn) flowBtn.classList.remove("hidden");
+            if (cachedRole === "quest_admin") {
+                if (featuresBtn) featuresBtn.classList.remove("hidden");
+                if (flowBtn) flowBtn.classList.remove("hidden");
+            }
             return;
         }
-        
+
         const { supabase } = await import("../supabaseClient.js");
         const { data, error } = await supabase
             .from("admin_users")
@@ -200,12 +202,15 @@ async function updateSidebarPermissions() {
             return;
         }
 
-        if (data.quest_role === "quest_adder") {
-            sessionStorage.setItem("user_quest_role", "quest_adder");
+        const role = data.quest_role;
+        if (role === "quest_admin" || role === "quest_editor") {
+            sessionStorage.setItem("user_quest_role", role);
             createBtn.classList.remove("hidden");
             editBtn.classList.remove("hidden");
-            if (featuresBtn) featuresBtn.classList.remove("hidden");
-            if (flowBtn) flowBtn.classList.remove("hidden");
+            if (role === "quest_admin") {
+                if (featuresBtn) featuresBtn.classList.remove("hidden");
+                if (flowBtn) flowBtn.classList.remove("hidden");
+            }
         } else {
             sessionStorage.removeItem("user_quest_role");
         }

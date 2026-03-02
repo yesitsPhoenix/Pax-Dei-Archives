@@ -410,7 +410,7 @@
                                 <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">User ID</th>
                                 <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Admin</th>
                                 <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Dev Comments</th>
-                                <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Quest Adder</th>
+                                <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Quest Role</th>
                                 <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Article Poster</th>
                                 <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Lore Editor</th>
                                 <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">General Access</th>
@@ -657,10 +657,14 @@
                     <span class="text-white text-sm"><span class="role-badge comments mr-2"><i class="fas fa-message"></i> comment_adder</span> Can add dev comments</span>
                 </label>
 
-                <label class="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg cursor-pointer hover:bg-slate-700 transition-all">
-                    <input type="checkbox" id="roleCheck_quest_adder" class="rounded text-violet-600 focus:ring-violet-500 w-4 h-4">
-                    <span class="text-white text-sm"><span class="role-badge quest mr-2"><i class="fas fa-scroll"></i> quest_adder</span> Can create and edit quests</span>
-                </label>
+                <div class="p-3 bg-slate-700/50 rounded-lg flex flex-col gap-2">
+                    <span class="text-white text-base"><span class="role-badge quest mr-2"><i class="fas fa-scroll"></i> quest_role</span> Quest access level</span>
+                    <select id="roleSelect_quest_role" class="w-full bg-[#1e293b] border border-slate-600 rounded-lg px-3 py-2 text-white text-base outline-none focus:border-violet-500">
+                        <option value="">None</option>
+                        <option value="quest_editor">quest_editor — Create &amp; edit quests only</option>
+                        <option value="quest_admin">quest_admin — Full quest admin access</option>
+                    </select>
+                </div>
 
                 <label class="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg cursor-pointer hover:bg-slate-700 transition-all">
                     <input type="checkbox" id="roleCheck_lore_editor" class="rounded text-violet-600 focus:ring-violet-500 w-4 h-4">

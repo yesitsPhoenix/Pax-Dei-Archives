@@ -289,7 +289,7 @@ async function fetchAndRenderUserRoles() {
 
     adminUsersCache.forEach(function(u) {
         const isCommenter     = u.role === 'comment_adder';
-        const isQuestAdder    = u.quest_role === 'quest_adder';
+        const questRole       = u.quest_role || null;
         const isLoreEditor    = u.lore_role === 'lore_editor';
         const isAdmin         = u.is_admin === true;
         const hasAccess       = u.is_editor === true;
@@ -314,8 +314,10 @@ async function fetchAndRenderUserRoles() {
             + '</td>';
 
         const questCell = '<td class="px-4 py-3">'
-            + (isQuestAdder
-                ? '<span class="role-badge quest"><i class="fas fa-scroll"></i> quest_adder</span>'
+            + (questRole === 'quest_admin'
+                ? '<span class="role-badge quest"><i class="fas fa-scroll"></i> quest_admin</span>'
+                : questRole === 'quest_editor'
+                ? '<span class="role-badge quest"><i class="fas fa-pen"></i> quest_editor</span>'
                 : '<span class="role-badge none">\u2014</span>')
             + '</td>';
 
@@ -352,7 +354,7 @@ async function fetchAndRenderUserRoles() {
                 + ' data-is-editor="' + hasAccess + '"'
                 + ' data-can-post-articles="' + canPostArticles + '"'
                 + ' data-is-commenter="' + isCommenter + '"'
-                + ' data-is-quest-adder="' + isQuestAdder + '"'
+                + ' data-quest-role="' + (questRole || '') + '"'
                 + ' data-is-lore-editor="' + isLoreEditor + '"'
                 + '>'
                 + '<i class="fas fa-pen mr-1"></i>Edit Roles'
@@ -426,7 +428,7 @@ async function fetchAndRenderUserRoles() {
                 isEditor: btn.dataset.isEditor === 'true',
                 canPostArticles: btn.dataset.canPostArticles === 'true',
                 isCommenter: btn.dataset.isCommenter === 'true',
-                isQuestAdder: btn.dataset.isQuestAdder === 'true',
+                questRole: btn.dataset.questRole || '',
                 isLoreEditor: btn.dataset.isLoreEditor === 'true'
             });
         });
@@ -441,34 +443,34 @@ function openManageUserRoleModal(opts) {
     if (!modal) return;
 
     const userSelect    = document.getElementById('roleUserSelect');
-    const ckAdmin       = document.getElementById('roleCheck_is_admin');
-    const ckEditor      = document.getElementById('roleCheck_is_editor');
-    const ckArticles    = document.getElementById('roleCheck_can_post_articles');
-    const ckCommenter   = document.getElementById('roleCheck_comment_adder');
-    const ckQuest       = document.getElementById('roleCheck_quest_adder');
-    const ckLore        = document.getElementById('roleCheck_lore_editor');
+    const ckAdmin          = document.getElementById('roleCheck_is_admin');
+    const ckEditor         = document.getElementById('roleCheck_is_editor');
+    const ckArticles       = document.getElementById('roleCheck_can_post_articles');
+    const ckCommenter      = document.getElementById('roleCheck_comment_adder');
+    const questRoleSelect  = document.getElementById('roleSelect_quest_role');
+    const ckLore           = document.getElementById('roleCheck_lore_editor');
     const msgEl         = document.getElementById('addUserRoleMessage');
 
     if (msgEl) { msgEl.classList.add('hidden'); msgEl.textContent = ''; }
 
     if (opts && opts.userId) {
         // Edit mode — select the existing user
-        if (userSelect) userSelect.value = opts.userId;
-        if (ckAdmin)     ckAdmin.checked     = opts.isAdmin     || false;
-        if (ckEditor)    ckEditor.checked    = opts.isEditor    || false;
-        if (ckArticles)  ckArticles.checked  = opts.canPostArticles || false;
-        if (ckCommenter) ckCommenter.checked = opts.isCommenter || false;
-        if (ckQuest)     ckQuest.checked     = opts.isQuestAdder || false;
-        if (ckLore)      ckLore.checked      = opts.isLoreEditor || false;
+        if (userSelect)      userSelect.value      = opts.userId;
+        if (ckAdmin)         ckAdmin.checked        = opts.isAdmin        || false;
+        if (ckEditor)        ckEditor.checked       = opts.isEditor       || false;
+        if (ckArticles)      ckArticles.checked     = opts.canPostArticles || false;
+        if (ckCommenter)     ckCommenter.checked    = opts.isCommenter    || false;
+        if (questRoleSelect) questRoleSelect.value  = opts.questRole      || '';
+        if (ckLore)          ckLore.checked         = opts.isLoreEditor   || false;
     } else {
         // Grant mode — reset form
-        if (userSelect) userSelect.value = '';
-        if (ckAdmin)     ckAdmin.checked     = false;
-        if (ckEditor)    ckEditor.checked    = false;
-        if (ckArticles)  ckArticles.checked  = false;
-        if (ckCommenter) ckCommenter.checked = false;
-        if (ckQuest)     ckQuest.checked     = false;
-        if (ckLore)      ckLore.checked      = false;
+        if (userSelect)      userSelect.value      = '';
+        if (ckAdmin)         ckAdmin.checked        = false;
+        if (ckEditor)        ckEditor.checked       = false;
+        if (ckArticles)      ckArticles.checked     = false;
+        if (ckCommenter)     ckCommenter.checked    = false;
+        if (questRoleSelect) questRoleSelect.value  = '';
+        if (ckLore)          ckLore.checked         = false;
     }
 
     modal.classList.remove('hidden');
@@ -483,7 +485,7 @@ async function saveUserRoles(userId, roles) {
         is_editor:        roles.isEditor,
         can_post_articles: roles.canPostArticles,
         role:             roles.isCommenter ? 'comment_adder' : '',
-        quest_role:       roles.isQuestAdder ? 'quest_adder' : null,
+        quest_role:       roles.questRole || null,
         lore_role:        roles.isLoreEditor ? 'lore_editor'  : null
     };
 
@@ -969,12 +971,12 @@ function setupModalHandlers() {
         submitRoleBtn.addEventListener('click', async function() {
             const userId = document.getElementById('roleUserSelect') ? document.getElementById('roleUserSelect').value : '';
             const roles = {
-                isAdmin:         document.getElementById('roleCheck_is_admin')         ? document.getElementById('roleCheck_is_admin').checked         : false,
-                isEditor:        document.getElementById('roleCheck_is_editor')        ? document.getElementById('roleCheck_is_editor').checked        : false,
+                isAdmin:         document.getElementById('roleCheck_is_admin')          ? document.getElementById('roleCheck_is_admin').checked          : false,
+                isEditor:        document.getElementById('roleCheck_is_editor')         ? document.getElementById('roleCheck_is_editor').checked         : false,
                 canPostArticles: document.getElementById('roleCheck_can_post_articles') ? document.getElementById('roleCheck_can_post_articles').checked : false,
-                isCommenter:     document.getElementById('roleCheck_comment_adder')    ? document.getElementById('roleCheck_comment_adder').checked    : false,
-                isQuestAdder:    document.getElementById('roleCheck_quest_adder')      ? document.getElementById('roleCheck_quest_adder').checked      : false,
-                isLoreEditor:    document.getElementById('roleCheck_lore_editor')      ? document.getElementById('roleCheck_lore_editor').checked      : false
+                isCommenter:     document.getElementById('roleCheck_comment_adder')     ? document.getElementById('roleCheck_comment_adder').checked     : false,
+                questRole:       document.getElementById('roleSelect_quest_role')       ? document.getElementById('roleSelect_quest_role').value         : '',
+                isLoreEditor:    document.getElementById('roleCheck_lore_editor')       ? document.getElementById('roleCheck_lore_editor').checked       : false
             };
 
             if (roleMsg) { roleMsg.className = 'form-message info'; roleMsg.textContent = 'Saving\u2026'; roleMsg.classList.remove('hidden'); }
