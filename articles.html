@@ -8,6 +8,62 @@
     <link rel="stylesheet" href="frontend/www/css/style.css">
     <link rel="stylesheet" href="frontend/www/css/articles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <style>
+        .markdown-content img {
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+        }
+        .markdown-content img:hover {
+            opacity: 0.85;
+        }
+        #image-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 20000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+        }
+        #image-overlay.active {
+            display: flex;
+        }
+        #image-overlay img {
+            max-width: 90%;
+            max-height: 90vh;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            cursor: pointer;
+        }
+        #image-overlay-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 48px;
+            color: #fff;
+            cursor: pointer;
+            z-index: 20001;
+            background: rgba(0, 0, 0, 0.5);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            transition: all 0.2s ease;
+        }
+        #image-overlay-close:hover {
+            background: rgba(255, 215, 0, 0.3);
+            transform: scale(1.1);
+        }
+    </style>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
@@ -30,7 +86,7 @@
       </main>
 
     <div id="fullArticleModalOverlay" class="fixed inset-0 bg-black/90 backdrop-blur-md z-[10000] hidden items-center justify-center p-4">
-        <div class="bg-[#27292a] w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-[30px] p-8 md:p-12 border border-[#444] shadow-2xl relative">
+        <div class="bg-[#27292a] w-full max-w-[70vw] max-h-[90vh] overflow-y-auto rounded-[30px] p-8 md:p-12 border border-[#444] shadow-2xl relative">
             <button id="closeArticleModal" class="absolute top-6 right-8 text-4xl text-gray-400 hover:text-[#FFD700] transition-colors">&times;</button>
             
             <h2 id="articleModalTitle" class="text-3xl font-bold text-[#FFD700] mb-4 pr-12"></h2>
@@ -44,7 +100,7 @@
                 </span>
             </div>
             
-            <div id="articleModalContent" class="text-gray-300 leading-relaxed text-lg space-y-4">
+            <div id="articleModalContent" class="markdown-content text-gray-300 leading-relaxed text-lg space-y-4">
                 </div>
             
             <div class="mt-10 flex justify-end">
@@ -73,7 +129,13 @@
     </script>
     <script type="module" src="frontend/www/js/main.js"></script>
     <script type="module" src="frontend/www/js/articles/articles.js"></script>
+    <script type="module" src="frontend/www/js/ui/imageEnlargement.js"></script>
     <script type="module" src="frontend/www/js/popoutAuth.js"></script>
+
+<div id="image-overlay">
+    <span id="image-overlay-close">&times;</span>
+    <img id="image-overlay-img" src="" alt="Enlarged view">
+</div>
 
 </body>
 </html>
