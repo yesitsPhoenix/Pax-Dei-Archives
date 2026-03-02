@@ -60,8 +60,8 @@ function waitForHeader(timeout = 5000) {
  */
 function getUnauthorizedRedirect(page) {
     if (page === 'edit_lore.html') return 'lore.html';
-    if (page === 'admin.html')     return 'index.html';
-    return 'quests.html';
+    if (page === 'edit_quest.html' || page === 'panel.html' || page === 'quest_flow.html') return 'quests.html';
+    return 'index.html';
 }
 
 // ── Core access handler ───────────────────────────────────────────────────────
