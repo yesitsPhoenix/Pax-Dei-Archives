@@ -247,11 +247,18 @@ async function buildCrossReferences(currentItem) {
 }
 
 // ── Render Category Landing Page ───────────────────────────────
-async function renderCategoryLanding(category) {
+const LORE_PAGE_SIZE = 12;
+
+async function renderCategoryLanding(category, page = 1) {
     const main = document.getElementById('lore-content-area');
     const items = await fetchItemsByCategory(category);
 
-    const cardsHtml = items.map(item => {
+    const totalPages = Math.max(1, Math.ceil(items.length / LORE_PAGE_SIZE));
+    const currentPage = Math.min(Math.max(1, page), totalPages);
+    const startIdx = (currentPage - 1) * LORE_PAGE_SIZE;
+    const pageItems = items.slice(startIdx, startIdx + LORE_PAGE_SIZE);
+
+    const cardsHtml = pageItems.map(item => {
         const preview = item.content ? stripHtml(renderMarkdown(item.content)).substring(0, 120) + '...' : 'No content yet.';
         const meta = [];
         if (item.author) meta.push(item.author);
@@ -264,13 +271,66 @@ async function renderCategoryLanding(category) {
         </a>`;
     }).join('');
 
+    // Build pagination controls
+    let paginationHtml = '';
+    if (totalPages > 1) {
+        const prevDisabled = currentPage === 1 ? 'disabled' : '';
+        const nextDisabled = currentPage === totalPages ? 'disabled' : '';
+
+        // Page number buttons (show up to 7, with ellipsis)
+        const pageButtons = [];
+        const maxVisible = 7;
+        let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+        let end = Math.min(totalPages, start + maxVisible - 1);
+        if (end - start < maxVisible - 1) start = Math.max(1, end - maxVisible + 1);
+
+        if (start > 1) {
+            pageButtons.push(`<button class="lore-page-btn" data-page="1">1</button>`);
+            if (start > 2) pageButtons.push(`<span class="lore-page-ellipsis">…</span>`);
+        }
+        for (let i = start; i <= end; i++) {
+            const active = i === currentPage ? 'active' : '';
+            pageButtons.push(`<button class="lore-page-btn ${active}" data-page="${i}">${i}</button>`);
+        }
+        if (end < totalPages) {
+            if (end < totalPages - 1) pageButtons.push(`<span class="lore-page-ellipsis">…</span>`);
+            pageButtons.push(`<button class="lore-page-btn" data-page="${totalPages}">${totalPages}</button>`);
+        }
+
+        paginationHtml = `
+            <div class="lore-pagination">
+                <button class="lore-page-btn lore-page-prev" data-page="${currentPage - 1}" ${prevDisabled}>
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                ${pageButtons.join('')}
+                <button class="lore-page-btn lore-page-next" data-page="${currentPage + 1}" ${nextDisabled}>
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+        `;
+    }
+
     main.innerHTML = `
         <div class="lore-category-landing">
             <h3>${category}</h3>
             <div class="lore-category-count">${items.length} ${items.length === 1 ? 'entry' : 'entries'}</div>
             <div class="lore-entry-cards">${cardsHtml}</div>
+            ${paginationHtml}
         </div>
     `;
+
+    // Attach pagination button listeners
+    main.querySelectorAll('.lore-page-btn[data-page]').forEach(btn => {
+        if (btn.disabled) return;
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const newPage = parseInt(btn.getAttribute('data-page'), 10);
+            if (!isNaN(newPage) && newPage >= 1 && newPage <= totalPages) {
+                await renderCategoryLanding(category, newPage);
+                main.scrollTop = 0;
+            }
+        });
+    });
 }
 
 // ── Render Article Detail ──────────────────────────────────────

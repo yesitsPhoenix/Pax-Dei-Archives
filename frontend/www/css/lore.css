@@ -816,3 +816,60 @@
     font-size: 15px;
     text-align: center;
 }
+
+/* ── Lore Pagination ─────────────────────────────────────────── */
+.lore-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 215, 0, 0.1);
+}
+
+.lore-page-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    height: 34px;
+    padding: 0 8px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 215, 0, 0.15);
+    border-radius: 6px;
+    color: #9CA3AF;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.lore-page-btn:hover:not(:disabled):not(.active) {
+    background: rgba(255, 215, 0, 0.08);
+    border-color: rgba(255, 215, 0, 0.35);
+    color: #FFD700;
+}
+
+.lore-page-btn.active {
+    background: rgba(255, 215, 0, 0.15);
+    border-color: rgba(255, 215, 0, 0.5);
+    color: #FFD700;
+    font-weight: 600;
+    cursor: default;
+}
+
+.lore-page-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.lore-page-ellipsis {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    color: #4B5563;
+    font-size: 13px;
+    user-select: none;
+}
