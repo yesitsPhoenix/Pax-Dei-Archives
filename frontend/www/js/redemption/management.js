@@ -417,9 +417,20 @@ async function fetchTableData() {
             }
         });
         
-        // Merge with character data
-        data = characters.map(char => {
-            const progression = progressionMap.get(char.character_id) || {
+        // Build character lookup from whatever the characters query returned
+        const characterMap = new Map(characters?.map(c => [c.character_id, c]) || []);
+
+        // Iterate over ALL character IDs that appear in claims (progressionMap),
+        // not just the ones the characters query returned (which may be RLS-scoped).
+        // Use characterMap only for name/region lookups with safe fallbacks.
+        const allCharIds = new Set([
+            ...progressionMap.keys(),
+            ...characterMap.keys()
+        ]);
+
+        data = Array.from(allCharIds).map(charId => {
+            const char = characterMap.get(charId);
+            const progression = progressionMap.get(charId) || {
                 chronicles_completed: 0,
                 avg_days_between: null,
                 days_inactive: null,
@@ -427,13 +438,13 @@ async function fetchTableData() {
                 last_quest_id: null,
                 last_claim_date: null
             };
-            
+
             return {
-                character_id: char.character_id,
-                username: userMap.get(char.user_id) || 'Unknown',
-                character_name: char.character_name,
-                region: char.region || '—',
-                shard: char.shard || '—',
+                character_id: charId,
+                username: char ? (userMap.get(char.user_id) || 'Unknown') : 'Unknown',
+                character_name: char?.character_name || 'Unknown',
+                region: char?.region || '—',
+                shard: char?.shard || '—',
                 chronicles_completed: progression.chronicles_completed,
                 avg_days_between: progression.avg_days_between,
                 days_inactive: progression.days_inactive,
@@ -442,7 +453,7 @@ async function fetchTableData() {
                 last_claim_date: progression.last_claim_date
             };
         });
-        
+
         // Sort by chronicles completed (descending)
         data.sort((a, b) => b.chronicles_completed - a.chronicles_completed);
     } else {
