@@ -64,7 +64,7 @@ request_log: dict[str, list[float]] = {}
 USE_RAG = True
 
 # How many lore entries to include per question when RAG is enabled
-RAG_TOP_K = 7
+RAG_TOP_K = 12
 
 # ---------------------------------------------------------------------------
 # Vector Search Configuration
@@ -229,26 +229,21 @@ class LoreSearchIndex:
         scores = []
         missing_embeddings = 0
 
-        # Debug: log types on first entry to catch serialization issues
-        if self.entries:
-            first = self.entries[0]
-            if first.embedding:
-                print(f"[DEBUG] query_vector type: {type(query_vector)}, first element type: {type(query_vector[0]) if query_vector else 'empty'}")
-                print(f"[DEBUG] entry.embedding type: {type(first.embedding)}, first element type: {type(first.embedding[0]) if first.embedding else 'empty'}")
-
         for entry in self.entries:
             if not entry.embedding:
                 missing_embeddings += 1
                 continue
             score = cosine_similarity(query_vector, entry.embedding)
 
-            # Keep the title boost — it's cheap and still valid
+            # Title boost — ensures direct title matches surface over content-heavy entries
             query_lower = query.lower()
-            query_words = set(query_lower.split())
+            query_words = set(query_lower.split()) - {'who', 'what', 'is', 'are', 'the', 'a', 'an', 'tell', 'me', 'about'}
             title_words = set(entry.title.lower().split())
             overlap = query_words & title_words
             if overlap:
-                score += len(overlap) * 0.05  # smaller boost relative to cosine scale
+                # Proportional overlap rewards entries whose entire title matches the query
+                overlap_ratio = len(overlap) / max(len(title_words), 1)
+                score += 0.3 + (overlap_ratio * 0.3)  # up to +0.6 for a full title match
 
             scores.append((score, entry))
 
@@ -271,36 +266,74 @@ search_index = LoreSearchIndex()
 
 SYSTEM_PROMPT_BASE = """You are the Lore Keeper of the Pax Dei Archives. You are an ancient scholar who speaks with gravity and reverence.
 
-ACCURACY RULES (HIGHEST PRIORITY — violation is unacceptable):
+================================================================================
+ACCURACY RULES — ABSOLUTE AND NON-NEGOTIABLE
+================================================================================
 
-1. ONLY state facts that are EXPLICITLY written in the LORE ENTRIES below. They are your SOLE source of truth.
-2. If the entries do not contain the answer, say: "The Archives hold no record of this."
-3. NEVER invent, fabricate, infer, extrapolate, or guess ANY detail — no matter how plausible it sounds.
-4. Do NOT assume relationships, motivations, or actions unless the text EXPLICITLY states them.
-   - Do NOT say "X was sent by Y" unless the text literally says Y sent X.
-   - Do NOT describe a character's role or gifts unless those exact concepts appear in the entry text.
-   - Do NOT combine information from different entries to create new claims not present in either entry.
-5. When describing what a lore entry says, stay extremely close to the original wording. Prefer quoting directly over rephrasing.
-6. If you are unsure whether something is stated in the entries, do NOT include it.
+You are a RETRIEVAL system. Your only job is to report what is written in the provided LORE ENTRIES.
+You do NOT reason. You do NOT infer. You do NOT fill gaps. You do NOT complete patterns.
 
-FORMAT RULES:
+RULE 1 — ENTRIES ONLY
+Every single word in your answer must come directly from the provided lore entries.
+If a fact is not stated word-for-word in an entry, it does not exist. Do not include it.
+This includes: names, dates, ages, time periods, pronouns, titles, and relationships.
+If an entry uses "he" — you use "he". If an entry uses "she" — you use "she". Never assume gender.
 
-7. Keep answers SHORT: 2-4 sentences for simple questions, 1-2 short paragraphs max for complex ones.
-8. Always finish your thought completely — never stop mid-sentence. Plan your answer to be concise from the start.
-9. Speak in-world as an ancient lore keeper, not as an AI. Use phrases like "It is written..." or "The records tell us..."
-10. If asked about game mechanics or modern topics, say: "Such matters lie beyond my scrolls."
+RULE 2 — NO GAP FILLING
+If the entries only partially answer a question, answer ONLY the part the entries cover.
+Do NOT complete the answer using your own knowledge, assumptions, or what "seems right."
+Example: If asked to list all Redeemers and the entries only mention three, list only those three.
+Do NOT add others even if you believe they exist.
 
-CITATION RULES (MANDATORY — every response MUST have citations):
+RULE 3 — NO INFERENCE
+Do NOT draw conclusions, infer causes, assume motivations, or imply relationships.
+- Do NOT say "X was likely caused by Y" — only state what the text says directly.
+- Do NOT say "this suggests" or "this implies" — only state what the text says directly.
+- Do NOT connect facts from two different entries to create a third claim.
 
-- When you reference information from a lore entry, cite it using EXACTLY this format: [[Category:slug|Title]]
-- The Category, slug, and Title MUST exactly match a "Citation key" line from the entries below. Copy it exactly. NEVER invent or modify a citation key.
-- ONLY cite entries that are provided below. If an entry is not present in the list, do NOT cite it — even if you think it should exist.
-- You MUST end EVERY response with a Sources block listing ALL entries you cited:
+RULE 4 — NUMBERS AND LISTS MUST BE EXACT
+If asked "how many" or "list all" — only count or list what appears in the provided entries.
+Do NOT guess at totals. If entries are missing, say so: "The Archives provided record of [N] — others may exist but are not recorded here."
+
+RULE 5 — WHEN IN DOUBT, OMIT
+If you are not 100% certain a fact is stated in the entries, leave it out entirely.
+A shorter, accurate answer is always better than a longer, fabricated one.
+
+RULE 7 — USE THE ENTRY'S OWN WORDS
+Do not paraphrase or reinterpret. When describing what an entry says, use the same words the entry uses.
+Example: if the entry says "he gave us the Rule of Life" — say that, not "he established a code of conduct."
+If you cannot find the exact wording to support a claim, omit the claim.
+
+RULE 6 — NO ANSWER AVAILABLE
+If the entries do not contain the answer, say exactly: "The Archives hold no record of this."
+Do NOT speculate. Do NOT say "perhaps" or "it is possible."
+
+================================================================================
+FORMAT RULES
+================================================================================
+
+- MATCH length to question complexity. Use these as firm guidelines:
+  * Simple factual question ("who is X", "what is X"): 2-4 sentences. One short paragraph.
+  * List question ("who are the X", "list all X"): One opening sentence, then a clean list. Each list item gets at most one short clause of context — not a full sentence.
+  * Broad topic question ("tell me about the ages"): 2-3 sentences of overview, then a list with one-line entries. Two short paragraphs absolute maximum.
+  * Never write a full paragraph per list item. Never summarize each entry individually in prose.
+- Always finish your thought completely — never stop mid-sentence.
+- Speak in-world as an ancient lore keeper. Use phrases like "It is written..." or "The records tell us..."
+- If asked about game mechanics or modern topics, say: "Such matters lie beyond my scrolls."
+
+================================================================================
+CITATION RULES — MANDATORY
+================================================================================
+
+- Cite every fact using EXACTLY this format: [[Category:slug|Title]]
+- The Category, slug, and Title MUST exactly match a "Citation key" line from the entries. Copy it exactly.
+- ONLY cite entries provided below. NEVER cite an entry that is not in the list.
+- End EVERY response with a Sources block:
   [[Sources]]
   [[Redeemers:meirothea|2nd - Meirothea]]
   [[/Sources]]
-- A response without [[Sources]]...[[/Sources]] at the end is INVALID. Always include it.
-- If you cannot find a matching Citation key for something, mention it without a citation rather than inventing one.
+- A response without [[Sources]]...[[/Sources]] is INVALID.
+- If you referenced something but cannot find its Citation key, omit that claim entirely.
 """
 
 FULL_CORPUS_PROMPT = SYSTEM_PROMPT_BASE + """
@@ -421,8 +454,59 @@ def load_lore_corpus() -> str:
     return full_corpus_prompt
 
 
+def normalize_query(query: str) -> str:
+    """Collapse repeated characters and lowercase to make typo-tolerant matching easier."""
+    # e.g. 'redeeemers' -> 'redeemers', 'abouut' -> 'about'
+    normalized = re.sub(r'(.)\1{2,}', r'\1\1', query.lower())
+    return normalized
+
+
+def get_category_flood_entries(query: str) -> list[LoreEntry]:
+    """
+    If the query clearly references a category name, return ALL entries from that
+    category so the model always has the complete set rather than a scored subset.
+    Tolerates typos by normalizing repeated characters before matching.
+    """
+    query_normalized = normalize_query(query)
+    all_categories = {e.category for e in search_index.entries}
+    for category in all_categories:
+        cat_lower = category.lower()
+        # Match on the category name itself or its likely plural/singular
+        variants = {cat_lower, cat_lower.rstrip('s'), cat_lower + 's'}
+        if any(v in query_normalized for v in variants if len(v) > 3):
+            flooded = [e for e in search_index.entries if e.category == category]
+            if flooded:
+                print(f"[RAG:flood] Query matched category '{category}' — injecting all {len(flooded)} entries")
+                return flooded
+    return []
+
+
 async def build_rag_prompt(query: str) -> str:
-    if USE_VECTOR_SEARCH:
+    # Check for category flood first — overrides vector/TF-IDF for broad category questions
+    flood_entries = get_category_flood_entries(query)
+
+    if flood_entries:
+        # Still run vector search for the remaining slots to add supporting context
+        remaining_k = max(0, RAG_TOP_K - len(flood_entries))
+        flood_slugs = {e.slug for e in flood_entries}
+        supporting = []
+
+        if remaining_k > 0:
+            if USE_VECTOR_SEARCH:
+                try:
+                    query_vector = await get_embedding(query)
+                    candidates = search_index.search_vector(query_vector, query, top_k=RAG_TOP_K + len(flood_entries))
+                    supporting = [e for e in candidates if e.slug not in flood_slugs][:remaining_k]
+                except Exception as e:
+                    print(f"[WARN] Vector search failed during flood ({e})")
+            else:
+                candidates = search_index.search_tfidf(query, top_k=RAG_TOP_K + len(flood_entries))
+                supporting = [e for e in candidates if e.slug not in flood_slugs][:remaining_k]
+
+        results = flood_entries + supporting
+        search_mode = "flood"
+
+    elif USE_VECTOR_SEARCH:
         try:
             query_vector = await get_embedding(query)
             results = search_index.search_vector(query_vector, query, top_k=RAG_TOP_K)
@@ -565,7 +649,11 @@ async def chat(request: Request, chat_req: ChatRequest):
     if USE_RAG:
         user_query = chat_req.messages[-1].content if chat_req.messages else ""
         system_prompt = await build_rag_prompt(user_query)
-        ctx_size = 8192
+        # Dynamically size context window: prompt tokens + headroom for response
+        # Rough token estimate: 4 chars per token. Minimum 8192, maximum 32768.
+        estimated_prompt_tokens = len(system_prompt) // 4
+        ctx_size = min(32768, max(8192, estimated_prompt_tokens + 2048))
+        print(f"[CTX] Prompt ~{estimated_prompt_tokens} tokens → ctx_size set to {ctx_size}")
     else:
         system_prompt = full_corpus_prompt
         ctx_size = 32768
