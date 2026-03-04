@@ -22,12 +22,10 @@ import httpx
 # ---------------------------------------------------------------------------
 
 SUPABASE_URL = "https://jrjgbnopmfovxwvtbivh.supabase.co"
-SUPABASE_ANON_KEY = (
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
-    ".eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impyamdibm9wbWZvdnh3dnRiaXZoIiwicm9sZSI6"
-    "ImFub24iLCJpYXQiOjE3MDgxOTg1MjYsImV4cCI6MjAyMzc3NDUyNn0"
-    ".za7oUzFhNmBdtcCRBmxwW5FSTFRWVAY6_rsRwlr3iqY"
-)
+# Service role key required — anon key is blocked by RLS from writing embeddings.
+# Find this in Supabase → Settings → API → service_role key.
+# This script is local-only and never exposed publicly, so service role is safe here.
+SUPABASE_ANON_KEY = "YOUR_SERVICE_ROLE_KEY_HERE"
 
 OLLAMA_URL = "http://localhost:11434"
 EMBED_MODEL = "nomic-embed-text"

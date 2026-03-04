@@ -385,6 +385,9 @@ def load_lore_corpus() -> str:
         if USE_VECTOR_SEARCH:
             raw_embedding = row.get("embedding")
             if raw_embedding:
+                # Supabase returns vector columns as a string "[0.1,0.2,...]" over REST
+                if isinstance(raw_embedding, str):
+                    raw_embedding = json.loads(raw_embedding)
                 entry.embedding = raw_embedding
                 with_embeddings += 1
             else:
