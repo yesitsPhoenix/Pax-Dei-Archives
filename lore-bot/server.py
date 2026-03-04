@@ -21,13 +21,13 @@ import math
 from pathlib import Path
 from datetime import datetime
 from collections import Counter
+from typing import Optional
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from typing import Optional
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -67,6 +67,19 @@ USE_RAG = True
 RAG_TOP_K = 7
 
 # ---------------------------------------------------------------------------
+# Vector Search Configuration
+# ---------------------------------------------------------------------------
+
+# Set to True to use pgvector embeddings for semantic search (recommended).
+# Set to False to fall back to TF-IDF keyword search for troubleshooting.
+# Requires: ollama pull nomic-embed-text  AND  embed_lore.py has been run.
+USE_VECTOR_SEARCH = True
+
+# Ollama model used for generating query embeddings at search time.
+# Must match the model used when embed_lore.py was run.
+EMBED_MODEL = "nomic-embed-text"
+
+# ---------------------------------------------------------------------------
 # Corpus Compression (for prompt only — original .md files untouched)
 # ---------------------------------------------------------------------------
 
@@ -82,6 +95,30 @@ def compress_for_prompt(text: str) -> str:
     text = re.sub(r'\n{3,}', '\n\n', text)
     text = re.sub(r'[ \t]+$', '', text, flags=re.MULTILINE)
     return text.strip()
+
+# ---------------------------------------------------------------------------
+# Vector Search Helpers
+# ---------------------------------------------------------------------------
+
+def cosine_similarity(a: list[float], b: list[float]) -> float:
+    """Compute cosine similarity between two vectors."""
+    dot = sum(x * y for x, y in zip(a, b))
+    mag_a = sum(x ** 2 for x in a) ** 0.5
+    mag_b = sum(x ** 2 for x in b) ** 0.5
+    return dot / (mag_a * mag_b) if mag_a and mag_b else 0.0
+
+
+async def get_embedding(text: str) -> list[float]:
+    """Embed text using Ollama's nomic-embed-text model."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{OLLAMA_URL}/api/embeddings",
+            json={"model": EMBED_MODEL, "prompt": text},
+            timeout=30,
+        )
+        resp.raise_for_status()
+        return resp.json()["embedding"]
+
 
 # ---------------------------------------------------------------------------
 # TF-IDF Search Engine (zero external dependencies)
@@ -123,6 +160,7 @@ class LoreEntry:
         self.content = content
         self.compressed = compressed
         self.citation_key = f"[[{category}:{slug}|{title}]]"
+        self.embedding: list[float] = []  # populated from Supabase when USE_VECTOR_SEARCH is True
 
         search_text = f"{title} {title} {title} {category} {author or ''} {compressed}"
         self.tokens = tokenize(search_text)
@@ -155,7 +193,8 @@ class LoreSearchIndex:
             self.doc_freq[term] += 1
         self.total_docs = len(self.entries)
 
-    def search(self, query: str, top_k: int = 5) -> list[LoreEntry]:
+    def search_tfidf(self, query: str, top_k: int = 5) -> list[LoreEntry]:
+        """Keyword-based TF-IDF search. Fallback when USE_VECTOR_SEARCH is False."""
         query_tokens = tokenize(query)
         if not query_tokens:
             return self.entries[:top_k]
@@ -184,6 +223,37 @@ class LoreSearchIndex:
 
         scores.sort(key=lambda x: x[0], reverse=True)
         return [entry for score, entry in scores[:top_k] if score > 0]
+
+    def search_vector(self, query_vector: list[float], query: str, top_k: int = 5) -> list[LoreEntry]:
+        """Semantic cosine-similarity search. Used when USE_VECTOR_SEARCH is True."""
+        scores = []
+        missing_embeddings = 0
+
+        for entry in self.entries:
+            if not entry.embedding:
+                missing_embeddings += 1
+                continue
+            score = cosine_similarity(query_vector, entry.embedding)
+
+            # Keep the title boost — it's cheap and still valid
+            query_lower = query.lower()
+            query_words = set(query_lower.split())
+            title_words = set(entry.title.lower().split())
+            overlap = query_words & title_words
+            if overlap:
+                score += len(overlap) * 0.05  # smaller boost relative to cosine scale
+
+            scores.append((score, entry))
+
+        if missing_embeddings:
+            print(f"[WARN] {missing_embeddings} entries have no embedding — run embed_lore.py")
+
+        scores.sort(key=lambda x: x[0], reverse=True)
+        return [entry for _, entry in scores[:top_k]]
+
+    def search(self, query: str, top_k: int = 5) -> list[LoreEntry]:
+        """Compatibility shim — used by TF-IDF path in build_rag_prompt."""
+        return self.search_tfidf(query, top_k)
 
 
 search_index = LoreSearchIndex()
@@ -271,10 +341,12 @@ def load_lore_corpus() -> str:
 
     print(f"[INFO] Fetching lore entries from Supabase...")
 
+    select_fields = "*,embedding" if USE_VECTOR_SEARCH else "*"
+
     try:
         resp = httpx.get(
             f"{SUPABASE_URL}/rest/v1/lore_items",
-            params={"select": "*", "order": "category.asc,sort_order.asc,title.asc"},
+            params={"select": select_fields, "order": "category.asc,sort_order.asc,title.asc"},
             headers={
                 "apikey": SUPABASE_ANON_KEY,
                 "Authorization": f"Bearer {SUPABASE_ANON_KEY}",
@@ -289,6 +361,8 @@ def load_lore_corpus() -> str:
 
     corpus_parts = []
     skipped_empty = 0
+    with_embeddings = 0
+    without_embeddings = 0
 
     for row in rows:
         content = (row.get("content") or "").strip()
@@ -307,6 +381,15 @@ def load_lore_corpus() -> str:
             content=content,
             compressed=compressed,
         )
+
+        if USE_VECTOR_SEARCH:
+            raw_embedding = row.get("embedding")
+            if raw_embedding:
+                entry.embedding = raw_embedding
+                with_embeddings += 1
+            else:
+                without_embeddings += 1
+
         search_index.add_entry(entry)
         corpus_parts.append(entry.to_prompt_block())
 
@@ -317,13 +400,31 @@ def load_lore_corpus() -> str:
     print(f"[INFO] Loaded {lore_entry_count} lore entries from Supabase")
     if skipped_empty > 0:
         print(f"[INFO] Skipped {skipped_empty} empty entries")
+    if USE_VECTOR_SEARCH:
+        print(f"[INFO] Vector search: ENABLED ({with_embeddings} embedded, {without_embeddings} missing)")
+        if without_embeddings > 0:
+            print(f"[WARN] {without_embeddings} entries lack embeddings — run embed_lore.py")
+    else:
+        print(f"[INFO] Vector search: DISABLED — using TF-IDF fallback")
     print(f"[INFO] Full corpus size: {len(full_corpus_prompt):,} chars (~{len(full_corpus_prompt) // 4:,} tokens)")
     print(f"[INFO] RAG mode: {'ENABLED (top {})'.format(RAG_TOP_K) if USE_RAG else 'DISABLED (full corpus)'}")
     return full_corpus_prompt
 
 
-def build_rag_prompt(query: str) -> str:
-    results = search_index.search(query, top_k=RAG_TOP_K)
+async def build_rag_prompt(query: str) -> str:
+    if USE_VECTOR_SEARCH:
+        try:
+            query_vector = await get_embedding(query)
+            results = search_index.search_vector(query_vector, query, top_k=RAG_TOP_K)
+            search_mode = "vector"
+        except Exception as e:
+            print(f"[WARN] Vector search failed ({e}), falling back to TF-IDF")
+            results = search_index.search_tfidf(query, top_k=RAG_TOP_K)
+            search_mode = "tfidf-fallback"
+    else:
+        results = search_index.search_tfidf(query, top_k=RAG_TOP_K)
+        search_mode = "tfidf"
+
     if not results:
         results = search_index.entries[:3]
 
@@ -331,8 +432,8 @@ def build_rag_prompt(query: str) -> str:
     prompt = RAG_PROMPT.format(lore_content=entries_text)
 
     titles = [e.title for e in results]
-    print(f"[RAG] Query: '{query[:80]}' → {len(results)} entries: {titles}")
-    print(f"[RAG] Prompt size: {len(prompt):,} chars (~{len(prompt) // 4:,} tokens)")
+    print(f"[RAG:{search_mode}] Query: '{query[:80]}' → {len(results)} entries: {titles}")
+    print(f"[RAG:{search_mode}] Prompt size: {len(prompt):,} chars (~{len(prompt) // 4:,} tokens)")
 
     return prompt
 
@@ -380,7 +481,8 @@ async def startup_event():
     print("  Pax Dei Archives — Lore Keeper Bot")
     print("=" * 60)
     print(f"[INFO] Ollama URL: {OLLAMA_URL}")
-    print(f"[INFO] Model: {OLLAMA_MODEL}")
+    print(f"[INFO] Generation model: {OLLAMA_MODEL}")
+    print(f"[INFO] Embed model: {EMBED_MODEL} ({'ON' if USE_VECTOR_SEARCH else 'OFF — TF-IDF fallback'})")
     print(f"[INFO] Supabase URL: {SUPABASE_URL}")
     print(f"[INFO] RAG mode: {'ON (top {})'.format(RAG_TOP_K) if USE_RAG else 'OFF (full corpus)'}")
     print(f"[INFO] Server will listen on {HOST}:{PORT}")
@@ -409,13 +511,18 @@ async def startup_event():
 
 @app.get("/health")
 async def health_check():
+    embedded_count = sum(1 for e in search_index.entries if e.embedding)
     return {
         "status": "ok",
-        "model": OLLAMA_MODEL,
+        "generation_model": OLLAMA_MODEL,
+        "embed_model": EMBED_MODEL,
         "lore_entries_loaded": lore_entry_count,
         "corpus_size_chars": len(full_corpus_prompt),
         "rag_enabled": USE_RAG,
         "rag_top_k": RAG_TOP_K if USE_RAG else None,
+        "vector_search_enabled": USE_VECTOR_SEARCH,
+        "entries_with_embeddings": embedded_count if USE_VECTOR_SEARCH else "n/a",
+        "entries_missing_embeddings": (lore_entry_count - embedded_count) if USE_VECTOR_SEARCH else "n/a",
         "valid_citations": get_valid_citations(),
     }
 
@@ -447,7 +554,7 @@ async def chat(request: Request, chat_req: ChatRequest):
 
     if USE_RAG:
         user_query = chat_req.messages[-1].content if chat_req.messages else ""
-        system_prompt = build_rag_prompt(user_query)
+        system_prompt = await build_rag_prompt(user_query)
         ctx_size = 8192
     else:
         system_prompt = full_corpus_prompt
