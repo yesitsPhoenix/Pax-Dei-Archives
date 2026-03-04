@@ -229,6 +229,13 @@ class LoreSearchIndex:
         scores = []
         missing_embeddings = 0
 
+        # Debug: log types on first entry to catch serialization issues
+        if self.entries:
+            first = self.entries[0]
+            if first.embedding:
+                print(f"[DEBUG] query_vector type: {type(query_vector)}, first element type: {type(query_vector[0]) if query_vector else 'empty'}")
+                print(f"[DEBUG] entry.embedding type: {type(first.embedding)}, first element type: {type(first.embedding[0]) if first.embedding else 'empty'}")
+
         for entry in self.entries:
             if not entry.embedding:
                 missing_embeddings += 1
