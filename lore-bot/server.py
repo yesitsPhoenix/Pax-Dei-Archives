@@ -65,7 +65,7 @@ request_log: dict[str, list[float]] = {}
 USE_RAG = True
 
 # How many lore entries to include per question when RAG is enabled
-RAG_TOP_K = 8
+RAG_TOP_K = 12
 
 # ---------------------------------------------------------------------------
 # Vector Search Configuration
@@ -421,6 +421,66 @@ def normalize_query(query: str) -> str:
     return normalized
 
 
+def extract_keyword_terms(query: str) -> list[str]:
+    """
+    Extract likely proper nouns and significant keywords from a query for
+    exact-match fallback injection. Returns lowercase terms 4+ chars long
+    that are either capitalised in the original query or not in the stop word list.
+    """
+    # Strip punctuation and split
+    words = re.findall(r"[A-Za-z']+", query)
+    terms = []
+    for word in words:
+        if len(word) < 4:
+            continue
+        # Include if capitalised (likely a proper noun) or not a stop word
+        if word[0].isupper() or word.lower() not in STOP_WORDS:
+            terms.append(word.lower())
+    return list(set(terms))
+
+
+def keyword_inject(results: list[LoreEntry], query: str, top_k: int) -> list[LoreEntry]:
+    """
+    Scan all entries for exact keyword matches from the query.
+    Inject any matching entries that vector search missed, replacing
+    the lowest-ranked results to keep total count at top_k.
+    """
+    terms = extract_keyword_terms(query)
+    if not terms:
+        return results
+
+    result_slugs = {e.slug for e in results}
+    injected = []
+
+    for entry in search_index.entries:
+        if entry.slug in result_slugs:
+            continue
+        searchable = (entry.title + " " + entry.content).lower()
+        if all(term in searchable for term in terms):
+            injected.append(entry)
+            result_slugs.add(entry.slug)
+
+    if not injected:
+        return results
+
+    print(f"[RAG:keyword-inject] Injecting {len(injected)} missed entries: {[e.title for e in injected]}")
+
+    # Replace lowest-ranked results to make room, keeping total at top_k
+    slots_available = max(0, top_k - len(results))
+    injected_fits = injected[:slots_available]
+    injected_overflow = injected[slots_available:]
+
+    # Inject entries that fit within top_k first
+    combined = results + injected_fits
+
+    # For overflow, replace lowest-ranked vector results (end of list)
+    if injected_overflow:
+        replace_count = min(len(injected_overflow), len(combined))
+        combined = combined[:-replace_count] + injected_overflow[:replace_count]
+
+    return combined[:top_k]
+
+
 def get_category_flood_entries(query: str) -> list[LoreEntry]:
     """
     If the query clearly references a category name, return ALL entries from that
@@ -481,6 +541,10 @@ async def build_rag_prompt(query: str) -> str:
 
     if not results:
         results = search_index.entries[:3]
+
+    # Keyword injection — catch entries missed by semantic search (e.g. minor named characters)
+    if search_mode in ("vector", "tfidf", "tfidf-fallback"):
+        results = keyword_inject(results, query, RAG_TOP_K)
 
     entries_text = "\n\n---\n\n".join(entry.to_prompt_block() for entry in results)
     prompt = RAG_PROMPT.format(lore_content=entries_text)
