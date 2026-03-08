@@ -18,6 +18,7 @@ import os
 import re
 import json
 import math
+import time
 from pathlib import Path
 from datetime import datetime
 from collections import Counter
@@ -36,7 +37,7 @@ from pydantic import BaseModel
 # Ollama connection
 # OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:32b")
 
 # Server settings
 HOST = os.getenv("LORE_BOT_HOST", "0.0.0.0")
@@ -64,7 +65,7 @@ request_log: dict[str, list[float]] = {}
 USE_RAG = True
 
 # How many lore entries to include per question when RAG is enabled
-RAG_TOP_K = 12
+RAG_TOP_K = 8
 
 # ---------------------------------------------------------------------------
 # Vector Search Configuration
@@ -151,7 +152,8 @@ def tokenize(text: str) -> list[str]:
 class LoreEntry:
     """A single lore entry with metadata and searchable content."""
     def __init__(self, title: str, slug: str, category: str,
-                 author: str, date: str, content: str, compressed: str):
+                 author: str, date: str, content: str, compressed: str,
+                 summary: str = ""):
         self.title = title
         self.slug = slug
         self.category = category
@@ -159,6 +161,8 @@ class LoreEntry:
         self.date = date or ""
         self.content = content
         self.compressed = compressed
+        # Use summary in prompts only if populated AND content exceeds 1500 chars
+        self.prompt_content = summary.strip() if (summary and summary.strip() and len(content) > 1500) else compressed
         self.citation_key = f"[[{category}:{slug}|{title}]]"
         self.embedding: list[float] = []  # populated from Supabase when USE_VECTOR_SEARCH is True
 
@@ -174,7 +178,7 @@ class LoreEntry:
         if self.date:
             block += f"Date: {self.date}\n"
         block += f"Category: {self.category}\n"
-        block += f"\n{self.compressed}"
+        block += f"\n{self.prompt_content}"
         return block
 
 
@@ -264,76 +268,31 @@ search_index = LoreSearchIndex()
 # System Prompts
 # ---------------------------------------------------------------------------
 
-SYSTEM_PROMPT_BASE = """You are the Lore Keeper of the Pax Dei Archives. You are an ancient scholar who speaks with gravity and reverence.
+SYSTEM_PROMPT_BASE = """You are the Lore Keeper of the Pax Dei Archives — an ancient scholar who speaks with gravity and reverence.
 
-================================================================================
-ACCURACY RULES — ABSOLUTE AND NON-NEGOTIABLE
-================================================================================
+ACCURACY RULES
+You are a retrieval system. Report only what is written in the provided lore entries. Do not reason, infer, fill gaps, or complete patterns.
+- Every fact must come directly from the entries. If it is not stated, it does not exist.
+- Use the entry's own words and pronouns. Never assume gender or paraphrase.
+- If entries only partially answer a question, answer only the part they cover. Do not add from your own knowledge.
+- If the entries do not contain the answer, say exactly: "The Archives hold no record of this." Do not speculate.
+- If unsure whether a fact is stated, omit it. A shorter, accurate answer is always better than a longer, fabricated one.
 
-You are a RETRIEVAL system. Your only job is to report what is written in the provided LORE ENTRIES.
-You do NOT reason. You do NOT infer. You do NOT fill gaps. You do NOT complete patterns.
-
-RULE 1 — ENTRIES ONLY
-Every single word in your answer must come directly from the provided lore entries.
-If a fact is not stated word-for-word in an entry, it does not exist. Do not include it.
-This includes: names, dates, ages, time periods, pronouns, titles, and relationships.
-If an entry uses "he" — you use "he". If an entry uses "she" — you use "she". Never assume gender.
-
-RULE 2 — NO GAP FILLING
-If the entries only partially answer a question, answer ONLY the part the entries cover.
-Do NOT complete the answer using your own knowledge, assumptions, or what "seems right."
-Example: If asked to list all Redeemers and the entries only mention three, list only those three.
-Do NOT add others even if you believe they exist.
-
-RULE 3 — NO INFERENCE
-Do NOT draw conclusions, infer causes, assume motivations, or imply relationships.
-- Do NOT say "X was likely caused by Y" — only state what the text says directly.
-- Do NOT say "this suggests" or "this implies" — only state what the text says directly.
-- Do NOT connect facts from two different entries to create a third claim.
-
-RULE 4 — NUMBERS AND LISTS MUST BE EXACT
-If asked "how many" or "list all" — only count or list what appears in the provided entries.
-Do NOT guess at totals. If entries are missing, say so: "The Archives provided record of [N] — others may exist but are not recorded here."
-
-RULE 5 — WHEN IN DOUBT, OMIT
-If you are not 100% certain a fact is stated in the entries, leave it out entirely.
-A shorter, accurate answer is always better than a longer, fabricated one.
-
-RULE 7 — USE THE ENTRY'S OWN WORDS
-Do not paraphrase or reinterpret. When describing what an entry says, use the same words the entry uses.
-Example: if the entry says "he gave us the Rule of Life" — say that, not "he established a code of conduct."
-If you cannot find the exact wording to support a claim, omit the claim.
-
-RULE 6 — NO ANSWER AVAILABLE
-If the entries do not contain the answer, say exactly: "The Archives hold no record of this."
-Do NOT speculate. Do NOT say "perhaps" or "it is possible."
-
-================================================================================
 FORMAT RULES
-================================================================================
-
-- MATCH length to question complexity. Use these as firm guidelines:
-  * Simple factual question ("who is X", "what is X"): 2-4 sentences. One short paragraph.
-  * List question ("who are the X", "list all X"): One opening sentence, then a clean list. Each list item gets at most one short clause of context — not a full sentence.
-  * Broad topic question ("tell me about the ages"): 2-3 sentences of overview, then a list with one-line entries. Two short paragraphs absolute maximum.
-  * Never write a full paragraph per list item. Never summarize each entry individually in prose.
+- Match response length to question complexity. Simple questions: 2-4 sentences. List questions: one opening sentence then a clean list with brief context per item. Broad questions: short overview then a list. Never write a full paragraph per list item.
 - Always finish your thought completely — never stop mid-sentence.
-- Speak in-world as an ancient lore keeper. Use phrases like "It is written..." or "The records tell us..."
+- Speak in-world. Use phrases like "It is written..." or "The records tell us..."
 - If asked about game mechanics or modern topics, say: "Such matters lie beyond my scrolls."
 
-================================================================================
 CITATION RULES — MANDATORY
-================================================================================
-
 - Cite every fact using EXACTLY this format: [[Category:slug|Title]]
-- The Category, slug, and Title MUST exactly match a "Citation key" line from the entries. Copy it exactly.
-- ONLY cite entries provided below. NEVER cite an entry that is not in the list.
+- Category, slug, and Title MUST exactly match a Citation key from the entries. Copy it exactly.
+- Only cite entries provided. Never cite an entry not in the list. If you cannot find its Citation key, omit that claim.
 - End EVERY response with a Sources block:
   [[Sources]]
   [[Redeemers:meirothea|2nd - Meirothea]]
   [[/Sources]]
 - A response without [[Sources]]...[[/Sources]] is INVALID.
-- If you referenced something but cannot find its Citation key, omit that claim entirely.
 """
 
 FULL_CORPUS_PROMPT = SYSTEM_PROMPT_BASE + """
@@ -420,6 +379,7 @@ def load_lore_corpus() -> str:
             date=row.get("date"),
             content=content,
             compressed=compressed,
+            summary=row.get("summary") or "",
         )
 
         if USE_VECTOR_SEARCH:
@@ -528,7 +488,6 @@ async def build_rag_prompt(query: str) -> str:
     titles = [e.title for e in results]
     print(f"[RAG:{search_mode}] Query: '{query[:80]}' → {len(results)} entries: {titles}")
     print(f"[RAG:{search_mode}] Prompt size: {len(prompt):,} chars (~{len(prompt) // 4:,} tokens)")
-
     return prompt
 
 

@@ -453,6 +453,16 @@ async function sendMessage(text) {
     isStreaming = true;
     const streamingDiv = addStreamingMessage();
     let fullResponse = '';
+    let renderScheduled = false;
+
+    function scheduleRender() {
+        if (renderScheduled) return;
+        renderScheduled = true;
+        setTimeout(() => {
+            updateStreamingMessage(fullResponse);
+            renderScheduled = false;
+        }, 50);
+    }
 
     try {
         const response = await fetch(`${LORE_BOT_URL}/api/chat`, {
@@ -495,7 +505,7 @@ async function sendMessage(text) {
 
                     if (chunk.content) {
                         fullResponse += chunk.content;
-                        updateStreamingMessage(fullResponse);
+                        scheduleRender();
                     }
 
                     if (chunk.done) {
