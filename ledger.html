@@ -421,6 +421,23 @@
             </div>
 
             <!-- Quick Guide Modal -->
+            <!-- Valley Presence Modal -->
+            <div id="valleyPresenceModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center hidden" style="z-index:10000">
+                <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-emerald-500/30 rounded-2xl shadow-2xl w-full max-w-4xl mx-4 p-6 max-h-[85vh] flex flex-col">
+                    <div class="flex items-start justify-between mb-4 flex-shrink-0">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-store text-emerald-400 text-xl"></i>
+                            <h3 class="text-white text-lg font-bold">Home Valley Presence</h3>
+                        </div>
+                        <button id="valleyPresenceModalClose" class="text-gray-400 hover:text-white transition-colors text-xl leading-none">&times;</button>
+                    </div>
+                    <div id="valleyPresenceModalBody" class="overflow-y-auto flex-1 pr-1"></div>
+                    <div class="mt-5 flex justify-end flex-shrink-0">
+                        <button id="valleyPresenceModalClose2" class="bg-slate-600 hover:bg-slate-500 text-gray-300 px-5 py-2 rounded-lg text-sm transition-all duration-200">Close</button>
+                    </div>
+                </div>
+            </div>
+
             <div id="quickGuideModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center hidden" style="z-index:10000">
                 <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-blue-500/30 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 p-6">
                     <div class="flex items-start justify-between mb-4">
@@ -621,6 +638,9 @@
                         <!-- Status line (loading / error) -->
                         <div id="market-pulse-status" class="hidden mb-4"></div>
 
+                        <!-- Staleness label -->
+                        <p id="market-pulse-age" class="text-gray-600 text-xs mb-3"></p>
+
                         <!-- Stat cards -->
                         <div id="market-pulse-cards" class="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div class="bg-slate-700/40 rounded-xl p-4 border border-slate-600/40">
@@ -653,6 +673,8 @@
                             </div>
                         </div>
 
+                        <!-- Own listings panel (populated by JS when avatar hash is set) -->
+                        <div id="market-pulse-own-listings" class="hidden mt-4 pt-4 border-t border-slate-600/40"></div>
 
                     </div>
                 </section>

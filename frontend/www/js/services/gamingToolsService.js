@@ -31,6 +31,9 @@ let _itemsData = null;
 /** Raw zone listings for the currently active character's zone. */
 let _currentZoneListings = [];
 
+/** Timestamp (ms) of the last successful zone data fetch. */
+let _lastFetchTime = null;
+
 /** Whether a zone fetch is currently in flight (prevent duplicate calls). */
 let _fetchInProgress = false;
 
@@ -153,6 +156,7 @@ export async function loadZoneDataForCharacter(character) {
         _currentZoneListings = listings;
         _currentPriceMap = buildMarketPriceMap(listings);
         _currentNameMap = buildNameMap(_currentPriceMap);
+        _lastFetchTime = Date.now();
 
         return {
             priceMap: _currentPriceMap,
@@ -176,6 +180,34 @@ export function clearZoneData() {
     _currentPriceMap = null;
     _currentNameMap = null;
     _currentZoneListings = [];
+    _lastFetchTime = null;
+}
+
+/**
+ * Returns how many minutes ago the zone data was last fetched, or null if never.
+ * @returns {number|null}
+ */
+export function getZoneDataAge() {
+    if (!_lastFetchTime) return null;
+    return Math.floor((Date.now() - _lastFetchTime) / 60000);
+}
+
+/**
+ * Returns own listing count and listings for a specific item slug.
+ * Used to show "X of those N listings are yours" in the add-listing hint.
+ *
+ * @param {string} avatarHash - from getSavedAvatarHash()
+ * @param {string} slug       - pax_dei_slug / gaming.tools item_id
+ * @returns {{ ownCount: number, ownListings: Array }}
+ */
+export function getOwnListingCountForSlug(avatarHash, slug) {
+    if (!avatarHash || !slug || !_currentZoneListings.length) {
+        return { ownCount: 0, ownListings: [] };
+    }
+    const ownListings = _currentZoneListings.filter(
+        l => l.item_id === slug && l.avatar_hash === avatarHash
+    );
+    return { ownCount: ownListings.length, ownListings };
 }
 
 // ── Price map ───────────────────────────────────────────────────────────────
@@ -250,6 +282,19 @@ export function getMarketDataForSlug(paxDeiSlug) {
 export function getItemNameForSlug(paxDeiSlug) {
     if (!_itemsData || !paxDeiSlug) return null;
     return _itemsData[paxDeiSlug]?.name || null;
+}
+
+/**
+ * Looks up the gaming.tools item_id for a given English display name.
+ * Used when pax_dei_slug is missing or mismatched, as a fallback to
+ * still identify the correct item in the zone listings.
+ *
+ * @param {string} itemName - e.g. "Charcoal"
+ * @returns {string|null} gaming.tools item_id, or null if not found in zone
+ */
+export function getItemIdByName(itemName) {
+    if (!_currentNameMap || !itemName) return null;
+    return _currentNameMap[itemName.toLowerCase().trim()] || null;
 }
 
 /**
@@ -372,6 +417,73 @@ export function summarizeOwnListings(ownListings) {
     const totalValue = ownListings.reduce((sum, l) => sum + (l.price * (l.quantity || 1)), 0);
     const uniqueItems = new Set(ownListings.map(l => l.item_id)).size;
     return { totalCount, totalValue, uniqueItems };
+}
+
+/**
+ * Analyses the player's own listings against the rest of the valley.
+ * For each item the player has listed, determines whether they are leading
+ * (lowest price) or being undercut (someone else is cheaper).
+ *
+ * @param {string} avatarHash - 16-char hex from getSavedAvatarHash()
+ * @returns {{
+ *   leading:  Array<{ itemId, itemName, yourLow, marketLow, yourCount, totalCount }>,
+ *   undercut: Array<{ itemId, itemName, yourLow, marketLow, gap, gapPct, yourCount, totalCount }>,
+ *   valleySharePct: number,
+ *   totalOwnListings: number,
+ *   totalValleyListings: number
+ * }|null}  null if no zone data or no own listings
+ */
+export function analyzeOwnListings(avatarHash) {
+    if (!avatarHash || !_currentZoneListings.length) return null;
+
+    const ownAll = _currentZoneListings.filter(l => l.avatar_hash === avatarHash);
+    if (!ownAll.length) return null;
+
+    const totalValleyListings = _currentZoneListings.length;
+    const totalOwnListings = ownAll.length;
+    const valleySharePct = Math.round((totalOwnListings / totalValleyListings) * 100);
+
+    // Group own listings by item_id
+    const ownByItem = {};
+    for (const l of ownAll) {
+        if (!ownByItem[l.item_id]) ownByItem[l.item_id] = [];
+        ownByItem[l.item_id].push(l.price / Math.max(l.quantity || 1, 1));
+    }
+
+    // Group all valley listings by item_id for market low
+    const valleyByItem = {};
+    for (const l of _currentZoneListings) {
+        if (!valleyByItem[l.item_id]) valleyByItem[l.item_id] = [];
+        valleyByItem[l.item_id].push(l.price / Math.max(l.quantity || 1, 1));
+    }
+
+    const leading = [];
+    const undercut = [];
+
+    for (const [itemId, ownPrices] of Object.entries(ownByItem)) {
+        const allPrices = valleyByItem[itemId] || [];
+        const yourLow   = Math.min(...ownPrices);
+        const marketLow = Math.min(...allPrices);
+        const yourCount = ownPrices.length;
+        const totalCount = allPrices.length;
+        const itemName = _itemsData?.[itemId]?.name || itemId.replace(/_/g, ' ');
+
+        // Leading if your lowest price equals (or beats) the market low
+        if (yourLow <= marketLow + 0.001) {
+            leading.push({ itemId, itemName, yourLow, marketLow, yourCount, totalCount });
+        } else {
+            const gap    = yourLow - marketLow;
+            const gapPct = Math.round((gap / marketLow) * 100);
+            undercut.push({ itemId, itemName, yourLow, marketLow, gap, gapPct, yourCount, totalCount });
+        }
+    }
+
+    // Sort undercut by gap descending (worst first)
+    undercut.sort((a, b) => b.gap - a.gap);
+    // Sort leading alphabetically
+    leading.sort((a, b) => a.itemName.localeCompare(b.itemName));
+
+    return { leading, undercut, valleySharePct, totalOwnListings, totalValleyListings };
 }
 
 // ── Avatar hash persistence (session only — never stores the raw ID) ─────────

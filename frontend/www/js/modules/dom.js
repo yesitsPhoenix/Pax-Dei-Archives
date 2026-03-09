@@ -115,7 +115,7 @@ export const openModal = (content) => {
 };
 
 const editListingModalHtml = `
-    <div id="editListingModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div id="editListingModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden" style="z-index:20000">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md mx-4 sm:mx-auto font-inter">
             <h3 class="text-2xl font-bold mb-6 text-gray-800">Edit Listing</h3>
             <form id="editListingForm">

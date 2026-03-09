@@ -1,5 +1,9 @@
 import { updateAlertBadgePosition } from '../sidebar.js';
-import { getItemData } from '../services/gamingToolsService.js';
+import { getItemData, getZoneDataAge, getSavedAvatarHash, analyzeOwnListings } from '../services/gamingToolsService.js';
+import { showEditListingModalByItemName } from './actions.js';
+
+/** Cached result of the last analyzeOwnListings() call — used to populate the modal. */
+let _lastValleyAnalysis = null;
 
 const grossSalesEl = document.getElementById('dashboard-gross-sales');
 const feesPaidEl = document.getElementById('dashboard-fees-paid');
@@ -402,6 +406,7 @@ export function renderMarketPulse(zoneSummary, ownSummary, character, loading = 
     if (!zoneSummary) return;
 
     const fmt = (n) => typeof n === 'number' ? n.toLocaleString() : '—';
+    const fmtGold = (n) => typeof n === 'number' ? n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : '—';
 
     const totalEl = document.getElementById('pulse-total-listings');
     const sellersEl = document.getElementById('pulse-unique-sellers');
@@ -422,5 +427,229 @@ export function renderMarketPulse(zoneSummary, ownSummary, character, loading = 
         }
     }
 
+    // ── Staleness label ──────────────────────────────────────────────────────
+    const ageEl = document.getElementById('market-pulse-age');
+    if (ageEl) {
+        const age = getZoneDataAge();
+        ageEl.textContent = age !== null
+            ? `Data refreshed ${age === 0 ? 'just now' : `${age}m ago`} · updates hourly`
+            : '';
+        ageEl.className = 'text-gray-300 text-xs mb-3';
+    }
 
+    // ── Own listings panel ───────────────────────────────────────────────────
+    const ownPanel = document.getElementById('market-pulse-own-listings');
+    if (!ownPanel) return;
+
+    const hasHash = !!getSavedAvatarHash();
+
+    if (!hasHash) {
+        // Subtle prompt — only show if avatar ID card is visible
+        const avatarCard = document.getElementById('avatar-id-card');
+        if (avatarCard && !avatarCard.classList.contains('hidden')) {
+            ownPanel.innerHTML = `
+                <div class="flex items-center gap-2 text-gray-300 text-xs italic">
+                    <i class="fas fa-circle-info text-gray-400"></i>
+                    Enter your Avatar ID above to see your home valley presence here.
+                </div>`;
+            ownPanel.classList.remove('hidden');
+        } else {
+            ownPanel.classList.add('hidden');
+        }
+        return;
+    }
+
+    // Run the competitive analysis
+    const savedHash = getSavedAvatarHash();
+    _lastValleyAnalysis = savedHash ? analyzeOwnListings(savedHash) : null;
+
+    if (!_lastValleyAnalysis) {
+        ownPanel.innerHTML = `
+            <div class="flex items-center gap-2 text-gray-300 text-sm">
+                <i class="fas fa-store text-gray-400"></i>
+                No listings found for your Avatar ID in this home valley.
+            </div>`;
+        ownPanel.classList.remove('hidden');
+        return;
+    }
+
+    const { leading, undercut, valleySharePct } = _lastValleyAnalysis;
+
+    const leadingChip = leading.length > 0
+        ? `<span class="inline-flex items-center gap-1.5 bg-emerald-900/40 border border-emerald-500/40 rounded-full px-3 py-1 text-sm">
+               <i class="fas fa-trophy text-emerald-400 text-xs"></i>
+               <span class="text-white font-semibold">Leading on</span>
+               <span class="text-emerald-300 font-bold">${leading.length}</span>
+               <span class="text-white">${leading.length === 1 ? 'item' : 'items'}</span>
+           </span>`
+        : '';
+
+    const undercutChip = undercut.length > 0
+        ? `<span class="inline-flex items-center gap-1.5 bg-rose-900/40 border border-rose-500/40 rounded-full px-3 py-1 text-sm">
+               <i class="fas fa-triangle-exclamation text-rose-400 text-xs"></i>
+               <span class="text-white font-semibold">Undercut on</span>
+               <span class="text-rose-300 font-bold">${undercut.length}</span>
+               <span class="text-white">${undercut.length === 1 ? 'item' : 'items'}</span>
+           </span>`
+        : `<span class="inline-flex items-center gap-1.5 bg-slate-700/40 border border-slate-500/40 rounded-full px-3 py-1 text-sm">
+               <i class="fas fa-check text-gray-400 text-xs"></i>
+               <span class="text-white">Not undercut</span>
+           </span>`;
+
+    const shareChip = `<span class="inline-flex items-center gap-1.5 bg-blue-900/40 border border-blue-500/40 rounded-full px-3 py-1 text-sm">
+               <i class="fas fa-chart-pie text-blue-400 text-xs"></i>
+               <span class="text-white font-semibold">Valley share:</span>
+               <span class="text-blue-300 font-bold">${valleySharePct}%</span>
+           </span>`;
+
+    ownPanel.innerHTML = `
+        <div class="flex flex-wrap items-center gap-2">
+            <span class="flex items-center gap-1.5 mr-1">
+                <i class="fas fa-store text-emerald-400 text-sm"></i>
+                <span class="text-emerald-300 font-semibold text-sm">Your home valley presence</span>
+                <span class="text-gray-400 text-xs">(as seen by gaming.tools):</span>
+            </span>
+            ${leadingChip}${undercutChip}${shareChip}
+            <button id="valley-presence-details-btn"
+                class="valley-details-btn ml-auto inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-amber-100 rounded-full transition-colors">
+                <i class="fas fa-magnifying-glass text-xs"></i> View Details
+            </button>
+        </div>`;
+    ownPanel.classList.remove('hidden');
+
+    // Wire the button after innerHTML is set
+    document.getElementById('valley-presence-details-btn')
+        ?.addEventListener('click', openValleyPresenceModal);
+}
+
+/**
+ * Populates and opens the Valley Presence details modal.
+ */
+export function openValleyPresenceModal() {
+    const modal = document.getElementById('valleyPresenceModal');
+    const body  = document.getElementById('valleyPresenceModalBody');
+    if (!modal || !body) return;
+
+    if (!_lastValleyAnalysis) {
+        body.innerHTML = '<p class="text-gray-400 text-sm">No data available.</p>';
+        modal.classList.remove('hidden');
+        return;
+    }
+
+    const { leading, undercut, valleySharePct, totalOwnListings, totalValleyListings } = _lastValleyAnalysis;
+    const fmt  = (n) => typeof n === 'number' ? n.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—';
+    const fmtG = (n) => `${fmt(n)}g`;
+
+    const undercutRows = undercut.map(item => `
+        <tr class="border-b border-slate-700/60 hover:bg-slate-700/30">
+            <td class="py-2.5 px-3 text-white text-sm">${item.itemName}</td>
+            <td class="py-2.5 px-3 text-rose-300 text-sm text-right font-semibold">${fmtG(item.yourLow)}</td>
+            <td class="py-2.5 px-3 text-emerald-300 text-sm text-right">${fmtG(item.marketLow)}</td>
+            <td class="py-2.5 px-3 text-amber-300 text-sm text-right">+${fmtG(item.gap)} <span class="text-gray-400 text-xs">(+${item.gapPct}%)</span></td>
+            <td class="py-2.5 px-3 text-gray-300 text-sm text-right">${item.yourCount} / ${item.totalCount}</td>
+            <td class="py-2.5 px-3 text-right">
+                <button class="valley-edit-btn inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white rounded-full border border-blue-400/40 transition-colors"
+                    data-item-name="${item.itemName.replace(/"/g, '&quot;')}">
+                    <i class="fas fa-pen text-xs"></i> Edit
+                </button>
+            </td>
+        </tr>`).join('');
+
+    const leadingRows = leading.map(item => `
+        <tr class="border-b border-slate-700/60 hover:bg-slate-700/30">
+            <td class="py-2.5 px-3 text-white text-sm">${item.itemName}</td>
+            <td class="py-2.5 px-3 text-emerald-300 text-sm text-right font-semibold">${fmtG(item.yourLow)}</td>
+            <td class="py-2.5 px-3 text-emerald-300 text-sm text-right">${fmtG(item.marketLow)}</td>
+            <td class="py-2.5 px-3 text-emerald-400 text-sm text-right font-semibold">Lowest price</td>
+            <td class="py-2.5 px-3 text-gray-300 text-sm text-right">${item.yourCount} / ${item.totalCount}</td>
+        </tr>`).join('');
+
+    const tableHeader = `
+        <thead>
+            <tr class="border-b border-slate-600">
+                <th class="py-2 px-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Item</th>
+                <th class="py-2 px-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide">Your Low</th>
+                <th class="py-2 px-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide">Market Low</th>
+                <th class="py-2 px-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide">Gap</th>
+                <th class="py-2 px-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide">Your / Total</th>
+                <th class="py-2 px-3"></th>
+            </tr>
+        </thead>`;
+
+    const leadingTableHeader = `
+        <thead>
+            <tr class="border-b border-slate-600">
+                <th class="py-2 px-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Item</th>
+                <th class="py-2 px-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide">Your Low</th>
+                <th class="py-2 px-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide">Market Low</th>
+                <th class="py-2 px-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide">Gap</th>
+                <th class="py-2 px-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide">Your / Total</th>
+            </tr>
+        </thead>`;
+
+    body.innerHTML = `
+        <!-- Summary chips -->
+        <div class="flex flex-wrap gap-2 mb-5">
+            <span class="inline-flex items-center gap-1.5 bg-blue-900/40 border border-blue-500/40 rounded-full px-3 py-1 text-sm">
+                <i class="fas fa-chart-pie text-blue-400 text-xs"></i>
+                <span class="text-white">Valley share:</span>
+                <span class="text-blue-300 font-bold">${valleySharePct}%</span>
+                <span class="text-gray-400 text-xs">(${totalOwnListings} of ${totalValleyListings})</span>
+            </span>
+            <span class="inline-flex items-center gap-1.5 bg-emerald-900/40 border border-emerald-500/40 rounded-full px-3 py-1 text-sm">
+                <i class="fas fa-trophy text-emerald-400 text-xs"></i>
+                <span class="text-white">Leading on <span class="font-bold text-emerald-300">${leading.length}</span> item${leading.length !== 1 ? 's' : ''}</span>
+            </span>
+            <span class="inline-flex items-center gap-1.5 bg-rose-900/40 border border-rose-500/40 rounded-full px-3 py-1 text-sm">
+                <i class="fas fa-triangle-exclamation text-rose-400 text-xs"></i>
+                <span class="text-white">Undercut on <span class="font-bold text-rose-300">${undercut.length}</span> item${undercut.length !== 1 ? 's' : ''}</span>
+            </span>
+        </div>
+
+        ${undercut.length > 0 ? `
+        <!-- Undercut section -->
+        <div class="mb-5">
+            <h4 class="flex items-center gap-2 text-rose-300 text-sm font-bold uppercase tracking-wide mb-2">
+                <i class="fas fa-triangle-exclamation text-rose-400"></i> Being Undercut
+                <span class="text-gray-400 text-xs font-normal normal-case ml-1">— sorted by largest gap first</span>
+            </h4>
+            <div class="overflow-x-auto rounded-lg border border-slate-700/60">
+                <table class="w-full text-left">${tableHeader}<tbody>${undercutRows}</tbody></table>
+            </div>
+        </div>` : ''}
+
+        ${leading.length > 0 ? `
+        <!-- Leading section -->
+        <div>
+            <h4 class="flex items-center gap-2 text-emerald-300 text-sm font-bold uppercase tracking-wide mb-2">
+                <i class="fas fa-trophy text-emerald-400"></i> Leading the Market
+            </h4>
+            <div class="overflow-x-auto rounded-lg border border-slate-700/60">
+                <table class="w-full text-left">${leadingTableHeader}<tbody>${leadingRows}</tbody></table>
+            </div>
+        </div>` : ''}
+
+        <p class="text-gray-400 text-xs mt-4 italic">Prices are per unit. Data reflects gaming.tools' last hourly sync — your Archives records may differ.</p>`;
+
+    modal.classList.remove('hidden');
+
+    // Wire edit buttons — open the edit modal on top of this modal (z-index stacking)
+    const editModal = document.getElementById('editListingModal');
+    body.querySelectorAll('.valley-edit-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const itemName = btn.dataset.itemName;
+            const opened = await showEditListingModalByItemName(itemName);
+            if (!opened) return; // No matching listing — stay on valley modal
+            // When edit modal closes, refresh the valley modal content in place
+            if (editModal) {
+                const observer = new MutationObserver(() => {
+                    if (editModal.classList.contains('hidden')) {
+                        observer.disconnect();
+                        openValleyPresenceModal();
+                    }
+                });
+                observer.observe(editModal, { attributes: true, attributeFilter: ['class'] });
+            }
+        });
+    });
 }

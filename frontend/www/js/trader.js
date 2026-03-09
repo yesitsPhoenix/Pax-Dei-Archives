@@ -11,6 +11,8 @@ import {
     getMarketDataForSlug,
     getMarketDataByItemName,
     getItemNameForSlug,
+    getOwnListingCountForSlug,
+    getItemIdByName,
     findOwnListings,
     summarizeOwnListings,
     getSavedAvatarHash,
@@ -390,6 +392,17 @@ const setupAddListingModalListeners = () => {
 };
 
 
+const setupValleyPresenceModal = () => {
+    const modal    = document.getElementById('valleyPresenceModal');
+    const closeBtn  = document.getElementById('valleyPresenceModalClose');
+    const closeBtn2 = document.getElementById('valleyPresenceModalClose2');
+    if (!modal) return;
+    const close = () => modal.classList.add('hidden');
+    closeBtn?.addEventListener('click', close);
+    closeBtn2?.addEventListener('click', close);
+    modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+};
+
 const setupQuickGuideModal = () => {
     const modal = document.getElementById('quickGuideModal');
     const openBtn = document.getElementById('quick-guide-btn');
@@ -492,6 +505,7 @@ const addPageEventListeners = () => {
     setupAvatarIdListeners();
     setupAvatarIdGuideModal();
     setupQuickGuideModal();
+    setupValleyPresenceModal();
 
 };
 
@@ -665,8 +679,9 @@ async function fetchItemSalesHistory(itemId) {
 }
 
 function initializeAutocomplete(allItems) {
-    // Holds the last fetched market data and sales history for the add-listing modal
+    // Holds the last fetched market data, own listing count, and sales history for the add-listing modal
     let _addListingMarketData = null;
+    let _addListingOwnCount = 0;   // how many of the zone listings for this item belong to the user
     let _addListingHistoryData = null;
     let _addListingHistoryLoading = false;
 
@@ -825,7 +840,9 @@ function initializeAutocomplete(allItems) {
                             <span class="text-white text-sm">${fmt(md.marketAvg * count)}g</span>
                         </div>
                     </div>` : `<div class="text-gray-400 text-sm italic mt-1">Enter count for stack prices</div>`}
-                    <div class="text-gray-400 text-xs mt-1.5">${md.totalListings} listing${md.totalListings !== 1 ? 's' : ''} in your home valley</div>
+                    <div class="text-gray-400 text-xs mt-1.5">
+                        ${md.totalListings} listing${md.totalListings !== 1 ? 's' : ''} in your home valley${_addListingOwnCount > 0 ? ` <span class="text-emerald-400">(${_addListingOwnCount} yours)</span>` : ''}
+                    </div>
                 </div>
             </div>` : `
             <div class="flex-1 min-w-0">
@@ -1002,6 +1019,29 @@ function initializeAutocomplete(allItems) {
                         marketData = getMarketDataByItemName(selectedItem.item_name);
                     }
                     _addListingMarketData = marketData || null;
+
+                    // Check how many zone listings for this item belong to the user.
+                    // We need the correct gaming.tools item_id, which may differ from
+                    // pax_dei_slug if the slug is mismatched or missing in the DB.
+                    const savedHash = getSavedAvatarHash();
+                    if (savedHash) {
+                        // Prefer validated slug; fall back to name-map lookup.
+                        let gtItemId = null;
+                        if (selectedItem.pax_dei_slug) {
+                            const slugName = getItemNameForSlug(selectedItem.pax_dei_slug);
+                            const slugValid = slugName &&
+                                slugName.toLowerCase().trim() === selectedItem.item_name.toLowerCase().trim();
+                            if (slugValid) gtItemId = selectedItem.pax_dei_slug;
+                        }
+                        if (!gtItemId) {
+                            gtItemId = getItemIdByName(selectedItem.item_name);
+                        }
+                        _addListingOwnCount = gtItemId
+                            ? getOwnListingCountForSlug(savedHash, gtItemId).ownCount
+                            : 0;
+                    } else {
+                        _addListingOwnCount = 0;
+                    }
 
                     if (!marketData) {
                         const hintEl = document.getElementById(priceHintId);

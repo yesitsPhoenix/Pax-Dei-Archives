@@ -497,6 +497,38 @@ export const showEditListingModal = async (listingId) => {
     }
 };
 
+/**
+ * Looks up the user's active listing_id for a given item name + current character,
+ * then opens the standard edit modal. Intended for use from the Valley Presence modal.
+ *
+ * @param {string} itemName - display name from gaming.tools
+ * @returns {Promise<boolean>} true if modal was opened, false if not found
+ */
+export const showEditListingModalByItemName = async (itemName) => {
+    try {
+        const { data, error } = await supabase
+            .from('market_listings')
+            .select('listing_id, items!inner(item_name)')
+            .eq('character_id', currentCharacterId)
+            .eq('is_cancelled', false)
+            .eq('is_fully_sold', false)
+            .ilike('items.item_name', itemName)
+            .order('listed_price_per_unit', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (error || !data) {
+            console.warn('[ValleyModal] No active listing found for item:', itemName, error);
+            return false;
+        }
+        await showEditListingModal(data.listing_id);
+        return true;
+    } catch (e) {
+        console.error('[ValleyModal] showEditListingModalByItemName error:', e);
+        return false;
+    }
+};
+
 export const updateEditFeeInfo = () => {
     //console.log('updateEditFeeInfo called.');
     const {
