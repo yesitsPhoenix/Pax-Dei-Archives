@@ -73,6 +73,21 @@ function toApiSlug(str) {
     return str.toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
 }
 
+/**
+ * Strips the path prefix from a pax_dei_slug stored in the DB.
+ * The DB stores path-prefixed slugs (e.g. "items/item_foo", "wieldables/wieldable_bar")
+ * but gaming.tools zone listings and items.json use bare item IDs (e.g. "item_foo").
+ * This normalizer makes all lookups work regardless of which format is passed in.
+ *
+ * @param {string} slug
+ * @returns {string}
+ */
+function toBareId(slug) {
+    if (!slug) return slug;
+    const slash = slug.lastIndexOf('/');
+    return slash !== -1 ? slug.slice(slash + 1) : slug;
+}
+
 // ── API fetching ────────────────────────────────────────────────────────────
 
 /**
@@ -204,8 +219,9 @@ export function getOwnListingCountForSlug(avatarHash, slug) {
     if (!avatarHash || !slug || !_currentZoneListings.length) {
         return { ownCount: 0, ownListings: [] };
     }
+    const bareSlug = toBareId(slug);
     const ownListings = _currentZoneListings.filter(
-        l => l.item_id === slug && l.avatar_hash === avatarHash
+        l => l.item_id === bareSlug && l.avatar_hash === avatarHash
     );
     return { ownCount: ownListings.length, ownListings };
 }
@@ -269,7 +285,7 @@ function buildNameMap(priceMap) {
  */
 export function getMarketDataForSlug(paxDeiSlug) {
     if (!_currentPriceMap || !paxDeiSlug) return null;
-    return _currentPriceMap[paxDeiSlug] || null;
+    return _currentPriceMap[toBareId(paxDeiSlug)] || null;
 }
 
 /**
@@ -281,7 +297,7 @@ export function getMarketDataForSlug(paxDeiSlug) {
  */
 export function getItemNameForSlug(paxDeiSlug) {
     if (!_itemsData || !paxDeiSlug) return null;
-    return _itemsData[paxDeiSlug]?.name || null;
+    return _itemsData[toBareId(paxDeiSlug)]?.name || null;
 }
 
 /**
@@ -319,7 +335,7 @@ export function getMarketDataByItemName(itemName) {
  */
 export function getItemData(itemId) {
     if (!_itemsData || !itemId) return null;
-    return _itemsData[itemId] || null;
+    return _itemsData[toBareId(itemId)] || null;
 }
 
 /**

@@ -191,17 +191,40 @@ const checkUser = async () => {
         });
         initializeListings(currentUser.id);
         initializeSales();
+    } else {
+        // No session — hide loading overlay so the login button is accessible
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        if (loadingOverlay) loadingOverlay.style.display = 'none';
     }
 };
 
 export async function fetchAllItemsForDropdown() {
-    const { data, error } = await supabase.rpc('get_all_items_for_dropdown');
-    if (error) {
-        console.error('Error fetching items for dropdowns:', error);
-        console.error('Supabase RPC error details:', error.message, error.details, error.hint);
-        throw error;
+    // Supabase server-side Max Rows cap (default 1000) overrides any .limit() call.
+    // Paginate in chunks of 1000 until we have everything.
+    const PAGE_SIZE = 1000;
+    let allItems = [];
+    let from = 0;
+
+    while (true) {
+        const { data, error } = await supabase
+            .from('items')
+            .select('item_id, item_name, category_id, pax_dei_slug, region_id')
+            .order('item_name', { ascending: true })
+            .range(from, from + PAGE_SIZE - 1);
+
+        if (error) {
+            console.error('[Items] fetchAllItemsForDropdown error:', error);
+            throw error;
+        }
+
+        allItems = allItems.concat(data || []);
+
+        if (!data || data.length < PAGE_SIZE) break; // last page
+        from += PAGE_SIZE;
     }
-    return data;
+
+    console.log(`[Items] Loaded ${allItems.length} items total`);
+    return allItems;
 }
 
 
@@ -979,106 +1002,205 @@ function initializeAutocomplete(allItems) {
     document.getElementById('modal-item-stacks')?.addEventListener('input', renderAddListingHint);
     document.getElementById('modal-item-price-per-stack')?.addEventListener('input', renderAddListingHint);
 
-    const setupInputAutocomplete = (inputNameId, suggestionsId, categorySelectId, priceHintId = null) => {
-        const inputElement = document.getElementById(inputNameId);
-        const suggestionsElement = document.getElementById(suggestionsId);
-        if (inputElement && suggestionsElement) {
-            setupCustomAutocomplete(inputElement, suggestionsElement, allItems, (selectedItem) => {
-                inputElement.value = selectedItem.item_name;
-                const categorySelect = document.getElementById(categorySelectId);
-                if (categorySelect) {
-                    categorySelect.value = String(selectedItem.category_id);
-                }
-                inputElement.dataset.selectedItemId = selectedItem.item_id;
-                inputElement.dataset.selectedPaxDeiSlug = selectedItem.pax_dei_slug;
-                inputElement.dataset.selectedItemCategory = selectedItem.category_id;
+    // Locked searchable select — replaces free-text autocomplete.
+    // Users can only select from the existing item list; no free-text entry is possible.
+    const setupLockedItemSelect = (inputId, suggestionsId, categorySelectId, onSelect) => {
+        const searchInput = document.getElementById(inputId);
+        const dropdown = document.getElementById(suggestionsId);
+        if (!searchInput || !dropdown) return;
 
-                // Market price hint + sales history (add-listing modal only)
-                if (priceHintId === 'modal-market-price-hint') {
-                    // Look up by slug first, but validate the slug actually maps to this item's
-                    // name — a mismatched pax_dei_slug in the DB (e.g. Charcoal pointing to
-                    // Charcoal Kiln Plans' item_id) would otherwise return the wrong prices.
-                    let marketData = null;
-                    if (selectedItem.pax_dei_slug) {
-                        const slugData = getMarketDataForSlug(selectedItem.pax_dei_slug);
-                        if (slugData) {
-                            const slugName = getItemNameForSlug(selectedItem.pax_dei_slug);
-                            const nameMatches = slugName &&
-                                slugName.toLowerCase().trim() === selectedItem.item_name.toLowerCase().trim();
-                            if (nameMatches) {
-                                marketData = slugData;
-                            } else {
-                                console.warn(
-                                    `[Trader] pax_dei_slug mismatch for "${selectedItem.item_name}": ` +
-                                    `slug "${selectedItem.pax_dei_slug}" resolves to "${slugName}" — falling back to name lookup.`
-                                );
-                            }
-                        }
-                    }
-                    if (!marketData) {
-                        marketData = getMarketDataByItemName(selectedItem.item_name);
-                    }
-                    _addListingMarketData = marketData || null;
+        let selectedItem = null;
+        let filteredItems = allItems;
+        let highlightIndex = -1;
 
-                    // Check how many zone listings for this item belong to the user.
-                    // We need the correct gaming.tools item_id, which may differ from
-                    // pax_dei_slug if the slug is mismatched or missing in the DB.
-                    const savedHash = getSavedAvatarHash();
-                    if (savedHash) {
-                        // Prefer validated slug; fall back to name-map lookup.
-                        let gtItemId = null;
-                        if (selectedItem.pax_dei_slug) {
-                            const slugName = getItemNameForSlug(selectedItem.pax_dei_slug);
-                            const slugValid = slugName &&
-                                slugName.toLowerCase().trim() === selectedItem.item_name.toLowerCase().trim();
-                            if (slugValid) gtItemId = selectedItem.pax_dei_slug;
-                        }
-                        if (!gtItemId) {
-                            gtItemId = getItemIdByName(selectedItem.item_name);
-                        }
-                        _addListingOwnCount = gtItemId
-                            ? getOwnListingCountForSlug(savedHash, gtItemId).ownCount
-                            : 0;
+        dropdown.innerHTML = '';
+        dropdown.style.display = 'none';
+        dropdown.style.position = 'absolute';
+        dropdown.style.zIndex = '9999';
+        dropdown.style.maxHeight = '220px';
+        dropdown.style.overflowY = 'auto';
+
+        const renderList = (items) => {
+            dropdown.innerHTML = '';
+            highlightIndex = -1;
+            if (items.length === 0) {
+                const noResult = document.createElement('div');
+                noResult.className = 'autocomplete-no-results';
+                noResult.textContent = 'No items found';
+                dropdown.appendChild(noResult);
+            } else {
+                items.forEach((item) => {
+                    const div = document.createElement('div');
+                    div.className = 'autocomplete-suggestion-item';
+                    const query = searchInput.value.trim();
+                    if (query) {
+                        const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const regex = new RegExp('(' + escaped + ')', 'gi');
+                        div.innerHTML = item.item_name.replace(regex, '<strong>$1</strong>');
                     } else {
-                        _addListingOwnCount = 0;
+                        div.textContent = item.item_name;
                     }
+                    div.addEventListener('mousedown', (e) => {
+                        e.preventDefault(); // prevent blur firing before click
+                        selectItem(item);
+                    });
+                    dropdown.appendChild(div);
+                });
+            }
+        };
 
-                    if (!marketData) {
-                        const hintEl = document.getElementById(priceHintId);
-                        if (hintEl) {
-                            hintEl.innerHTML = '<span class="text-gray-400 text-sm"><i class="fas fa-globe text-sm mr-1 text-gray-500"></i>No market data for this item in your zone.</span>';
-                            hintEl.classList.remove('hidden');
-                        }
-                    }
+        const selectItem = (item) => {
+            selectedItem = item;
+            searchInput.value = item.item_name;
+            searchInput.dataset.selectedItemId = item.item_id;
+            searchInput.dataset.selectedPaxDeiSlug = item.pax_dei_slug || '';
+            searchInput.dataset.selectedItemCategory = item.category_id || '';
+            const catSelect = document.getElementById(categorySelectId);
+            if (catSelect) catSelect.value = String(item.category_id);
+            dropdown.style.display = 'none';
+            if (onSelect) onSelect(item);
+        };
 
-                    // Fetch sales history async (non-blocking)
-                    if (currentCharacterId && selectedItem.item_id) {
-                        _addListingHistoryData = null;
-                        _addListingHistoryLoading = true;
-                        if (marketData) renderAddListingHint(); // show market + spinner
-                        fetchItemSalesHistory(selectedItem.item_id).then((hist) => {
-                            _addListingHistoryData = hist;
-                            _addListingHistoryLoading = false;
-                            renderAddListingHint();
-                        });
+        const clearSelection = () => {
+            selectedItem = null;
+            delete searchInput.dataset.selectedItemId;
+            delete searchInput.dataset.selectedPaxDeiSlug;
+            delete searchInput.dataset.selectedItemCategory;
+        };
+
+        const openDropdown = () => {
+            const query = searchInput.value.trim().toLowerCase();
+            filteredItems = query
+                ? allItems.filter(i => i.item_name.toLowerCase().includes(query))
+                : allItems;
+            renderList(filteredItems);
+            dropdown.style.display = 'block';
+        };
+
+        const setHighlight = (idx) => {
+            const items = dropdown.querySelectorAll('.autocomplete-suggestion-item');
+            items.forEach(el => el.classList.remove('highlighted'));
+            if (idx >= 0 && idx < items.length) {
+                items[idx].classList.add('highlighted');
+                items[idx].scrollIntoView({ block: 'nearest' });
+            }
+            highlightIndex = idx;
+        };
+
+        searchInput.addEventListener('input', () => {
+            clearSelection();
+            openDropdown();
+        });
+
+        searchInput.addEventListener('focus', openDropdown);
+
+        searchInput.addEventListener('blur', () => {
+            setTimeout(() => {
+                dropdown.style.display = 'none';
+                // Snap to exact match or revert to last confirmed selection
+                if (!selectedItem || searchInput.value !== selectedItem.item_name) {
+                    const exact = allItems.find(i => i.item_name.toLowerCase() === searchInput.value.toLowerCase());
+                    if (exact) {
+                        selectItem(exact);
                     } else {
-                        _addListingHistoryData = null;
-                        _addListingHistoryLoading = false;
-                        if (marketData) renderAddListingHint();
+                        searchInput.value = selectedItem ? selectedItem.item_name : '';
                     }
                 }
-            });
-        }
+            }, 150);
+        });
+
+        searchInput.addEventListener('keydown', (e) => {
+            const visibleItems = dropdown.querySelectorAll('.autocomplete-suggestion-item');
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setHighlight(Math.min(highlightIndex + 1, visibleItems.length - 1));
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setHighlight(Math.max(highlightIndex - 1, 0));
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (highlightIndex >= 0 && filteredItems[highlightIndex]) {
+                    selectItem(filteredItems[highlightIndex]);
+                } else if (filteredItems.length === 1) {
+                    selectItem(filteredItems[0]);
+                }
+            } else if (e.key === 'Escape') {
+                dropdown.style.display = 'none';
+                searchInput.value = selectedItem ? selectedItem.item_name : '';
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
     };
 
-    setupInputAutocomplete('modal-item-name', 'modal-item-name-suggestions', 'modal-item-category', 'modal-market-price-hint');
-    setupInputAutocomplete('modal-purchase-item-name', 'modal-purchase-item-name-suggestions', 'modal-purchase-item-category');
+    // ── Add Listing modal ────────────────────────────────────────────────────
+    setupLockedItemSelect('modal-item-name', 'modal-item-name-suggestions', 'modal-item-category', (selectedItem) => {
+        let marketData = null;
+        if (selectedItem.pax_dei_slug) {
+            const slugData = getMarketDataForSlug(selectedItem.pax_dei_slug);
+            if (slugData) {
+                const slugName = getItemNameForSlug(selectedItem.pax_dei_slug);
+                const nameMatches = slugName && slugName.toLowerCase().trim() === selectedItem.item_name.toLowerCase().trim();
+                if (nameMatches) {
+                    marketData = slugData;
+                } else {
+                    console.warn(`[Trader] pax_dei_slug mismatch for "${selectedItem.item_name}": slug "${selectedItem.pax_dei_slug}" resolves to "${slugName}" — falling back to name lookup.`);
+                }
+            }
+        }
+        if (!marketData) marketData = getMarketDataByItemName(selectedItem.item_name);
+        _addListingMarketData = marketData || null;
 
+        const savedHash = getSavedAvatarHash();
+        if (savedHash) {
+            let gtItemId = null;
+            if (selectedItem.pax_dei_slug) {
+                const slugName = getItemNameForSlug(selectedItem.pax_dei_slug);
+                const slugValid = slugName && slugName.toLowerCase().trim() === selectedItem.item_name.toLowerCase().trim();
+                if (slugValid) gtItemId = selectedItem.pax_dei_slug;
+            }
+            if (!gtItemId) gtItemId = getItemIdByName(selectedItem.item_name);
+            _addListingOwnCount = gtItemId ? getOwnListingCountForSlug(savedHash, gtItemId).ownCount : 0;
+        } else {
+            _addListingOwnCount = 0;
+        }
+
+        if (!marketData) {
+            const hintEl = document.getElementById('modal-market-price-hint');
+            if (hintEl) {
+                hintEl.innerHTML = '<span class="text-gray-400 text-sm"><i class="fas fa-globe text-sm mr-1 text-gray-500"></i>No market data for this item in your zone.</span>';
+                hintEl.classList.remove('hidden');
+            }
+        }
+
+        if (currentCharacterId && selectedItem.item_id) {
+            _addListingHistoryData = null;
+            _addListingHistoryLoading = true;
+            if (marketData) renderAddListingHint();
+            fetchItemSalesHistory(selectedItem.item_id).then((hist) => {
+                _addListingHistoryData = hist;
+                _addListingHistoryLoading = false;
+                renderAddListingHint();
+            });
+        } else {
+            _addListingHistoryData = null;
+            _addListingHistoryLoading = false;
+            if (marketData) renderAddListingHint();
+        }
+    });
+
+    // ── Record Purchase modal ────────────────────────────────────────────────
+    setupLockedItemSelect('modal-purchase-item-name', 'modal-purchase-item-name-suggestions', 'modal-purchase-item-category', null);
+
+    // ── Listings filter ──────────────────────────────────────────────────────
     const filterListingItemNameInput = document.getElementById('filter-listing-item-name');
     const filterListingItemNameSuggestions = document.getElementById('filter-listing-item-name-suggestions');
-
     if (filterListingItemNameInput && filterListingItemNameSuggestions) {
-        setupCustomAutocomplete(filterListingItemNameInput, filterListingItemNameSuggestions, allItems, (selectedItem) => {
+        setupLockedItemSelect('filter-listing-item-name', 'filter-listing-item-name-suggestions', null, (selectedItem) => {
             filterListingItemNameInput.value = selectedItem.item_name;
         });
     }
