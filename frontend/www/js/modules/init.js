@@ -114,6 +114,7 @@ export const fetchAndPopulateCategories = async (selectElement) => {
 
 export const initializeListings = async (userId) => {
     setCurrentUserId(userId);
+    window._pdaLoadListings = (stallId) => loadActiveListings(stallId ?? null);
     addListingsEventListeners();
     await Promise.all([
         itemCategorySelect && fetchAndPopulateCategories(itemCategorySelect),
@@ -241,16 +242,16 @@ const addListingsEventListeners = () => {
 export const loadActiveListings = async (marketStallId = null) => {
     const { targetTable, actualListingsBody, targetLoader } = getMarketStallDomElements(marketStallId);
 
+    // Ensure static table is visible (it's the single render target)
+    if (targetTable) targetTable.style.display = 'table';
+    if (targetLoader) targetLoader.style.display = 'none';
+
     if (!currentCharacterId) {
-        targetLoader.style.display = 'none';
-        targetTable.style.display = 'table';
         if (actualListingsBody) {
-            actualListingsBody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Please select a character or create one to view listings.</td></tr>';
+            actualListingsBody.innerHTML = '<tr><td colspan="10" class="text-center py-4">Please select a character or create one to view listings.</td></tr>';
         }
         return;
     }
-    targetLoader.style.display = 'block';
-    targetTable.style.display = 'none';
 
     const currentPage = getCurrentListingsPage(marketStallId);
 
@@ -285,11 +286,8 @@ export const loadActiveListings = async (marketStallId = null) => {
     } catch (e) {
         console.error("Error loading active listings:", e.message);
         if (actualListingsBody) {
-            actualListingsBody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-red-500">Error loading listings: ${e.message}</td></tr>`;
+            actualListingsBody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-red-500">Error loading listings: ${e.message}</td></tr>`;
         }
-    } finally {
-        targetLoader.style.display = 'none';
-        targetTable.style.display = 'table';
     }
 };
 
@@ -417,14 +415,8 @@ export const setupMarketStallTabs = async () => {
                     btn.classList.remove('bg-blue-500', 'text-white');
                     btn.classList.add('bg-gray-200', 'text-gray-700');
                 });
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    content.classList.add('hidden');
-                });
-
                 tabButton.classList.remove('bg-gray-200', 'text-gray-700');
                 tabButton.classList.add('bg-blue-500', 'text-white');
-
-                tabContent.classList.remove('hidden');
 
                 const lastPage = stallPageMap[stall.id] || 1;
                 setCurrentListingsPage(lastPage, stall.id);
@@ -438,10 +430,7 @@ export const setupMarketStallTabs = async () => {
                         firstTabButton.classList.remove('bg-gray-200', 'text-gray-700');
                         firstTabButton.classList.add('bg-blue-500', 'text-white');
                     }
-                    const firstTabContent = document.getElementById(`listings-for-${firstStallId}`);
-                    if (firstTabContent) {
-                        firstTabContent.classList.remove('hidden');
-                    }
+                    // Tab content divs are decorative only — static table is always the render target
                     const lastPage = stallPageMap[firstStallId] || 1;
                     setCurrentListingsPage(lastPage, firstStallId);
                     loadActiveListings(firstStallId);

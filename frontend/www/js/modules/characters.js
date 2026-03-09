@@ -834,9 +834,9 @@ export const getCurrentCharacter = async (forceRefresh = false) => {
 
     const { data, error } = await supabase
         .from('characters')
-        .select('character_id, character_name, gold')
+        .select('character_id, character_name, gold, shard, province, home_valley')
         .eq('character_id', currentCharacterId)
-        .single();
+        .maybeSingle();
 
     if (error) {
         console.error('Error fetching current character:', error.message);

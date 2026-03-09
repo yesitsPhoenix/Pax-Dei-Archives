@@ -4,27 +4,8 @@ const sidebar = document.getElementById('sidebar');
 
 // Function to update alert badge position based on sidebar state
 export function updateAlertBadgePosition() {
-    const alertBadge = document.getElementById('sidebarAlertBadge');
-    const sidebar = document.getElementById('sidebar');
-    
-    if (!alertBadge) return;
-    
-    // Only reposition if there's content (not hidden)
-    if (!alertBadge.classList.contains('hidden')) {
-        if (sidebar && sidebar.classList.contains('collapsed')) {
-            // When collapsed, center the badge on the icon using !important to override Tailwind
-            alertBadge.style.setProperty('right', 'auto', 'important');
-            alertBadge.style.setProperty('left', '50%', 'important');
-            alertBadge.style.setProperty('transform', 'translateX(-50%)', 'important');
-            alertBadge.style.setProperty('top', '-8px', 'important');
-        } else {
-            // When expanded, remove inline styles to let Tailwind classes take over
-            alertBadge.style.removeProperty('right');
-            alertBadge.style.removeProperty('left');
-            alertBadge.style.removeProperty('transform');
-            alertBadge.style.removeProperty('top');
-        }
-    }
+    // Badge positioning is now handled entirely by CSS (sidebar.css).
+    // This function is kept as a no-op to avoid breaking existing callers.
 }
 
 document.addEventListener('DOMContentLoaded', () => {

@@ -5,14 +5,15 @@ import {
     getCurrentListingsPage,
     setCurrentListingsPage
 } from './dom.js';
-import {
-    loadActiveListings
-} from './init.js';
+import { getMarketDataForSlug, getMarketDataByItemName, getItemData } from '../services/gamingToolsService.js';
 
-export const renderListingsTable = (listings) => {
-    listingsBody.innerHTML = '';
+export const renderListingsTable = (listings, actualListingsBody) => {
+    const targetBody = actualListingsBody || listingsBody;
+    if (!targetBody) return;
+
+    targetBody.innerHTML = '';
     if (listings.length === 0) {
-        listingsBody.innerHTML = '<tr><td colspan="9" class="text-center py-4">No listings found for the current filters.</td></tr>';
+        targetBody.innerHTML = '<tr><td colspan="10" class="text-center py-4">No listings found for the current filters.</td></tr>';
         return;
     }
 
@@ -20,11 +21,95 @@ export const renderListingsTable = (listings) => {
         const paxDeiSlug = listing.pax_dei_slug ||
             (listing.items && listing.items.pax_dei_slug);
 
-        const paxDeiUrl = paxDeiSlug ? `https://paxdei.gaming.tools/${paxDeiSlug}` : '#';
-
-        const isLinkEnabled = !!paxDeiSlug;
+        // Use items.json URL if available (has correct category path), else fallback
+        const itemData = paxDeiSlug ? getItemData(paxDeiSlug) : null;
+        const paxDeiUrl = itemData?.url || (paxDeiSlug ? `https://paxdei.gaming.tools/${paxDeiSlug}` : '#');
+        const isLinkEnabled = !!(itemData?.url || paxDeiSlug);
         const linkClasses = isLinkEnabled ? 'text-blue-600 hover:underline' : 'text-gray-700 cursor-default';
         const linkTarget = isLinkEnabled ? 'target="_blank"' : '';
+
+        // Market Low column — try slug first, fall back to display name via items.json
+        const myPrice = parseFloat(listing.listed_price_per_unit) || 0;
+        const marketData = (paxDeiSlug ? getMarketDataForSlug(paxDeiSlug) : null)
+            ?? getMarketDataByItemName(listing.item_name);
+        let marketLowCell;
+
+        if (!marketData) {
+            marketLowCell = `<td class="py-3 px-6 text-left text-gray-500 text-md">—</td>`;
+        } else {
+            const { marketLow, totalListings } = marketData;
+            const priceDiff = myPrice - marketLow;
+            const priceDiffPct = marketLow > 0 ? (priceDiff / marketLow) * 100 : 0;
+
+            // Smart gold formatter: enough precision to be meaningful at low values
+            const fmtGold = (v) => {
+                if (v >= 1000) return v.toLocaleString(undefined, { maximumFractionDigits: 0 }) + 'g';
+                if (v >= 100)  return v.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'g';
+                return v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + 'g';
+            };
+
+            const absDiff = Math.abs(priceDiff);
+            const diffStr = fmtGold(absDiff);
+            const pctStr = priceDiffPct.toFixed(0) + '%';
+
+            // Tiered thresholds based on actual market price distribution:
+            // 65% of items sell under 10g, 82% under 50g — flat % thresholds are misleading at low values.
+            // Green uses OR (either condition alone keeps it green).
+            // Yellow/Red use AND (must exceed both gates to trigger).
+            let yellowGoldGate, yellowPctGate, redGoldGate, redPctGate;
+            if (marketLow < 10) {
+                yellowGoldGate = 0.5;  yellowPctGate = 10;
+                redGoldGate    = 2;    redPctGate    = 30;
+            } else if (marketLow < 100) {
+                yellowGoldGate = 3;    yellowPctGate = 10;
+                redGoldGate    = 10;   redPctGate    = 25;
+            } else if (marketLow < 500) {
+                yellowGoldGate = 15;   yellowPctGate = 8;
+                redGoldGate    = 50;   redPctGate    = 20;
+            } else {
+                yellowGoldGate = 50;   yellowPctGate = 5;
+                redGoldGate    = 150;  redPctGate    = 15;
+            }
+
+            const isRed    = priceDiff > redGoldGate    && priceDiffPct > redPctGate;
+            const isYellow = !isRed && (priceDiff > yellowGoldGate && priceDiffPct > yellowPctGate);
+
+            let colorClass, icon, tipText, diffLabel;
+            if (myPrice <= marketLow) {
+                colorClass = 'text-emerald-400';
+                icon = '<i class="fas fa-check-circle text-md ml-1"></i>';
+                diffLabel = myPrice < marketLow
+                    ? `<span class="text-emerald-500 text-md">-${diffStr} (${pctStr} below)</span>`
+                    : `<span class="text-emerald-500 text-md">= market low</span>`;
+                tipText = `Your price (${fmtGold(myPrice)}) is at or below<br>the home valley low of <strong>${fmtGold(marketLow)}</strong>/unit`;
+            } else if (isRed) {
+                colorClass = 'text-red-400';
+                icon = '<i class="fas fa-arrow-up text-md ml-1"></i>';
+                diffLabel = `<span class="text-red-500 text-md">+${diffStr} (+${pctStr})</span>`;
+                tipText = `Your price (${fmtGold(myPrice)}) is <strong>+${diffStr} (+${pctStr})</strong><br>above the home valley low of <strong>${fmtGold(marketLow)}</strong>/unit`;
+            } else if (isYellow) {
+                colorClass = 'text-yellow-400';
+                icon = '<i class="fas fa-equals text-md ml-1"></i>';
+                diffLabel = `<span class="text-yellow-500 text-md">+${diffStr} (+${pctStr})</span>`;
+                tipText = `Your price (${fmtGold(myPrice)}) is <strong>+${diffStr} (+${pctStr})</strong><br>above the home valley low of <strong>${fmtGold(marketLow)}</strong>/unit`;
+            } else {
+                // Above market but within acceptable range for this price tier
+                colorClass = 'text-emerald-400';
+                icon = '<i class="fas fa-check-circle text-md ml-1"></i>';
+                diffLabel = `<span class="text-emerald-500 text-md">+${diffStr} (+${pctStr})</span>`;
+                tipText = `Your price (${fmtGold(myPrice)}) is <strong>+${diffStr} (+${pctStr})</strong><br>above the home valley low of <strong>${fmtGold(marketLow)}</strong>/unit<br><span style='color:#6b7280;font-size:0.85em'>Within acceptable range for this price tier</span>`;
+            }
+
+            const tipHtml = `<div class='text-gray-400 text-md mb-1' style='border-bottom:1px solid #334155;padding-bottom:4px;margin-bottom:4px'>${totalListings} listings &middot; gaming.tools</div><div class='${colorClass}'>${tipText}</div>`.replace(/"/g, '&quot;');
+            marketLowCell = `
+                <td class="py-3 px-6 text-left pda-cell-tip" data-tip-html="${tipHtml}">
+                    <span class="${colorClass} font-medium text-md">
+                        ${fmtGold(marketLow)}${icon}
+                    </span>
+                    <div class="mt-0.5">${diffLabel}</div>
+                    <div class="text-gray-500 text-md">${totalListings} listed</div>
+                </td>`;
+        }
 
         const row = document.createElement('tr');
         row.dataset.listingId = listing.listing_id;
@@ -45,6 +130,7 @@ export const renderListingsTable = (listings) => {
             <td class="py-3 px-6 text-left">${Math.round(listing.total_listed_price || 0).toLocaleString()}</td>
             <td class="py-3 px-6 text-left">${Math.round(listing.market_fee || 0).toLocaleString()}</td>
             <td class="py-3 px-6 text-left">${new Date(listing.listing_date).toISOString().substring(0, 10)}</td>
+            ${marketLowCell}
             <td class="py-3 px-6 text-left">
                 <div class="flex gap-2 whitespace-nowrap">
                     ${!listing.is_cancelled && !listing.is_fully_sold ? `
@@ -55,7 +141,7 @@ export const renderListingsTable = (listings) => {
                 </div>
             </td>
         `;
-        listingsBody.appendChild(row);
+        targetBody.appendChild(row);
     });
 };
 
@@ -84,7 +170,7 @@ export const renderListingsPagination = (totalCount, marketStallId) => {
         if (!disabled) {
             button.addEventListener('click', () => {
                 setCurrentListingsPage(page, marketStallId);
-                loadActiveListings(marketStallId);
+                if (typeof window._pdaLoadListings === 'function') window._pdaLoadListings(marketStallId);
             });
         }
         return button;

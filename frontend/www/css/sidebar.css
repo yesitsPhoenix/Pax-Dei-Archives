@@ -57,8 +57,18 @@
     flex-shrink: 0;
     display: block;
 }
-#sidebar.collapsed span {
+#sidebar.collapsed span:not(#sidebarAlertBadge) {
     display: none !important;
+}
+
+#sidebar.collapsed #sidebarAlertBadge:not(.hidden) {
+    display: flex !important;
+    position: absolute;
+    top: -4px;
+    right: 2px;
+    left: auto;
+    transform: none;
+    z-index: 10;
 }
 
 #sidebar svg {

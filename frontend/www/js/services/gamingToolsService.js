@@ -1,0 +1,393 @@
+/**
+ * gamingToolsService.js
+ *
+ * Integration with the paxdei.gaming.tools public market API.
+ * Data updates hourly on their end; we cache responses for 45 minutes.
+ * No authentication required. All hashing runs client-side.
+ *
+ * API reference: https://paxdei.gaming.tools/market/api
+ *
+ * URL structure: https://data-cdn.gaming.tools/paxdei/market/{world}/{domain}/{zone}.json
+ *   world  = character.shard      (e.g. "demeter", "tyr", "sif")
+ *   domain = character.province   (e.g. "merrie", "ancien", "inis_gallia", "kerys")
+ *   zone   = character.home_valley (e.g. "shire", "yarborn", "salias")
+ */
+
+const API_BASE = 'https://data-cdn.gaming.tools/paxdei/market';
+const CACHE_TTL_MS = 45 * 60 * 1000; // 45 minutes
+const CACHE_PREFIX = 'pda_gt_';
+
+// ── Module-level state ──────────────────────────────────────────────────────
+
+/** Price map for the currently active character's zone. */
+let _currentPriceMap = null;
+
+/** Name-based lookup map: English display name (lowercase) → item_id */
+let _currentNameMap = null;
+
+/** Items data from items.json: item_id → { name, url } */
+let _itemsData = null;
+
+/** Raw zone listings for the currently active character's zone. */
+let _currentZoneListings = [];
+
+/** Whether a zone fetch is currently in flight (prevent duplicate calls). */
+let _fetchInProgress = false;
+
+// ── Session cache helpers ───────────────────────────────────────────────────
+
+function cacheGet(key) {
+    try {
+        const raw = sessionStorage.getItem(CACHE_PREFIX + key);
+        if (!raw) return null;
+        const { data, ts } = JSON.parse(raw);
+        if (Date.now() - ts > CACHE_TTL_MS) {
+            sessionStorage.removeItem(CACHE_PREFIX + key);
+            return null;
+        }
+        return data;
+    } catch {
+        return null;
+    }
+}
+
+function cacheSet(key, data) {
+    try {
+        sessionStorage.setItem(CACHE_PREFIX + key, JSON.stringify({ data, ts: Date.now() }));
+    } catch {
+        // Silently fail on quota exceeded
+    }
+}
+
+// ── URL normalization ───────────────────────────────────────────────────────
+
+/**
+ * Converts a display string to the API slug format.
+ * e.g. "Inis Gallia" → "inis_gallia", "Merrie" → "merrie"
+ */
+function toApiSlug(str) {
+    if (!str) return '';
+    return str.toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+}
+
+// ── API fetching ────────────────────────────────────────────────────────────
+
+/**
+ * Fetches active market listings for a character's home valley zone.
+ * @param {string} shard      - e.g. "Demeter"
+ * @param {string} province   - e.g. "Merrie"
+ * @param {string} homeValley - e.g. "Shire"
+ * @returns {Promise<Array>}  raw listing objects from gaming.tools
+ */
+export async function fetchZoneListings(shard, province, homeValley) {
+    const world = toApiSlug(shard);
+    const domain = toApiSlug(province);
+    const zone = toApiSlug(homeValley);
+
+    if (!world || !domain || !zone) {
+        throw new Error(`Character zone data incomplete (shard="${shard}", province="${province}", homeValley="${homeValley}")`);
+    }
+
+    const cacheKey = `zone_${world}_${domain}_${zone}`;
+    const cached = cacheGet(cacheKey);
+    if (cached) return cached;
+
+    const url = `${API_BASE}/${world}/${domain}/${zone}.json`;
+    const res = await fetch(url);
+    if (!res.ok) {
+        throw new Error(`Zone not found in gaming.tools API: ${world}/${domain}/${zone}`);
+    }
+    const data = await res.json();
+    cacheSet(cacheKey, data);
+    return data;
+}
+
+/**
+ * Fetches and caches the gaming.tools items dictionary (item_id → { name, url }).
+ * Loaded once per session; persists across zone changes.
+ * @returns {Promise<Object>}
+ */
+export async function loadItemsData() {
+    if (_itemsData) return _itemsData;
+    const cached = cacheGet('items_data');
+    if (cached) {
+        _itemsData = cached;
+        return _itemsData;
+    }
+    try {
+        const res = await fetch(`${API_BASE}/items.json`);
+        if (!res.ok) throw new Error('items.json fetch failed');
+        const raw = await res.json();
+        _itemsData = {};
+        for (const [id, item] of Object.entries(raw)) {
+            _itemsData[id] = {
+                name: item.name?.En || id,
+                url: item.url || null
+            };
+        }
+        cacheSet('items_data', _itemsData);
+    } catch (e) {
+        console.warn('[GamingTools] items.json load failed:', e.message);
+        _itemsData = {};
+    }
+    return _itemsData;
+}
+
+/**
+ * Loads zone listings for a character and stores the results in module-level state.
+ * Safe to call multiple times; prevents duplicate in-flight requests.
+ *
+ * @param {object} character - Must include shard, province, home_valley
+ * @returns {Promise<{ priceMap: object, zoneSummary: object }|null>}
+ */
+export async function loadZoneDataForCharacter(character) {
+    if (_fetchInProgress) return null;
+    if (!character?.shard || !character?.province || !character?.home_valley) return null;
+
+    _fetchInProgress = true;
+    try {
+        const [listings] = await Promise.all([
+            fetchZoneListings(character.shard, character.province, character.home_valley),
+            loadItemsData()
+        ]);
+        _currentZoneListings = listings;
+        _currentPriceMap = buildMarketPriceMap(listings);
+        _currentNameMap = buildNameMap(_currentPriceMap);
+
+        return {
+            priceMap: _currentPriceMap,
+            zoneSummary: buildZoneSummary(listings),
+            listings
+        };
+    } catch (err) {
+        console.warn('[GamingTools] Zone data unavailable:', err.message);
+        _currentZoneListings = [];
+        _currentPriceMap = null;
+        return null;
+    } finally {
+        _fetchInProgress = false;
+    }
+}
+
+/**
+ * Clears the current zone state (call when character changes).
+ */
+export function clearZoneData() {
+    _currentPriceMap = null;
+    _currentNameMap = null;
+    _currentZoneListings = [];
+}
+
+// ── Price map ───────────────────────────────────────────────────────────────
+
+/**
+ * Builds a price lookup map from raw zone listings.
+ * Keys are pax_dei_slug (= item_id in gaming.tools).
+ *
+ * @param {Array} zoneListings
+ * @returns {Object<string, { marketLow: number, marketAvg: number, totalListings: number }>}
+ */
+export function buildMarketPriceMap(zoneListings) {
+    const grouped = {};
+    for (const listing of zoneListings) {
+        const slug = listing.item_id;
+        if (!grouped[slug]) grouped[slug] = [];
+        const qty = listing.quantity || 1;
+        grouped[slug].push(listing.price / qty); // price is total stack price; convert to per-unit
+    }
+    const result = {};
+    for (const [slug, prices] of Object.entries(grouped)) {
+        const sorted = prices.slice().sort((a, b) => a - b);
+        const sum = sorted.reduce((s, p) => s + p, 0);
+        result[slug] = {
+            marketLow: sorted[0],
+            marketAvg: parseFloat((sum / sorted.length).toFixed(2)),
+            totalListings: sorted.length
+        };
+    }
+    return result;
+}
+
+/**
+ * Builds a name-based lookup map for items in the current zone price map.
+ * Keys are lowercase English display names (from items.json).
+ * Values are item_ids, used to then look up the price map.
+ *
+ * @param {Object} priceMap - from buildMarketPriceMap()
+ * @returns {Object<string, string>} lowercase name → item_id
+ */
+function buildNameMap(priceMap) {
+    const nameMap = {};
+    if (!_itemsData) return nameMap;
+    for (const itemId of Object.keys(priceMap)) {
+        const item = _itemsData[itemId];
+        if (item?.name) {
+            nameMap[item.name.toLowerCase()] = itemId;
+        }
+    }
+    return nameMap;
+}
+
+/**
+ * Looks up market price data for a single item slug using current zone state.
+ * Returns null if no zone data is loaded or the item has no listings.
+ *
+ * @param {string} paxDeiSlug
+ * @returns {{ marketLow: number, marketAvg: number, totalListings: number }|null}
+ */
+export function getMarketDataForSlug(paxDeiSlug) {
+    if (!_currentPriceMap || !paxDeiSlug) return null;
+    return _currentPriceMap[paxDeiSlug] || null;
+}
+
+/**
+ * Returns the English display name for a given slug/item_id from items.json.
+ * Used to cross-check that a slug lookup actually refers to the expected item.
+ *
+ * @param {string} paxDeiSlug
+ * @returns {string|null}
+ */
+export function getItemNameForSlug(paxDeiSlug) {
+    if (!_itemsData || !paxDeiSlug) return null;
+    return _itemsData[paxDeiSlug]?.name || null;
+}
+
+/**
+ * Looks up market price data by English display name (e.g. "Iron Skinning Knife").
+ * Uses the items.json name → item_id map, then the price map.
+ * Used as a fallback when pax_dei_slug is not populated in the DB.
+ *
+ * @param {string} itemName - Display name as stored in the DB
+ * @returns {{ marketLow: number, marketAvg: number, totalListings: number }|null}
+ */
+export function getMarketDataByItemName(itemName) {
+    if (!_currentNameMap || !_currentPriceMap || !itemName) return null;
+    const itemId = _currentNameMap[itemName.toLowerCase().trim()];
+    return itemId ? (_currentPriceMap[itemId] || null) : null;
+}
+
+/**
+ * Returns name and URL for a given item_id from the items.json dictionary.
+ *
+ * @param {string} itemId - e.g. "wearable_leather_hands_pilgrim_0_t4_common"
+ * @returns {{ name: string, url: string }|null}
+ */
+export function getItemData(itemId) {
+    if (!_itemsData || !itemId) return null;
+    return _itemsData[itemId] || null;
+}
+
+/**
+ * Returns the current price map (or null).
+ */
+export function getCurrentPriceMap() {
+    return _currentPriceMap;
+}
+
+// ── Zone summary ────────────────────────────────────────────────────────────
+
+/**
+ * Builds a human-readable summary of the zone's market activity.
+ *
+ * @param {Array} zoneListings
+ * @returns {{ totalListings: number, uniqueSellers: number, uniqueItems: number, topItemSlug: string|null, topItemCount: number }}
+ */
+export function buildZoneSummary(zoneListings) {
+    if (!zoneListings || zoneListings.length === 0) {
+        return { totalListings: 0, uniqueSellers: 0, uniqueItems: 0, topItemSlug: null, topItemCount: 0 };
+    }
+    const totalListings = zoneListings.length;
+    const uniqueSellers = new Set(zoneListings.map(l => l.avatar_hash)).size;
+    const uniqueItems = new Set(zoneListings.map(l => l.item_id)).size;
+
+    const itemCounts = {};
+    for (const l of zoneListings) {
+        itemCounts[l.item_id] = (itemCounts[l.item_id] || 0) + 1;
+    }
+    const sorted = Object.entries(itemCounts).sort((a, b) => b[1] - a[1]);
+    const topItemSlug = sorted[0]?.[0] || null;
+    const topItemCount = sorted[0]?.[1] || 0;
+
+    return { totalListings, uniqueSellers, uniqueItems, topItemSlug, topItemCount };
+}
+
+// ── Avatar ID hashing ───────────────────────────────────────────────────────
+
+let _xxhashInstance = null;
+
+async function getXxHash() {
+    if (_xxhashInstance) return _xxhashInstance;
+    try {
+        const mod = await import('https://cdn.jsdelivr.net/npm/xxhash-wasm@1.1.0/esm/xxhash-wasm.js');
+        const init = mod.default ?? mod;
+        _xxhashInstance = await init();
+    } catch (e) {
+        console.warn('[GamingTools] xxhash-wasm failed to load:', e);
+        _xxhashInstance = null;
+    }
+    return _xxhashInstance;
+}
+
+/**
+ * Computes the xxHash64 of an Avatar ID string (the same algorithm gaming.tools uses).
+ * Runs entirely client-side. The raw Avatar ID is never stored or transmitted.
+ *
+ * @param {string} avatarId - UUID string from PaxDei.log
+ * @returns {Promise<string|null>} 16-char lowercase hex string, or null on failure
+ */
+export async function hashAvatarId(avatarId) {
+    if (!avatarId?.trim()) return null;
+    const hasher = await getXxHash();
+    if (!hasher) return null;
+    try {
+        const hash = hasher.h64(avatarId.trim());
+        return hash.toString(16).padStart(16, '0');
+    } catch (e) {
+        console.warn('[GamingTools] Hashing failed:', e);
+        return null;
+    }
+}
+
+// ── Own listing identification ──────────────────────────────────────────────
+
+/**
+ * Returns listings from the current zone data that match the given avatar hash.
+ *
+ * @param {string} avatarHash - 16-char hex from hashAvatarId()
+ * @returns {Array} matching listing objects
+ */
+export function findOwnListings(avatarHash) {
+    if (!avatarHash || !_currentZoneListings.length) return [];
+    return _currentZoneListings.filter(l => l.avatar_hash === avatarHash);
+}
+
+/**
+ * Returns a summary of the player's own external listings.
+ *
+ * @param {Array} ownListings - from findOwnListings()
+ * @returns {{ totalCount: number, totalValue: number, uniqueItems: number }}
+ */
+export function summarizeOwnListings(ownListings) {
+    const totalCount = ownListings.length;
+    const totalValue = ownListings.reduce((sum, l) => sum + (l.price * (l.quantity || 1)), 0);
+    const uniqueItems = new Set(ownListings.map(l => l.item_id)).size;
+    return { totalCount, totalValue, uniqueItems };
+}
+
+// ── Avatar hash persistence (session only — never stores the raw ID) ─────────
+
+export function getSavedAvatarHash() {
+    return localStorage.getItem('pda_avatar_hash') || null;
+}
+
+export function saveAvatarHash(hash) {
+    if (hash) {
+        localStorage.setItem('pda_avatar_hash', hash);
+    } else {
+        localStorage.removeItem('pda_avatar_hash');
+    }
+}
+
+export function clearAvatarHash() {
+    localStorage.removeItem('pda_avatar_hash');
+}

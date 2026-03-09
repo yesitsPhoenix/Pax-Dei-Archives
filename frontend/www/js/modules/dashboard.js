@@ -1,4 +1,5 @@
 import { updateAlertBadgePosition } from '../sidebar.js';
+import { getItemData } from '../services/gamingToolsService.js';
 
 const grossSalesEl = document.getElementById('dashboard-gross-sales');
 const feesPaidEl = document.getElementById('dashboard-fees-paid');
@@ -63,7 +64,7 @@ export const renderDashboard = async (dashboardStats, characterData, allActivity
     netProfitEl.innerHTML = `${formatCurrency(netProfit)} <i class="fas fa-coins"></i>`;
     activeListingsEl.innerHTML = `${activeListingsCount} <i class="fa-solid fa-list"></i>`;
     if (totalPurchasesEl) {
-        totalPurchasesEl.innerHTML = `${formatCurrency(totalPurchases)} <i class="fa-solid fa-shopping-cart"></i>`;
+        totalPurchasesEl.textContent = formatCurrency(totalPurchases);
     }
     currentHoldingsEl.innerHTML = `${formatCurrency(currentGoldHoldings)} <i class="fa-solid fa-sack-dollar"></i>`;
     earnedPveGoldEl.innerHTML = `${formatCurrency(pveGoldTotal)} <i class="fa-solid fa-hand-holding-dollar"></i>`;
@@ -352,4 +353,74 @@ function updateSidebarAlertBadge(count) {
     } else {
         alertBadge.classList.add('hidden');
     }
+}
+
+/**
+ * Renders the Market Pulse section with live gaming.tools zone data.
+ *
+ * @param {object|null} zoneSummary     - from gamingToolsService.buildZoneSummary()
+ * @param {object|null} ownSummary      - from gamingToolsService.summarizeOwnListings()
+ * @param {object|null} character       - character object with shard/province/home_valley
+ * @param {boolean}     loading         - show loading state
+ * @param {string|null} errorMsg        - show error message instead
+ */
+export function renderMarketPulse(zoneSummary, ownSummary, character, loading = false, errorMsg = null) {
+    const section = document.getElementById('market-pulse-section');
+    if (!section) return;
+
+    const zoneLabel = character
+        ? `${character.shard ?? '—'} · ${character.province ?? '—'} · ${character.home_valley ?? '—'}`
+        : 'No character selected';
+
+    const pulseCards = document.getElementById('market-pulse-cards');
+    const pulseStatus = document.getElementById('market-pulse-status');
+    const ownListingsSummaryEl = document.getElementById('market-pulse-own-listings');
+    const zoneNameEl = document.getElementById('market-pulse-zone-name');
+
+    if (zoneNameEl) zoneNameEl.textContent = zoneLabel;
+
+    if (loading) {
+        if (pulseStatus) {
+            pulseStatus.innerHTML = '<span class="text-gray-400 text-sm"><i class="fas fa-spinner fa-spin mr-2"></i>Loading market data…</span>';
+            pulseStatus.classList.remove('hidden');
+        }
+        if (pulseCards) pulseCards.classList.add('opacity-50', 'pointer-events-none');
+        return;
+    }
+
+    if (pulseStatus) pulseStatus.classList.add('hidden');
+    if (pulseCards) pulseCards.classList.remove('opacity-50', 'pointer-events-none');
+
+    if (errorMsg) {
+        if (pulseStatus) {
+            pulseStatus.innerHTML = `<span class="text-amber-400 text-sm"><i class="fas fa-exclamation-triangle mr-2"></i>${errorMsg}</span>`;
+            pulseStatus.classList.remove('hidden');
+        }
+        return;
+    }
+
+    if (!zoneSummary) return;
+
+    const fmt = (n) => typeof n === 'number' ? n.toLocaleString() : '—';
+
+    const totalEl = document.getElementById('pulse-total-listings');
+    const sellersEl = document.getElementById('pulse-unique-sellers');
+    const itemsEl = document.getElementById('pulse-unique-items');
+    const topItemEl = document.getElementById('pulse-top-item');
+
+    if (totalEl) totalEl.textContent = fmt(zoneSummary.totalListings);
+    if (sellersEl) sellersEl.textContent = fmt(zoneSummary.uniqueSellers);
+    if (itemsEl) itemsEl.textContent = fmt(zoneSummary.uniqueItems);
+    if (topItemEl) {
+        if (zoneSummary.topItemSlug) {
+            const topItemData = getItemData(zoneSummary.topItemSlug);
+            const displayName = topItemData?.name || zoneSummary.topItemSlug.replace(/_/g, ' ');
+            const topItemUrl = topItemData?.url || `https://paxdei.gaming.tools/${zoneSummary.topItemSlug}`;
+            topItemEl.innerHTML = `<a href="${topItemUrl}" target="_blank" class="text-blue-400 hover:underline truncate block max-w-[180px]" title="${displayName}">${displayName}</a> <span class="text-gray-400">(${fmt(zoneSummary.topItemCount)})</span>`;
+        } else {
+            topItemEl.textContent = '—';
+        }
+    }
+
+
 }
