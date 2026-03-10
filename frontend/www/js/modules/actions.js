@@ -486,6 +486,12 @@ export const showEditListingModal = async (listingId) => {
         editQuantityListedInput.value = Math.round(listing.quantity_listed || 0);
         editTotalPriceInput.value = Math.round(listing.total_listed_price || 0);
         updateEditFeeInfo();
+        // Always reset button state in case a previous save left it stuck
+        const submitButton = editModal?.querySelector('button[type="submit"]');
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Save Changes';
+        }
         editModal.classList.remove('hidden');
         //console.log('Edit modal displayed.');
     } catch (e) {

@@ -438,6 +438,44 @@
                 </div>
             </div>
 
+            <!-- Valley Item Edit Modal (bulk-edit all listings for one item from valley presence context) -->
+            <div id="valleyItemEditModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center hidden" style="z-index:10001">
+                <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-blue-500/30 rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
+                    <div class="flex items-start justify-between mb-4">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-pen text-blue-400"></i>
+                                <h3 id="valleyItemEditTitle" class="text-white text-lg font-bold">Edit Listings</h3>
+                            </div>
+                            <p id="valleyItemEditSubtitle" class="text-gray-400 text-sm mt-1"></p>
+                        </div>
+                        <button id="valleyItemEditModalClose" class="text-gray-400 hover:text-white transition-colors text-xl leading-none">&times;</button>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-gray-300 text-sm font-semibold mb-1">New Total Price per Stack</label>
+                            <input type="number" id="valleyItemEditPrice" min="1" step="1"
+                                class="w-full bg-slate-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none border border-slate-600 text-lg">
+                            <p id="valleyItemEditFeeInfo" class="text-gray-400 text-xs mt-1.5"></p>
+                        </div>
+                    </div>
+                    <p id="valleyItemEditError" class="text-red-400 text-sm mt-3 hidden"></p>
+                    <div class="flex gap-3 mt-5">
+                        <button id="valleyItemEditSaveBtn"
+                            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                            Save All Listings
+                        </button>
+                        <button id="valleyItemEditCancelBtn"
+                            class="bg-slate-600 hover:bg-slate-500 text-gray-300 font-semibold py-2 px-4 rounded-lg transition-colors">
+                            Cancel
+                        </button>
+                    </div>
+                    <p class="text-white text-sm mt-3 italic">
+                        <i class="fas fa-info-circle mr-1"></i>Valley presence updates immediately. The gaming.tools market data syncs hourly — other players' prices may lag slightly.
+                    </p>
+                </div>
+            </div>
+
             <div id="quickGuideModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center hidden" style="z-index:10000">
                 <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-blue-500/30 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 p-6">
                     <div class="flex items-start justify-between mb-4">

@@ -436,6 +436,26 @@ export function summarizeOwnListings(ownListings) {
 }
 
 /**
+ * Patches the in-memory zone listings to immediately reflect a price change the
+ * player just saved in Archives — so the valley presence modal updates instantly
+ * rather than waiting for gaming.tools' next hourly sync.
+ *
+ * @param {string} avatarHash     - 16-char hex hash of the player's Avatar ID
+ * @param {string} itemId         - gaming.tools item_id (bare or path-prefixed)
+ * @param {number} newPricePerUnit - new per-unit price in gold
+ */
+export function updateOwnListingPrices(avatarHash, itemId, newPricePerUnit) {
+    if (!avatarHash || !itemId || !_currentZoneListings.length) return;
+    const bareId = toBareId(itemId);
+    for (const listing of _currentZoneListings) {
+        if (listing.avatar_hash === avatarHash && listing.item_id === bareId) {
+            // price in gaming.tools is total stack price; quantity is items per stack
+            listing.price = newPricePerUnit * Math.max(listing.quantity || 1, 1);
+        }
+    }
+}
+
+/**
  * Analyses the player's own listings against the rest of the valley.
  * For each item the player has listed, determines whether they are leading
  * (lowest price) or being undercut (someone else is cheaper).

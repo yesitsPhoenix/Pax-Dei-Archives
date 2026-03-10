@@ -1,6 +1,5 @@
 import { updateAlertBadgePosition } from '../sidebar.js';
-import { getItemData, getZoneDataAge, getSavedAvatarHash, analyzeOwnListings } from '../services/gamingToolsService.js';
-import { showEditListingModalByItemName } from './actions.js';
+import { getItemData, getZoneDataAge, getSavedAvatarHash, analyzeOwnListings, getMarketDataByItemName } from '../services/gamingToolsService.js';
 
 /** Cached result of the last analyzeOwnListings() call — used to populate the modal. */
 let _lastValleyAnalysis = null;
@@ -459,82 +458,168 @@ export function renderMarketPulse(zoneSummary, ownSummary, character, loading = 
         return;
     }
 
-    // Run the competitive analysis
-    const savedHash = getSavedAvatarHash();
-    _lastValleyAnalysis = savedHash ? analyzeOwnListings(savedHash) : null;
-
-    if (!_lastValleyAnalysis) {
-        ownPanel.innerHTML = `
-            <div class="flex items-center gap-2 text-gray-300 text-sm">
-                <i class="fas fa-store text-gray-400"></i>
-                No listings found for your Avatar ID in this home valley.
-            </div>`;
-        ownPanel.classList.remove('hidden');
-        return;
-    }
-
-    const { leading, undercut, valleySharePct } = _lastValleyAnalysis;
-
-    const leadingChip = leading.length > 0
-        ? `<span class="inline-flex items-center gap-1.5 bg-emerald-900/40 border border-emerald-500/40 rounded-full px-3 py-1 text-sm">
-               <i class="fas fa-trophy text-emerald-400 text-xs"></i>
-               <span class="text-white font-semibold">Leading on</span>
-               <span class="text-emerald-300 font-bold">${leading.length}</span>
-               <span class="text-white">${leading.length === 1 ? 'item' : 'items'}</span>
-           </span>`
-        : '';
-
-    const undercutChip = undercut.length > 0
-        ? `<span class="inline-flex items-center gap-1.5 bg-rose-900/40 border border-rose-500/40 rounded-full px-3 py-1 text-sm">
-               <i class="fas fa-triangle-exclamation text-rose-400 text-xs"></i>
-               <span class="text-white font-semibold">Undercut on</span>
-               <span class="text-rose-300 font-bold">${undercut.length}</span>
-               <span class="text-white">${undercut.length === 1 ? 'item' : 'items'}</span>
-           </span>`
-        : `<span class="inline-flex items-center gap-1.5 bg-slate-700/40 border border-slate-500/40 rounded-full px-3 py-1 text-sm">
-               <i class="fas fa-check text-gray-400 text-xs"></i>
-               <span class="text-white">Not undercut</span>
-           </span>`;
-
-    const shareChip = `<span class="inline-flex items-center gap-1.5 bg-blue-900/40 border border-blue-500/40 rounded-full px-3 py-1 text-sm">
-               <i class="fas fa-chart-pie text-blue-400 text-xs"></i>
-               <span class="text-white font-semibold">Valley share:</span>
-               <span class="text-blue-300 font-bold">${valleySharePct}%</span>
-           </span>`;
-
+    // Render chips from Supabase data (async — updates panel once data arrives)
     ownPanel.innerHTML = `
         <div class="flex flex-wrap items-center gap-2">
             <span class="flex items-center gap-1.5 mr-1">
                 <i class="fas fa-store text-emerald-400 text-sm"></i>
                 <span class="text-emerald-300 font-semibold text-sm">Your home valley presence</span>
-                <span class="text-gray-400 text-xs">(as seen by gaming.tools):</span>
             </span>
-            ${leadingChip}${undercutChip}${shareChip}
+            <span class="text-gray-400 text-xs italic"><i class="fas fa-spinner fa-spin mr-1"></i>Loading…</span>
             <button id="valley-presence-details-btn"
                 class="valley-details-btn ml-auto inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-amber-100 rounded-full transition-colors">
                 <i class="fas fa-magnifying-glass text-xs"></i> View Details
             </button>
         </div>`;
     ownPanel.classList.remove('hidden');
-
-    // Wire the button after innerHTML is set
     document.getElementById('valley-presence-details-btn')
         ?.addEventListener('click', openValleyPresenceModal);
+
+    // Fetch real counts from Supabase and update chips
+    buildValleyAnalysisFromSupabase().then(analysis => {
+        if (!analysis) return;
+        _lastValleyAnalysis = analysis;
+        const { leading, undercut, valleySharePct } = analysis;
+
+        const leadingChip = leading.length > 0
+            ? `<span class="inline-flex items-center gap-1.5 bg-emerald-900/40 border border-emerald-500/40 rounded-full px-3 py-1 text-sm">
+                   <i class="fas fa-trophy text-emerald-400 text-xs"></i>
+                   <span class="text-white font-semibold">Leading on</span>
+                   <span class="text-emerald-300 font-bold">${leading.length}</span>
+                   <span class="text-white">${leading.length === 1 ? 'item' : 'items'}</span>
+               </span>`
+            : '';
+
+        const undercutChip = undercut.length > 0
+            ? `<span class="inline-flex items-center gap-1.5 bg-rose-900/40 border border-rose-500/40 rounded-full px-3 py-1 text-sm">
+                   <i class="fas fa-triangle-exclamation text-rose-400 text-xs"></i>
+                   <span class="text-white font-semibold">Undercut on</span>
+                   <span class="text-rose-300 font-bold">${undercut.length}</span>
+                   <span class="text-white">${undercut.length === 1 ? 'item' : 'items'}</span>
+               </span>`
+            : `<span class="inline-flex items-center gap-1.5 bg-slate-700/40 border border-slate-500/40 rounded-full px-3 py-1 text-sm">
+                   <i class="fas fa-check text-gray-400 text-xs"></i>
+                   <span class="text-white">Not undercut</span>
+               </span>`;
+
+        const shareChip = `<span class="inline-flex items-center gap-1.5 bg-blue-900/40 border border-blue-500/40 rounded-full px-3 py-1 text-sm">
+                   <i class="fas fa-chart-pie text-blue-400 text-xs"></i>
+                   <span class="text-white font-semibold">Valley share:</span>
+                   <span class="text-blue-300 font-bold">${valleySharePct}%</span>
+               </span>`;
+
+        // Only update if panel is still showing (character hasn't changed)
+        if (ownPanel.isConnected) {
+            ownPanel.innerHTML = `
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="flex items-center gap-1.5 mr-1">
+                        <i class="fas fa-store text-emerald-400 text-sm"></i>
+                        <span class="text-emerald-300 font-semibold text-sm">Your home valley presence</span>
+                    </span>
+                    ${leadingChip}${undercutChip}${shareChip}
+                    <button id="valley-presence-details-btn"
+                        class="valley-details-btn ml-auto inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-amber-100 rounded-full transition-colors">
+                        <i class="fas fa-magnifying-glass text-xs"></i> View Details
+                    </button>
+                </div>`;
+            document.getElementById('valley-presence-details-btn')
+                ?.addEventListener('click', openValleyPresenceModal);
+        }
+    }).catch(err => console.error('[ValleyPresence] Chip update failed:', err));
+}
+
+/**
+ * Fetches the player's active Supabase listings, compares against gaming.tools
+ * market data, and returns a structured analysis. Shared by both the ledger
+ * page chips and the valley presence modal.
+ *
+ * @returns {Promise<{leading, undercut, valleySharePct, totalOwnListings, totalValleyListings}|null>}
+ */
+async function buildValleyAnalysisFromSupabase() {
+    try {
+        const { supabase }           = await import('../supabaseClient.js');
+        const { currentCharacterId } = await import('./characters.js');
+        if (!currentCharacterId) return null;
+
+        const { data: rawListings, error: fetchErr } = await supabase
+            .from('market_listings')
+            .select('listed_price_per_unit, quantity_listed, items(item_name)')
+            .eq('character_id', currentCharacterId)
+            .eq('is_cancelled', false)
+            .eq('is_fully_sold', false);
+
+        if (fetchErr) throw fetchErr;
+        if (!rawListings || rawListings.length === 0) return null;
+
+        // Build map: itemName → { minPrice, count }
+        const ownByName = {};
+        for (const listing of rawListings) {
+            const name = listing.items?.item_name;
+            if (!name) continue;
+            if (!ownByName[name]) ownByName[name] = { minPrice: Infinity, count: 0 };
+            ownByName[name].count++;
+            if (listing.listed_price_per_unit < ownByName[name].minPrice) {
+                ownByName[name].minPrice = listing.listed_price_per_unit;
+            }
+        }
+
+        const leading  = [];
+        const undercut = [];
+        let totalOwnListings = 0;
+
+        for (const [itemName, own] of Object.entries(ownByName)) {
+            totalOwnListings += own.count;
+            const mktData    = getMarketDataByItemName(itemName);
+            const marketLow  = mktData?.marketLow ?? null;
+            const totalCount = mktData?.totalListings ?? own.count;
+
+            if (marketLow === null) {
+                leading.push({ itemName, yourLow: own.minPrice, marketLow: own.minPrice, yourCount: own.count, totalCount, noGtData: true });
+                continue;
+            }
+            if (own.minPrice <= marketLow + 0.001) {
+                leading.push({ itemName, yourLow: own.minPrice, marketLow, yourCount: own.count, totalCount });
+            } else {
+                const gap    = own.minPrice - marketLow;
+                const gapPct = Math.round((gap / marketLow) * 100);
+                undercut.push({ itemName, yourLow: own.minPrice, marketLow, gap, gapPct, yourCount: own.count, totalCount });
+            }
+        }
+
+        undercut.sort((a, b) => b.gap - a.gap);
+        leading.sort((a, b) => a.itemName.localeCompare(b.itemName));
+
+        // Valley share uses gaming.tools avatar-hash data (best available for total count)
+        const gtAnalysis          = getSavedAvatarHash() ? analyzeOwnListings(getSavedAvatarHash()) : null;
+        const valleySharePct      = gtAnalysis?.valleySharePct      ?? 0;
+        const totalValleyListings = gtAnalysis?.totalValleyListings ?? 0;
+
+        return { leading, undercut, valleySharePct, totalOwnListings, totalValleyListings };
+    } catch (err) {
+        console.error('[ValleyPresence] buildValleyAnalysisFromSupabase error:', err);
+        return null;
+    }
 }
 
 /**
  * Populates and opens the Valley Presence details modal.
+ * Fetches YOUR listings from Supabase (always current), then compares
+ * against gaming.tools market data for Market Low / total counts.
  */
-export function openValleyPresenceModal() {
+export async function openValleyPresenceModal() {
     const modal = document.getElementById('valleyPresenceModal');
     const body  = document.getElementById('valleyPresenceModalBody');
     if (!modal || !body) return;
 
-    if (!_lastValleyAnalysis) {
-        body.innerHTML = '<p class="text-gray-400 text-sm">No data available.</p>';
-        modal.classList.remove('hidden');
+    modal.classList.remove('hidden');
+    body.innerHTML = '<p class="text-gray-400 text-sm flex items-center gap-2"><i class="fas fa-spinner fa-spin"></i> Loading your listings…</p>';
+
+    const analysis = await buildValleyAnalysisFromSupabase();
+    if (!analysis) {
+        body.innerHTML = '<p class="text-gray-400 text-sm">No active listings found for this character.</p>';
         return;
     }
+    _lastValleyAnalysis = analysis;
 
     const { leading, undercut, valleySharePct, totalOwnListings, totalValleyListings } = _lastValleyAnalysis;
     const fmt  = (n) => typeof n === 'number' ? n.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—';
@@ -549,7 +634,8 @@ export function openValleyPresenceModal() {
             <td class="py-2.5 px-3 text-gray-300 text-sm text-right">${item.yourCount} / ${item.totalCount}</td>
             <td class="py-2.5 px-3 text-right">
                 <button class="valley-edit-btn inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white rounded-full border border-blue-400/40 transition-colors"
-                    data-item-name="${item.itemName.replace(/"/g, '&quot;')}">
+                    data-item-name="${item.itemName.replace(/"/g, '&quot;')}"
+                    data-gt-item-id="${item.itemId}">
                     <i class="fas fa-pen text-xs"></i> Edit
                 </button>
             </td>
@@ -633,23 +719,210 @@ export function openValleyPresenceModal() {
 
     modal.classList.remove('hidden');
 
-    // Wire edit buttons — open the edit modal on top of this modal (z-index stacking)
-    const editModal = document.getElementById('editListingModal');
+    // Wire edit buttons — open the valley bulk edit modal
     body.querySelectorAll('.valley-edit-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const itemName = btn.dataset.itemName;
-            const opened = await showEditListingModalByItemName(itemName);
-            if (!opened) return; // No matching listing — stay on valley modal
-            // When edit modal closes, refresh the valley modal content in place
-            if (editModal) {
-                const observer = new MutationObserver(() => {
-                    if (editModal.classList.contains('hidden')) {
-                        observer.disconnect();
-                        openValleyPresenceModal();
-                    }
-                });
-                observer.observe(editModal, { attributes: true, attributeFilter: ['class'] });
-            }
+        btn.addEventListener('click', () => {
+            const itemName  = btn.dataset.itemName;
+            const gtItemId  = btn.dataset.gtItemId || null;
+            showValleyItemEditModal(itemName, gtItemId);
         });
     });
+}
+
+/**
+ * Opens a bulk-edit modal for all active listings of a given item from the valley presence context.
+ * Fetches all matching listings, lets the user set one new price, and applies it to all of them.
+ *
+ * @param {string} itemName - Display name of the item to edit
+ */
+async function showValleyItemEditModal(itemName, gtItemId = null) {
+    const editModal = document.getElementById('valleyItemEditModal');
+    if (!editModal) return;
+
+    const titleEl    = document.getElementById('valleyItemEditTitle');
+    const subtitleEl = document.getElementById('valleyItemEditSubtitle');
+    const priceInput = document.getElementById('valleyItemEditPrice');
+    const feeInfoEl  = document.getElementById('valleyItemEditFeeInfo');
+    const errorEl    = document.getElementById('valleyItemEditError');
+    const saveBtn    = document.getElementById('valleyItemEditSaveBtn');
+    const cancelBtn  = document.getElementById('valleyItemEditCancelBtn');
+    const closeBtn   = document.getElementById('valleyItemEditModalClose');
+
+    // Reset state
+    if (errorEl)    errorEl.classList.add('hidden');
+    if (saveBtn)  { saveBtn.disabled = false; saveBtn.textContent = 'Save All Listings'; }
+
+    const { supabase }           = await import('../supabaseClient.js');
+    const { currentCharacterId } = await import('./characters.js');
+
+    if (!currentCharacterId) {
+        if (errorEl) { errorEl.textContent = 'No character selected.'; errorEl.classList.remove('hidden'); }
+        return;
+    }
+
+    // Find item_id from item name
+    const { data: itemData, error: itemErr } = await supabase
+        .from('items')
+        .select('item_id')
+        .ilike('item_name', itemName)
+        .maybeSingle();
+
+    if (itemErr || !itemData) {
+        console.warn('[ValleyEdit] Item not found in DB:', itemName);
+        return;
+    }
+
+    // Fetch all active listings for this item + character
+    const { data: listings, error: listErr } = await supabase
+        .from('market_listings')
+        .select('listing_id, quantity_listed, total_listed_price, market_fee')
+        .eq('character_id', currentCharacterId)
+        .eq('item_id', itemData.item_id)
+        .eq('is_cancelled', false)
+        .eq('is_fully_sold', false)
+        .order('listed_price_per_unit', { ascending: false });
+
+    if (listErr || !listings || listings.length === 0) {
+        console.warn('[ValleyEdit] No active listings found for item:', itemName);
+        return;
+    }
+
+    // Pre-fill price from current average
+    const avgPrice = Math.round(listings.reduce((s, l) => s + l.total_listed_price, 0) / listings.length);
+    if (titleEl)    titleEl.textContent    = `Edit: ${itemName}`;
+    if (subtitleEl) subtitleEl.textContent = `${listings.length} active listing${listings.length !== 1 ? 's' : ''} will be updated with the new price.`;
+    if (priceInput) { priceInput.value = avgPrice; }
+
+    // Live fee estimate
+    const updateFeeInfo = () => {
+        const price = parseFloat(priceInput?.value);
+        if (feeInfoEl && !isNaN(price) && price > 0) {
+            const feePerListing = Math.ceil(price * 0.05);
+            feeInfoEl.textContent = `Est. fee per listing: ${feePerListing}g  ·  ${listings.length} listing${listings.length !== 1 ? 's' : ''} = ${feePerListing * listings.length}g total (only charged if price increases)`;
+        } else if (feeInfoEl) {
+            feeInfoEl.textContent = '';
+        }
+    };
+    priceInput?.addEventListener('input', updateFeeInfo);
+    updateFeeInfo();
+
+    editModal.classList.remove('hidden');
+    priceInput?.focus();
+    priceInput?.select();
+
+    // ── Close helpers ─────────────────────────────────────────────────────
+    const closeEditModal = () => {
+        editModal.classList.add('hidden');
+        priceInput?.removeEventListener('input', updateFeeInfo);
+    };
+
+    const closeAndReopenValley = () => {
+        closeEditModal();
+        openValleyPresenceModal();
+    };
+
+    if (closeBtn)  closeBtn.onclick  = closeEditModal;
+    if (cancelBtn) cancelBtn.onclick = closeEditModal;
+    editModal.onclick = (e) => { if (e.target === editModal) closeEditModal(); };
+
+    // ── Save handler ──────────────────────────────────────────────────────
+    if (saveBtn) {
+        saveBtn.onclick = async () => {
+            const newTotalPrice = parseFloat(priceInput?.value);
+            if (isNaN(newTotalPrice) || newTotalPrice <= 0) {
+                if (errorEl) { errorEl.textContent = 'Please enter a valid price greater than 0.'; errorEl.classList.remove('hidden'); }
+                return;
+            }
+            if (errorEl) errorEl.classList.add('hidden');
+            saveBtn.disabled   = true;
+            saveBtn.textContent = 'Saving...';
+
+            try {
+                // Calculate total additional fees (only charged when price increases)
+                let totalAdditionalFees = 0;
+                const ops = listings.map(listing => {
+                    const priceIncrease = newTotalPrice - listing.total_listed_price;
+                    let newFee = listing.market_fee;
+                    let additionalFee = 0;
+                    if (priceIncrease > 0) {
+                        newFee = Math.max(Math.ceil(newTotalPrice * 0.05), listing.market_fee);
+                        additionalFee = newFee - listing.market_fee;
+                        totalAdditionalFees += additionalFee;
+                    }
+                    return {
+                        listingId:    listing.listing_id,
+                        quantity:     listing.quantity_listed,
+                        newTotalPrice,
+                        newPricePerUnit: newTotalPrice / listing.quantity_listed,
+                        newFee
+                    };
+                });
+
+                // Check gold if fees are due
+                if (totalAdditionalFees > 0) {
+                    const { data: charData } = await supabase
+                        .from('characters')
+                        .select('gold')
+                        .eq('character_id', currentCharacterId)
+                        .single();
+
+                    const currentGold = charData?.gold || 0;
+                    if (currentGold < totalAdditionalFees) {
+                        if (errorEl) {
+                            errorEl.textContent = `Not enough gold! Need ${totalAdditionalFees.toLocaleString()}g for fees but only have ${currentGold.toLocaleString()}g.`;
+                            errorEl.classList.remove('hidden');
+                        }
+                        saveBtn.disabled    = false;
+                        saveBtn.textContent = 'Save All Listings';
+                        return;
+                    }
+                }
+
+                // Apply updates in parallel
+                const results = await Promise.all(ops.map(op =>
+                    supabase
+                        .from('market_listings')
+                        .update({
+                            total_listed_price:   op.newTotalPrice,
+                            listed_price_per_unit: op.newPricePerUnit,
+                            market_fee:           op.newFee
+                        })
+                        .eq('listing_id',   op.listingId)
+                        .eq('character_id', currentCharacterId)
+                ));
+
+                const failed = results.filter(r => r.error);
+                if (failed.length > 0) {
+                    if (errorEl) { errorEl.textContent = `${failed.length} update(s) failed: ${failed[0].error.message}`; errorEl.classList.remove('hidden'); }
+                    saveBtn.disabled    = false;
+                    saveBtn.textContent = 'Save All Listings';
+                    return;
+                }
+
+                // Deduct additional fees from character gold
+                if (totalAdditionalFees > 0) {
+                    const { data: charData } = await supabase
+                        .from('characters')
+                        .select('gold')
+                        .eq('character_id', currentCharacterId)
+                        .single();
+                    if (charData) {
+                        await supabase
+                            .from('characters')
+                            .update({ gold: (charData.gold || 0) - totalAdditionalFees })
+                            .eq('character_id', currentCharacterId);
+                    }
+                }
+
+                // Re-open valley modal — it now fetches fresh Supabase data directly
+                closeAndReopenValley();
+
+            } catch (e) {
+                console.error('[ValleyEdit] Unexpected error during save:', e);
+                if (errorEl) { errorEl.textContent = 'An unexpected error occurred. Check the console.'; errorEl.classList.remove('hidden'); }
+                saveBtn.disabled    = false;
+                saveBtn.textContent = 'Save All Listings';
+            }
+        };
+    }
 }
