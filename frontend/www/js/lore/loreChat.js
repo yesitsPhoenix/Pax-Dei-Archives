@@ -21,6 +21,14 @@ const MAX_HISTORY_MESSAGES = 20; // Keep last N messages for context
 const LORE_PAGE_BASE = 'lore.html';
 
 // ---------------------------------------------------------------------------
+// Timing Debug
+// ---------------------------------------------------------------------------
+// Set to true to log detailed client-side timing for every request.
+// Measures: send → HTTP response, first chunk, last chunk, finalize render.
+// All output goes to browser console (F12 → Console).
+const TIMING_DEBUG = false;
+
+// ---------------------------------------------------------------------------
 // Category icon mapping (matches lore.js)
 // ---------------------------------------------------------------------------
 
@@ -455,6 +463,13 @@ async function sendMessage(text) {
     let fullResponse = '';
     let renderScheduled = false;
 
+    // Timing
+    const t_send = performance.now();
+    let t_http_response = null;
+    let t_first_chunk = null;
+    let t_last_chunk = null;
+    let chunkCount = 0;
+
     function scheduleRender() {
         if (renderScheduled) return;
         renderScheduled = true;
@@ -473,6 +488,11 @@ async function sendMessage(text) {
                 stream: true,
             }),
         });
+
+        t_http_response = performance.now();
+        if (TIMING_DEBUG) {
+            console.log(`[Timing] HTTP response received: ${Math.round(t_http_response - t_send)}ms after send`);
+        }
 
         if (!response.ok) {
             const errData = await response.json().catch(() => ({}));
@@ -504,6 +524,14 @@ async function sendMessage(text) {
                     }
 
                     if (chunk.content) {
+                        chunkCount++;
+                        t_last_chunk = performance.now();
+                        if (t_first_chunk === null) {
+                            t_first_chunk = t_last_chunk;
+                            if (TIMING_DEBUG) {
+                                console.log(`[Timing] First content chunk: ${Math.round(t_first_chunk - t_send)}ms after send  (${Math.round(t_first_chunk - t_http_response)}ms after HTTP response)`);
+                            }
+                        }
                         fullResponse += chunk.content;
                         scheduleRender();
                     }
@@ -521,7 +549,18 @@ async function sendMessage(text) {
         }
 
         // Finalize with full citation rendering
+        const t_stream_end = performance.now();
+        if (TIMING_DEBUG && t_first_chunk !== null) {
+            const genMs = Math.round(t_last_chunk - t_first_chunk);
+            const tps = genMs > 0 ? (chunkCount / (genMs / 1000)).toFixed(1) : '?';
+            console.log(`[Timing] Stream complete: ${chunkCount} chunks over ${genMs}ms (${tps} chunks/s)  total=${Math.round(t_stream_end - t_send)}ms`);
+        }
+        const t_render_start = performance.now();
         finalizeStreamingMessage(fullResponse);
+        if (TIMING_DEBUG) {
+            console.log(`[Timing] Citation render + finalize: ${Math.round(performance.now() - t_render_start)}ms`);
+            console.log(`[Timing] ── Full journey: send → first visible text = ${Math.round(t_first_chunk - t_send)}ms | send → complete = ${Math.round(performance.now() - t_send)}ms ──`);
+        }
 
         // Add assistant response to history
         if (fullResponse) {

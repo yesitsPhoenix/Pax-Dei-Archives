@@ -36,7 +36,7 @@ from pydantic import BaseModel
 
 # Ollama connection
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:32b")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:14b")
 
 # Server settings
 HOST = os.getenv("LORE_BOT_HOST", "0.0.0.0")
@@ -65,6 +65,19 @@ USE_RAG = True
 
 # How many lore entries to include per question when RAG is enabled
 RAG_TOP_K = 12
+
+# ---------------------------------------------------------------------------
+# Timing Debug
+# ---------------------------------------------------------------------------
+
+# Set to True to emit detailed per-phase timing logs for every chat request.
+# Covers: RAG retrieval, embed call, prompt build, Ollama time-to-first-token,
+# total generation time, and tokens-per-second estimate.
+# Safe to leave on in production — logs go to stdout only.
+TIMING_DEBUG = False
+
+# Tracks wall-clock time of the last chat request to measure inter-request gap.
+_last_request_wall: float = 0.0
 
 # ---------------------------------------------------------------------------
 # Vector Search Configuration
@@ -109,15 +122,19 @@ def cosine_similarity(a: list[float], b: list[float]) -> float:
 
 
 async def get_embedding(text: str) -> list[float]:
-    """Embed text using Ollama's nomic-embed-text model."""
+    """Embed text using Ollama's nomic-embed-text model.
+
+    Uses the current Ollama /api/embed endpoint (replaces the deprecated /api/embeddings).
+    Response shape: { "embeddings": [[...]] }
+    """
     async with httpx.AsyncClient() as client:
         resp = await client.post(
-            f"{OLLAMA_URL}/api/embeddings",
-            json={"model": EMBED_MODEL, "prompt": text},
+            f"{OLLAMA_URL}/api/embed",
+            json={"model": EMBED_MODEL, "input": text},
             timeout=30,
         )
         resp.raise_for_status()
-        return resp.json()["embedding"]
+        return resp.json()["embeddings"][0]
 
 
 # ---------------------------------------------------------------------------
@@ -278,7 +295,9 @@ You are a retrieval system. Report only what is written in the provided lore ent
 - If unsure whether a fact is stated, omit it. A shorter, accurate answer is always better than a longer, fabricated one.
 
 FORMAT RULES
-- Match response length to question complexity. Simple questions: 2-4 sentences. List questions: one opening sentence then a clean list with brief context per item. Broad questions: short overview then a list. Never write a full paragraph per list item.
+- BE BRIEF. Your role is to point the reader toward the source entries, not to reproduce them.
+- Hard limit: 3 sentences maximum for simple questions. 1 sentence + a short list for enumeration questions. Never exceed one short paragraph for any response.
+- Never summarise or retell full lore entries — give the key fact and let the cited sources do the rest.
 - Always finish your thought completely — never stop mid-sentence.
 - Speak in-world. Use phrases like "It is written..." or "The records tell us..."
 - If asked about game mechanics or modern topics, say: "Such matters lie beyond my scrolls."
@@ -500,7 +519,11 @@ def get_category_flood_entries(query: str) -> list[LoreEntry]:
     return []
 
 
-async def build_rag_prompt(query: str) -> str:
+async def build_rag_prompt(query: str) -> tuple[str, dict]:
+    """Returns (prompt, timing) where timing contains per-phase durations in ms."""
+    t_start = time.perf_counter()
+    timing: dict = {}
+
     # Check for category flood first — overrides vector/TF-IDF for broad category questions
     flood_entries = get_category_flood_entries(query)
 
@@ -513,13 +536,19 @@ async def build_rag_prompt(query: str) -> str:
         if remaining_k > 0:
             if USE_VECTOR_SEARCH:
                 try:
+                    t_embed = time.perf_counter()
                     query_vector = await get_embedding(query)
+                    timing['embed_ms'] = round((time.perf_counter() - t_embed) * 1000)
+                    t_search = time.perf_counter()
                     candidates = search_index.search_vector(query_vector, query, top_k=RAG_TOP_K + len(flood_entries))
+                    timing['search_ms'] = round((time.perf_counter() - t_search) * 1000)
                     supporting = [e for e in candidates if e.slug not in flood_slugs][:remaining_k]
                 except Exception as e:
                     print(f"[WARN] Vector search failed during flood ({e})")
             else:
+                t_search = time.perf_counter()
                 candidates = search_index.search_tfidf(query, top_k=RAG_TOP_K + len(flood_entries))
+                timing['search_ms'] = round((time.perf_counter() - t_search) * 1000)
                 supporting = [e for e in candidates if e.slug not in flood_slugs][:remaining_k]
 
         results = flood_entries + supporting
@@ -527,15 +556,23 @@ async def build_rag_prompt(query: str) -> str:
 
     elif USE_VECTOR_SEARCH:
         try:
+            t_embed = time.perf_counter()
             query_vector = await get_embedding(query)
+            timing['embed_ms'] = round((time.perf_counter() - t_embed) * 1000)
+            t_search = time.perf_counter()
             results = search_index.search_vector(query_vector, query, top_k=RAG_TOP_K)
+            timing['search_ms'] = round((time.perf_counter() - t_search) * 1000)
             search_mode = "vector"
         except Exception as e:
             print(f"[WARN] Vector search failed ({e}), falling back to TF-IDF")
+            t_search = time.perf_counter()
             results = search_index.search_tfidf(query, top_k=RAG_TOP_K)
+            timing['search_ms'] = round((time.perf_counter() - t_search) * 1000)
             search_mode = "tfidf-fallback"
     else:
+        t_search = time.perf_counter()
         results = search_index.search_tfidf(query, top_k=RAG_TOP_K)
+        timing['search_ms'] = round((time.perf_counter() - t_search) * 1000)
         search_mode = "tfidf"
 
     if not results:
@@ -545,13 +582,16 @@ async def build_rag_prompt(query: str) -> str:
     if search_mode in ("vector", "tfidf", "tfidf-fallback"):
         results = keyword_inject(results, query, RAG_TOP_K)
 
+    t_build = time.perf_counter()
     entries_text = "\n\n---\n\n".join(entry.to_prompt_block() for entry in results)
     prompt = RAG_PROMPT.format(lore_content=entries_text)
+    timing['prompt_build_ms'] = round((time.perf_counter() - t_build) * 1000)
+    timing['total_rag_ms'] = round((time.perf_counter() - t_start) * 1000)
 
     titles = [e.title for e in results]
     print(f"[RAG:{search_mode}] Query: '{query[:80]}' → {len(results)} entries: {titles}")
     print(f"[RAG:{search_mode}] Prompt size: {len(prompt):,} chars (~{len(prompt) // 4:,} tokens)")
-    return prompt
+    return prompt, timing
 
 
 # ---------------------------------------------------------------------------
@@ -668,15 +708,31 @@ async def chat(request: Request, chat_req: ChatRequest):
     if not chat_req.messages:
         raise HTTPException(status_code=400, detail="No messages provided.")
 
+    t_request_start = time.perf_counter()
+    t_request_wall = time.time()
+
     if USE_RAG:
         user_query = chat_req.messages[-1].content if chat_req.messages else ""
-        system_prompt = await build_rag_prompt(user_query)
-        # Dynamically size context window: prompt tokens + headroom for response
-        # Rough token estimate: 4 chars per token. Minimum 8192, maximum 32768.
+        system_prompt, rag_timing = await build_rag_prompt(user_query)
+        # Pin context window at 32768 — hardware (2x RTX 3060 12GB, 24GB pooled)
+        # has sufficient VRAM to hold the full KV cache at this size for all RAG prompts.
+        # Consistent ctx_size means consistent model behaviour across queries.
         estimated_prompt_tokens = len(system_prompt) // 4
-        ctx_size = min(32768, max(8192, estimated_prompt_tokens + 2048))
-        print(f"[CTX] Prompt ~{estimated_prompt_tokens} tokens → ctx_size set to {ctx_size}")
+        ctx_size = 32768
+        print(f"[CTX] Prompt ~{estimated_prompt_tokens} tokens → ctx_size pinned to {ctx_size}")
+        if TIMING_DEBUG:
+            global _last_request_wall
+            ts = datetime.fromtimestamp(t_request_wall).strftime('%H:%M:%S')
+            gap = round(t_request_wall - _last_request_wall) if _last_request_wall else None
+            gap_str = f"  gap_since_last={gap}s" if gap is not None else "  gap_since_last=first"
+            print(f"[TIMING] Request @ {ts}{gap_str}")
+            _last_request_wall = t_request_wall
+            print(f"[TIMING] RAG phases: embed={rag_timing.get('embed_ms','—')}ms  "
+                  f"search={rag_timing.get('search_ms','—')}ms  "
+                  f"prompt_build={rag_timing.get('prompt_build_ms','—')}ms  "
+                  f"total_rag={rag_timing.get('total_rag_ms','—')}ms")
     else:
+        rag_timing = {}
         system_prompt = full_corpus_prompt
         ctx_size = 32768
 
@@ -693,8 +749,9 @@ async def chat(request: Request, chat_req: ChatRequest):
         "options": {
             "temperature": 0.3,
             "top_p": 0.85,
-            "num_predict": 768,
+            "num_predict": 400,
             "num_ctx": ctx_size,
+            "num_keep": -1,
         }
     }
 
@@ -721,13 +778,39 @@ async def chat(request: Request, chat_req: ChatRequest):
                         error_body = await resp.aread()
                         yield json.dumps({"error": f"Ollama error: {error_body.decode()}"}) + "\n"
                         return
+
+                    t_first_token = None
+                    token_count = 0
+
                     async for line in resp.aiter_lines():
                         if line.strip():
                             try:
                                 chunk = json.loads(line)
                                 content = chunk.get("message", {}).get("content", "")
                                 done = chunk.get("done", False)
+
+                                if content and t_first_token is None:
+                                    t_first_token = time.perf_counter()
+                                    if TIMING_DEBUG:
+                                        ttft = round((t_first_token - t_request_start) * 1000)
+                                        print(f"[TIMING] Time to first token: {ttft}ms "
+                                              f"(RAG={rag_timing.get('total_rag_ms','—')}ms + "
+                                              f"Ollama prefill={ttft - rag_timing.get('total_rag_ms', 0)}ms)")
+
+                                if content:
+                                    token_count += 1
+
                                 yield json.dumps({"content": content, "done": done}) + "\n"
+
+                                if done and TIMING_DEBUG:
+                                    t_done = time.perf_counter()
+                                    total_ms = round((t_done - t_request_start) * 1000)
+                                    gen_ms = round((t_done - t_first_token) * 1000) if t_first_token else 0
+                                    tps = round(token_count / (gen_ms / 1000), 1) if gen_ms > 0 else 0
+                                    print(f"[TIMING] Generation complete: "
+                                          f"{token_count} chunks in {gen_ms}ms ({tps} tok/s)  "
+                                          f"total wall time={total_ms}ms")
+
                             except json.JSONDecodeError:
                                 continue
         except httpx.ConnectError:

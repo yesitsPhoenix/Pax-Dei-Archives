@@ -77,14 +77,18 @@ def write_embedding(row_id: str, vector: list[float]) -> None:
 # ---------------------------------------------------------------------------
 
 def get_embedding(text: str) -> list[float]:
-    """Call Ollama's embedding endpoint and return the vector."""
+    """Call Ollama's embedding endpoint and return the vector.
+
+    Uses the current Ollama /api/embed endpoint (replaces the deprecated /api/embeddings).
+    Response shape: { "embeddings": [[...]] }
+    """
     resp = httpx.post(
-        f"{OLLAMA_URL}/api/embeddings",
-        json={"model": EMBED_MODEL, "prompt": text},
+        f"{OLLAMA_URL}/api/embed",
+        json={"model": EMBED_MODEL, "input": text},
         timeout=60,
     )
     resp.raise_for_status()
-    return resp.json()["embedding"]
+    return resp.json()["embeddings"][0]
 
 
 def check_ollama() -> None:
