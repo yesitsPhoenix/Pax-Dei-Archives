@@ -1,4 +1,4 @@
-import { supabase } from '../supabaseClient.js';
+﻿import { supabase } from '../supabaseClient.js';
 import { questState } from './questStateManager.js';
 import { enableSignTooltip } from '../ui/signTooltip.js';
 
@@ -209,6 +209,7 @@ async function showAddForm(recordToEdit = null) {
                         <option value="zebian" ${value === 'zebian' ? 'selected' : ''}>zebian</option>
                         <option value="demira" ${value === 'demira' ? 'selected' : ''}>demira</option>
                         <option value="armozel" ${value === 'armozel' ? 'selected' : ''}>armozel</option>
+                        <option value="meirothea" ${value === 'meirothea' ? 'selected' : ''}>meirothea</option>
                     </select>
                 </div>
             `;

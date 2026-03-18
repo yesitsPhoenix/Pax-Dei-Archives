@@ -304,6 +304,19 @@ class QuestStateManager {
 
         this.log(`Adding claim for quest ${questId}`);
 
+        // Enforce max_claims if the quest has a limit set
+        const quest = this.getQuestById(questId);
+        if (quest && quest.max_claims > 0) {
+            const { count, error: countError } = await supabase
+                .from('user_claims')
+                .select('*', { count: 'exact', head: true })
+                .eq('quest_id', questId);
+
+            if (!countError && count !== null && count >= quest.max_claims) {
+                throw new Error(`This quest has reached its maximum number of completions (${quest.max_claims}).`);
+            }
+        }
+
         const { error } = await supabase
             .from('user_claims')
             .insert({
