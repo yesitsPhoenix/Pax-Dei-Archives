@@ -788,7 +788,7 @@ async function saveRecord() {
     if (currentTable === 'quest_categories') {
         const nameField = document.getElementById('field-name');
         if (!nameField || !nameField.value.trim()) {
-            alert('Category name is required!');
+            showToast('Category name is required!', 'error');
             return;
         }
     }
@@ -835,7 +835,7 @@ async function saveRecord() {
     
     if (error) {
         console.error('Database error:', error);
-        alert(`Error: ${error.message}\nDetails: ${error.details || 'No additional details'}\nHint: ${error.hint || 'No hint available'}`);
+        showToast(`Error: ${error.message}`, 'error');
     } else if (isEditMode && (!data || data.length === 0)) {
         // Update succeeded but returned empty array - likely RLS policy issue
         console.warn('Update query succeeded but returned no data - possible RLS policy blocking SELECT');

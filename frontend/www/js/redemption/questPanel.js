@@ -1,4 +1,5 @@
-import { supabase } from "../supabaseClient.js";
+﻿import { supabase } from "../supabaseClient.js";
+import { getAdminRoles } from "../admin/adminManager.js";
 import { enableSignTooltip, mouseTooltip } from '../ui/signTooltip.js';
 import { initializeCharacterSystem } from "./characterManager.js";
 import { questState } from './questStateManager.js';
@@ -238,14 +239,9 @@ async function checkAccess() {
         return;
     }
 
-    const { data: adminData, error: adminError } = await supabase
-        .from("admin_users")
-        .select("quest_role")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
+    const { questRole } = await getAdminRoles();
     const validRoles = ['quest_admin', 'quest_editor'];
-    if (adminError || !adminData || !validRoles.includes(adminData.quest_role)) {
+    if (!validRoles.includes(questRole)) {
         window.location.href = "quests.html";
         return;
     }
