@@ -1,4 +1,5 @@
 ﻿import { supabase } from '../supabaseClient.js';
+import { getAdminRoles } from '../admin/adminManager.js';
 import { questState } from './questStateManager.js';
 import { enableSignTooltip } from '../ui/signTooltip.js';
 
@@ -20,10 +21,10 @@ const itemsPerPage = 15;
 const tableConfigs = {
     secret_unlock_configs: {
         display: 'Secret Unlock',
-        columns: ['id', 'category_name', 'cipher_keyword', 'unlock_sequence', 'discovery_message'],
-        labels: ['ID', 'Target Category', 'Keyword', 'Shifted Sequence', 'Unlock Message'],
+        columns: ['id', 'category_name', 'cipher_keyword', 'unlock_sequence', 'discovery_message', 'max_unlocks'],
+        labels: ['ID', 'Target Category', 'Keyword', 'Shifted Sequence', 'Unlock Message', 'Max Unlocks'],
         sort: 'created_at',
-        insertable: ['category_name', 'cipher_keyword', 'unlock_sequence', 'discovery_message']
+        insertable: ['category_name', 'cipher_keyword', 'unlock_sequence', 'discovery_message', 'max_unlocks']
     },
     heroic_feats: {
         display: 'Heroic Feat',
@@ -799,7 +800,7 @@ async function saveRecord() {
         
         const val = el.value.trim();
         
-        if (['sort_order', 'gold', 'required_count'].includes(field)) {
+        if (['sort_order', 'gold', 'required_count', 'max_unlocks'].includes(field)) {
             payload[field] = parseInt(val) || 0;
         } else if (field === 'is_secret' || field === 'active') {
             payload[field] = val === 'true';
@@ -1302,6 +1303,13 @@ function toggleLeaderboardMode() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    const { questRole } = await getAdminRoles();
+    const validRoles = ['quest_admin', 'quest_editor'];
+    if (!validRoles.includes(questRole)) {
+        window.location.href = 'quests.html';
+        return;
+    }
+
     if (!questState.isReady()) {
         await questState.initialize();
     }

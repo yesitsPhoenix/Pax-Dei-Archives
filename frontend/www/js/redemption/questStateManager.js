@@ -346,6 +346,19 @@ class QuestStateManager {
 
         this.log(`Unlocking secret category: ${categoryName}`);
 
+        // Enforce max_unlocks if the config has a limit set
+        const secretConfig = this.cache.secretUnlockConfigs.find(c => c.category_name === categoryName);
+        if (secretConfig && secretConfig.max_unlocks > 0) {
+            const { count, error: countError } = await supabase
+                .from('user_unlocked_categories')
+                .select('*', { count: 'exact', head: true })
+                .eq('category_name', categoryName);
+
+            if (!countError && count !== null && count >= secretConfig.max_unlocks) {
+                throw new Error(`This secret questline has reached its maximum number of unlocks (${secretConfig.max_unlocks}).`);
+            }
+        }
+
         const { error } = await supabase
             .from('user_unlocked_categories')
             .upsert({

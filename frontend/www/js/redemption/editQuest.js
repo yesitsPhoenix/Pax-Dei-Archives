@@ -1,4 +1,5 @@
-import { supabase } from "../supabaseClient.js";
+﻿import { supabase } from "../supabaseClient.js";
+import { getAdminRoles } from "../admin/adminManager.js";
 import { enableSignTooltip, mouseTooltip } from '../ui/signTooltip.js';
 import { questState } from './questStateManager.js';
 import { 
@@ -267,6 +268,13 @@ async function init() {
 
     if (authError || !user) {
         window.location.href = "quests.html";
+        return;
+    }
+
+    const { questRole } = await getAdminRoles();
+    const validRoles = ['quest_admin', 'quest_editor'];
+    if (!validRoles.includes(questRole)) {
+        window.location.href = 'quests.html';
         return;
     }
 

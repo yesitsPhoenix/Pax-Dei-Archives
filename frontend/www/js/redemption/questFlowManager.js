@@ -1,4 +1,5 @@
-import { questState } from './questStateManager.js';
+﻿import { questState } from './questStateManager.js';
+import { getAdminRoles } from '../admin/adminManager.js';
 
 let cy = null;
 let allQuests = [];
@@ -18,6 +19,12 @@ const getNodeColor = (quest) => {
 };
 
 async function initDiagram() {
+    const { questRole } = await getAdminRoles();
+    if (questRole !== 'quest_admin') {
+        window.location.href = 'quests.html';
+        return;
+    }
+
     try {
         if (!questState.isReady()) {
             await questState.initialize();
