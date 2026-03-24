@@ -338,12 +338,18 @@
     </div>
 </aside>
 
-<div id="traderLoginContainer" class="admin-form-container hidden flex-col items-center justify-center p-12 text-center bg-[#1f2937] rounded-2xl border border-gray-700 max-w-2xl mx-auto my-10 shadow-2xl" style="display: none; text-align: center;">
-    <p>Please log in to view Quests.</p>
-    <button id="traderDiscordLoginButton" class="discord-button" style="margin: 15px auto;">
-        <i class="fab fa-discord"></i> Login with Discord
-    </button>
-    <p id="traderLoginError" style="color: red; display: none;"></p>
+<div id="traderLoginContainer" class="hidden animate-fade-in">
+    <div class="max-w-md mx-auto bg-gradient-to-br from-slate-800 to-slate-900 p-8 rounded-2xl shadow-2xl border border-amber-400/20">
+        <div class="text-center">
+            <i class="fas fa-lock text-amber-400 text-6xl mb-4"></i>
+            <p class="text-white text-lg mb-6">Please log in to view Quests.</p>
+            <button id="traderDiscordLoginButton" class="w-full bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-3">
+                <i class="fab fa-discord text-xl"></i>
+                <span>Login with Discord</span>
+            </button>
+            <p id="traderLoginError" class="text-red-400 text-md mt-4 hidden"></p>
+        </div>
+    </div>
 </div>
 
 <div id="quest-log-main-content" style="display: none;">
