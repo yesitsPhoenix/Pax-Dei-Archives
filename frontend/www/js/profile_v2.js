@@ -248,10 +248,21 @@ async function init() {
         const { data: { user }, error } = await supabase.auth.getUser();
         
         if (error || !user) {
-            profileLoading.textContent = 'Please log in to view your profile.';
-            profileLoading.style.display = 'block';
-            if (loadingOverlay) {
-                loadingOverlay.style.display = 'none';
+            if (loadingOverlay) loadingOverlay.style.display = 'none';
+
+            const loginContainer = document.getElementById('profileLoginContainer');
+            const mainContent = document.getElementById('profileMainContent');
+            if (loginContainer) loginContainer.classList.remove('hidden');
+            if (mainContent) mainContent.style.display = 'none';
+
+            const loginBtn = document.getElementById('profileDiscordLoginButton');
+            if (loginBtn) {
+                loginBtn.addEventListener('click', async () => {
+                    await supabase.auth.signInWithOAuth({
+                        provider: 'discord',
+                        options: { redirectTo: window.location.href, scopes: 'identify' }
+                    });
+                });
             }
             return;
         }
