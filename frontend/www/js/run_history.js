@@ -354,7 +354,7 @@ const handleClearFilters = () => {
 };
 
 // ─────────────────────────────────────────
-//  AGGREGATED TABLE  (item × tool × miracle, median rate/hr, N≥3)
+//  AGGREGATED TABLE  (item × tool × miracle, median rate/hr, N≥1)
 // ─────────────────────────────────────────
 async function buildAggregatedTable() {
     const aggBody  = document.getElementById('aggTableBody');
@@ -401,7 +401,7 @@ async function buildAggregatedTable() {
 
     // Keep only groups with 3+ runs, compute median, sort item → median desc
     const rows = Object.values(groups)
-        .filter(g => g.rates.length >= 3)
+        .filter(g => g.rates.length >= 1)
         .map(g => ({ ...g, n: g.rates.length, medianRate: median(g.rates) }))
         .sort((a, b) => a.item.localeCompare(b.item) || b.medianRate - a.medianRate);
 
