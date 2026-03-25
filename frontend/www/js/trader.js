@@ -692,10 +692,11 @@ async function fetchItemSalesHistory(itemId) {
         const totalUnits  = data.reduce((s, r) => s + (r.quantity_sold || 0), 0);
         const avgPerUnit  = data.reduce((s, r) => s + (r.sale_price_per_unit || 0), 0) / data.length;
         const avgPerStack = data.reduce((s, r) => s + (r.total_sale_price || 0), 0) / data.length;
+        const maxPerUnit  = Math.max(...data.map(r => r.sale_price_per_unit || 0));
         const lastSold    = data[0].sale_date;
         const saleCount   = data.length;
 
-        return { avgPerUnit, avgPerStack, totalUnits, saleCount, lastSold };
+        return { avgPerUnit, avgPerStack, maxPerUnit, totalUnits, saleCount, lastSold };
     } catch {
         return null;
     }
@@ -971,7 +972,26 @@ function initializeAutocomplete(allItems) {
             }
         }
 
-        // Row 4 — live price total (always shown when price+stacks are filled)
+        // Row 4 — high price option (only when no market data and sales history has a max)
+        if (!md && hist?.maxPerUnit && hasCount) {
+            const highPerStack = Math.round(hist.maxPerUnit * count);
+            const highTotal = hasStacks ? highPerStack * stacks : null;
+            bottomRows += `
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-1.5">
+                <span class="text-white text-sm font-semibold flex items-center gap-1.5">
+                    <i class="fas fa-arrow-trend-up text-emerald-400"></i> High price option:
+                </span>
+                <span class="text-emerald-300 font-bold text-base">${fmt(highPerStack)}g</span>${hasCount ? ` <span class="text-gray-400 text-sm">/stack (${count})</span>` : ''}
+                <button id="modal-use-high-price-btn" type="button" class="px-2 py-0.5 text-xs font-semibold bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 border border-emerald-500/40 rounded transition-colors">Use</button>
+                ${highTotal !== null ? `<span class="text-gray-400 text-sm mx-1">&rarr;</span><span class="text-white text-sm">Total: <span class="text-emerald-200 font-bold">${fmt(highTotal)}g</span></span>` : ''}
+            </div>
+            <div class="flex items-center gap-1.5 mt-1">
+                <span class="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0 bg-emerald-400"></span>
+                <span class="text-emerald-400 text-sm">Your highest ever sale price for this item — no live market to undercut.</span>
+            </div>`;
+        }
+
+        // Row 5 — live price total (always shown when price+stacks are filled)
         if (hasPrice && hasStacks) {
             const liveTotal = price * stacks;
             bottomRows += `
@@ -991,6 +1011,17 @@ function initializeAutocomplete(allItems) {
                 const priceInput = document.getElementById('modal-item-price-per-stack');
                 if (priceInput && suggestion?.suggestedPerStack !== null) {
                     priceInput.value = suggestion.suggestedPerStack;
+                    priceInput.focus();
+                }
+            });
+        }
+        const useHighBtn = hintEl.querySelector('#modal-use-high-price-btn');
+        if (useHighBtn) {
+            useHighBtn.addEventListener('click', () => {
+                const priceInput = document.getElementById('modal-item-price-per-stack');
+                const count = parseInt(document.getElementById('modal-item-count-per-stack')?.value, 10);
+                if (priceInput && _addListingHistoryData?.maxPerUnit && count > 0) {
+                    priceInput.value = Math.round(_addListingHistoryData.maxPerUnit * count);
                     priceInput.focus();
                 }
             });
