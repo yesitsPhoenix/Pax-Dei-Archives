@@ -2,6 +2,18 @@ import { supabase } from './supabaseClient.js';
 import { FARMING_CATEGORIES, GATHERING_TOOLS } from './gatheringConstants.js';
 import { loadRunCharts } from './run_charts.js';
 
+// ── Stats helpers ──
+const MIN_RUN_MS = 60_000; // 1-minute floor, kept in sync with run_charts.js
+
+function median(arr) {
+    if (!arr.length) return 0;
+    const sorted = [...arr].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 !== 0
+        ? sorted[mid]
+        : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+}
+
 const formatTime = (totalMilliseconds) => {
     const totalSeconds = Math.floor(totalMilliseconds / 1000);
     const hours = Math.floor(totalSeconds / 3600);
@@ -326,7 +338,8 @@ const getChartFilters = () => {
 const handleApplyFilters = () => {
     const filters = getChartFilters();
     fetchDataAndRender();
-    loadRunCharts(filters); // ⬅️ Call chart refresh
+    loadRunCharts(filters);
+    buildAggregatedTable();
 };
 
 const handleClearFilters = () => {
@@ -336,8 +349,87 @@ const handleClearFilters = () => {
     filterMiracleStatus.value = '';
     
     fetchDataAndRender();
-    loadRunCharts({}); // ⬅️ Call chart refresh with empty filters
+    loadRunCharts({});
+    buildAggregatedTable();
 };
+
+// ─────────────────────────────────────────
+//  AGGREGATED TABLE  (item × tool × miracle, median rate/hr, N≥3)
+// ─────────────────────────────────────────
+async function buildAggregatedTable() {
+    const aggBody  = document.getElementById('aggTableBody');
+    if (!aggBody) return;
+
+    const category     = filterCategory.value.trim();
+    const itemName     = filterItemName.value.trim();
+    const toolName     = filterToolName.value.trim();
+    const miracleStatus = filterMiracleStatus.value;
+
+    aggBody.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-yellow-400 text-center">Loading…</td></tr>';
+
+    let query = supabase
+        .from('farming_runs')
+        .select('item, tool_used, miracle_active, amount, time_ms')
+        .gte('time_ms', MIN_RUN_MS);
+
+    if (category)     query = query.ilike('category',     `%${category}%`);
+    if (itemName)     query = query.ilike('item',          `%${itemName}%`);
+    if (toolName)     query = query.ilike('tool_used',     `%${toolName}%`);
+    if (miracleStatus) query = query.eq('miracle_active', miracleStatus === 'active');
+
+    const { data, error } = await query.limit(5000);
+
+    if (error || !data) {
+        aggBody.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-red-400 text-center">Error loading aggregated data.</td></tr>';
+        return;
+    }
+
+    // Compute rate/hr per run
+    const withRates = data
+        .map(r => ({ ...r, rate_hr: r.time_ms > 0 ? (r.amount / (r.time_ms / 3_600_000)) : 0 }))
+        .filter(r => r.rate_hr > 0);
+
+    // Group by (item, tool_used, miracle_active)
+    const groups = {};
+    for (const r of withRates) {
+        const key = `${r.item}||${r.tool_used || ''}||${r.miracle_active ? '1' : '0'}`;
+        if (!groups[key]) {
+            groups[key] = { item: r.item, tool: r.tool_used || '—', miracle: r.miracle_active, rates: [] };
+        }
+        groups[key].rates.push(r.rate_hr);
+    }
+
+    // Keep only groups with 3+ runs, compute median, sort item → median desc
+    const rows = Object.values(groups)
+        .filter(g => g.rates.length >= 3)
+        .map(g => ({ ...g, n: g.rates.length, medianRate: median(g.rates) }))
+        .sort((a, b) => a.item.localeCompare(b.item) || b.medianRate - a.medianRate);
+
+    const countEl = document.getElementById('aggTableCount');
+    if (countEl) countEl.textContent = rows.length ? `${rows.length} group${rows.length !== 1 ? 's' : ''}` : '';
+
+    if (!rows.length) {
+        aggBody.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-gray-400 text-center italic">No groups with 3+ runs found for current filters.</td></tr>';
+        return;
+    }
+
+    aggBody.innerHTML = '';
+    let lastItem = null;
+    rows.forEach(row => {
+        const isNewItem = row.item !== lastItem;
+        lastItem = row.item;
+        const tr = document.createElement('tr');
+        tr.className = `hover:bg-gray-700 transition duration-150 ease-in-out${isNewItem && row !== rows[0] ? ' border-t border-gray-600' : ''}`;
+        tr.innerHTML = `
+            <td class="px-3 py-2 text-sm font-semibold text-white">${isNewItem ? row.item : ''}</td>
+            <td class="px-3 py-2 text-sm text-center text-gray-300">${row.tool}</td>
+            <td class="px-3 py-2 text-sm text-center">${row.miracle ? '<span class="text-green-400 font-medium">Yes</span>' : '<span class="text-gray-400">No</span>'}</td>
+            <td class="px-3 py-2 text-sm text-center text-blue-400 font-bold font-mono">${Math.round(row.medianRate).toLocaleString()}</td>
+            <td class="px-3 py-2 text-sm text-center text-gray-400">${row.n}</td>
+        `;
+        aggBody.appendChild(tr);
+    });
+}
 
 filterCategory.addEventListener('input', filterCategoryResults);
 filterCategory.addEventListener('focus', filterCategoryResults);
@@ -382,4 +474,5 @@ filterToolName.addEventListener('keypress', (e) => {
 document.addEventListener('DOMContentLoaded', () => {
     fetchDataAndRender(1);
     loadRunCharts({});
+    buildAggregatedTable();
 });

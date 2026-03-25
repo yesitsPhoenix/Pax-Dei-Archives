@@ -18,6 +18,18 @@ const TEXT_COLOR = 'rgb(255, 255, 255)';
 const MIRACLE_COLOR_ACTIVE = 'rgba(255, 99, 132, 0.6)';
 const MIRACLE_COLOR_INACTIVE = 'rgba(54, 162, 235, 0.6)';
 
+// ── Stats helpers ──
+const MIN_RUN_MS = 60_000; // 1-minute floor — exclude sub-minute sessions
+
+function median(arr) {
+    if (!arr.length) return 0;
+    const sorted = [...arr].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 !== 0
+        ? sorted[mid]
+        : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+}
+
 function createRateHrDistributionChart(data) {
     const ctx = document.getElementById('rateHrDistributionChart')?.getContext('2d');
     if (!ctx) {
@@ -195,7 +207,7 @@ function createToolEffectivenessChart(data) {
                 },
                 title: {
                     display: true,
-                    text: 'Average Rate/hr by Tool',
+                    text: 'Median Rate/hr by Tool',
                     color: TEXT_COLOR
                 }
             },
@@ -273,7 +285,7 @@ function createMiracleImpactChart(data) {
                 },
                 title: {
                     display: true,
-                    text: 'Miracle Impact on Rate/hr by Category',
+                    text: 'Miracle Impact on Median Rate/hr by Category',
                     color: TEXT_COLOR
                 }
             },
@@ -294,7 +306,7 @@ function createMiracleImpactChart(data) {
                 y: {
                     title: {
                         display: true,
-                        text: 'Average Rate/hr',
+                        text: 'Median Rate/hr',
                         color: TEXT_COLOR
                     },
                     beginAtZero: true,
@@ -331,17 +343,19 @@ async function loadRuns(filterCriteria) {
         return [];
     }
 
-    const runsWithRates = rawRuns.map(run => {
-        const time_hr = run.time_ms / 3600000;
-        const rate_hr = time_hr > 0 ? Math.round(run.amount / time_hr) : 0;
+    const runsWithRates = rawRuns
+        .filter(run => run.time_ms >= MIN_RUN_MS)
+        .map(run => {
+            const time_hr = run.time_ms / 3600000;
+            const rate_hr = time_hr > 0 ? Math.round(run.amount / time_hr) : 0;
 
-        return {
-            rate_hr: rate_hr,
-            category: run.category,
-            tool_used: run.tool_used,
-            miracle_active: run.miracle_active
-        };
-    }).filter(run => run.rate_hr > 0);
+            return {
+                rate_hr: rate_hr,
+                category: run.category,
+                tool_used: run.tool_used,
+                miracle_active: run.miracle_active
+            };
+        }).filter(run => run.rate_hr > 0);
 
     return runsWithRates;
 }
@@ -403,11 +417,8 @@ function processToolEffectivenessData(runs) {
     for (const run of runs) {
         const key = run.tool_used;
         if (key && run.rate_hr > 0) {
-            if (!toolData[key]) {
-                toolData[key] = { totalRate: 0, count: 0 };
-            }
-            toolData[key].totalRate += run.rate_hr;
-            toolData[key].count += 1;
+            if (!toolData[key]) toolData[key] = { rates: [] };
+            toolData[key].rates.push(run.rate_hr);
         }
     }
 
@@ -415,7 +426,7 @@ function processToolEffectivenessData(runs) {
         .filter(([key]) => key && key.toLowerCase() !== 'hand')
         .map(([key, data]) => ({
             label: key,
-            averageRate: Math.round(data.totalRate / data.count)
+            averageRate: median(data.rates)
         }))
         .sort((a, b) => b.averageRate - a.averageRate);
 
@@ -439,13 +450,8 @@ function processMiracleImpactData(runs) {
         const activeRuns = categoryRuns.filter(run => run.miracle_active === true && run.rate_hr > 0);
         const inactiveRuns = categoryRuns.filter(run => run.miracle_active === false && run.rate_hr > 0);
         
-        const avgActive = activeRuns.length > 0 
-            ? Math.round(activeRuns.reduce((sum, run) => sum + run.rate_hr, 0) / activeRuns.length)
-            : 0;
-            
-        const avgInactive = inactiveRuns.length > 0 
-            ? Math.round(inactiveRuns.reduce((sum, run) => sum + run.rate_hr, 0) / inactiveRuns.length)
-            : 0;
+        const avgActive   = activeRuns.length   > 0 ? median(activeRuns.map(r => r.rate_hr))   : 0;
+        const avgInactive = inactiveRuns.length > 0 ? median(inactiveRuns.map(r => r.rate_hr)) : 0;
 
         if (avgActive > 0 || avgInactive > 0) {
             results.labels.push(category);

@@ -104,6 +104,32 @@
                             </div>
                         </div>
 
+                        <div class="mb-8 p-4 bg-gray-800 rounded-lg">
+                            <div class="flex items-baseline gap-3 mb-4">
+                                <h2 class="text-2xl font-semibold text-white">Aggregated Rates</h2>
+                                <span id="aggTableCount" class="text-sm text-gray-400 italic"></span>
+                            </div>
+                            <p class="text-sm text-gray-400 mb-4">Median rate/hr grouped by item &rarr; tool &rarr; miracle. Only groups with 3 or more runs are shown. Runs under 1 minute are excluded.</p>
+                            <div class="max-h-[60vh] overflow-y-auto bg-gray-600 p-3 rounded-lg border border-gray-500">
+                                <table class="min-w-full divide-y divide-gray-500">
+                                    <thead>
+                                        <tr>
+                                            <th class="sticky top-0 bg-gray-600 px-3 py-2 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">Item</th>
+                                            <th class="sticky top-0 bg-gray-600 px-3 py-2 text-center text-sm font-medium text-gray-300 uppercase tracking-wider">Tool</th>
+                                            <th class="sticky top-0 bg-gray-600 px-3 py-2 text-center text-sm font-medium text-gray-300 uppercase tracking-wider">Miracle</th>
+                                            <th class="sticky top-0 bg-gray-600 px-3 py-2 text-center text-sm font-medium text-gray-300 uppercase tracking-wider">Median Rate/hr</th>
+                                            <th class="sticky top-0 bg-gray-600 px-3 py-2 text-center text-sm font-medium text-gray-300 uppercase tracking-wider">N</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="aggTableBody" class="bg-gray-800 divide-y divide-gray-700 text-white">
+                                        <tr>
+                                            <td colspan="5" class="px-3 py-4 text-sm text-gray-400 text-center">Loading&hellip;</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
                         <div class="p-4 bg-gray-800 rounded-lg">
                             <h2 class="text-2xl font-semibold mb-4 text-white">Filtered Run Results</h2>
                             <div id="runResultsTableContainer" class="max-h-[80vh] overflow-y-auto bg-gray-600 p-3 rounded-lg border border-gray-500">

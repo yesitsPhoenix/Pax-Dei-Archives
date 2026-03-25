@@ -1,6 +1,9 @@
 import { supabase } from './supabaseClient.js';
 import { FARMING_CATEGORIES, GATHERING_TOOLS } from './gatheringConstants.js';
 
+const MIN_RUN_MS          = 60_000;  // 1-minute floor
+const RATE_WARN_THRESHOLD = 50_000;  // /hr soft-warning ceiling
+
 
 function generateUniqueCode() {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -109,6 +112,8 @@ const finalItemNameDisplay = document.getElementById('finalItemNameDisplay');
 const gatheredAmountInput = document.getElementById('gatheredAmountInput');
 const saveRunBtn = document.getElementById('saveRunBtn');
 const cancelFinalizeBtn = document.getElementById('cancelFinalizeBtn');
+const finalRatePreview = document.getElementById('finalRatePreview');
+const finalRateWarning = document.getElementById('finalRateWarning');
 const runHistoryBody = document.getElementById('runHistoryBody');
 
 // FIX: Corrected element IDs
@@ -213,12 +218,32 @@ function pauseStopwatch() {
 function stopStopwatch() {
     clearInterval(intervalId);
     isRunning = false;
+
+    if (elapsedTime > 0 && elapsedTime < MIN_RUN_MS) {
+        feedbackMessage.textContent = 'Run must be at least 1 minute long to save.';
+        feedbackMessage.className = 'text-center text-sm mt-4 text-red-400';
+        startRunBtn.textContent = 'Continue Run';
+        startRunBtn.disabled = false;
+        pauseRunBtn.disabled = true;
+        stopRunBtn.textContent = 'Discard Run';
+        stopRunBtn.onclick = () => {
+            stopRunBtn.textContent = 'Stop Run';
+            stopRunBtn.onclick = null;
+            resetFullRunState();
+            feedbackMessage.textContent = 'Run discarded.';
+            feedbackMessage.className = 'text-center text-sm mt-4 text-gray-400';
+        };
+        return;
+    }
     
     if (elapsedTime > 0 && currentRun && currentRun.item) {
         finalTimeDisplay.textContent = formatTime(elapsedTime);
         finalItemNameDisplay.textContent = currentRun.item;
         gatheredAmountInput.value = '';
+        if (finalRatePreview) finalRatePreview.textContent = '\u2014';
+        if (finalRateWarning) finalRateWarning.classList.add('hidden');
         finalizeRunModal.classList.remove('hidden');
+        setTimeout(() => gatheredAmountInput.focus(), 50);
     } else {
         resetFullRunState();
         feedbackMessage.textContent = 'Run stopped.';
@@ -398,6 +423,12 @@ shareRunBtn.addEventListener('click', () => {
     }
 });
 
+// Restore Stop button to normal behaviour when continuing a short run
+function restoreStopBtn() {
+    stopRunBtn.textContent = 'Stop Run';
+    stopRunBtn.onclick = null; // falls back to the addEventListener below
+}
+
 startRunBtn.addEventListener('click', () => {
     if (!currentRunCode) {
         feedbackMessage.textContent = 'Please generate a New Code or Load a Run first.';
@@ -429,6 +460,7 @@ startRunBtn.addEventListener('click', () => {
 
     currentRun.item = item;
     currentRun.name = runName;
+    restoreStopBtn();
     startStopwatch();
 });
 
@@ -440,11 +472,29 @@ cancelFinalizeBtn.addEventListener('click', () => {
     finalizeRunModal.classList.add('hidden');
 });
 
+// Rate preview + soft warning while typing the gathered amount
+gatheredAmountInput.addEventListener('input', () => {
+    const qty = parseInt(gatheredAmountInput.value, 10);
+    if (!finalRatePreview) return;
+    if (isNaN(qty) || qty < 0 || !elapsedTime) {
+        finalRatePreview.textContent = '\u2014';
+        if (finalRateWarning) finalRateWarning.classList.add('hidden');
+        return;
+    }
+    const rateHr = qty / (elapsedTime / 3_600_000);
+    finalRatePreview.textContent = Math.round(rateHr).toLocaleString();
+    if (finalRateWarning) finalRateWarning.classList.toggle('hidden', rateHr <= RATE_WARN_THRESHOLD);
+});
+
 
 saveRunBtn.addEventListener('click', async () => {
     const amount = parseInt(gatheredAmountInput.value, 10);
     if (isNaN(amount) || amount < 0) {
         alert('Please enter a valid amount gathered (0 or greater).');
+        return;
+    }
+    if (elapsedTime < MIN_RUN_MS) {
+        alert('Run must be at least 1 minute long to save.');
         return;
     }
 
