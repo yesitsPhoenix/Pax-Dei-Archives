@@ -125,7 +125,7 @@ async function initMap() {
         zoomHome.addTo(map);
 
         var imageOverlay = L.imageOverlay(
-            "frontend/www/assets/combined_dark1.jpg", [
+            "frontend/www/assets/map.jpg", [
                 [680, -450],
                 [-680, 450],
             ]
