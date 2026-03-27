@@ -208,7 +208,7 @@ export async function fetchAllItemsForDropdown() {
     while (true) {
         const { data, error } = await supabase
             .from('items')
-            .select('item_id, item_name, category_id, pax_dei_slug, region_id')
+            .select('item_id, item_name, category_id, pax_dei_slug')
             .order('item_name', { ascending: true })
             .range(from, from + PAGE_SIZE - 1);
 
