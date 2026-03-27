@@ -132,6 +132,25 @@ const editListingModalHtml = `
                     <input type="number" step="0.01" id="edit-total-price" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
                     <p id="edit-fee-info" class="text-xs text-gray-600 mt-1"></p>
                 </div>
+                <div class="mb-5 pt-3 border-t border-gray-200">
+                    <p class="text-gray-600 text-xs font-bold uppercase tracking-wide mb-2">Quality <span class="font-normal normal-case text-gray-400">(weapons, armor &amp; tools)</span></p>
+                    <div class="flex flex-wrap gap-2 items-center">
+                        <button type="button" id="edit-mastercrafted-btn"
+                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-500 hover:border-amber-400 transition-all duration-150 text-sm font-semibold select-none"
+                            aria-pressed="false">
+                            <i class="fas fa-crown" style="font-size:0.8em"></i> Mastercrafted
+                        </button>
+                        <div class="flex items-center gap-1">
+                            <span class="text-gray-400 text-xs mr-1">Enchant:</span>
+                            <button type="button" class="edit-enchant-btn px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-500 hover:border-blue-400 transition-all duration-150 text-sm font-semibold select-none" data-tier="0">None</button>
+                            <button type="button" class="edit-enchant-btn px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-500 hover:border-blue-400 transition-all duration-150 text-sm font-semibold select-none" data-tier="1">I</button>
+                            <button type="button" class="edit-enchant-btn px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-500 hover:border-blue-400 transition-all duration-150 text-sm font-semibold select-none" data-tier="2">II</button>
+                            <button type="button" class="edit-enchant-btn px-2.5 py-1.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-500 hover:border-blue-400 transition-all duration-150 text-sm font-semibold select-none" data-tier="3">III</button>
+                        </div>
+                    </div>
+                    <input type="hidden" id="edit-is-mastercrafted" name="edit-is-mastercrafted" value="false">
+                    <input type="hidden" id="edit-enchantment-tier" name="edit-enchantment-tier" value="0">
+                </div>
                 <div class="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
                     <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">Save Changes</button>
                     <button type="button" id="closeEditModal" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-full">Cancel</button>
@@ -142,6 +161,60 @@ const editListingModalHtml = `
 `;
 document.body.insertAdjacentHTML('beforeend', editListingModalHtml);
 
+// ── Edit modal quality toggle listeners (set up once on page load) ───────────────
+(function _setupEditQualityToggles() {
+    const masterBtn   = document.getElementById('edit-mastercrafted-btn');
+    const masterInput = document.getElementById('edit-is-mastercrafted');
+
+    if (masterBtn && masterInput) {
+        masterBtn.addEventListener('click', () => {
+            const newVal = masterBtn.getAttribute('aria-pressed') !== 'true';
+            _applyEditMastercrafted(newVal);
+        });
+    }
+
+    document.querySelectorAll('.edit-enchant-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            _applyEditEnchantTier(parseInt(btn.dataset.tier, 10));
+        });
+    });
+})();
+
+export const applyEditMastercrafted = (val) => {
+    const masterBtn   = document.getElementById('edit-mastercrafted-btn');
+    const masterInput = document.getElementById('edit-is-mastercrafted');
+    if (!masterBtn || !masterInput) return;
+    masterInput.value = val ? 'true' : 'false';
+    masterBtn.setAttribute('aria-pressed', val ? 'true' : 'false');
+    if (val) {
+        masterBtn.classList.add('border-amber-500', 'bg-amber-50', 'text-amber-700');
+        masterBtn.classList.remove('border-gray-300', 'bg-gray-50', 'text-gray-500');
+        masterBtn.querySelector('i').style.color = '#d97706';
+    } else {
+        masterBtn.classList.remove('border-amber-500', 'bg-amber-50', 'text-amber-700');
+        masterBtn.classList.add('border-gray-300', 'bg-gray-50', 'text-gray-500');
+        masterBtn.querySelector('i').style.color = '';
+    }
+};
+const _applyEditMastercrafted = applyEditMastercrafted;
+
+export const applyEditEnchantTier = (tier) => {
+    const enchantInput = document.getElementById('edit-enchantment-tier');
+    if (enchantInput) enchantInput.value = tier;
+    document.querySelectorAll('.edit-enchant-btn').forEach(b => {
+        const isActive = parseInt(b.dataset.tier, 10) === tier;
+        if (isActive) {
+            b.classList.add('border-blue-500', 'bg-blue-50', 'text-blue-700');
+            b.classList.remove('border-gray-300', 'bg-gray-50', 'text-gray-500');
+        } else {
+            b.classList.remove('border-blue-500', 'bg-blue-50', 'text-blue-700');
+            b.classList.add('border-gray-300', 'bg-gray-50', 'text-gray-500');
+        }
+    });
+};
+const _applyEditEnchantTier = applyEditEnchantTier;
+// ─────────────────────────────────────────────────────────────────
+
 export const getEditListingModalElements = () => {
     const editModal = document.getElementById('editListingModal');
     const editItemNameInput = document.getElementById('edit-item-name');
@@ -150,7 +223,9 @@ export const getEditListingModalElements = () => {
     const editFeeInfo = document.getElementById('edit-fee-info');
     const editListingForm = document.getElementById('editListingForm');
     const closeEditModalButton = document.getElementById('closeEditModal');
-    return { editModal, editItemNameInput, editQuantityListedInput, editTotalPriceInput, editFeeInfo, editListingForm, closeEditModalButton };
+    const editIsMastercraftedInput = document.getElementById('edit-is-mastercrafted');
+    const editEnchantmentTierInput = document.getElementById('edit-enchantment-tier');
+    return { editModal, editItemNameInput, editQuantityListedInput, editTotalPriceInput, editFeeInfo, editListingForm, closeEditModalButton, editIsMastercraftedInput, editEnchantmentTierInput };
 };
 
 export let originalListingPrice = 0;

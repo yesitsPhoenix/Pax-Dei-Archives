@@ -23,6 +23,7 @@ export const renderListingsTable = (listings, actualListingsBody) => {
 
         // Use items.json URL if available (has correct category path), else fallback
         const itemData = paxDeiSlug ? getItemData(paxDeiSlug) : null;
+
         const paxDeiUrl = itemData?.url || (paxDeiSlug ? `https://paxdei.gaming.tools/${paxDeiSlug}` : '#');
         const isLinkEnabled = !!(itemData?.url || paxDeiSlug);
         const linkClasses = isLinkEnabled ? 'text-blue-600 hover:underline' : 'text-gray-700 cursor-default';
@@ -111,6 +112,40 @@ export const renderListingsTable = (listings, actualListingsBody) => {
                 </td>`;
         }
 
+        // ── Quality attribute indicators ─────────────────────────────────────
+        const isMastercrafted = !!listing.is_mastercrafted;
+        const enchantTier = listing.enchantment_tier || 0;
+        const enchantRomanMap = { 1: 'I', 2: 'II', 3: 'III' };
+        const enchantLabel = enchantRomanMap[enchantTier] || null;
+        const iconPath = itemData?.iconPath || null;
+
+        // Icon block (with superimposed overlays when quality attributes are set)
+        let iconHtml = '';
+        if (iconPath) {
+            const imgEnchantClass = enchantTier > 0 ? ` listing-icon-enchant-${enchantTier}` : '';
+            const crownOverlay = isMastercrafted
+                ? `<i class="fas fa-crown listing-icon-crown-overlay" title="Mastercrafted"></i>`
+                : '';
+            const romanOverlay = enchantLabel
+                ? `<span class="listing-icon-roman-overlay">${enchantLabel}</span>`
+                : '';
+            iconHtml = `<div class="listing-item-icon">
+                <img src="${iconPath}" alt="" loading="lazy" class="listing-item-icon-img${imgEnchantClass}" onerror="this.closest('.listing-item-icon').style.display='none'">
+                ${crownOverlay}${romanOverlay}
+            </div>`;
+        }
+
+        // Fallback text badges (shown only when there is no icon image)
+        const crownBadge = isMastercrafted && !iconPath
+            ? `<span class="listing-crown" title="Mastercrafted"><i class="fas fa-crown" style="color:#f59e0b;font-size:0.75em;margin-right:3px;"></i></span>`
+            : '';
+        const enchantBadge = enchantLabel && !iconPath
+            ? `<span class="listing-enchant-badge listing-enchant-tier-${enchantTier}" title="Enchantment ${enchantLabel}">${enchantLabel}</span>`
+            : '';
+        // Cell left-border glow (used whether or not there is an icon)
+        const enchantCellClass = enchantTier > 0 ? ` listing-enchant-glow-${enchantTier}` : '';
+        // ─────────────────────────────────────────────────────────────────────
+
         const row = document.createElement('tr');
         row.dataset.listingId = listing.listing_id;
         row.innerHTML = `
@@ -119,10 +154,11 @@ export const renderListingsTable = (listings, actualListingsBody) => {
                        data-listing-id="${listing.listing_id}" 
                        class="listing-select-checkbox form-checkbox h-4 w-4 text-indigo-600 rounded">
             </td>
-            <td class="py-3 px-6 text-left">
-                <a href="${paxDeiUrl}" ${linkTarget} class="${linkClasses}">
-                    ${listing.item_name || 'N/A'}
-                </a>
+            <td class="py-3 px-6 text-left${enchantCellClass}">
+                <div class="listing-item-cell">
+                    ${iconHtml}
+                    <span class="listing-item-name">${crownBadge}<a href="${paxDeiUrl}" ${linkTarget} class="${linkClasses}">${listing.item_name || 'N/A'}</a>${enchantBadge}</span>
+                </div>
             </td>
             <td class="py-3 px-6 text-left">${listing.category_name || 'N/A'}</td>
             <td class="py-3 px-6 text-left">${Math.round(listing.quantity_listed || 0).toLocaleString()}</td>

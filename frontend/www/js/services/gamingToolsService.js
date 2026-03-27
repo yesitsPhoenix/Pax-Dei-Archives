@@ -127,7 +127,7 @@ export async function fetchZoneListings(shard, province, homeValley) {
  */
 export async function loadItemsData() {
     if (_itemsData) return _itemsData;
-    const cached = cacheGet('items_data');
+    const cached = cacheGet('items_data_v2');
     if (cached) {
         _itemsData = cached;
         return _itemsData;
@@ -140,10 +140,11 @@ export async function loadItemsData() {
         for (const [id, item] of Object.entries(raw)) {
             _itemsData[id] = {
                 name: item.name?.En || id,
-                url: item.url || null
+                url: item.url || null,
+                iconPath: item.iconPath || null
             };
         }
-        cacheSet('items_data', _itemsData);
+        cacheSet('items_data_v2', _itemsData);
     } catch (e) {
         console.warn('[GamingTools] items.json load failed:', e.message);
         _itemsData = {};

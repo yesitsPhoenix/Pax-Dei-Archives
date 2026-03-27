@@ -30,7 +30,9 @@ import {
     createStallError,
     marketStallsList,
     deleteStallError,
-    modalMarketStallLocationSelect
+    modalMarketStallLocationSelect,
+    applyEditMastercrafted,
+    applyEditEnchantTier
 } from './dom.js';
 import { loadTransactionHistory } from './sales.js';
 
@@ -123,6 +125,8 @@ export const handleAddListing = async (e) => {
         const itemCountPerStack = parseInt(form.querySelector('[name="item-count-per-stack"]').value, 10);
         const itemPricePerStack = parseFloat(form.querySelector('[name="item-price-per-stack"]').value);
         const marketStallId = form.querySelector('[name="market-stall-location"]').value;
+        const isMastercrafted = form.querySelector('[name="is-mastercrafted"]')?.value === 'true';
+        const enchantmentTier = parseInt(form.querySelector('[name="enchantment-tier"]')?.value || '0', 10) || null;
 
         if (!itemName || isNaN(itemStacks) || isNaN(itemCountPerStack) || isNaN(itemPricePerStack) || !marketStallId) {
             await showCustomModal('Validation Error', 'Please fill in all listing fields correctly.', [{
@@ -187,7 +191,9 @@ export const handleAddListing = async (e) => {
                 listed_price_per_unit: pricePerUnitPerListing,
                 total_listed_price: totalListedPricePerListing,
                 market_fee: marketFeePerListing,
-                market_stall_id: marketStallId
+                market_stall_id: marketStallId,
+                is_mastercrafted: isMastercrafted,
+                enchantment_tier: enchantmentTier
             });
 
             if (error) {
@@ -464,7 +470,7 @@ export const showEditListingModal = async (listingId) => {
             error
         } = await supabase
             .from('market_listings')
-            .select('item_id, quantity_listed, total_listed_price, market_fee, items(item_name)')
+            .select('item_id, quantity_listed, total_listed_price, market_fee, is_mastercrafted, enchantment_tier, items(item_name)')
             .eq('listing_id', listingId)
             .eq('character_id', currentCharacterId)
             .single();
@@ -486,6 +492,9 @@ export const showEditListingModal = async (listingId) => {
         editQuantityListedInput.value = Math.round(listing.quantity_listed || 0);
         editTotalPriceInput.value = Math.round(listing.total_listed_price || 0);
         updateEditFeeInfo();
+        // Populate quality attributes
+        applyEditMastercrafted(!!listing.is_mastercrafted);
+        applyEditEnchantTier(listing.enchantment_tier || 0);
         // Always reset button state in case a previous save left it stuck
         const submitButton = editModal?.querySelector('button[type="submit"]');
         if (submitButton) {
@@ -676,6 +685,9 @@ export const handleEditListingSave = async (e) => {
         //console.log('New price per unit:', listed_price_per_unit);
 
 
+        const editIsMastercrafted = document.getElementById('edit-is-mastercrafted')?.value === 'true';
+        const editEnchantmentTier = parseInt(document.getElementById('edit-enchantment-tier')?.value || '0', 10) || null;
+
         const {
             error: updateListingError
         } = await supabase
@@ -684,7 +696,9 @@ export const handleEditListingSave = async (e) => {
                 quantity_listed: quantity_listed,
                 listed_price_per_unit: listed_price_per_unit,
                 total_listed_price: total_listed_price,
-                market_fee: newCalculatedFee
+                market_fee: newCalculatedFee,
+                is_mastercrafted: editIsMastercrafted,
+                enchantment_tier: editEnchantmentTier
             })
             .eq('listing_id', currentEditingListingId)
             .eq('character_id', currentCharacterId);
@@ -700,6 +714,14 @@ export const handleEditListingSave = async (e) => {
         //console.log('Listing successfully updated in DB.');
 
 
+        // Close the modal and re-enable the button immediately so the user
+        // isn't left watching 'Saving...' while the success dialog blocks.
+        editModal.classList.add('hidden');
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Save Changes';
+        }
+
         if (additionalFeeToDeduct > 0) {
             const newGold = currentGold - additionalFeeToDeduct;
             const {
@@ -712,28 +734,15 @@ export const handleEditListingSave = async (e) => {
                 .eq('character_id', currentCharacterId);
 
             if (updateGoldError) {
-                await showCustomModal('Warning', 'Listing updated, but failed to deduct additional gold for fee increase: ' + updateGoldError.message, [{
-                    text: 'OK',
-                    value: true
-                }]);
+                showCustomModal('Warning', 'Listing updated, but failed to deduct additional gold for fee increase: ' + updateGoldError.message, [{ text: 'OK', value: true }]);
                 console.error('handleEditListingSave: Error updating character gold for fee deduction:', updateGoldError.message);
             } else {
-                await showCustomModal('Success', `Listing updated and additional fee of ${additionalFeeToDeduct.toLocaleString()} gold deducted!`, [{
-                    text: 'OK',
-                    value: true
-                }]);
-                //console.log(`Character gold updated from ${currentGold} to ${newGold} after fee deduction.`);
+                showCustomModal('Success', `Listing updated and additional fee of ${additionalFeeToDeduct.toLocaleString()} gold deducted!`, [{ text: 'OK', value: true }]);
             }
         } else {
-            await showCustomModal('Success', 'Listing updated successfully!', [{
-                text: 'OK',
-                value: true
-            }]);
-            //console.log('Listing updated, no additional fee to deduct.');
+            showCustomModal('Success', 'Listing updated successfully!', [{ text: 'OK', value: true }]);
         }
-        editModal.classList.add('hidden');
-        //console.log('Edit modal hidden. Calling loadTraderPageData.');
-        await loadTraderPageData();
+        loadTraderPageData(); // non-blocking — page refreshes in background
         
     } catch (e) {
         console.error('handleEditListingSave: An unexpected error occurred while saving changes.', e);

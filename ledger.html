@@ -166,6 +166,166 @@
         .pda-tooltip-host:focus-within .pda-tooltip {
             display: block;
         }
+        /* ── Quality attribute indicators (mastercrafted / enchantment) ── */
+        .listing-crown {
+            display: inline-flex;
+            align-items: center;
+            vertical-align: middle;
+            margin-right: 2px;
+        }
+        .listing-enchant-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 5px;
+            font-size: 0.65em;
+            font-weight: 800;
+            line-height: 1;
+            padding: 2px 5px;
+            border-radius: 4px;
+            vertical-align: middle;
+            letter-spacing: 0.05em;
+        }
+        /* Tier I — subtle blue */
+        .listing-enchant-tier-1 {
+            color: #93c5fd;
+            background: rgba(59,130,246,0.15);
+            border: 1px solid rgba(96,165,250,0.5);
+        }
+        /* Tier II — brighter blue */
+        .listing-enchant-tier-2 {
+            color: #60a5fa;
+            background: rgba(59,130,246,0.2);
+            border: 1px solid rgba(96,165,250,0.7);
+        }
+        /* Tier III — electric blue */
+        .listing-enchant-tier-3 {
+            color: #bfdbfe;
+            background: rgba(37,99,235,0.28);
+            border: 1px solid #60a5fa;
+        }
+        /* Cell-level glow intentionally removed — glow lives on the icon only */
+        /* ── Item icon in active listings table ── */
+        .listing-item-cell {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .listing-item-name {
+            display: inline-flex;
+            align-items: center;
+        }
+        /* Icon wrapper — position: relative so overlays anchor to it */
+        .listing-item-icon {
+            position: relative;
+            width: 36px;
+            height: 36px;
+            flex-shrink: 0;
+            border-radius: 6px;
+            overflow: visible; /* overlays can bleed outside */
+        }
+        .listing-item-icon-img {
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            object-fit: cover;
+            display: block;
+        }
+        /* Enchant glow on the icon image */
+        .listing-icon-enchant-1 {
+            box-shadow: 0 0 6px 2px rgba(96,165,250,0.55);
+            outline: 1px solid rgba(96,165,250,0.55);
+        }
+        .listing-icon-enchant-2 {
+            box-shadow: 0 0 9px 3px rgba(96,165,250,0.75);
+            outline: 1px solid rgba(96,165,250,0.8);
+        }
+        .listing-icon-enchant-3 {
+            box-shadow: 0 0 13px 4px rgba(59,130,246,0.9), 0 0 5px 1px #60a5fa;
+            outline: 1.5px solid #60a5fa;
+        }
+        /* Crown: top-right corner of the icon */
+        .listing-icon-crown-overlay {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            font-size: 0.6rem;
+            color: #f59e0b;
+            text-shadow: 0 0 4px #000, 0 0 4px #000;
+            pointer-events: none;
+            line-height: 1;
+        }
+        /* Roman numeral: bottom-right corner of the icon */
+        .listing-icon-roman-overlay {
+            position: absolute;
+            bottom: -3px;
+            right: -3px;
+            font-size: 1rem;
+            font-weight: 900;
+            color: #bfdbfe;
+            background: rgba(0,0,0,0.72);
+            border: 1px solid rgba(96,165,250,0.6);
+            border-radius: 3px;
+            padding: 0px 3px 1px;
+            line-height: 1.1;
+            pointer-events: none;
+            letter-spacing: -0.02em;
+        }
+
+        /* Quality toggle buttons in the Add Listing modal */
+        .quality-toggle-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 1px solid #475569;
+            background: #334155;
+            color: #94a3b8;
+            font-size: 0.85em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s, color 0.15s;
+            user-select: none;
+        }
+        .quality-toggle-btn:hover {
+            border-color: #64748b;
+            color: #e2e8f0;
+        }
+        .quality-toggle-btn[aria-pressed="true"] {
+            border-color: #f59e0b;
+            background: rgba(245,158,11,0.12);
+            color: #fcd34d;
+        }
+        .quality-toggle-btn[aria-pressed="true"] i {
+            color: #f59e0b;
+        }
+        .enchant-tier-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 36px;
+            padding: 5px 10px;
+            border-radius: 8px;
+            border: 1px solid #475569;
+            background: #334155;
+            color: #94a3b8;
+            font-size: 0.85em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s, color 0.15s;
+            user-select: none;
+        }
+        .enchant-tier-btn:hover {
+            border-color: #64748b;
+            color: #e2e8f0;
+        }
+        .enchant-tier-btn.active {
+            border-color: #60a5fa;
+            background: rgba(59,130,246,0.18);
+            color: #93c5fd;
+        }
+
         /* Market Low cell tooltip — rendered in <body> via JS to escape table stacking context */
         #pda-float-tip {
             display: none;
@@ -1006,6 +1166,24 @@
                         <option value="">Select a Market Stall</option>
                     </select>
                 </div>
+                <!-- Quality attributes (weapons, armor, tools) -->
+                <div class="form-group pt-3 border-t border-slate-600/50">
+                    <label class="block text-md font-medium text-gray-300 mb-2">Quality <span class="text-gray-500 text-sm font-normal">(weapons, armor &amp; tools)</span></label>
+                    <div class="flex flex-wrap gap-2 items-center">
+                        <button type="button" id="modal-mastercrafted-btn" class="quality-toggle-btn" aria-pressed="false">
+                            <i class="fas fa-crown" style="font-size:0.85em"></i> Mastercrafted
+                        </button>
+                        <div class="flex items-center gap-1">
+                            <span class="text-gray-400 text-sm mr-1">Enchant:</span>
+                            <button type="button" class="modal-enchant-btn enchant-tier-btn" data-tier="0">None</button>
+                            <button type="button" class="modal-enchant-btn enchant-tier-btn" data-tier="1">I</button>
+                            <button type="button" class="modal-enchant-btn enchant-tier-btn" data-tier="2">II</button>
+                            <button type="button" class="modal-enchant-btn enchant-tier-btn" data-tier="3">III</button>
+                        </div>
+                    </div>
+                    <input type="hidden" id="modal-is-mastercrafted" name="is-mastercrafted" value="false">
+                    <input type="hidden" id="modal-enchantment-tier" name="enchantment-tier" value="0">
+                </div>
                 <div class="flex justify-end gap-4">
                     <button type="submit" class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300">
                         Add Listing
@@ -1390,6 +1568,63 @@
     setupAdminAuthListener();
     </script>
 
+    <!-- Quality attribute toggles for Add Listing modal -->
+    <script>
+    (function () {
+        const masterBtn   = document.getElementById('modal-mastercrafted-btn');
+        const masterInput = document.getElementById('modal-is-mastercrafted');
+        const enchantInput = document.getElementById('modal-enchantment-tier');
+        const enchantBtns  = document.querySelectorAll('.modal-enchant-btn');
+        const addModal     = document.getElementById('addListingModal');
+
+        function setMastercrafted(val) {
+            if (!masterBtn || !masterInput) return;
+            masterInput.value = val ? 'true' : 'false';
+            masterBtn.setAttribute('aria-pressed', val ? 'true' : 'false');
+        }
+
+        function setEnchantTier(tier) {
+            if (!enchantInput) return;
+            enchantInput.value = tier;
+            enchantBtns.forEach(b => {
+                const active = parseInt(b.dataset.tier, 10) === tier;
+                b.classList.toggle('active', active);
+            });
+        }
+
+        // Initialise enchant buttons — "None" active by default
+        setEnchantTier(0);
+
+        masterBtn?.addEventListener('click', () => {
+            const next = masterBtn.getAttribute('aria-pressed') !== 'true';
+            setMastercrafted(next);
+        });
+
+        enchantBtns.forEach(b => {
+            b.addEventListener('click', () => setEnchantTier(parseInt(b.dataset.tier, 10)));
+        });
+
+        // Reset quality fields when the modal is closed or the form is reset
+        document.getElementById('closeAddListingModalBtn')?.addEventListener('click', resetQuality);
+        document.getElementById('add-listing-form-modal')?.addEventListener('reset', resetQuality);
+
+        // Also reset after a successful submission (form.reset() is called in actions.js)
+        const form = document.getElementById('add-listing-form-modal');
+        if (form) {
+            const origReset = form.reset.bind(form);
+            form.reset = function () {
+                origReset();
+                resetQuality();
+            };
+        }
+
+        function resetQuality() {
+            setMastercrafted(false);
+            setEnchantTier(0);
+        }
+    })();
+    </script>
+
     <!-- Float tooltip for Market Low cells (escapes table stacking context) -->
     <div id="pda-float-tip"></div>
     <script>
@@ -1398,6 +1633,7 @@
         const MARGIN = 10;
 
         document.addEventListener('mouseover', (e) => {
+            if (!(e.target instanceof Element)) return;
             const cell = e.target.closest('td.pda-cell-tip');
             if (!cell) return;
             const html = cell.dataset.tipHtml;
