@@ -7,6 +7,31 @@ import {
 } from './dom.js';
 import { getMarketDataForSlug, getMarketDataByItemName, getItemData } from '../services/gamingToolsService.js';
 
+// Maps items.json URL prefixes to gaming.tools embed-compatible category paths.
+// The embed script validates the first URL path segment against its mainCategories
+// list (armor, weapons, tools, etc.) which differs from items.json prefixes.
+// Maps DB slug prefixes to gaming.tools embed-compatible URL paths.
+// All mappings verified via HEAD requests against paxdei.gaming.tools.
+function toEmbedUrl(paxDeiSlug, fallback) {
+    if (!paxDeiSlug) return { url: fallback, noTooltip: true };
+    const slash  = paxDeiSlug.lastIndexOf('/');
+    const bare   = slash !== -1 ? paxDeiSlug.slice(slash + 1) : paxDeiSlug;
+    const prefix = slash !== -1 ? paxDeiSlug.slice(0, slash) : '';
+    let cat;
+    if      (prefix === 'wearables')   cat = 'armor';
+    else if (prefix === 'wieldables')  cat = bare.startsWith('wieldable_tool')   ? 'tools'
+                                          : bare.startsWith('wieldable_shield') ? 'shields'
+                                          : 'weapons';
+    else if (prefix === 'consumables') cat = 'consumables';
+    else if (prefix === 'gatherables') cat = 'gatherables';
+    else if (prefix === 'recipes')     cat = 'recipes';
+    else if (prefix === 'projectiles') cat = 'projectiles';
+    else if (prefix === 'props')       cat = 'props';
+    else if (prefix === 'materials')   cat = 'materials';
+    else return { url: fallback, noTooltip: true };
+    return { url: `https://paxdei.gaming.tools/${cat}/${bare}`, noTooltip: false };
+}
+
 export const renderListingsTable = (listings, actualListingsBody) => {
     const targetBody = actualListingsBody || listingsBody;
     if (!targetBody) return;
@@ -21,13 +46,14 @@ export const renderListingsTable = (listings, actualListingsBody) => {
         const paxDeiSlug = listing.pax_dei_slug ||
             (listing.items && listing.items.pax_dei_slug);
 
-        // Use items.json URL if available (has correct category path), else fallback
-        const itemData = paxDeiSlug ? getItemData(paxDeiSlug) : null;
-
-        const paxDeiUrl = itemData?.url || (paxDeiSlug ? `https://paxdei.gaming.tools/${paxDeiSlug}` : '#');
+        // Use items.json for icon/name data; build the embed-compatible URL separately
+        const itemData   = paxDeiSlug ? getItemData(paxDeiSlug) : null;
+        const fallbackUrl = itemData?.url || (paxDeiSlug ? `https://paxdei.gaming.tools/${paxDeiSlug}` : '#');
+        const { url: paxDeiUrl, noTooltip } = toEmbedUrl(paxDeiSlug, fallbackUrl);
         const isLinkEnabled = !!(itemData?.url || paxDeiSlug);
         const linkClasses = isLinkEnabled ? 'text-blue-600 hover:underline' : 'text-gray-700 cursor-default';
         const linkTarget = isLinkEnabled ? 'target="_blank"' : '';
+        const noTooltipAttr = noTooltip ? 'data-no-tooltip' : '';
 
         // Market Low column — try slug first, fall back to display name via items.json
         const myPrice = parseFloat(listing.listed_price_per_unit) || 0;
@@ -155,10 +181,9 @@ export const renderListingsTable = (listings, actualListingsBody) => {
                        class="listing-select-checkbox form-checkbox h-4 w-4 text-indigo-600 rounded">
             </td>
             <td class="py-3 px-6 text-left${enchantCellClass}">
-                <div class="listing-item-cell">
-                    ${iconHtml}
-                    <span class="listing-item-name">${crownBadge}<a href="${paxDeiUrl}" ${linkTarget} class="${linkClasses}">${listing.item_name || 'N/A'}</a>${enchantBadge}</span>
-                </div>
+                <a href="${paxDeiUrl}" ${linkTarget} ${noTooltipAttr} class="listing-item-cell ${linkClasses}">
+                    ${iconHtml}${crownBadge}${listing.item_name || 'N/A'}${enchantBadge}
+                </a>
             </td>
             <td class="py-3 px-6 text-left">${listing.category_name || 'N/A'}</td>
             <td class="py-3 px-6 text-left">${Math.round(listing.quantity_listed || 0).toLocaleString()}</td>

@@ -1645,14 +1645,16 @@
 
         document.addEventListener('mousemove', (e) => {
             if (tip.style.display === 'none') return;
+            if (!(e.target instanceof Element)) return;
             if (!e.target.closest('td.pda-cell-tip')) return;
             positionTip(e);
         });
 
         document.addEventListener('mouseout', (e) => {
+            if (!(e.target instanceof Element)) return;
             if (!e.target.closest('td.pda-cell-tip')) return;
             // only hide if leaving the cell entirely
-            if (!e.relatedTarget || !e.relatedTarget.closest('td.pda-cell-tip')) {
+            if (!e.relatedTarget || !(e.relatedTarget instanceof Element) || !e.relatedTarget.closest('td.pda-cell-tip')) {
                 tip.style.display = 'none';
             }
         });
