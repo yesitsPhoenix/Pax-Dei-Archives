@@ -1132,67 +1132,82 @@
     </div>
 
     <div id="addListingModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 modal-backdrop">
-        <div class="bg-slate-800 p-8 rounded-2xl shadow-2xl w-full max-w-4xl border border-emerald-400/30">
-            <h3 class="text-xl font-bold text-white mb-6 text-center">Add New Listing</h3>
-            <form id="add-listing-form-modal" class="space-y-4">
-                <div class="form-group">
-                    <label for="modal-item-name" class="block text-md font-medium text-gray-300">Item Name</label>
-                    <div class="autocomplete-wrapper">
-                        <input type="text" id="modal-item-name" name="item-name" placeholder="e.g., Iron Ingot" required
-                               class="mt-1 block w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400">
-                        <div id="modal-item-name-suggestions" class="autocomplete-suggestions"></div>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="modal-item-stacks" class="block text-md font-medium text-gray-300">Stacks (Number of Individual Listings)</label>
-                    <input type="number" id="modal-item-stacks" name="item-stacks" value="1" required
-                               class="mt-1 block w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400">
-                </div>
-                <div class="form-group">
-                    <label for="modal-item-count-per-stack" class="block text-md font-medium text-gray-300">Count (per stack)</label>
-                    <input type="number" id="modal-item-count-per-stack" name="item-count-per-stack" placeholder="e.g., 100" required
-                               class="mt-1 block w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400">
-                </div>
-                <div class="form-group">
-                    <label for="modal-item-price-per-stack" class="block text-md font-medium text-gray-300">Price (per stack)</label>
-                    <input type="number" id="modal-item-price-per-stack" name="item-price-per-stack" placeholder="e.g., 500" required
-                               class="mt-1 block w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400">
-                    <div id="modal-market-price-hint" class="hidden mt-1 px-3 py-2.5 bg-slate-600/70 rounded-lg border border-slate-400/60 text-gray-200"></div>
-                </div>
-                <div class="form-group">
-                    <label for="modal-market-stall-location" class="block text-md font-medium text-gray-300">Market Stall Location</label>
-                    <select id="modal-market-stall-location" name="market-stall-location" required
-                                class="w-full p-2 bg-slate-700 text-white border border-slate-600 rounded-lg focus:ring-2 focus:ring-amber-400">
-                        <option value="">Select a Market Stall</option>
-                    </select>
-                </div>
-                <!-- Quality attributes (weapons, armor, tools) -->
-                <div class="form-group pt-3 border-t border-slate-600/50">
-                    <label class="block text-md font-medium text-gray-300 mb-2">Quality <span class="text-gray-500 text-sm font-normal">(weapons, armor &amp; tools)</span></label>
-                    <div class="flex flex-wrap gap-2 items-center">
-                        <button type="button" id="modal-mastercrafted-btn" class="quality-toggle-btn" aria-pressed="false">
-                            <i class="fas fa-crown" style="font-size:0.85em"></i> Mastercrafted
-                        </button>
-                        <div class="flex items-center gap-1">
-                            <span class="text-gray-400 text-sm mr-1">Enchant:</span>
-                            <button type="button" class="modal-enchant-btn enchant-tier-btn" data-tier="0">None</button>
-                            <button type="button" class="modal-enchant-btn enchant-tier-btn" data-tier="1">I</button>
-                            <button type="button" class="modal-enchant-btn enchant-tier-btn" data-tier="2">II</button>
-                            <button type="button" class="modal-enchant-btn enchant-tier-btn" data-tier="3">III</button>
+        <div class="bg-slate-800 p-6 rounded-2xl shadow-2xl w-full max-w-5xl border border-emerald-400/30">
+            <h3 class="text-xl font-bold text-white mb-5 text-center">Add New Listing</h3>
+            <div class="flex gap-6">
+                <!-- Left column: form fields -->
+                <form id="add-listing-form-modal" class="flex flex-col gap-3.5 w-[340px] flex-shrink-0">
+                    <div class="form-group">
+                        <label for="modal-item-name" class="block text-sm font-medium text-gray-300">Item Name</label>
+                        <div class="autocomplete-wrapper">
+                            <input type="text" id="modal-item-name" name="item-name" placeholder="e.g., Iron Ingot" required
+                                   class="mt-1 block w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400">
+                            <div id="modal-item-name-suggestions" class="autocomplete-suggestions"></div>
                         </div>
                     </div>
-                    <input type="hidden" id="modal-is-mastercrafted" name="is-mastercrafted" value="false">
-                    <input type="hidden" id="modal-enchantment-tier" name="enchantment-tier" value="0">
+                    <div class="form-group">
+                        <label for="modal-item-stacks" class="block text-sm font-medium text-gray-300">Stacks <span class="text-gray-500 font-normal">(individual listings)</span></label>
+                        <input type="number" id="modal-item-stacks" name="item-stacks" value="1" required
+                               class="mt-1 block w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400">
+                    </div>
+                    <div class="form-group">
+                        <label for="modal-item-count-per-stack" class="block text-sm font-medium text-gray-300">Count <span class="text-gray-500 font-normal">(per stack)</span></label>
+                        <input type="number" id="modal-item-count-per-stack" name="item-count-per-stack" placeholder="e.g., 100" required
+                               class="mt-1 block w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400">
+                    </div>
+                    <div class="form-group">
+                        <label for="modal-item-price-per-stack" class="block text-sm font-medium text-gray-300">Price <span class="text-gray-500 font-normal">(per stack)</span></label>
+                        <input type="number" id="modal-item-price-per-stack" name="item-price-per-stack" placeholder="e.g., 500" required
+                               class="mt-1 block w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400">
+                    </div>
+                    <div class="form-group">
+                        <label for="modal-market-stall-location" class="block text-sm font-medium text-gray-300">Market Stall</label>
+                        <select id="modal-market-stall-location" name="market-stall-location" required
+                                    class="mt-1 w-full p-2 bg-slate-700 text-white border border-slate-600 rounded-lg focus:ring-2 focus:ring-amber-400">
+                            <option value="">Select a Market Stall</option>
+                        </select>
+                    </div>
+                    <!-- Quality attributes (weapons, armor, tools) -->
+                    <div class="form-group pt-3 border-t border-slate-600/50">
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Quality <span class="text-gray-500 text-xs font-normal">(weapons, armor &amp; tools)</span></label>
+                        <div class="flex flex-wrap gap-2 items-center">
+                            <button type="button" id="modal-mastercrafted-btn" class="quality-toggle-btn" aria-pressed="false">
+                                <i class="fas fa-crown" style="font-size:0.85em"></i> Mastercrafted
+                            </button>
+                            <div class="flex items-center gap-1">
+                                <span class="text-gray-400 text-xs mr-1">Enchant:</span>
+                                <button type="button" class="modal-enchant-btn enchant-tier-btn" data-tier="0">None</button>
+                                <button type="button" class="modal-enchant-btn enchant-tier-btn" data-tier="1">I</button>
+                                <button type="button" class="modal-enchant-btn enchant-tier-btn" data-tier="2">II</button>
+                                <button type="button" class="modal-enchant-btn enchant-tier-btn" data-tier="3">III</button>
+                            </div>
+                        </div>
+                        <input type="hidden" id="modal-is-mastercrafted" name="is-mastercrafted" value="false">
+                        <input type="hidden" id="modal-enchantment-tier" name="enchantment-tier" value="0">
+                    </div>
+                    <div class="flex justify-end gap-3 pt-1">
+                        <button type="submit" class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300">
+                            Add Listing
+                        </button>
+                        <button type="button" id="closeAddListingModalBtn" class="bg-slate-600 hover:bg-slate-700 text-white py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-300">
+                            Close
+                        </button>
+                    </div>
+                </form>
+                <!-- Divider -->
+                <div class="w-px bg-slate-600/50 self-stretch flex-shrink-0"></div>
+                <!-- Right column: market data + suggested price -->
+                <div class="flex-1 min-w-0 flex flex-col">
+                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Market Intelligence</p>
+                    <!-- Placeholder shown before item is selected -->
+                    <div id="modal-market-hint-placeholder" class="flex-1 flex flex-col items-center justify-center text-center py-8">
+                        <i class="fas fa-search text-slate-600 text-3xl mb-3"></i>
+                        <p class="text-gray-500 text-sm">Select an item to see live market data, your sales history, and a suggested price.</p>
+                    </div>
+                    <!-- Hint panel (populated by JS after item selected) -->
+                    <div id="modal-market-price-hint" class="hidden flex-1 overflow-y-auto text-gray-200"></div>
                 </div>
-                <div class="flex justify-end gap-4">
-                    <button type="submit" class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300">
-                        Add Listing
-                    </button>
-                    <button type="button" id="closeAddListingModalBtn" class="bg-slate-600 hover:bg-slate-700 text-white py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-300">
-                        Close
-                    </button>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
 

@@ -10,6 +10,8 @@ import {
     clearZoneData,
     getMarketDataForSlug,
     getMarketDataByItemName,
+    getMarketDataForSlugByQuality,
+    getMarketDataByItemNameAndQuality,
     getItemNameForSlug,
     getOwnListingCountForSlug,
     getItemIdByName,
@@ -681,7 +683,7 @@ async function fetchItemSalesHistory(itemId) {
     try {
         const { data, error } = await supabase
             .from('sales')
-            .select('quantity_sold, sale_price_per_unit, total_sale_price, sale_date, market_listings!inner(item_id)')
+            .select('quantity_sold, sale_price_per_unit, total_sale_price, sale_date, market_listings!inner(item_id, is_mastercrafted, enchantment_tier)')
             .eq('market_listings.item_id', itemId)
             .eq('character_id', currentCharacterId)
             .order('sale_date', { ascending: false })
@@ -696,7 +698,32 @@ async function fetchItemSalesHistory(itemId) {
         const lastSold    = data[0].sale_date;
         const saleCount   = data.length;
 
-        return { avgPerUnit, avgPerStack, maxPerUnit, totalUnits, saleCount, lastSold };
+        // Build quality-keyed breakdown
+        const grouped = {};
+        for (const row of data) {
+            const ml  = row.market_listings;
+            const mc  = ml?.is_mastercrafted ? 1 : 0;
+            const enc = ml?.enchantment_tier  || 0;
+            const key = `mc${mc}enc${enc}`;
+            if (!grouped[key]) grouped[key] = { rows: [], lastSold: null };
+            grouped[key].rows.push(row);
+            if (!grouped[key].lastSold || row.sale_date > grouped[key].lastSold) {
+                grouped[key].lastSold = row.sale_date;
+            }
+        }
+        const byQuality = {};
+        for (const [key, group] of Object.entries(grouped)) {
+            const rows = group.rows;
+            byQuality[key] = {
+                avgPerUnit:  rows.reduce((s, r) => s + (r.sale_price_per_unit || 0), 0) / rows.length,
+                avgPerStack: rows.reduce((s, r) => s + (r.total_sale_price    || 0), 0) / rows.length,
+                maxPerUnit:  Math.max(...rows.map(r => r.sale_price_per_unit || 0)),
+                saleCount:   rows.length,
+                lastSold:    group.lastSold
+            };
+        }
+
+        return { avgPerUnit, avgPerStack, maxPerUnit, totalUnits, saleCount, lastSold, byQuality };
     } catch {
         return null;
     }
@@ -708,6 +735,7 @@ function initializeAutocomplete(allItems) {
     let _addListingOwnCount = 0;   // how many of the zone listings for this item belong to the user
     let _addListingHistoryData = null;
     let _addListingHistoryLoading = false;
+    let _addListingSelectedItem = null;  // the currently selected item (for quality-specific lookups)
 
     function getRelativeTime(isoDate) {
         const diff = Date.now() - new Date(isoDate).getTime();
@@ -719,90 +747,131 @@ function initializeAutocomplete(allItems) {
         return months === 1 ? '1 month ago' : `${months} months ago`;
     }
 
-    function buildSuggestion(md, hist, count, stacks) {
-        const hasMarket   = !!md;
-        const hasHist     = !!hist;
-        const hasCount    = count > 0;
-        const hasStacks   = stacks > 0;
-        const lowSupply   = hasMarket && md.totalListings <= 3;
-        const highSupply  = hasMarket && md.totalListings > 20;
+    function buildSuggestion(md, qualityMd, hist, count, stacks, isMastercrafted, enchantmentTier) {
+        const ENCHANT_PREMIUMS = [0, 0.10, 0.20, 0.30];
+        const mcPremium   = isMastercrafted ? 0.15 : 0;
+        const encPremium  = ENCHANT_PREMIUMS[enchantmentTier || 0] || 0;
+        const qualityMult = (1 + mcPremium) * (1 + encPremium);
+        const isQuality   = isMastercrafted || ((enchantmentTier || 0) > 0);
+
+        // Effective market data: quality-specific if available, otherwise all-quality × premium
+        const effectiveMd = qualityMd || (md && isQuality ? {
+            marketLow:     parseFloat((md.marketLow  * qualityMult).toFixed(2)),
+            marketAvg:     parseFloat((md.marketAvg  * qualityMult).toFixed(2)),
+            totalListings: null,  // estimated — not a real listing count
+            isEstimated:   true
+        } : md);
+
+        // Effective history: quality-specific if available, otherwise all-quality × premium
+        const qHistKey    = `mc${isMastercrafted ? 1 : 0}enc${enchantmentTier || 0}`;
+        const qualityHist = hist?.byQuality?.[qHistKey] || null;
+        const effectiveHist = qualityHist || (hist && isQuality ? {
+            avgPerUnit:  parseFloat((hist.avgPerUnit  * qualityMult).toFixed(2)),
+            avgPerStack: parseFloat((hist.avgPerStack * qualityMult).toFixed(2)),
+            maxPerUnit:  parseFloat((hist.maxPerUnit  * qualityMult).toFixed(2)),
+            saleCount:   hist.saleCount,
+            lastSold:    hist.lastSold,
+            isEstimated: true
+        } : hist);
+
+        const hasMarket = !!effectiveMd;
+        const hasHist   = !!effectiveHist;
+        const hasCount  = count > 0;
+        const hasStacks = stacks > 0;
+        const lowSupply = hasMarket && effectiveMd.totalListings !== null && effectiveMd.totalListings <= 3;
 
         if (!hasMarket && !hasHist) return null;
 
         let suggestedPerStack = null;
-        let insight = '';
+        let insight      = '';
         let insightClass = 'text-gray-400';
 
+        // Quality note for display
+        let qualityNote = null;
+        if (isQuality) {
+            if (qualityMd && qualityHist) {
+                qualityNote = { type: 'exact',    text: 'Using quality-specific market and sales data.' };
+            } else if (qualityMd) {
+                qualityNote = { type: 'partial',  text: 'Quality-specific market data found; sales history is blended across all quality.' };
+            } else if (qualityHist) {
+                qualityNote = { type: 'partial',  text: 'Quality-specific sales history found; market data is estimated.' };
+            } else {
+                const parts = [];
+                if (isMastercrafted) parts.push('Mastercrafted +15%');
+                if ((enchantmentTier || 0) > 0) {
+                    const labels = ['', 'I', 'II', 'III'];
+                    parts.push(`Enchant ${labels[enchantmentTier]} +${[0,10,20,30][enchantmentTier]}%`);
+                }
+                qualityNote = { type: 'estimated', text: `No quality-specific data found — estimated from base prices (${parts.join(', ')}).` };
+            }
+        }
+
         if (hasMarket && hasHist && hasCount) {
-            const ratio = md.marketLow / hist.avgPerUnit;
-            const marketFloor = Math.round(md.marketLow * count);
+            const marketFloor = Math.round(effectiveMd.marketLow * count);
+            const ratio       = effectiveMd.marketLow / effectiveHist.avgPerUnit;
 
             if (lowSupply) {
-                // Low competition — price above market low, but never below it
-                const histBased = Math.round(hist.avgPerUnit * count * 1.05);
+                const histBased   = Math.round(effectiveHist.avgPerUnit * count * 1.05);
                 suggestedPerStack = Math.max(histBased, marketFloor);
-                insight = `Only ${md.totalListings} listing${md.totalListings !== 1 ? 's' : ''} in your zone — low competition, you have pricing power.`;
-                insightClass = 'text-emerald-400';
+                insight           = `Only ${effectiveMd.totalListings} listing${effectiveMd.totalListings !== 1 ? 's' : ''} in your zone — low competition, you have pricing power.`;
+                insightClass      = 'text-emerald-400';
             } else if (ratio < 0.75) {
                 suggestedPerStack = marketFloor;
-                insight = `Market has dropped well below your historical avg — competitive pricing recommended.`;
-                insightClass = 'text-rose-400';
+                insight           = 'Market has dropped well below your historical avg — competitive pricing recommended.';
+                insightClass      = 'text-rose-400';
             } else if (ratio < 0.95) {
                 suggestedPerStack = marketFloor;
-                insight = `Market is slightly below your avg — pricing near market low will move faster.`;
-                insightClass = 'text-amber-400';
+                insight           = 'Market is slightly below your avg — pricing near market low will move faster.';
+                insightClass      = 'text-amber-400';
             } else if (ratio <= 1.1) {
-                // Market aligns — use hist avg but never below market low
-                suggestedPerStack = Math.max(Math.round(hist.avgPerUnit * count), marketFloor);
-                insight = `Market aligns with your historical avg — your usual price looks good.`;
-                insightClass = 'text-emerald-400';
+                suggestedPerStack = Math.max(Math.round(effectiveHist.avgPerUnit * count), marketFloor);
+                insight           = 'Market aligns with your historical avg — your usual price looks good.';
+                insightClass      = 'text-emerald-400';
             } else {
-                // Market has risen above hist — suggest market low as the new baseline
-                suggestedPerStack = marketFloor;
-                insight = `Market low is above your historical avg — consider pricing higher than usual.`;
-                insightClass = 'text-emerald-400';
+                // Market has risen above history — price 5% above floor
+                suggestedPerStack = Math.round(effectiveMd.marketLow * count * 1.05);
+                insight           = 'Market low is above your historical avg — priced 5% above market floor.';
+                insightClass      = 'text-emerald-400';
             }
         } else if (hasMarket && hasCount) {
-            const marketFloor = Math.round(md.marketLow * count);
             if (lowSupply) {
-                suggestedPerStack = Math.round(md.marketLow * count * 1.1);
-                insight = `Only ${md.totalListings} listing${md.totalListings !== 1 ? 's' : ''} in your zone — no competition, priced 10% above market low.`;
-                insightClass = 'text-emerald-400';
+                suggestedPerStack = Math.round(effectiveMd.marketLow * count * 1.1);
+                insight           = `Only ${effectiveMd.totalListings} listing${effectiveMd.totalListings !== 1 ? 's' : ''} — no competition, priced 10% above market low.`;
+                insightClass      = 'text-emerald-400';
             } else {
-                suggestedPerStack = marketFloor;
-                insight = `No sales history yet — market low used as baseline.`;
-                insightClass = 'text-gray-400';
+                suggestedPerStack = Math.round(effectiveMd.marketLow * count);
+                insight           = 'No sales history yet — market low used as baseline.';
+                insightClass      = 'text-gray-400';
             }
         } else if (hasHist && hasCount) {
-            suggestedPerStack = Math.round(hist.avgPerUnit * count);
-            insight = `No live market data — based on your sales history only.`;
-            insightClass = 'text-gray-400';
+            // No live market — player can capture the market
+            const bestHistPerUnit = Math.max(effectiveHist.maxPerUnit || 0, effectiveHist.avgPerUnit || 0);
+            suggestedPerStack = Math.round(bestHistPerUnit * count * 1.10);
+            insight           = 'No live market listings — you can set the price. Priced 10% above your best historical sale.';
+            insightClass      = 'text-emerald-400';
         }
 
-        // Total revenue if stacks known
-        const totalRevenue = (suggestedPerStack !== null && hasStacks)
-            ? suggestedPerStack * stacks
-            : null;
+        const totalRevenue = (suggestedPerStack !== null && hasStacks) ? suggestedPerStack * stacks : null;
 
-        // Market impact note
+        // Market impact note (only when we have a real listing count)
         let impactNote = null;
-        if (hasMarket && hasStacks && md.totalListings > 0) {
-            const pct = Math.round((stacks / md.totalListings) * 100);
-            if (stacks >= md.totalListings) {
-                impactNote = { text: `You'd be adding ${stacks} stacks to ${md.totalListings} existing — this doubles+ the supply in your zone.`, cls: 'text-amber-400', bubble: 'bg-amber-400' };
+        if (hasMarket && hasStacks && effectiveMd.totalListings !== null && effectiveMd.totalListings > 0) {
+            const pct = Math.round((stacks / effectiveMd.totalListings) * 100);
+            if (stacks >= effectiveMd.totalListings) {
+                impactNote = { text: `You'd be adding ${stacks} stacks to ${effectiveMd.totalListings} existing — this doubles+ the supply in your zone.`, cls: 'text-amber-400', bubble: 'bg-amber-400' };
             } else if (pct >= 50) {
-                impactNote = { text: `You'd be adding ${stacks} stacks to ${md.totalListings} existing (~${pct}% of current supply).`, cls: 'text-amber-400', bubble: 'bg-amber-400' };
+                impactNote = { text: `You'd be adding ${stacks} stacks to ${effectiveMd.totalListings} existing (~${pct}% of current supply).`, cls: 'text-amber-400', bubble: 'bg-amber-400' };
             } else if (pct >= 20) {
-                impactNote = { text: `Adding ${stacks} stacks alongside ${md.totalListings} existing listings (~${pct}% of supply).`, cls: 'text-gray-300', bubble: 'bg-gray-400' };
+                impactNote = { text: `Adding ${stacks} stacks alongside ${effectiveMd.totalListings} existing (~${pct}% of supply).`, cls: 'text-gray-300', bubble: 'bg-gray-400' };
             }
-            // Below 20% — not worth flagging
         }
 
-        return { suggestedPerStack, totalRevenue, insight, insightClass, impactNote };
+        return { suggestedPerStack, totalRevenue, insight, insightClass, impactNote, qualityNote };
     }
 
     function renderAddListingHint() {
-        const hintEl = document.getElementById('modal-market-price-hint');
+        const hintEl      = document.getElementById('modal-market-price-hint');
+        const placeholder = document.getElementById('modal-market-hint-placeholder');
         if (!hintEl) return;
 
         const md      = _addListingMarketData;
@@ -810,13 +879,38 @@ function initializeAutocomplete(allItems) {
         const loading = _addListingHistoryLoading;
 
         if (!md && !hist && !loading) {
-            hintEl.innerHTML = `
-                <div class="flex items-center gap-2">
+            if (!_addListingSelectedItem) {
+                // No item selected yet — show placeholder
+                hintEl.innerHTML = '';
+                hintEl.classList.add('hidden');
+                if (placeholder) placeholder.classList.remove('hidden');
+            } else {
+                // Item selected but no data exists
+                if (placeholder) placeholder.classList.add('hidden');
+                hintEl.innerHTML = `<div class="flex items-center gap-2 p-2">
                     <i class="fas fa-info-circle text-gray-500 text-sm"></i>
                     <span class="text-gray-400 text-sm italic">No market or sales data found for this item yet.</span>
                 </div>`;
-            hintEl.classList.remove('hidden');
+                hintEl.classList.remove('hidden');
+            }
             return;
+        }
+        if (placeholder) placeholder.classList.add('hidden');
+
+        // Read quality toggles from the form
+        const isMastercrafted = document.getElementById('modal-is-mastercrafted')?.value === 'true';
+        const enchantmentTier = parseInt(document.getElementById('modal-enchantment-tier')?.value || '0', 10) || 0;
+        const isQuality       = isMastercrafted || enchantmentTier > 0;
+
+        // Quality-specific market data lookup
+        let qualityMd = null;
+        if (isQuality && _addListingSelectedItem) {
+            if (_addListingSelectedItem.pax_dei_slug) {
+                const slugName  = getItemNameForSlug(_addListingSelectedItem.pax_dei_slug);
+                const slugValid = slugName && slugName.toLowerCase().trim() === _addListingSelectedItem.item_name.toLowerCase().trim();
+                if (slugValid) qualityMd = getMarketDataForSlugByQuality(_addListingSelectedItem.pax_dei_slug, isMastercrafted, enchantmentTier);
+            }
+            if (!qualityMd) qualityMd = getMarketDataByItemNameAndQuality(_addListingSelectedItem.item_name, isMastercrafted, enchantmentTier);
         }
 
         const count  = parseInt(document.getElementById('modal-item-count-per-stack')?.value, 10);
@@ -827,202 +921,261 @@ function initializeAutocomplete(allItems) {
         const hasPrice  = price > 0;
         const fmt = (v) => v.toLocaleString(undefined, { maximumFractionDigits: 2 });
 
-        // ── Supply context tag (shown in market column header) ───────────────
-        const supplyTag = md
-            ? md.totalListings <= 3
-                ? `<span class="ml-2 text-xs font-semibold text-emerald-300 bg-emerald-900/50 border border-emerald-500/40 rounded px-1.5 py-0.5">Low supply</span>`
-                : md.totalListings > 20
-                    ? `<span class="ml-2 text-xs font-semibold text-rose-300 bg-rose-900/50 border border-rose-500/40 rounded px-1.5 py-0.5">High supply</span>`
+        // ── Market column ─────────────────────────────────────────────────────
+        const displayMd   = qualityMd || md;
+        const supplyCount = displayMd?.totalListings ?? 0;
+        const supplyTag   = displayMd
+            ? supplyCount <= 3
+                ? `<span class="ml-1 text-xs font-semibold text-emerald-300 bg-emerald-900/50 border border-emerald-500/40 rounded px-1.5 py-0.5">Low supply</span>`
+                : supplyCount > 20
+                    ? `<span class="ml-1 text-xs font-semibold text-rose-300 bg-rose-900/50 border border-rose-500/40 rounded px-1.5 py-0.5">High supply</span>`
                     : ''
             : '';
+        const qBadge = isQuality && qualityMd
+            ? `<span class="ml-1 text-xs font-semibold text-purple-300 bg-purple-900/40 border border-purple-500/40 rounded px-1.5 py-0.5">Quality match</span>`
+            : isQuality && md
+                ? `<span class="ml-1 text-xs font-semibold text-amber-300 bg-amber-900/30 border border-amber-500/30 rounded px-1.5 py-0.5">Est. ×quality</span>`
+                : '';
 
-        // ── Market column ────────────────────────────────────────────────────
-        const marketCol = md ? `
+        let marketCol;
+        if (displayMd) {
+            marketCol = `
             <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-1.5 mb-3 flex-wrap">
-                    <i class="fas fa-globe text-blue-400"></i>
-                    <span class="text-blue-300 text-base font-semibold uppercase tracking-wide">Live Market</span>
-                    ${supplyTag}
+                <div class="flex items-center gap-1 mb-2 flex-wrap">
+                    <i class="fas fa-globe text-blue-400 text-xs"></i>
+                    <span class="text-blue-300 text-xs font-semibold uppercase tracking-wide">Live Market</span>
+                    ${supplyTag}${qBadge}
                 </div>
-                <div class="space-y-1.5">
+                <div class="space-y-1">
                     <div class="flex justify-between gap-2">
-                        <span class="text-white text-sm">Low/unit</span>
-                        <span class="text-amber-400 font-bold text-sm">${fmt(md.marketLow)}g</span>
+                        <span class="text-gray-300 text-xs">Low/unit</span>
+                        <span class="text-amber-400 font-bold text-xs">${fmt(displayMd.marketLow)}g</span>
                     </div>
                     <div class="flex justify-between gap-2">
-                        <span class="text-white text-sm">Avg/unit</span>
-                        <span class="text-white text-sm">${fmt(md.marketAvg)}g</span>
+                        <span class="text-gray-300 text-xs">Avg/unit</span>
+                        <span class="text-white text-xs">${fmt(displayMd.marketAvg)}g</span>
                     </div>
                     ${hasCount ? `
-                    <div class="border-t border-slate-400/40 pt-1.5 mt-1.5">
+                    <div class="border-t border-slate-500/40 pt-1 mt-1">
                         <div class="flex justify-between gap-2">
-                            <span class="text-white text-sm">Low/stack <span class="text-gray-400 text-xs">(${count})</span></span>
-                            <span class="text-amber-400 font-bold text-sm">${fmt(md.marketLow * count)}g</span>
+                            <span class="text-gray-300 text-xs">Low/stack <span class="text-gray-500 text-xs">(${count})</span></span>
+                            <span class="text-amber-400 font-bold text-xs">${fmt(displayMd.marketLow * count)}g</span>
                         </div>
-                        <div class="flex justify-between gap-2 mt-1">
-                            <span class="text-white text-sm">Avg/stack</span>
-                            <span class="text-white text-sm">${fmt(md.marketAvg * count)}g</span>
+                        <div class="flex justify-between gap-2 mt-0.5">
+                            <span class="text-gray-300 text-xs">Avg/stack</span>
+                            <span class="text-white text-xs">${fmt(displayMd.marketAvg * count)}g</span>
                         </div>
-                    </div>` : `<div class="text-gray-400 text-sm italic mt-1">Enter count for stack prices</div>`}
-                    <div class="text-gray-400 text-xs mt-1.5">
-                        ${md.totalListings} listing${md.totalListings !== 1 ? 's' : ''} in your home valley${_addListingOwnCount > 0 ? ` <span class="text-emerald-400">(${_addListingOwnCount} yours)</span>` : ''}
+                    </div>` : `<div class="text-gray-500 text-xs italic mt-1">Enter count for stack prices</div>`}
+                    ${qualityMd && md ? `
+                    <div class="mt-1 pt-1 border-t border-slate-500/30 text-gray-500 text-xs">
+                        All quality: ${md.totalListings} listing${md.totalListings !== 1 ? 's' : ''} &middot; Low ${fmt(md.marketLow)}g
+                    </div>` : ''}
+                    <div class="text-gray-500 text-xs mt-0.5">
+                        ${displayMd.totalListings !== null
+                            ? `${displayMd.totalListings} listing${displayMd.totalListings !== 1 ? 's' : ''} in your zone`
+                            : 'Estimated from all-quality listings'}${_addListingOwnCount > 0 ? ` <span class="text-emerald-400">(${_addListingOwnCount} yours)</span>` : ''}
                     </div>
                 </div>
-            </div>` : `
-            <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-1.5 mb-3">
-                    <i class="fas fa-globe text-gray-500"></i>
-                    <span class="text-gray-400 text-base font-semibold uppercase tracking-wide">Live Market</span>
-                </div>
-                <div class="text-gray-400 text-sm italic">No market data in your zone</div>
             </div>`;
+        } else {
+            marketCol = `
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-1.5 mb-2">
+                    <i class="fas fa-globe text-gray-500 text-xs"></i>
+                    <span class="text-gray-400 text-xs font-semibold uppercase tracking-wide">Live Market</span>
+                </div>
+                <div class="text-gray-500 text-xs italic">No market data in your zone</div>
+            </div>`;
+        }
 
-        // ── History column ───────────────────────────────────────────────────
+        // ── History column ────────────────────────────────────────────────────
         let histCol;
         if (loading) {
             histCol = `
             <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-1.5 mb-3">
-                    <i class="fas fa-chart-bar text-purple-400"></i>
-                    <span class="text-purple-300 text-base font-semibold uppercase tracking-wide">Your Sales</span>
+                <div class="flex items-center gap-1.5 mb-2">
+                    <i class="fas fa-chart-bar text-purple-400 text-xs"></i>
+                    <span class="text-purple-300 text-xs font-semibold uppercase tracking-wide">Your Sales</span>
                 </div>
-                <div class="text-gray-400 text-sm italic"><i class="fas fa-spinner fa-spin mr-1"></i>Loading history&hellip;</div>
+                <div class="text-gray-400 text-xs italic"><i class="fas fa-spinner fa-spin mr-1"></i>Loading&hellip;</div>
             </div>`;
         } else if (hist) {
+            const qHistKey    = `mc${isMastercrafted ? 1 : 0}enc${enchantmentTier}`;
+            const qualityHist = hist.byQuality?.[qHistKey] || null;
+            const hasQBreakdown = isQuality && qualityHist && qualityHist.saleCount < hist.saleCount;
             histCol = `
             <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-1.5 mb-3">
-                    <i class="fas fa-chart-bar text-purple-400"></i>
-                    <span class="text-purple-300 text-base font-semibold uppercase tracking-wide">Your Sales</span>
+                <div class="flex items-center gap-1 mb-2 flex-wrap">
+                    <i class="fas fa-chart-bar text-purple-400 text-xs"></i>
+                    <span class="text-purple-300 text-xs font-semibold uppercase tracking-wide">Your Sales</span>
+                    ${hasQBreakdown ? `<span class="text-xs font-semibold text-gray-400 bg-slate-700 border border-slate-500 rounded px-1.5 py-0.5">All quality</span>` : ''}
                 </div>
-                <div class="space-y-1.5">
+                <div class="space-y-1">
                     <div class="flex justify-between gap-2">
-                        <span class="text-white text-sm">Avg/unit</span>
-                        <span class="text-purple-300 font-bold text-sm">${fmt(hist.avgPerUnit)}g</span>
+                        <span class="text-gray-300 text-xs">Avg/unit</span>
+                        <span class="text-purple-300 font-bold text-xs">${fmt(hist.avgPerUnit)}g</span>
                     </div>
                     <div class="flex justify-between gap-2">
-                        <span class="text-white text-sm">Avg/stack</span>
-                        <span class="text-white text-sm">${fmt(hist.avgPerStack)}g</span>
+                        <span class="text-gray-300 text-xs">Avg/stack</span>
+                        <span class="text-white text-xs">${fmt(hist.avgPerStack)}g</span>
                     </div>
                     ${hasCount ? `
-                    <div class="border-t border-slate-400/40 pt-1.5 mt-1.5">
+                    <div class="border-t border-slate-500/40 pt-1 mt-1">
                         <div class="flex justify-between gap-2">
-                            <span class="text-white text-sm">Hist/stack <span class="text-gray-400 text-xs">(${count})</span></span>
-                            <span class="text-purple-300 font-bold text-sm">${fmt(hist.avgPerUnit * count)}g</span>
+                            <span class="text-gray-300 text-xs">Hist/stack <span class="text-gray-500 text-xs">(${count})</span></span>
+                            <span class="text-purple-300 font-bold text-xs">${fmt(hist.avgPerUnit * count)}g</span>
                         </div>
                     </div>` : ''}
-                    <div class="text-gray-400 text-xs mt-1.5">${hist.saleCount} sale${hist.saleCount !== 1 ? 's' : ''} &middot; last ${getRelativeTime(hist.lastSold)}</div>
+                    ${hasQBreakdown ? `
+                    <div class="mt-1.5 pt-1.5 border-t border-purple-500/30 bg-purple-900/10 rounded p-1.5">
+                        <div class="text-purple-300 text-xs font-semibold mb-1 flex items-center gap-1">
+                            <i class="fas fa-filter text-xs"></i> Same quality (${qualityHist.saleCount} sale${qualityHist.saleCount !== 1 ? 's' : ''})
+                        </div>
+                        <div class="flex justify-between gap-2">
+                            <span class="text-gray-300 text-xs">Avg/unit</span>
+                            <span class="text-purple-200 font-semibold text-xs">${fmt(qualityHist.avgPerUnit)}g</span>
+                        </div>
+                        ${hasCount ? `<div class="flex justify-between gap-2 mt-0.5">
+                            <span class="text-gray-300 text-xs">Avg/stack (${count})</span>
+                            <span class="text-purple-200 font-semibold text-xs">${fmt(qualityHist.avgPerUnit * count)}g</span>
+                        </div>` : ''}
+                        <div class="text-gray-500 text-xs mt-0.5">Last sold ${getRelativeTime(qualityHist.lastSold)}</div>
+                    </div>` : ''}
+                    <div class="text-gray-500 text-xs mt-1">${hist.saleCount} sale${hist.saleCount !== 1 ? 's' : ''} &middot; last ${getRelativeTime(hist.lastSold)}</div>
                 </div>
             </div>`;
         } else {
             histCol = `
             <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-1.5 mb-3">
-                    <i class="fas fa-chart-bar text-gray-500"></i>
-                    <span class="text-gray-400 text-base font-semibold uppercase tracking-wide">Your Sales</span>
+                <div class="flex items-center gap-1.5 mb-2">
+                    <i class="fas fa-chart-bar text-gray-500 text-xs"></i>
+                    <span class="text-gray-400 text-xs font-semibold uppercase tracking-wide">Your Sales</span>
                 </div>
-                <div class="text-gray-400 text-sm italic">No sales recorded for this item</div>
+                <div class="text-gray-500 text-xs italic">No sales recorded for this item</div>
             </div>`;
         }
 
-        // ── Suggestion + context rows ────────────────────────────────────────
-        const suggestion = buildSuggestion(md, hist, count, stacks);
-        const bubbleMap = {
-            'text-rose-400':    'bg-rose-400',
-            'text-amber-400':   'bg-amber-400',
-            'text-emerald-400': 'bg-emerald-400',
-            'text-gray-300':    'bg-gray-400',
-            'text-gray-400':    'bg-gray-400',
-        };
+        // ── Build suggestion ─────────────────────────────────────────────────
+        const suggestion = buildSuggestion(md, qualityMd, hist, count, stacks, isMastercrafted, enchantmentTier);
 
-        let bottomRows = '';
-        if (suggestion) { // suggestion hoisted above
-            // Row 1 — suggested price + use button + total revenue at suggested
-            const suggestedTotal = (suggestion.suggestedPerStack !== null && hasStacks)
-                ? `<span class="text-gray-400 text-sm mx-1">&rarr;</span><span class="text-white text-sm">Total at suggested: <span class="text-yellow-200 font-bold">${fmt(suggestion.suggestedPerStack * stacks)}g</span> <span class="text-gray-400 text-xs">(${stacks} stack${stacks !== 1 ? 's' : ''})</span></span>`
-                : '';
-            bottomRows += `
-            <div class="border-t border-slate-400/40 pt-2.5 mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                <span class="text-white text-sm font-semibold flex items-center gap-1.5">
-                    <i class="fas fa-lightbulb text-yellow-400"></i> Suggested price:
-                </span>
-                ${suggestion.suggestedPerStack !== null
-                    ? `<span class="text-yellow-300 font-bold text-base">${fmt(suggestion.suggestedPerStack)}g</span>${hasCount ? ` <span class="text-gray-400 text-sm">/stack (${count})</span>` : ''}
-                       <button id="modal-use-suggested-price-btn" type="button" class="px-2 py-0.5 text-xs font-semibold bg-yellow-500/20 hover:bg-yellow-500/40 text-yellow-300 border border-yellow-500/40 rounded transition-colors">Use</button>`
-                    : `<span class="text-gray-400 text-sm italic">Enter count above</span>`}
-                ${suggestedTotal}
-            </div>`;
-
-            // Row 2 — insight
-            if (suggestion.insight) {
-                bottomRows += `
-            <div class="flex items-center gap-1.5 mt-1.5">
-                <span class="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0 ${bubbleMap[suggestion.insightClass] || 'bg-gray-400'}"></span>
-                <span class="${suggestion.insightClass} text-sm">${suggestion.insight}</span>
-            </div>`;
-            }
-
-            // Row 3 — market impact (only if notable)
-            if (suggestion.impactNote) {
-                bottomRows += `
-            <div class="flex items-center gap-1.5 mt-1.5">
-                <span class="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0 ${suggestion.impactNote.bubble}"></span>
-                <span class="${suggestion.impactNote.cls} text-sm">${suggestion.impactNote.text}</span>
-            </div>`;
-            }
+        // ── Quality note banner ──────────────────────────────────────────────
+        let qualityBanner = '';
+        if (suggestion?.qualityNote) {
+            const q = suggestion.qualityNote;
+            const bannerCls = q.type === 'exact'
+                ? 'bg-purple-900/20 border-purple-500/40 text-purple-300'
+                : q.type === 'partial'
+                    ? 'bg-blue-900/20 border-blue-500/40 text-blue-300'
+                    : 'bg-amber-900/20 border-amber-500/40 text-amber-300';
+            const icon = q.type === 'exact' ? 'fa-check-circle' : q.type === 'partial' ? 'fa-info-circle' : 'fa-triangle-exclamation';
+            qualityBanner = `<div class="mb-2 px-2.5 py-1.5 border rounded-lg ${bannerCls} text-xs flex items-center gap-2">
+                <i class="fas ${icon} flex-shrink-0"></i><span>${q.text}</span></div>`;
         }
 
-        // Row 4 — high price option (only when no market data and sales history has a max)
+        // ── Suggested price card (prominent) ─────────────────────────────────
+        let suggestionCard = '';
+        if (suggestion) {
+            const bubbleCls = suggestion.insightClass === 'text-rose-400'    ? 'bg-rose-400'
+                            : suggestion.insightClass === 'text-amber-400'   ? 'bg-amber-400'
+                            : suggestion.insightClass === 'text-emerald-400' ? 'bg-emerald-400'
+                            : 'bg-gray-400';
+            suggestionCard = `
+            <div class="mt-2 p-3 bg-yellow-900/20 border border-yellow-500/40 rounded-xl">
+                <div class="flex items-center gap-2 mb-1.5">
+                    <i class="fas fa-lightbulb text-yellow-400 text-sm"></i>
+                    <span class="text-yellow-300 font-semibold text-xs uppercase tracking-widest">Suggested Price</span>
+                </div>
+                ${suggestion.suggestedPerStack !== null && hasCount
+                    ? `<div class="flex flex-wrap items-baseline gap-2 mb-1">
+                           <span class="text-yellow-300 font-bold text-2xl">${fmt(suggestion.suggestedPerStack)}g</span>
+                           <span class="text-gray-400 text-xs">/ stack of ${count}</span>
+                           <button id="modal-use-suggested-price-btn" type="button"
+                               class="px-2.5 py-1 text-xs font-semibold bg-yellow-500/20 hover:bg-yellow-500/40 text-yellow-300 border border-yellow-500/40 rounded-lg transition-colors">
+                               Use this price
+                           </button>
+                       </div>
+                       ${hasStacks ? `<div class="text-gray-300 text-xs mb-1">${stacks} stack${stacks !== 1 ? 's' : ''} &times; ${fmt(suggestion.suggestedPerStack)}g = <span class="text-yellow-200 font-bold">${fmt(suggestion.suggestedPerStack * stacks)}g</span> total</div>` : ''}
+                       <div class="flex items-center gap-1.5">
+                           <span class="inline-block w-2 h-2 rounded-full flex-shrink-0 ${bubbleCls}"></span>
+                           <span class="${suggestion.insightClass} text-xs">${suggestion.insight}</span>
+                       </div>`
+                    : `<span class="text-gray-400 text-xs italic">Enter stack count to see suggestion</span>`
+                }
+            </div>`;
+        }
+
+        // ── Impact note ──────────────────────────────────────────────────────
+        let impactRow = '';
+        if (suggestion?.impactNote) {
+            impactRow = `
+            <div class="flex items-center gap-1.5 mt-1.5">
+                <span class="inline-block w-2 h-2 rounded-full flex-shrink-0 ${suggestion.impactNote.bubble}"></span>
+                <span class="${suggestion.impactNote.cls} text-xs">${suggestion.impactNote.text}</span>
+            </div>`;
+        }
+
+        // ── High price option (history-only, no live market data at all) ─────
+        let highPriceRow = '';
         if (!md && hist?.maxPerUnit && hasCount) {
             const highPerStack = Math.round(hist.maxPerUnit * count);
-            const highTotal = hasStacks ? highPerStack * stacks : null;
-            bottomRows += `
-            <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-1.5">
-                <span class="text-white text-sm font-semibold flex items-center gap-1.5">
+            const highTotal    = hasStacks ? highPerStack * stacks : null;
+            highPriceRow = `
+            <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2 pt-1.5 border-t border-slate-500/30">
+                <span class="text-white text-xs font-semibold flex items-center gap-1">
                     <i class="fas fa-arrow-trend-up text-emerald-400"></i> High price option:
                 </span>
-                <span class="text-emerald-300 font-bold text-base">${fmt(highPerStack)}g</span>${hasCount ? ` <span class="text-gray-400 text-sm">/stack (${count})</span>` : ''}
-                <button id="modal-use-high-price-btn" type="button" class="px-2 py-0.5 text-xs font-semibold bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 border border-emerald-500/40 rounded transition-colors">Use</button>
-                ${highTotal !== null ? `<span class="text-gray-400 text-sm mx-1">&rarr;</span><span class="text-white text-sm">Total: <span class="text-emerald-200 font-bold">${fmt(highTotal)}g</span></span>` : ''}
+                <span class="text-emerald-300 font-bold text-sm">${fmt(highPerStack)}g</span>
+                <span class="text-gray-400 text-xs">/stack (${count})</span>
+                <button id="modal-use-high-price-btn" type="button"
+                    class="px-2 py-0.5 text-xs font-semibold bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 border border-emerald-500/40 rounded transition-colors">Use</button>
+                ${highTotal !== null ? `<span class="text-gray-400 text-xs">&rarr; <span class="text-emerald-200 font-bold">${fmt(highTotal)}g</span> total</span>` : ''}
             </div>
-            <div class="flex items-center gap-1.5 mt-1">
-                <span class="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0 bg-emerald-400"></span>
-                <span class="text-emerald-400 text-sm">Your highest ever sale price for this item — no live market to undercut.</span>
+            <div class="flex items-center gap-1.5 mt-0.5">
+                <span class="inline-block w-2 h-2 rounded-full flex-shrink-0 bg-emerald-400"></span>
+                <span class="text-emerald-400 text-xs">Your highest ever sale — no live market to undercut.</span>
             </div>`;
         }
 
-        // Row 5 — live price total (always shown when price+stacks are filled)
+        // ── Live price total ─────────────────────────────────────────────────
+        let livePriceRow = '';
         if (hasPrice && hasStacks) {
             const liveTotal = price * stacks;
-            bottomRows += `
-            <div class="flex items-center gap-2 mt-1.5 pt-1.5 border-t border-slate-400/30">
-                <i class="fas fa-calculator text-gray-400 text-xs"></i>
-                <span class="text-white text-sm">At <span class="text-white font-semibold">${fmt(price)}g</span>/stack &times; ${stacks} stack${stacks !== 1 ? 's' : ''} = <span class="text-cyan-300 font-bold">${fmt(liveTotal)}g</span> total revenue</span>
+            livePriceRow = `
+            <div class="flex items-center gap-2 mt-2 pt-1.5 border-t border-slate-500/30">
+                <i class="fas fa-calculator text-gray-500 text-xs"></i>
+                <span class="text-gray-300 text-xs">At <span class="text-white font-semibold">${fmt(price)}g</span>/stack × ${stacks} = <span class="text-cyan-300 font-bold">${fmt(liveTotal)}g</span> total</span>
             </div>`;
         }
 
-        hintEl.innerHTML = `<div class="flex gap-5">${marketCol}<div class="w-px bg-slate-400/40 self-stretch"></div>${histCol}</div>${bottomRows}`;
+        hintEl.innerHTML = `
+            ${qualityBanner}
+            <div class="flex gap-3">${marketCol}<div class="w-px bg-slate-500/40 self-stretch flex-shrink-0"></div>${histCol}</div>
+            ${suggestionCard}
+            ${impactRow}
+            ${highPriceRow}
+            ${livePriceRow}`;
         hintEl.classList.remove('hidden');
 
-        // Wire up "Use" button — must happen after innerHTML is set
+        // Wire up "Use suggested price" button
         const useBtn = hintEl.querySelector('#modal-use-suggested-price-btn');
         if (useBtn) {
             useBtn.addEventListener('click', () => {
                 const priceInput = document.getElementById('modal-item-price-per-stack');
                 if (priceInput && suggestion?.suggestedPerStack !== null) {
                     priceInput.value = suggestion.suggestedPerStack;
-                    priceInput.focus();
+                    priceInput.dispatchEvent(new Event('input'));
                 }
             });
         }
+        // Wire up "Use high price" button
         const useHighBtn = hintEl.querySelector('#modal-use-high-price-btn');
         if (useHighBtn) {
             useHighBtn.addEventListener('click', () => {
                 const priceInput = document.getElementById('modal-item-price-per-stack');
-                const count = parseInt(document.getElementById('modal-item-count-per-stack')?.value, 10);
-                if (priceInput && _addListingHistoryData?.maxPerUnit && count > 0) {
-                    priceInput.value = Math.round(_addListingHistoryData.maxPerUnit * count);
-                    priceInput.focus();
+                const cnt = parseInt(document.getElementById('modal-item-count-per-stack')?.value, 10);
+                if (priceInput && _addListingHistoryData?.maxPerUnit && cnt > 0) {
+                    priceInput.value = Math.round(_addListingHistoryData.maxPerUnit * cnt);
+                    priceInput.dispatchEvent(new Event('input'));
                 }
             });
         }
@@ -1032,6 +1185,9 @@ function initializeAutocomplete(allItems) {
     document.getElementById('modal-item-count-per-stack')?.addEventListener('input', renderAddListingHint);
     document.getElementById('modal-item-stacks')?.addEventListener('input', renderAddListingHint);
     document.getElementById('modal-item-price-per-stack')?.addEventListener('input', renderAddListingHint);
+    // Re-render hint when quality toggles change (defer 10ms so hidden inputs update first)
+    document.getElementById('modal-mastercrafted-btn')?.addEventListener('click', () => setTimeout(renderAddListingHint, 10));
+    document.querySelectorAll('.modal-enchant-btn').forEach(b => b.addEventListener('click', () => setTimeout(renderAddListingHint, 10)));
 
     // Locked searchable select — replaces free-text autocomplete.
     // Users can only select from the existing item list; no free-text entry is possible.
@@ -1170,11 +1326,13 @@ function initializeAutocomplete(allItems) {
 
     // ── Add Listing modal ────────────────────────────────────────────────────
     setupLockedItemSelect('modal-item-name', 'modal-item-name-suggestions', 'modal-item-category', (selectedItem) => {
+        _addListingSelectedItem = selectedItem;
+
         let marketData = null;
         if (selectedItem.pax_dei_slug) {
             const slugData = getMarketDataForSlug(selectedItem.pax_dei_slug);
             if (slugData) {
-                const slugName = getItemNameForSlug(selectedItem.pax_dei_slug);
+                const slugName    = getItemNameForSlug(selectedItem.pax_dei_slug);
                 const nameMatches = slugName && slugName.toLowerCase().trim() === selectedItem.item_name.toLowerCase().trim();
                 if (nameMatches) {
                     marketData = slugData;
@@ -1190,7 +1348,7 @@ function initializeAutocomplete(allItems) {
         if (savedHash) {
             let gtItemId = null;
             if (selectedItem.pax_dei_slug) {
-                const slugName = getItemNameForSlug(selectedItem.pax_dei_slug);
+                const slugName  = getItemNameForSlug(selectedItem.pax_dei_slug);
                 const slugValid = slugName && slugName.toLowerCase().trim() === selectedItem.item_name.toLowerCase().trim();
                 if (slugValid) gtItemId = selectedItem.pax_dei_slug;
             }
@@ -1200,27 +1358,19 @@ function initializeAutocomplete(allItems) {
             _addListingOwnCount = 0;
         }
 
-        if (!marketData) {
-            const hintEl = document.getElementById('modal-market-price-hint');
-            if (hintEl) {
-                hintEl.innerHTML = '<span class="text-gray-400 text-sm"><i class="fas fa-globe text-sm mr-1 text-gray-500"></i>No market data for this item in your zone.</span>';
-                hintEl.classList.remove('hidden');
-            }
-        }
-
         if (currentCharacterId && selectedItem.item_id) {
-            _addListingHistoryData = null;
+            _addListingHistoryData   = null;
             _addListingHistoryLoading = true;
-            if (marketData) renderAddListingHint();
+            renderAddListingHint();
             fetchItemSalesHistory(selectedItem.item_id).then((hist) => {
-                _addListingHistoryData = hist;
+                _addListingHistoryData   = hist;
                 _addListingHistoryLoading = false;
                 renderAddListingHint();
             });
         } else {
-            _addListingHistoryData = null;
+            _addListingHistoryData   = null;
             _addListingHistoryLoading = false;
-            if (marketData) renderAddListingHint();
+            renderAddListingHint();
         }
     });
 

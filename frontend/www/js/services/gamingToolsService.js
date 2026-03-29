@@ -22,6 +22,9 @@ const CACHE_PREFIX = 'pda_gt_';
 /** Price map for the currently active character's zone. */
 let _currentPriceMap = null;
 
+/** Quality-keyed price map: "${bareId}::mc${0|1}::enc${0-3}" → price stats */
+let _currentQualityMap = null;
+
 /** Name-based lookup map: English display name (lowercase) → item_id */
 let _currentNameMap = null;
 
@@ -171,6 +174,7 @@ export async function loadZoneDataForCharacter(character) {
         ]);
         _currentZoneListings = listings;
         _currentPriceMap = buildMarketPriceMap(listings);
+        _currentQualityMap = buildQualityMarketMap(listings);
         _currentNameMap = buildNameMap(_currentPriceMap);
         _lastFetchTime = Date.now();
 
@@ -194,6 +198,7 @@ export async function loadZoneDataForCharacter(character) {
  */
 export function clearZoneData() {
     _currentPriceMap = null;
+    _currentQualityMap = null;
     _currentNameMap = null;
     _currentZoneListings = [];
     _lastFetchTime = null;
@@ -251,6 +256,38 @@ export function buildMarketPriceMap(zoneListings) {
         result[slug] = {
             marketLow: sorted[0],
             marketAvg: parseFloat((sum / sorted.length).toFixed(2)),
+            totalListings: sorted.length
+        };
+    }
+    return result;
+}
+
+/**
+ * Builds a quality-keyed price map from raw zone listings.
+ * Groups by item_id + mastercraft + enchantment_level.
+ * Key format: "${item_id}::mc${0|1}::enc${0-3}"
+ *
+ * @param {Array} zoneListings
+ * @returns {Object<string, { marketLow: number, marketAvg: number, totalListings: number }>}
+ */
+function buildQualityMarketMap(zoneListings) {
+    const grouped = {};
+    for (const listing of zoneListings) {
+        const slug = listing.item_id;
+        const mc   = listing.mastercraft ? 1 : 0;
+        const enc  = listing.enchantment_level || 0;
+        const key  = `${slug}::mc${mc}::enc${enc}`;
+        if (!grouped[key]) grouped[key] = [];
+        const qty = listing.quantity || 1;
+        grouped[key].push(listing.price / qty);
+    }
+    const result = {};
+    for (const [key, prices] of Object.entries(grouped)) {
+        const sorted = prices.slice().sort((a, b) => a - b);
+        const sum = sorted.reduce((s, p) => s + p, 0);
+        result[key] = {
+            marketLow:     sorted[0],
+            marketAvg:     parseFloat((sum / sorted.length).toFixed(2)),
             totalListings: sorted.length
         };
     }
@@ -326,6 +363,40 @@ export function getMarketDataByItemName(itemName) {
     if (!_currentNameMap || !_currentPriceMap || !itemName) return null;
     const itemId = _currentNameMap[itemName.toLowerCase().trim()];
     return itemId ? (_currentPriceMap[itemId] || null) : null;
+}
+
+/**
+ * Looks up quality-specific market price data for a single item slug.
+ * Filters zone listings to only those matching the given mastercraft + enchantment level.
+ *
+ * @param {string}  paxDeiSlug      - DB slug or gaming.tools item_id
+ * @param {boolean} isMastercrafted
+ * @param {number}  enchantmentTier - 0–3
+ * @returns {{ marketLow: number, marketAvg: number, totalListings: number }|null}
+ */
+export function getMarketDataForSlugByQuality(paxDeiSlug, isMastercrafted, enchantmentTier) {
+    if (!_currentQualityMap || !paxDeiSlug) return null;
+    const bareId = toBareId(paxDeiSlug);
+    const mc  = isMastercrafted ? 1 : 0;
+    const enc = enchantmentTier || 0;
+    return _currentQualityMap[`${bareId}::mc${mc}::enc${enc}`] || null;
+}
+
+/**
+ * Looks up quality-specific market price data by English display name.
+ *
+ * @param {string}  itemName
+ * @param {boolean} isMastercrafted
+ * @param {number}  enchantmentTier - 0–3
+ * @returns {{ marketLow: number, marketAvg: number, totalListings: number }|null}
+ */
+export function getMarketDataByItemNameAndQuality(itemName, isMastercrafted, enchantmentTier) {
+    if (!_currentNameMap || !_currentQualityMap || !itemName) return null;
+    const itemId = _currentNameMap[itemName.toLowerCase().trim()];
+    if (!itemId) return null;
+    const mc  = isMastercrafted ? 1 : 0;
+    const enc = enchantmentTier || 0;
+    return _currentQualityMap[`${itemId}::mc${mc}::enc${enc}`] || null;
 }
 
 /**
