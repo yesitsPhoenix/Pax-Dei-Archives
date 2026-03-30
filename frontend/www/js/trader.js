@@ -1,4 +1,4 @@
-// trader.js
+﻿// trader.js
 import { supabase } from './supabaseClient.js';
 import { initializeListings, loadActiveListings, populateMarketStallDropdown, setupMarketStallTabs, clearMarketStallsCache } from './modules/init.js';
 import { initializeCharacters, insertCharacterModalHtml, currentCharacterId, getCurrentCharacter } from './modules/characters.js';
@@ -1276,10 +1276,16 @@ function initializeAutocomplete(allItems) {
 
         searchInput.addEventListener('input', () => {
             clearSelection();
-            openDropdown();
+            if (searchInput.value.trim().length >= 3) {
+                openDropdown();
+            } else {
+                dropdown.style.display = 'none';
+            }
         });
 
-        searchInput.addEventListener('focus', openDropdown);
+        searchInput.addEventListener('focus', () => {
+            if (searchInput.value.trim().length >= 3) openDropdown();
+        });
 
         searchInput.addEventListener('blur', () => {
             setTimeout(() => {
