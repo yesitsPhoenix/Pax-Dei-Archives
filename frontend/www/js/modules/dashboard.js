@@ -1,8 +1,51 @@
 import { updateAlertBadgePosition } from '../sidebar.js';
-import { getItemData, getZoneDataAge, getSavedAvatarHash, analyzeOwnListings, getMarketDataByItemName } from '../services/gamingToolsService.js';
+import {
+    getItemData,
+    getZoneDataAge,
+    getSavedAvatarHash,
+    analyzeOwnListings,
+    getMarketDataForSlugByQuality,
+    getMarketDataByItemNameAndQuality
+} from '../services/gamingToolsService.js';
 
 /** Cached result of the last analyzeOwnListings() call — used to populate the modal. */
 let _lastValleyAnalysis = null;
+
+function normalizeEnchantmentTier(tier) {
+    return Number.isInteger(tier) ? tier : (parseInt(tier, 10) || 0);
+}
+
+function getQualityLabel(isMastercrafted, enchantmentTier) {
+    const tier = normalizeEnchantmentTier(enchantmentTier);
+    const labels = [];
+    if (isMastercrafted) labels.push('Mastercrafted');
+    if (tier > 0) {
+        const roman = ['', 'I', 'II', 'III'];
+        labels.push(`Enchantment ${roman[tier] || tier}`);
+    }
+    return labels.length ? labels.join(' · ') : '';
+}
+
+function getVariantKey(itemId, isMastercrafted, enchantmentTier) {
+    return `${itemId}::mc${isMastercrafted ? 1 : 0}::enc${normalizeEnchantmentTier(enchantmentTier)}`;
+}
+
+function renderValleyItemLabel(item) {
+    const tier = normalizeEnchantmentTier(item.enchantmentTier);
+    const roman = ['', 'I', 'II', 'III'];
+    const crownBadge = item.isMastercrafted
+        ? `<span class="listing-crown" title="Mastercrafted"><i class="fas fa-crown" style="color:#f59e0b;font-size:0.75em;margin-right:3px;"></i></span>`
+        : '';
+    const enchantBadge = tier > 0
+        ? `<span class="listing-enchant-badge listing-enchant-tier-${tier}" title="Enchantment ${roman[tier] || tier}">${roman[tier] || tier}</span>`
+        : '';
+
+    return `
+        <div class="font-medium inline-flex items-center">
+            ${crownBadge}${item.itemName}${enchantBadge}
+        </div>
+        ${item.qualityLabel ? `<div class="text-xs text-gray-400 mt-0.5">${item.qualityLabel}</div>` : ''}`;
+}
 
 const grossSalesEl = document.getElementById('dashboard-gross-sales');
 const feesPaidEl = document.getElementById('dashboard-fees-paid');
@@ -543,7 +586,7 @@ async function buildValleyAnalysisFromSupabase() {
 
         const { data: rawListings, error: fetchErr } = await supabase
             .from('market_listings')
-            .select('listed_price_per_unit, quantity_listed, items(item_name)')
+            .select('item_id, listed_price_per_unit, quantity_listed, is_mastercrafted, enchantment_tier, items(item_name, pax_dei_slug)')
             .eq('character_id', currentCharacterId)
             .eq('is_cancelled', false)
             .eq('is_fully_sold', false);
@@ -552,14 +595,32 @@ async function buildValleyAnalysisFromSupabase() {
         if (!rawListings || rawListings.length === 0) return null;
 
         // Build map: itemName → { minPrice, count }
-        const ownByName = {};
+        const ownByVariant = {};
         for (const listing of rawListings) {
-            const name = listing.items?.item_name;
-            if (!name) continue;
-            if (!ownByName[name]) ownByName[name] = { minPrice: Infinity, count: 0 };
-            ownByName[name].count++;
-            if (listing.listed_price_per_unit < ownByName[name].minPrice) {
-                ownByName[name].minPrice = listing.listed_price_per_unit;
+            const itemId = listing.item_id;
+            const itemName = listing.items?.item_name;
+            if (!itemId || !itemName) continue;
+
+            const isMastercrafted = !!listing.is_mastercrafted;
+            const enchantmentTier = normalizeEnchantmentTier(listing.enchantment_tier);
+            const variantKey = getVariantKey(itemId, isMastercrafted, enchantmentTier);
+
+            if (!ownByVariant[variantKey]) {
+                ownByVariant[variantKey] = {
+                    itemId,
+                    itemName,
+                    paxDeiSlug: listing.items?.pax_dei_slug || null,
+                    isMastercrafted,
+                    enchantmentTier,
+                    qualityLabel: getQualityLabel(isMastercrafted, enchantmentTier),
+                    minPrice: Infinity,
+                    count: 0
+                };
+            }
+
+            ownByVariant[variantKey].count++;
+            if (listing.listed_price_per_unit < ownByVariant[variantKey].minPrice) {
+                ownByVariant[variantKey].minPrice = listing.listed_price_per_unit;
             }
         }
 
@@ -567,27 +628,49 @@ async function buildValleyAnalysisFromSupabase() {
         const undercut = [];
         let totalOwnListings = 0;
 
-        for (const [itemName, own] of Object.entries(ownByName)) {
+        for (const own of Object.values(ownByVariant)) {
             totalOwnListings += own.count;
-            const mktData    = getMarketDataByItemName(itemName);
+
+            let mktData = null;
+            if (own.paxDeiSlug) {
+                mktData = getMarketDataForSlugByQuality(own.paxDeiSlug, own.isMastercrafted, own.enchantmentTier);
+            }
+            if (!mktData) {
+                mktData = getMarketDataByItemNameAndQuality(own.itemName, own.isMastercrafted, own.enchantmentTier);
+            }
+
             const marketLow  = mktData?.marketLow ?? null;
             const totalCount = mktData?.totalListings ?? own.count;
+            const summaryRow = {
+                itemId: own.itemId,
+                itemName: own.itemName,
+                paxDeiSlug: own.paxDeiSlug,
+                isMastercrafted: own.isMastercrafted,
+                enchantmentTier: own.enchantmentTier,
+                qualityLabel: own.qualityLabel,
+                yourLow: own.minPrice,
+                yourCount: own.count,
+                totalCount
+            };
 
             if (marketLow === null) {
-                leading.push({ itemName, yourLow: own.minPrice, marketLow: own.minPrice, yourCount: own.count, totalCount, noGtData: true });
+                leading.push({ ...summaryRow, marketLow: own.minPrice, noGtData: true });
                 continue;
             }
             if (own.minPrice <= marketLow + 0.001) {
-                leading.push({ itemName, yourLow: own.minPrice, marketLow, yourCount: own.count, totalCount });
+                leading.push({ ...summaryRow, marketLow });
             } else {
                 const gap    = own.minPrice - marketLow;
                 const gapPct = Math.round((gap / marketLow) * 100);
-                undercut.push({ itemName, yourLow: own.minPrice, marketLow, gap, gapPct, yourCount: own.count, totalCount });
+                undercut.push({ ...summaryRow, marketLow, gap, gapPct });
             }
         }
 
         undercut.sort((a, b) => b.gap - a.gap);
-        leading.sort((a, b) => a.itemName.localeCompare(b.itemName));
+        leading.sort((a, b) =>
+            a.itemName.localeCompare(b.itemName) ||
+            a.qualityLabel.localeCompare(b.qualityLabel)
+        );
 
         // Valley share uses gaming.tools avatar-hash data (best available for total count)
         const gtAnalysis          = getSavedAvatarHash() ? analyzeOwnListings(getSavedAvatarHash()) : null;
@@ -627,7 +710,9 @@ export async function openValleyPresenceModal() {
 
     const undercutRows = undercut.map(item => `
         <tr class="border-b border-slate-700/60 hover:bg-slate-700/30">
-            <td class="py-2.5 px-3 text-white text-sm">${item.itemName}</td>
+            <td class="py-2.5 px-3 text-white text-sm">
+                ${renderValleyItemLabel(item)}
+            </td>
             <td class="py-2.5 px-3 text-rose-300 text-sm text-right font-semibold">${fmtG(item.yourLow)}</td>
             <td class="py-2.5 px-3 text-emerald-300 text-sm text-right">${fmtG(item.marketLow)}</td>
             <td class="py-2.5 px-3 text-amber-300 text-sm text-right">+${fmtG(item.gap)} <span class="text-gray-400 text-xs">(+${item.gapPct}%)</span></td>
@@ -635,7 +720,9 @@ export async function openValleyPresenceModal() {
             <td class="py-2.5 px-3 text-right">
                 <button class="valley-edit-btn inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white rounded-full border border-blue-400/40 transition-colors"
                     data-item-name="${item.itemName.replace(/"/g, '&quot;')}"
-                    data-gt-item-id="${item.itemId}">
+                    data-item-id="${item.itemId}"
+                    data-is-mastercrafted="${item.isMastercrafted ? 'true' : 'false'}"
+                    data-enchantment-tier="${item.enchantmentTier}">
                     <i class="fas fa-pen text-xs"></i> Edit
                 </button>
             </td>
@@ -643,7 +730,9 @@ export async function openValleyPresenceModal() {
 
     const leadingRows = leading.map(item => `
         <tr class="border-b border-slate-700/60 hover:bg-slate-700/30">
-            <td class="py-2.5 px-3 text-white text-sm">${item.itemName}</td>
+            <td class="py-2.5 px-3 text-white text-sm">
+                ${renderValleyItemLabel(item)}
+            </td>
             <td class="py-2.5 px-3 text-emerald-300 text-sm text-right font-semibold">${fmtG(item.yourLow)}</td>
             <td class="py-2.5 px-3 text-emerald-300 text-sm text-right">${fmtG(item.marketLow)}</td>
             <td class="py-2.5 px-3 text-emerald-400 text-sm text-right font-semibold">Lowest price</td>
@@ -723,8 +812,10 @@ export async function openValleyPresenceModal() {
     body.querySelectorAll('.valley-edit-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const itemName  = btn.dataset.itemName;
-            const gtItemId  = btn.dataset.gtItemId || null;
-            showValleyItemEditModal(itemName, gtItemId);
+            const itemId = parseInt(btn.dataset.itemId || '', 10);
+            const isMastercrafted = btn.dataset.isMastercrafted === 'true';
+            const enchantmentTier = normalizeEnchantmentTier(btn.dataset.enchantmentTier);
+            showValleyItemEditModal(itemName, itemId, isMastercrafted, enchantmentTier);
         });
     });
 }
@@ -735,7 +826,7 @@ export async function openValleyPresenceModal() {
  *
  * @param {string} itemName - Display name of the item to edit
  */
-async function showValleyItemEditModal(itemName, gtItemId = null) {
+async function showValleyItemEditModal(itemName, itemId = null, isMastercrafted = false, enchantmentTier = 0) {
     const editModal = document.getElementById('valleyItemEditModal');
     if (!editModal) return;
 
@@ -760,38 +851,44 @@ async function showValleyItemEditModal(itemName, gtItemId = null) {
         return;
     }
 
-    // Find item_id from item name
-    const { data: itemData, error: itemErr } = await supabase
-        .from('items')
-        .select('item_id')
-        .ilike('item_name', itemName)
-        .maybeSingle();
-
-    if (itemErr || !itemData) {
-        console.warn('[ValleyEdit] Item not found in DB:', itemName);
+    const normalizedEnchantTier = normalizeEnchantmentTier(enchantmentTier);
+    const resolvedItemId = Number.isInteger(itemId) ? itemId : parseInt(itemId, 10);
+    if (!resolvedItemId) {
+        console.warn('[ValleyEdit] Missing item_id for:', itemName);
         return;
     }
 
-    // Fetch all active listings for this item + character
-    const { data: listings, error: listErr } = await supabase
+    // Fetch only the exact quality variant represented by the valley row
+    let listingsQuery = supabase
         .from('market_listings')
         .select('listing_id, quantity_listed, total_listed_price, market_fee')
         .eq('character_id', currentCharacterId)
-        .eq('item_id', itemData.item_id)
+        .eq('item_id', resolvedItemId)
+        .eq('is_mastercrafted', !!isMastercrafted)
         .eq('is_cancelled', false)
         .eq('is_fully_sold', false)
         .order('listed_price_per_unit', { ascending: false });
 
+    listingsQuery = normalizedEnchantTier > 0
+        ? listingsQuery.eq('enchantment_tier', normalizedEnchantTier)
+        : listingsQuery.is('enchantment_tier', null);
+
+    const { data: listings, error: listErr } = await listingsQuery;
+
     if (listErr || !listings || listings.length === 0) {
-        console.warn('[ValleyEdit] No active listings found for item:', itemName);
+        console.warn('[ValleyEdit] No active listings found for variant:', itemName, isMastercrafted, normalizedEnchantTier);
         return;
     }
 
     // Pre-fill price from current average
     const avgPrice = Math.round(listings.reduce((s, l) => s + l.total_listed_price, 0) / listings.length);
+    const qualityLabel = getQualityLabel(!!isMastercrafted, normalizedEnchantTier);
     if (titleEl)    titleEl.textContent    = `Edit: ${itemName}`;
-    if (subtitleEl) subtitleEl.textContent = `${listings.length} active listing${listings.length !== 1 ? 's' : ''} will be updated with the new price.`;
+    if (subtitleEl) subtitleEl.textContent = `${qualityLabel} · ${listings.length} active listing${listings.length !== 1 ? 's' : ''} will be updated with the new price.`;
     if (priceInput) { priceInput.value = avgPrice; }
+    if (subtitleEl && !qualityLabel) {
+        subtitleEl.textContent = `${listings.length} active listing${listings.length !== 1 ? 's' : ''} will be updated with the new price.`;
+    }
 
     // Live fee estimate
     const updateFeeInfo = () => {
