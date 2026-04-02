@@ -1,4 +1,4 @@
-import { updateAlertBadgePosition } from '../sidebar.js';
+﻿import { updateAlertBadgePosition } from '../sidebar.js';
 import {
     getItemData,
     getZoneDataAge,
@@ -520,7 +520,25 @@ export function renderMarketPulse(zoneSummary, ownSummary, character, loading = 
 
     // Fetch real counts from Supabase and update chips
     buildValleyAnalysisFromSupabase().then(analysis => {
-        if (!analysis) return;
+        if (!analysis) {
+            if (ownPanel.isConnected) {
+                ownPanel.innerHTML = `
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="flex items-center gap-1.5 mr-1">
+                            <i class="fas fa-store text-emerald-400 text-sm"></i>
+                            <span class="text-emerald-300 font-semibold text-sm">Your home valley presence</span>
+                        </span>
+                        <span class="text-gray-400 text-sm italic">No active listings found.</span>
+                        <button id="valley-presence-details-btn"
+                            class="valley-details-btn ml-auto inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-amber-100 rounded-full transition-colors">
+                            <i class="fas fa-magnifying-glass text-xs"></i> View Details
+                        </button>
+                    </div>`;
+                document.getElementById('valley-presence-details-btn')
+                    ?.addEventListener('click', openValleyPresenceModal);
+            }
+            return;
+        }
         _lastValleyAnalysis = analysis;
         const { leading, undercut, valleySharePct } = analysis;
 
