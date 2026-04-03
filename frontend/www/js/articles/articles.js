@@ -1,5 +1,5 @@
 import { supabase } from '../supabaseClient.js';
-import { formatCommentDateTime, slugify } from '../utils.js';
+import { formatCommentDateTime, replaceEmojiShortcodes, slugify } from '../utils.js';
 import DOMPurify from 'https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.es.min.js';
 
 const ARTICLE_LIST_CACHE_KEY = 'paxDeiArticleList';
@@ -318,7 +318,7 @@ export async function displayFullArticle(slug) {
   const readTimeEl = $('#articleModalReadTime');
   readTimeEl.html(`<i class="fa-regular fa-clock text-[#FFD700]"></i> ${article.readTime} min read`).removeClass('hidden');
 
-  const markdownHtml = marked.parse(article.content || '');
+  const markdownHtml = marked.parse(replaceEmojiShortcodes(article.content || ''));
   $('#articleModalContent').html(DOMPurify.sanitize(markdownHtml));
 
   const sourceLink = $('#articleModalSourceLink');

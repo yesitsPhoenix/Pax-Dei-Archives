@@ -1,6 +1,6 @@
 import { supabase } from '../supabaseClient.js';
 import { authSession } from '../authSessionManager.js';
-import { formatNewsDate } from '../utils.js';
+import { formatNewsDate, replaceEmojiShortcodes } from '../utils.js';
 
 const CHANGELOG_TABLE = 'site_changelog';
 
@@ -286,7 +286,8 @@ function hideFormMessage() {
 }
 
 function sanitizeMarkdown(markdownText) {
-  const parsed = window.marked ? window.marked.parse(markdownText) : escapeHtml(markdownText);
+  const parsedInput = replaceEmojiShortcodes(markdownText);
+  const parsed = window.marked ? window.marked.parse(parsedInput) : escapeHtml(parsedInput);
   return window.DOMPurify ? window.DOMPurify.sanitize(parsed) : parsed;
 }
 

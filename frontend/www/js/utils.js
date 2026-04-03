@@ -52,6 +52,27 @@ export function slugify(text) {
     .replace(/--+/g, '-');
 }
 
+export function replaceEmojiShortcodes(text) {
+  if (!text) return text;
+
+  const input = String(text);
+  const EmojiConvertor = typeof window !== 'undefined' ? window.EmojiConvertor : null;
+
+  if (!EmojiConvertor) {
+    return input;
+  }
+
+  if (!window.__paxEmojiConvertor) {
+    const convertor = new EmojiConvertor();
+    convertor.replace_mode = 'unified';
+    convertor.allow_native = true;
+    convertor.avoid_ms_emoji = false;
+    window.__paxEmojiConvertor = convertor;
+  }
+
+  return window.__paxEmojiConvertor.replace_colons(input);
+}
+
 export async function isLoggedIn() {
   const { data: { session } } = await supabase.auth.getSession();
   return !!session;
