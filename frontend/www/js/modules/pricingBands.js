@@ -19,7 +19,7 @@ export function getCompetitiveThresholds(marketLowStack) {
 
 export function classifyCompetitiveGap(gap, gapPct, marketLowStack, leadingLabel = 'leading') {
     const thresholds = getCompetitiveThresholds(marketLowStack);
-    const status = gap <= 0
+    const status = gap < -0.001
         ? leadingLabel
         : (gap <= thresholds.maxGapGold && gapPct <= thresholds.maxGapPct ? 'competitive' : 'undercut');
 

@@ -1,6 +1,5 @@
 import { questState } from "./questStateManager.js";
 import { mouseTooltip } from "../ui/signTooltip.js";
-import { loadArchetypeBanner } from "../archetypes/archetypesUI.js";
 
 const selected = [];
 const grid = document.getElementById("sign-grid");
@@ -184,8 +183,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         try {
             await questState.addClaim(matchedQuest.id, user.id, characterId);
-            
-            await loadArchetypeBanner(characterId);
 
             const modal = document.getElementById("sign-redemption-modal");
             
