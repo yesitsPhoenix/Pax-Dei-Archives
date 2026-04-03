@@ -50,8 +50,8 @@ const initCustomModal = () => {
     const customModalContainer = document.getElementById('customModalContainer');
     const customModalContentWrapper = document.getElementById('customModalContentWrapper');
 
-    customModalContainer.addEventListener('click', (event) => {
-        if (event.target === customModalContainer) {
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !customModalContainer.classList.contains('hidden')) {
             customModalContainer.classList.add('hidden');
             if (window.customModalResolvePromise) {
                 window.customModalResolvePromise(false);

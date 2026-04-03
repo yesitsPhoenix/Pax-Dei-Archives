@@ -43,8 +43,10 @@ function setupValleyPresenceModal() {
     const close = () => modal.classList.add('hidden');
     closeBtn?.addEventListener('click', close);
     closeBtn2?.addEventListener('click', close);
-    modal.addEventListener('click', (event) => {
-        if (event.target === modal) close();
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+            close();
+        }
     });
 }
 
@@ -58,8 +60,10 @@ function setupQuickGuideModal() {
     openBtn.addEventListener('click', () => modal.classList.remove('hidden'));
     closeBtn?.addEventListener('click', () => modal.classList.add('hidden'));
     closeBtn2?.addEventListener('click', () => modal.classList.add('hidden'));
-    modal.addEventListener('click', (event) => {
-        if (event.target === modal) modal.classList.add('hidden');
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+            modal.classList.add('hidden');
+        }
     });
 }
 
@@ -73,8 +77,10 @@ function setupAvatarIdGuideModal() {
     openBtn.addEventListener('click', () => modal.classList.remove('hidden'));
     closeBtn?.addEventListener('click', () => modal.classList.add('hidden'));
     closeBtn2?.addEventListener('click', () => modal.classList.add('hidden'));
-    modal.addEventListener('click', (event) => {
-        if (event.target === modal) modal.classList.add('hidden');
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+            modal.classList.add('hidden');
+        }
     });
 }
 

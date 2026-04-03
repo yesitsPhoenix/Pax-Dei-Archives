@@ -50,7 +50,7 @@ export async function fetchItemSalesHistoryForListing({ supabase, currentCharact
     }
 }
 
-export function buildAddListingSuggestion(md, qualityMd, hist, count, stacks, isMastercrafted, enchantmentTier) {
+export function buildAddListingSuggestion(md, qualityMd, hist, count, stacks, isMastercrafted, enchantmentTier, ownCount = 0) {
     const ENCHANT_PREMIUMS = [0, 0.10, 0.20, 0.30];
     const mcPremium   = isMastercrafted ? 0.15 : 0;
     const encPremium  = ENCHANT_PREMIUMS[enchantmentTier || 0] || 0;
@@ -80,6 +80,7 @@ export function buildAddListingSuggestion(md, qualityMd, hist, count, stacks, is
     const hasCount  = count > 0;
     const hasStacks = stacks > 0;
     const lowSupply = hasMarket && effectiveMd.totalListings !== null && effectiveMd.totalListings <= 3;
+    const hasExternalCompetition = hasMarket && effectiveMd.totalListings !== null && effectiveMd.totalListings > ownCount;
 
     if (!hasMarket && !hasHist) return null;
 
@@ -133,13 +134,18 @@ export function buildAddListingSuggestion(md, qualityMd, hist, count, stacks, is
             insightClass      = 'text-emerald-400';
         }
     } else if (hasMarket && hasCount) {
+        const marketFloor = Math.round(effectiveMd.marketLow * count);
         if (lowSupply) {
             suggestedPerStack = Math.round(effectiveMd.marketLow * count * 1.1);
             insight           = `Only ${effectiveMd.totalListings} listing${effectiveMd.totalListings !== 1 ? 's' : ''} - no competition, priced 10% above market low.`;
             insightClass      = 'text-emerald-400';
+        } else if (hasExternalCompetition) {
+            suggestedPerStack = marketFloor;
+            insight           = 'No sales history yet - matching the current floor is the safest baseline.';
+            insightClass      = 'text-amber-400';
         } else {
-            suggestedPerStack = Math.round(effectiveMd.marketLow * count);
-            insight           = 'No sales history yet - market low used as baseline.';
+            suggestedPerStack = marketFloor;
+            insight           = 'No sales history yet - market low used as baseline because the current live listings appear to be yours.';
             insightClass      = 'text-gray-400';
         }
     } else if (hasHist && hasCount) {
@@ -164,6 +170,145 @@ export function buildAddListingSuggestion(md, qualityMd, hist, count, stacks, is
     }
 
     return { suggestedPerStack, totalRevenue, insight, insightClass, impactNote, qualityNote };
+}
+
+function getUndercutStep(stackPrice) {
+    if (stackPrice >= 250) return 5;
+    if (stackPrice >= 100) return 3;
+    if (stackPrice >= 25) return 2;
+    return 1;
+}
+
+function getMarketLowRecommendation(stackMarketLow, ownCount, totalListings, ownListingAtFloor = false) {
+    const roundedLow = Math.round(stackMarketLow);
+    const hasExternalCompetition = Number.isFinite(totalListings) && totalListings > ownCount && !ownListingAtFloor;
+
+    if (!hasExternalCompetition) {
+        return {
+            value: roundedLow,
+            description: 'Hold the current floor since the visible listings appear to be yours.',
+            subtext: 'No outside listing to undercut right now.'
+        };
+    }
+
+    const undercutStep = getUndercutStep(roundedLow);
+    const value = Math.max(1, roundedLow - undercutStep);
+    return {
+        value,
+        description: 'Slip just under the current floor to become the cheapest external listing.',
+        subtext: `${undercutStep}g below the live market low of ${roundedLow}g.`
+    };
+}
+
+function getCompetitivePriceRecommendation({ stackMarketLow, stackMarketAvg, suggestionValue, hasHistory }) {
+    const roundedLow = Math.round(stackMarketLow);
+    const thresholds = getCompetitiveThresholds(roundedLow);
+    const bandCap = roundedLow + thresholds.maxGapGold;
+
+    return {
+        value: bandCap,
+        description: hasHistory
+            ? 'Top end of the competitive band before you drift out of the safe pricing range.'
+            : 'Highest price that still fits inside the competitive band.',
+        subtext: `${thresholds.label} band: +${thresholds.maxGapGold}g / +${thresholds.maxGapPct}%`
+    };
+}
+
+function isOwnListingAtMarketLow(ownListings, marketLowPerUnit) {
+    if (!Array.isArray(ownListings) || !ownListings.length || !Number.isFinite(marketLowPerUnit)) return false;
+
+    return ownListings.some((listing) => {
+        const quantity = listing.quantity || 1;
+        const ownPerUnit = listing.price / quantity;
+        return Math.abs(ownPerUnit - marketLowPerUnit) < 0.0001;
+    });
+}
+
+function getPriceOptionTheme(type) {
+    if (type === 'market-low') {
+        return {
+            card: 'border-orange-500/45 bg-orange-950/30 shadow-[inset_0_1px_0_rgba(251,146,60,0.14)]',
+            badge: 'border-orange-400/50 bg-orange-500/20 text-orange-200',
+            price: 'text-orange-300',
+            button: 'bg-orange-500/20 hover:bg-orange-500/35 text-orange-200 border-orange-400/45',
+            meta: 'text-orange-200'
+        };
+    }
+
+    if (type === 'competitive') {
+        return {
+            card: 'border-cyan-500/45 bg-cyan-950/28 shadow-[inset_0_1px_0_rgba(34,211,238,0.14)]',
+            badge: 'border-cyan-400/50 bg-cyan-500/20 text-cyan-200',
+            price: 'text-cyan-300',
+            button: 'bg-cyan-500/20 hover:bg-cyan-500/35 text-cyan-200 border-cyan-400/45',
+            meta: 'text-cyan-200'
+        };
+    }
+
+    return {
+        card: 'border-fuchsia-500/45 bg-fuchsia-950/28 shadow-[inset_0_1px_0_rgba(217,70,239,0.14)]',
+        badge: 'border-fuchsia-400/50 bg-fuchsia-500/20 text-fuchsia-200',
+        price: 'text-fuchsia-300',
+        button: 'bg-fuchsia-500/20 hover:bg-fuchsia-500/35 text-fuchsia-200 border-fuchsia-400/45',
+        meta: 'text-fuchsia-200'
+    };
+}
+
+function getCompetitiveStatusPresentation(status) {
+    if (status === 'leading') {
+        return {
+            label: 'Leading',
+            pill: 'border-emerald-500/40 bg-emerald-900/30 text-emerald-300',
+            text: 'text-emerald-300',
+            icon: 'fa-trophy'
+        };
+    }
+
+    if (status === 'competitive') {
+        return {
+            label: 'Competitive',
+            pill: 'border-amber-500/40 bg-amber-900/30 text-amber-300',
+            text: 'text-amber-300',
+            icon: 'fa-handshake'
+        };
+    }
+
+    return {
+        label: 'Above Range',
+        pill: 'border-rose-500/40 bg-rose-900/30 text-rose-300',
+        text: 'text-rose-300',
+        icon: 'fa-triangle-exclamation'
+    };
+}
+
+function renderSuggestedPriceOption(option, stacks, fmt) {
+    const theme = getPriceOptionTheme(option.type);
+    const total = stacks > 0 ? option.value * stacks : null;
+
+    return `
+        <div class="rounded-xl border p-4 ${theme.card}">
+            <div class="flex items-start justify-between gap-2 mb-2">
+                <div>
+                    <div class="text-white text-base font-semibold leading-tight">${option.label}</div>
+                    <div class="text-gray-300 text-sm leading-5 mt-1">${option.description}</div>
+                </div>
+                <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${theme.badge}">${option.badge}</span>
+            </div>
+            <div class="flex items-end justify-between gap-3 flex-wrap mt-4">
+                <div>
+                    <div class="${theme.price} font-bold text-4xl leading-none">${fmt(option.value)}g</div>
+                    <div class="text-gray-400 text-sm mt-1">per stack</div>
+                </div>
+                <button type="button" data-suggested-price="${option.value}"
+                    class="px-2.5 py-1 text-xs font-semibold border rounded-lg transition-colors ${theme.button}">
+                    Use this price
+                </button>
+            </div>
+            <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-sm">
+                ${option.subtext ? `<span class="text-gray-300 leading-5">${option.subtext}</span>` : ''}
+                ${total !== null ? `<span class="${theme.meta} font-semibold">${stacks} stack${stacks !== 1 ? 's' : ''}: ${fmt(total)}g total</span>` : ''}
+            </div>
+        </div>`;
 }
 
 function getRelativeTime(isoDate) {
@@ -191,6 +336,7 @@ export function createAddListingIntelligenceController({
     const state = {
         marketData: null,
         ownCount: 0,
+        ownListings: [],
         historyData: null,
         historyLoading: false,
         selectedItem: null,
@@ -377,7 +523,7 @@ export function createAddListingIntelligenceController({
             </div>`;
         }
 
-        const suggestion = buildAddListingSuggestion(md, qualityMd, hist, count, stacks, isMastercrafted, enchantmentTier);
+        const suggestion = buildAddListingSuggestion(md, qualityMd, hist, count, stacks, isMastercrafted, enchantmentTier, state.ownCount);
 
         let competitiveCard = '';
         const stackMarketLow = (displayMd && hasCount) ? (displayMd.marketLow * count) : null;
@@ -395,19 +541,17 @@ export function createAddListingIntelligenceController({
             const suggestionStatus = suggestion?.suggestedPerStack !== null
                 ? classifyCompetitiveGap(suggestionGap, suggestionGapPct, roundedStackMarketLow).status
                 : null;
+            const enteredStatusDisplay = hasPrice ? getCompetitiveStatusPresentation(enteredStatus) : null;
+            const suggestionStatusDisplay = suggestionStatus ? getCompetitiveStatusPresentation(suggestionStatus) : null;
 
             const statusPill = !hasPrice
                 ? `<span class="inline-flex items-center gap-1 rounded-full border border-slate-500/40 bg-slate-700/40 px-2 py-0.5 text-xs text-gray-300">Enter a price to compare</span>`
-                : enteredStatus === 'leading'
-                    ? `<span class="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-900/30 px-2 py-0.5 text-xs text-emerald-300"><i class="fas fa-trophy text-[10px]"></i> Leading</span>`
-                    : enteredStatus === 'competitive'
-                        ? `<span class="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-900/30 px-2 py-0.5 text-xs text-amber-300"><i class="fas fa-handshake text-[10px]"></i> Competitive</span>`
-                        : `<span class="inline-flex items-center gap-1 rounded-full border border-rose-500/40 bg-rose-900/30 px-2 py-0.5 text-xs text-rose-300"><i class="fas fa-triangle-exclamation text-[10px]"></i> Undercut</span>`;
+                : `<span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${enteredStatusDisplay.pill}"><i class="fas ${enteredStatusDisplay.icon} text-[10px]"></i> ${enteredStatusDisplay.label}</span>`;
 
             const suggestionLine = suggestion?.suggestedPerStack !== null
                 ? `<div class="flex justify-between gap-2 text-xs">
                         <span class="text-gray-300">Suggested status</span>
-                        <span class="${suggestionStatus === 'leading' ? 'text-emerald-300' : suggestionStatus === 'competitive' ? 'text-amber-300' : 'text-rose-300'} font-semibold">${suggestionStatus === 'leading' ? 'Leading' : suggestionStatus === 'competitive' ? 'Competitive' : 'Undercut'}</span>
+                        <span class="${suggestionStatusDisplay.text} font-semibold">${suggestionStatusDisplay.label}</span>
                    </div>`
                 : '';
 
@@ -442,7 +586,7 @@ export function createAddListingIntelligenceController({
                         </div>
                         ${hasPrice ? `<div class="flex justify-between gap-2 text-sm">
                             <span class="text-gray-300">Gap vs low</span>
-                            <span class="${enteredStatus === 'leading' ? 'text-emerald-300' : enteredStatus === 'competitive' ? 'text-amber-300' : 'text-rose-300'} font-semibold whitespace-nowrap">${enteredGap > 0 ? '+' : ''}${fmt(enteredGap)}g (${enteredGapPct > 0 ? '+' : ''}${enteredGapPct}%)</span>
+                            <span class="${enteredStatusDisplay.text} font-semibold whitespace-nowrap">${enteredGap > 0 ? '+' : ''}${fmt(enteredGap)}g (${enteredGapPct > 0 ? '+' : ''}${enteredGapPct}%)</span>
                         </div>` : ''}
                         ${suggestionLine}
                     </div>
@@ -468,24 +612,66 @@ export function createAddListingIntelligenceController({
             const bubbleCls = suggestion.insightClass === 'text-rose-400' ? 'bg-rose-400'
                 : suggestion.insightClass === 'text-amber-400' ? 'bg-amber-400'
                 : suggestion.insightClass === 'text-emerald-400' ? 'bg-emerald-400'
+                : suggestion.insightClass === 'text-fuchsia-300' ? 'bg-fuchsia-400'
                 : 'bg-gray-400';
+            const suggestionOptions = [];
+
+            if (stackMarketLow !== null) {
+                const marketLowRecommendation = getMarketLowRecommendation(
+                    stackMarketLow,
+                    state.ownCount,
+                    displayMd?.totalListings,
+                    isOwnListingAtMarketLow(state.ownListings, displayMd?.marketLow)
+                );
+                suggestionOptions.push({
+                    type: 'market-low',
+                    label: 'Market Low',
+                    badge: 'Fastest',
+                    value: marketLowRecommendation.value,
+                    description: marketLowRecommendation.description,
+                    subtext: marketLowRecommendation.subtext
+                });
+            }
+
+            if (suggestion.suggestedPerStack !== null && hasCount) {
+                suggestionOptions.push({
+                    type: 'suggested',
+                    label: 'Suggested Price',
+                    badge: 'Recommended',
+                    value: suggestion.suggestedPerStack,
+                    description: 'Balanced using live listings and your own sales history.',
+                    subtext: suggestion.insight
+                });
+            }
+
+            if (stackMarketLow !== null) {
+                const competitiveRecommendation = getCompetitivePriceRecommendation({
+                    stackMarketLow,
+                    stackMarketAvg: displayMd?.marketAvg && hasCount ? displayMd.marketAvg * count : null,
+                    suggestionValue: suggestion.suggestedPerStack,
+                    hasHistory: !!hist
+                });
+                suggestionOptions.push({
+                    type: 'competitive',
+                    label: 'Competitive Price',
+                    badge: 'Stretch',
+                    value: competitiveRecommendation.value,
+                    description: competitiveRecommendation.description,
+                    subtext: competitiveRecommendation.subtext
+                });
+            }
+
             suggestionCard = `
-            <div class="mt-2 p-3 bg-yellow-900/20 border border-yellow-500/40 rounded-xl">
+            <div class="mt-2 p-3 bg-slate-800/70 border border-slate-500/40 rounded-xl">
                 <div class="flex items-center gap-2 mb-1.5">
-                    <i class="fas fa-lightbulb text-yellow-400 text-sm"></i>
-                    <span class="text-yellow-300 font-semibold text-sm uppercase tracking-widest">Suggested Price</span>
+                    <i class="fas fa-lightbulb text-gray-300 text-sm"></i>
+                    <span class="text-gray-100 font-semibold text-sm uppercase tracking-widest">Suggested Price</span>
                 </div>
-                ${suggestion.suggestedPerStack !== null && hasCount
-                    ? `<div class="flex flex-wrap items-baseline gap-2 mb-1">
-                           <span class="text-yellow-300 font-bold text-2xl">${fmt(suggestion.suggestedPerStack)}g</span>
-                           <span class="text-gray-400 text-sm">/ stack of ${count}</span>
-                           <button id="modal-use-suggested-price-btn" type="button"
-                               class="px-2.5 py-1 text-xs font-semibold bg-yellow-500/20 hover:bg-yellow-500/40 text-yellow-300 border border-yellow-500/40 rounded-lg transition-colors">
-                               Use this price
-                           </button>
+                ${suggestionOptions.length > 0
+                    ? `<div class="grid gap-2 md:grid-cols-3">
+                           ${suggestionOptions.map(option => renderSuggestedPriceOption(option, stacks, fmt)).join('')}
                        </div>
-                       ${hasStacks ? `<div class="text-gray-300 text-sm mb-1">${stacks} stack${stacks !== 1 ? 's' : ''} x ${fmt(suggestion.suggestedPerStack)}g = <span class="text-yellow-200 font-bold">${fmt(suggestion.suggestedPerStack * stacks)}g</span> total</div>` : ''}
-                       <div class="flex items-center gap-1.5">
+                       <div class="flex items-center gap-1.5 mt-2">
                            <span class="inline-block w-2 h-2 rounded-full flex-shrink-0 ${bubbleCls}"></span>
                            <span class="${suggestion.insightClass} text-sm">${suggestion.insight}</span>
                        </div>`
@@ -544,16 +730,16 @@ export function createAddListingIntelligenceController({
             ${livePriceRow}`;
         hintEl.classList.remove('hidden');
 
-        const useBtn = hintEl.querySelector('#modal-use-suggested-price-btn');
-        if (useBtn) {
-            useBtn.addEventListener('click', () => {
+        hintEl.querySelectorAll('[data-suggested-price]').forEach((btn) => {
+            btn.addEventListener('click', () => {
                 const priceInput = document.getElementById('modal-item-price-per-stack');
-                if (priceInput && suggestion?.suggestedPerStack !== null) {
-                    priceInput.value = suggestion.suggestedPerStack;
+                const targetPrice = parseInt(btn.getAttribute('data-suggested-price'), 10);
+                if (priceInput && Number.isFinite(targetPrice)) {
+                    priceInput.value = targetPrice;
                     priceInput.dispatchEvent(new Event('input'));
                 }
             });
-        }
+        });
 
         const useHighBtn = hintEl.querySelector('#modal-use-high-price-btn');
         if (useHighBtn) {
@@ -596,9 +782,12 @@ export function createAddListingIntelligenceController({
                 if (slugValid) gtItemId = selectedItem.pax_dei_slug;
             }
             if (!gtItemId) gtItemId = getItemIdByName(selectedItem.item_name);
-            state.ownCount = gtItemId ? getOwnListingCountForSlug(savedHash, gtItemId).ownCount : 0;
+            const ownListingData = gtItemId ? getOwnListingCountForSlug(savedHash, gtItemId) : { ownCount: 0, ownListings: [] };
+            state.ownCount = ownListingData.ownCount;
+            state.ownListings = ownListingData.ownListings || [];
         } else {
             state.ownCount = 0;
+            state.ownListings = [];
         }
 
         const currentCharacterId = getCurrentCharacterId();

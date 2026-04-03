@@ -623,13 +623,13 @@ export function renderMarketPulse(zoneSummary, ownSummary, character, loading = 
         const undercutChip = undercut.length > 0
             ? `<span class="inline-flex items-center gap-1.5 bg-rose-900/40 border border-rose-500/40 rounded-full px-3 py-1 text-sm">
                    <i class="fas fa-triangle-exclamation text-rose-400 text-xs"></i>
-                   <span class="text-white font-semibold">Undercut on</span>
+                   <span class="text-white font-semibold">Above range on</span>
                    <span class="text-rose-300 font-bold">${undercut.length}</span>
                    <span class="text-white">${undercut.length === 1 ? 'item' : 'items'}</span>
                </span>`
             : `<span class="inline-flex items-center gap-1.5 bg-slate-700/40 border border-slate-500/40 rounded-full px-3 py-1 text-sm">
                    <i class="fas fa-check text-gray-400 text-xs"></i>
-                   <span class="text-white">Not undercut</span>
+                   <span class="text-white">No above-range listings</span>
                </span>`;
 
         const shareChip = `<span class="inline-flex items-center gap-1.5 bg-blue-900/40 border border-blue-500/40 rounded-full px-3 py-1 text-sm">
@@ -994,15 +994,15 @@ export async function openValleyPresenceModal() {
             ${buildCompetitiveChip(competitive.length)}
             <span class="inline-flex items-center gap-1.5 bg-rose-900/40 border border-rose-500/40 rounded-full px-3 py-1 text-sm">
                 <i class="fas fa-triangle-exclamation text-rose-400 text-xs"></i>
-                <span class="text-white">Undercut on <span class="font-bold text-rose-300">${undercut.length}</span> item${undercut.length !== 1 ? 's' : ''}</span>
+                <span class="text-white">Above range on <span class="font-bold text-rose-300">${undercut.length}</span> item${undercut.length !== 1 ? 's' : ''}</span>
             </span>
         </div>
 
         ${undercut.length > 0 ? `
-        <!-- Undercut section -->
+        <!-- Above range section -->
         <div class="mb-5">
             <h4 class="flex items-center gap-2 text-rose-300 text-sm font-bold uppercase tracking-wide mb-2">
-                <i class="fas fa-triangle-exclamation text-rose-400"></i> Being Undercut
+                <i class="fas fa-triangle-exclamation text-rose-400"></i> Above Competitive Range
                 <span class="text-gray-400 text-xs font-normal normal-case ml-1">— sorted by largest gap first</span>
             </h4>
             <div class="overflow-x-auto rounded-lg border border-slate-700/60">
@@ -1043,6 +1043,7 @@ export async function openValleyPresenceModal() {
                     <ul class="text-gray-400 text-xs mt-2 leading-relaxed space-y-1 list-disc pl-4">
                         ${getCompetitiveBandDisplayRows().map(row => `<li>${row}</li>`).join('')}
                     </ul>
+                    <p class="text-gray-300 text-xs leading-relaxed mt-2">When we show recommendations in the add-listing modal, the ladder is: undercut the floor, match the floor, then stretch to the top of the competitive band.</p>
                 </div>
                 <div class="rounded-lg border border-slate-700/60 bg-slate-900/40 p-3">
                     <p class="text-white text-sm font-semibold mb-1">Historical context</p>
@@ -1051,16 +1052,16 @@ export async function openValleyPresenceModal() {
             </div>
             <div class="grid gap-3 md:grid-cols-3 mt-3">
                 <div class="rounded-lg border border-rose-500/20 bg-rose-900/10 p-3">
-                    <p class="text-rose-300 text-xs font-bold uppercase tracking-wide mb-1">Undercut Example</p>
-                    <p class="text-gray-300 text-xs leading-relaxed">A 12g stack against a 5g market low falls in the 5g-19g band, where only 5g and 30% are allowed. Its 7g gap and 140% delta keep it undercut even if it sold higher in the past.</p>
+                    <p class="text-rose-300 text-xs font-bold uppercase tracking-wide mb-1">Above-Range Example</p>
+                    <p class="text-gray-300 text-xs leading-relaxed">A 12g stack against a 5g market low falls in the 5g-19g band, where only 5g and 30% are allowed. Its 7g gap and 140% delta push it above the competitive range even if it sold higher in the past.</p>
                 </div>
                 <div class="rounded-lg border border-amber-500/20 bg-amber-900/10 p-3">
                     <p class="text-amber-300 text-xs font-bold uppercase tracking-wide mb-1">Competitive Example</p>
-                    <p class="text-gray-300 text-xs leading-relaxed">A 320g stack against a 320g market low is competitive because it matches the current floor. A 320g stack against 315g also stays competitive here because the 5g gap and 2% delta are still inside the 300g+ band.</p>
+                    <p class="text-gray-300 text-xs leading-relaxed">A 30g stack against a 30g market low is competitive because it matches the current floor. In that same 20g-74g band, a 37g stack also stays competitive because the 7g gap and 23% delta are still inside the band cap.</p>
                 </div>
                 <div class="rounded-lg border border-emerald-500/20 bg-emerald-900/10 p-3">
                     <p class="text-emerald-300 text-xs font-bold uppercase tracking-wide mb-1">Leading Example</p>
-                    <p class="text-gray-300 text-xs leading-relaxed">If your stack is below the current Home Valley low, it shows as leading. Matching the low is treated as competitive, not leading.</p>
+                    <p class="text-gray-300 text-xs leading-relaxed">If your stack is below the current Home Valley low, it shows as leading. Matching the low is treated as competitive, not leading, which matches the add-listing modal.</p>
                 </div>
             </div>
         <p class="text-gray-500 text-xs mt-3 italic">Data reflects gaming.tools' last hourly sync, while your Archives listings and sales history update immediately.</p>
@@ -1167,10 +1168,16 @@ async function showValleyItemEditModal(itemName, itemId = null, isMastercrafted 
     priceInput?.focus();
     priceInput?.select();
 
+    let handleValleyEditEscape;
+
     // ── Close helpers ─────────────────────────────────────────────────────
     const closeEditModal = () => {
         editModal.classList.add('hidden');
         priceInput?.removeEventListener('input', updateFeeInfo);
+        if (handleValleyEditEscape) {
+            document.removeEventListener('keydown', handleValleyEditEscape);
+            handleValleyEditEscape = null;
+        }
     };
 
     const closeAndReopenValley = () => {
@@ -1180,7 +1187,11 @@ async function showValleyItemEditModal(itemName, itemId = null, isMastercrafted 
 
     if (closeBtn)  closeBtn.onclick  = closeEditModal;
     if (cancelBtn) cancelBtn.onclick = closeEditModal;
-    editModal.onclick = (e) => { if (e.target === editModal) closeEditModal(); };
+    handleValleyEditEscape = function handleValleyEditEscape(e) {
+        if (e.key !== 'Escape' || editModal.classList.contains('hidden')) return;
+        closeEditModal();
+    };
+    document.addEventListener('keydown', handleValleyEditEscape);
 
     // ── Save handler ──────────────────────────────────────────────────────
     if (saveBtn) {

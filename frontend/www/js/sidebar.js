@@ -9,6 +9,22 @@ export function updateAlertBadgePosition() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    const scrollToSection = (sectionId) => {
+        const target = document.getElementById(sectionId);
+        if (!target) return;
+
+        const header = document.querySelector('.header-area');
+        const headerOffset = header ? header.getBoundingClientRect().height : 0;
+        const extraOffset = 64;
+        const top = target.getBoundingClientRect().top + window.scrollY - headerOffset - extraOffset;
+
+        window.history.replaceState(null, '', `#${sectionId}`);
+        window.scrollTo({
+            top: Math.max(0, top),
+            behavior: 'smooth'
+        });
+    };
+
     if (sidebar) {
         sidebar.classList.add('collapsed');
 
@@ -30,6 +46,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const manageListingsBtn = document.getElementById('manageListingsBtn');
     const manageStallsBtn = document.getElementById('manageStallsBtn');
     const closeManageMarketStallsModalBtn = document.getElementById('closeManageMarketStallsModalBtn');
+    const sidebarDashboardLink = document.getElementById('sidebarDashboardLink');
+    const sidebarActiveListingsLink = document.getElementById('sidebarActiveListingsLink');
+    const sidebarTransactionHistoryLink = document.getElementById('sidebarTransactionHistoryLink');
 
     if (manageListingsBtn && manageMarketStallsModal) {
         manageListingsBtn.addEventListener('click', () => {
@@ -49,6 +68,21 @@ document.addEventListener('DOMContentLoaded', () => {
             manageMarketStallsModal.classList.add('hidden');
         });
     }
+
+    sidebarDashboardLink?.addEventListener('click', (e) => {
+        e.preventDefault();
+        scrollToSection('dashboard-anchor');
+    });
+
+    sidebarActiveListingsLink?.addEventListener('click', (e) => {
+        e.preventDefault();
+        scrollToSection('active-listings-anchor');
+    });
+
+    sidebarTransactionHistoryLink?.addEventListener('click', (e) => {
+        e.preventDefault();
+        scrollToSection('transaction-history-anchor');
+    });
 
 
     const addListingSidebarBtn = document.getElementById('addListingSidebarBtn');
@@ -71,8 +105,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (addListingModal) {
-        addListingModal.addEventListener('click', (e) => {
-            if (e.target === addListingModal) {
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !addListingModal.classList.contains('hidden')) {
                 addListingModal.classList.add('hidden');
             }
         });
@@ -98,8 +132,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (recordPurchaseModal) {
-        recordPurchaseModal.addEventListener('click', (e) => {
-            if (e.target === recordPurchaseModal) {
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !recordPurchaseModal.classList.contains('hidden')) {
                 recordPurchaseModal.classList.add('hidden');
             }
         });
@@ -128,8 +162,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (addPveTransactionModal) {
-        addPveTransactionModal.addEventListener('click', (e) => {
-            if (e.target === addPveTransactionModal) {
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !addPveTransactionModal.classList.contains('hidden')) {
                 addPveTransactionModal.classList.add('hidden');
             }
         });
