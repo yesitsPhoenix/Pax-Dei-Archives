@@ -5,11 +5,16 @@ import {
     getSavedAvatarHash,
     analyzeOwnListings,
     getMarketDataForSlugByQuality,
-    getMarketDataByItemNameAndQuality
+    getMarketDataByItemNameAndQuality,
+    getZoneListingsForItemByQuality
 } from '../services/gamingToolsService.js';
+import { getCompetitiveThresholds, classifyCompetitiveGap, getCompetitiveBandDisplayRows } from './pricingBands.js';
 
 /** Cached result of the last analyzeOwnListings() call — used to populate the modal. */
 let _lastValleyAnalysis = null;
+const HISTORICAL_MEDIAN_TOLERANCE_PCT = 20;
+const HISTORICAL_INFO_MAX_SELLERS = 2;
+const HISTORICAL_MIN_SALES = 3;
 
 function normalizeEnchantmentTier(tier) {
     return Number.isInteger(tier) ? tier : (parseInt(tier, 10) || 0);
@@ -44,7 +49,69 @@ function renderValleyItemLabel(item) {
         <div class="font-medium inline-flex items-center">
             ${crownBadge}${item.itemName}${enchantBadge}
         </div>
-        ${item.qualityLabel ? `<div class="text-xs text-gray-400 mt-0.5">${item.qualityLabel}</div>` : ''}`;
+        ${(item.qualityLabel || item.stackLabel || item.historyNote) ? `<div class="text-xs text-gray-400 mt-0.5">${[item.qualityLabel, item.stackLabel, item.historyNote].filter(Boolean).join(' · ')}</div>` : ''}`;
+}
+
+function getMedian(values) {
+    if (!values.length) return null;
+    const sorted = values.slice().sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 0
+        ? (sorted[mid - 1] + sorted[mid]) / 2
+        : sorted[mid];
+}
+
+function buildHistoryKey(itemId, isMastercrafted, enchantmentTier, stackSize) {
+    return `${getVariantKey(itemId, isMastercrafted, enchantmentTier)}::stack${stackSize}`;
+}
+
+function summarizeHistoricalSales(rows) {
+    if (!rows.length) return null;
+    const prices = rows
+        .map(row => Number(row.total_sale_price) || 0)
+        .filter(price => price > 0);
+    if (!prices.length) return null;
+    return {
+        count: prices.length,
+        median: getMedian(prices),
+        min: Math.min(...prices),
+        max: Math.max(...prices)
+    };
+}
+
+function buildHistoricalPricingNote({ stackPrice, sellerCount, historicalStats }) {
+    if (!historicalStats || historicalStats.count < HISTORICAL_MIN_SALES) {
+        return null;
+    }
+    if (sellerCount > HISTORICAL_INFO_MAX_SELLERS) {
+        return null;
+    }
+
+    const medianUpperBound = historicalStats.median * (1 + HISTORICAL_MEDIAN_TOLERANCE_PCT / 100);
+    const withinMedianTolerance = stackPrice <= medianUpperBound;
+    const withinHistoricalRange = stackPrice >= historicalStats.min && stackPrice <= historicalStats.max;
+
+    if (!withinMedianTolerance && !withinHistoricalRange) {
+        return null;
+    }
+
+    return `History context: ${historicalStats.count} sales, median ${historicalStats.median.toLocaleString(undefined, { maximumFractionDigits: 2 })}g, range ${historicalStats.min.toLocaleString(undefined, { maximumFractionDigits: 2 })}g-${historicalStats.max.toLocaleString(undefined, { maximumFractionDigits: 2 })}g`;
+}
+
+function getValleyBucketRank(bucket) {
+    if (bucket === 'leading') return 0;
+    if (bucket === 'competitive') return 1;
+    return 2;
+}
+
+function buildCompetitiveChip(competitiveCount) {
+    if (competitiveCount <= 0) return '';
+    return `<span class="inline-flex items-center gap-1.5 bg-amber-900/40 border border-amber-500/40 rounded-full px-3 py-1 text-sm">
+                <i class="fas fa-handshake text-amber-400 text-xs"></i>
+                <span class="text-white font-semibold">Competitive</span>
+                <span class="text-amber-300 font-bold">${competitiveCount}</span>
+                <span class="text-white">${competitiveCount === 1 ? 'item' : 'items'}</span>
+            </span>`;
 }
 
 const grossSalesEl = document.getElementById('dashboard-gross-sales');
@@ -540,7 +607,7 @@ export function renderMarketPulse(zoneSummary, ownSummary, character, loading = 
             return;
         }
         _lastValleyAnalysis = analysis;
-        const { leading, undercut, valleySharePct } = analysis;
+        const { leading, competitive, undercut, valleySharePct } = analysis;
 
         const leadingChip = leading.length > 0
             ? `<span class="inline-flex items-center gap-1.5 bg-emerald-900/40 border border-emerald-500/40 rounded-full px-3 py-1 text-sm">
@@ -550,6 +617,8 @@ export function renderMarketPulse(zoneSummary, ownSummary, character, loading = 
                    <span class="text-white">${leading.length === 1 ? 'item' : 'items'}</span>
                </span>`
             : '';
+
+        const competitiveChip = buildCompetitiveChip(competitive.length);
 
         const undercutChip = undercut.length > 0
             ? `<span class="inline-flex items-center gap-1.5 bg-rose-900/40 border border-rose-500/40 rounded-full px-3 py-1 text-sm">
@@ -577,7 +646,7 @@ export function renderMarketPulse(zoneSummary, ownSummary, character, loading = 
                         <i class="fas fa-store text-emerald-400 text-sm"></i>
                         <span class="text-emerald-300 font-semibold text-sm">Your home valley presence</span>
                     </span>
-                    ${leadingChip}${undercutChip}${shareChip}
+                    ${leadingChip}${competitiveChip}${undercutChip}${shareChip}
                     <button id="valley-presence-details-btn"
                         class="valley-details-btn ml-auto inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-amber-100 rounded-full transition-colors">
                         <i class="fas fa-magnifying-glass text-xs"></i> View Details
@@ -594,7 +663,7 @@ export function renderMarketPulse(zoneSummary, ownSummary, character, loading = 
  * market data, and returns a structured analysis. Shared by both the ledger
  * page chips and the valley presence modal.
  *
- * @returns {Promise<{leading, undercut, valleySharePct, totalOwnListings, totalValleyListings}|null>}
+ * @returns {Promise<{leading, competitive, undercut, valleySharePct, totalOwnListings, totalValleyListings}|null>}
  */
 async function buildValleyAnalysisFromSupabase() {
     try {
@@ -604,15 +673,42 @@ async function buildValleyAnalysisFromSupabase() {
 
         const { data: rawListings, error: fetchErr } = await supabase
             .from('market_listings')
-            .select('item_id, listed_price_per_unit, quantity_listed, is_mastercrafted, enchantment_tier, items(item_name, pax_dei_slug)')
+            .select('item_id, listed_price_per_unit, total_listed_price, quantity_listed, is_mastercrafted, enchantment_tier, items(item_name, pax_dei_slug)')
             .eq('character_id', currentCharacterId)
             .eq('is_cancelled', false)
             .eq('is_fully_sold', false);
 
+        const { data: rawSales, error: salesErr } = await supabase
+            .from('sales')
+            .select('total_sale_price, quantity_sold, sale_date, market_listings!inner(item_id, is_mastercrafted, enchantment_tier)')
+            .eq('character_id', currentCharacterId)
+            .order('sale_date', { ascending: false })
+            .limit(250);
+
         if (fetchErr) throw fetchErr;
+        if (salesErr) throw salesErr;
         if (!rawListings || rawListings.length === 0) return null;
 
-        // Build map: itemName → { minPrice, count }
+        const salesByHistoryKey = {};
+        for (const sale of rawSales || []) {
+            const marketListing = Array.isArray(sale.market_listings) ? sale.market_listings[0] : sale.market_listings;
+            const itemId = marketListing?.item_id;
+            if (!itemId) continue;
+
+            const stackSize = Math.max(Number(sale.quantity_sold) || 1, 1);
+            const isMastercrafted = !!marketListing.is_mastercrafted;
+            const enchantmentTier = normalizeEnchantmentTier(marketListing.enchantment_tier);
+            const historyKey = buildHistoryKey(itemId, isMastercrafted, enchantmentTier, stackSize);
+
+            if (!salesByHistoryKey[historyKey]) {
+                salesByHistoryKey[historyKey] = [];
+            }
+            if (salesByHistoryKey[historyKey].length < 20) {
+                salesByHistoryKey[historyKey].push(sale);
+            }
+        }
+
+        // Build map: item variant → listings summary
         const ownByVariant = {};
         for (const listing of rawListings) {
             const itemId = listing.item_id;
@@ -631,18 +727,21 @@ async function buildValleyAnalysisFromSupabase() {
                     isMastercrafted,
                     enchantmentTier,
                     qualityLabel: getQualityLabel(isMastercrafted, enchantmentTier),
-                    minPrice: Infinity,
-                    count: 0
+                    count: 0,
+                    listings: []
                 };
             }
 
             ownByVariant[variantKey].count++;
-            if (listing.listed_price_per_unit < ownByVariant[variantKey].minPrice) {
-                ownByVariant[variantKey].minPrice = listing.listed_price_per_unit;
-            }
+            ownByVariant[variantKey].listings.push({
+                stackSize: Math.max(Number(listing.quantity_listed) || 1, 1),
+                stackPrice: Number(listing.total_listed_price) || 0,
+                unitPrice: Number(listing.listed_price_per_unit) || 0
+            });
         }
 
         const leading  = [];
+        const competitive = [];
         const undercut = [];
         let totalOwnListings = 0;
 
@@ -657,34 +756,113 @@ async function buildValleyAnalysisFromSupabase() {
                 mktData = getMarketDataByItemNameAndQuality(own.itemName, own.isMastercrafted, own.enchantmentTier);
             }
 
-            const marketLow  = mktData?.marketLow ?? null;
-            const totalCount = mktData?.totalListings ?? own.count;
-            const summaryRow = {
-                itemId: own.itemId,
-                itemName: own.itemName,
-                paxDeiSlug: own.paxDeiSlug,
-                isMastercrafted: own.isMastercrafted,
-                enchantmentTier: own.enchantmentTier,
-                qualityLabel: own.qualityLabel,
-                yourLow: own.minPrice,
-                yourCount: own.count,
-                totalCount
-            };
+            const marketVariantListings = getZoneListingsForItemByQuality(
+                own.paxDeiSlug,
+                own.itemName,
+                own.isMastercrafted,
+                own.enchantmentTier
+            );
 
-            if (marketLow === null) {
-                leading.push({ ...summaryRow, marketLow: own.minPrice, noGtData: true });
-                continue;
+            let bestListingSummary = null;
+
+            for (const listing of own.listings) {
+                const exactStackListings = marketVariantListings.filter(marketListing =>
+                    Math.max(Number(marketListing.quantity) || 1, 1) === listing.stackSize
+                );
+                const matchingMarketListings = exactStackListings.length > 0 ? exactStackListings : marketVariantListings;
+                const sellerCount = new Set(
+                    matchingMarketListings
+                        .map(marketListing => marketListing.avatar_hash)
+                        .filter(Boolean)
+                ).size;
+                const marketLowStack = exactStackListings.length > 0
+                    ? Math.min(...exactStackListings.map(marketListing => Number(marketListing.price) || 0))
+                    : (mktData?.marketLow ?? null) !== null
+                        ? (mktData.marketLow * listing.stackSize)
+                        : null;
+                const historicalStats = summarizeHistoricalSales(
+                    salesByHistoryKey[buildHistoryKey(own.itemId, own.isMastercrafted, own.enchantmentTier, listing.stackSize)] || []
+                );
+                const yourCountForSize = own.listings.filter(ownListing => ownListing.stackSize === listing.stackSize).length;
+                const totalCount = exactStackListings.length > 0
+                    ? exactStackListings.length
+                    : (mktData?.totalListings ?? matchingMarketListings.length ?? own.count);
+                const summaryRow = {
+                    itemId: own.itemId,
+                    itemName: own.itemName,
+                    paxDeiSlug: own.paxDeiSlug,
+                    isMastercrafted: own.isMastercrafted,
+                    enchantmentTier: own.enchantmentTier,
+                    qualityLabel: own.qualityLabel,
+                    yourLow: listing.stackPrice,
+                    yourCount: yourCountForSize,
+                    totalCount,
+                    sellerCount,
+                    stackSize: listing.stackSize,
+                    stackLabel: `Stack of ${listing.stackSize.toLocaleString()}`,
+                    marketLow: marketLowStack,
+                    isExactStackMatch: exactStackListings.length > 0,
+                    historicalStats
+                };
+
+                if (marketLowStack === null) {
+                    bestListingSummary = { bucket: 'leading', sortGap: 0, row: { ...summaryRow, marketLow: listing.stackPrice, noGtData: true } };
+                    break;
+                }
+
+                if (listing.stackPrice <= marketLowStack + 0.001) {
+                    const candidate = { bucket: 'leading', sortGap: 0, row: summaryRow };
+                    if (!bestListingSummary || bestListingSummary.bucket !== 'leading' || listing.stackPrice < bestListingSummary.row.yourLow) {
+                        bestListingSummary = candidate;
+                    }
+                    continue;
+                }
+
+                const gap = listing.stackPrice - marketLowStack;
+                const gapPct = Math.round((gap / marketLowStack) * 100);
+                const { status: bucket, thresholds } = classifyCompetitiveGap(gap, gapPct, marketLowStack);
+                const historyNote = buildHistoricalPricingNote({
+                    stackPrice: listing.stackPrice,
+                    sellerCount,
+                    historicalStats
+                });
+                const candidate = {
+                    bucket,
+                    sortGap: gapPct,
+                    row: {
+                        ...summaryRow,
+                        gap,
+                        gapPct,
+                        competitiveThresholds: thresholds,
+                        historyNote
+                    }
+                };
+
+                const currentRank = bestListingSummary ? getValleyBucketRank(bestListingSummary.bucket) : Infinity;
+                const candidateRank = getValleyBucketRank(candidate.bucket);
+
+                if (
+                    !bestListingSummary ||
+                    candidateRank < currentRank ||
+                    (candidateRank === currentRank && gapPct < bestListingSummary.sortGap)
+                ) {
+                    bestListingSummary = candidate;
+                }
             }
-            if (own.minPrice <= marketLow + 0.001) {
-                leading.push({ ...summaryRow, marketLow });
+
+            if (!bestListingSummary) continue;
+
+            if (bestListingSummary.bucket === 'leading') {
+                leading.push(bestListingSummary.row);
+            } else if (bestListingSummary.bucket === 'competitive') {
+                competitive.push(bestListingSummary.row);
             } else {
-                const gap    = own.minPrice - marketLow;
-                const gapPct = Math.round((gap / marketLow) * 100);
-                undercut.push({ ...summaryRow, marketLow, gap, gapPct });
+                undercut.push(bestListingSummary.row);
             }
         }
 
         undercut.sort((a, b) => b.gap - a.gap);
+        competitive.sort((a, b) => a.gapPct - b.gapPct || a.gap - b.gap);
         leading.sort((a, b) =>
             a.itemName.localeCompare(b.itemName) ||
             a.qualityLabel.localeCompare(b.qualityLabel)
@@ -695,7 +873,7 @@ async function buildValleyAnalysisFromSupabase() {
         const valleySharePct      = gtAnalysis?.valleySharePct      ?? 0;
         const totalValleyListings = gtAnalysis?.totalValleyListings ?? 0;
 
-        return { leading, undercut, valleySharePct, totalOwnListings, totalValleyListings };
+        return { leading, competitive, undercut, valleySharePct, totalOwnListings, totalValleyListings };
     } catch (err) {
         console.error('[ValleyPresence] buildValleyAnalysisFromSupabase error:', err);
         return null;
@@ -722,7 +900,7 @@ export async function openValleyPresenceModal() {
     }
     _lastValleyAnalysis = analysis;
 
-    const { leading, undercut, valleySharePct, totalOwnListings, totalValleyListings } = _lastValleyAnalysis;
+    const { leading, competitive, undercut, valleySharePct, totalOwnListings, totalValleyListings } = _lastValleyAnalysis;
     const fmt  = (n) => typeof n === 'number' ? n.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—';
     const fmtG = (n) => `${fmt(n)}g`;
 
@@ -733,7 +911,27 @@ export async function openValleyPresenceModal() {
             </td>
             <td class="py-2.5 px-3 text-rose-300 text-sm text-right font-semibold">${fmtG(item.yourLow)}</td>
             <td class="py-2.5 px-3 text-emerald-300 text-sm text-right">${fmtG(item.marketLow)}</td>
-            <td class="py-2.5 px-3 text-amber-300 text-sm text-right">+${fmtG(item.gap)} <span class="text-gray-400 text-xs">(+${item.gapPct}%)</span></td>
+            <td class="py-2.5 px-3 text-amber-300 text-sm text-right whitespace-nowrap">+${fmtG(item.gap)} <span class="text-gray-400 text-xs">(+${item.gapPct}%)</span></td>
+            <td class="py-2.5 px-3 text-gray-300 text-sm text-right">${item.yourCount} / ${item.totalCount}</td>
+            <td class="py-2.5 px-3 text-right">
+                <button class="valley-edit-btn inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white rounded-full border border-blue-400/40 transition-colors"
+                    data-item-name="${item.itemName.replace(/"/g, '&quot;')}"
+                    data-item-id="${item.itemId}"
+                    data-is-mastercrafted="${item.isMastercrafted ? 'true' : 'false'}"
+                    data-enchantment-tier="${item.enchantmentTier}">
+                    <i class="fas fa-pen text-xs"></i> Edit
+                </button>
+            </td>
+        </tr>`).join('');
+
+    const competitiveRows = competitive.map(item => `
+        <tr class="border-b border-slate-700/60 hover:bg-slate-700/30">
+            <td class="py-2.5 px-3 text-white text-sm">
+                ${renderValleyItemLabel(item)}
+            </td>
+            <td class="py-2.5 px-3 text-amber-200 text-sm text-right font-semibold">${fmtG(item.yourLow)}</td>
+            <td class="py-2.5 px-3 text-emerald-300 text-sm text-right">${fmtG(item.marketLow)}</td>
+            <td class="py-2.5 px-3 text-amber-300 text-sm text-right whitespace-nowrap">+${fmtG(item.gap)} <span class="text-gray-400 text-xs">(+${item.gapPct}%)</span></td>
             <td class="py-2.5 px-3 text-gray-300 text-sm text-right">${item.yourCount} / ${item.totalCount}</td>
             <td class="py-2.5 px-3 text-right">
                 <button class="valley-edit-btn inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white rounded-full border border-blue-400/40 transition-colors"
@@ -793,6 +991,7 @@ export async function openValleyPresenceModal() {
                 <i class="fas fa-trophy text-emerald-400 text-xs"></i>
                 <span class="text-white">Leading on <span class="font-bold text-emerald-300">${leading.length}</span> item${leading.length !== 1 ? 's' : ''}</span>
             </span>
+            ${buildCompetitiveChip(competitive.length)}
             <span class="inline-flex items-center gap-1.5 bg-rose-900/40 border border-rose-500/40 rounded-full px-3 py-1 text-sm">
                 <i class="fas fa-triangle-exclamation text-rose-400 text-xs"></i>
                 <span class="text-white">Undercut on <span class="font-bold text-rose-300">${undercut.length}</span> item${undercut.length !== 1 ? 's' : ''}</span>
@@ -811,6 +1010,17 @@ export async function openValleyPresenceModal() {
             </div>
         </div>` : ''}
 
+        ${competitive.length > 0 ? `
+        <!-- Competitive section -->
+        <div class="mb-5">
+            <h4 class="flex items-center gap-2 text-amber-300 text-sm font-bold uppercase tracking-wide mb-2">
+                <i class="fas fa-handshake text-amber-400"></i> Competitive Pricing
+            </h4>
+            <div class="overflow-x-auto rounded-lg border border-slate-700/60">
+                <table class="w-full text-left">${tableHeader}<tbody>${competitiveRows}</tbody></table>
+            </div>
+        </div>` : ''}
+
         ${leading.length > 0 ? `
         <!-- Leading section -->
         <div>
@@ -822,7 +1032,39 @@ export async function openValleyPresenceModal() {
             </div>
         </div>` : ''}
 
-        <p class="text-gray-400 text-xs mt-4 italic">Prices are per unit. Data reflects gaming.tools' last hourly sync — your Archives records may differ.</p>`;
+        <div class="mt-5 rounded-xl border border-slate-700/60 bg-slate-800/40 p-4">
+            <h4 class="flex items-center gap-2 text-sky-300 text-sm font-bold uppercase tracking-wide mb-3">
+                <i class="fas fa-circle-info text-sky-400"></i> How Pricing Is Judged
+            </h4>
+            <div class="grid gap-3 md:grid-cols-2">
+                <div class="rounded-lg border border-slate-700/60 bg-slate-900/40 p-3">
+                    <p class="text-white text-sm font-semibold mb-1">Live market rules</p>
+                    <p class="text-gray-300 text-xs leading-relaxed">Pricing is compared by stack when a matching stack exists in Home Valley. If no matching stack is present, the market low is estimated from the best available per-unit listing.</p>
+                    <ul class="text-gray-400 text-xs mt-2 leading-relaxed space-y-1 list-disc pl-4">
+                        ${getCompetitiveBandDisplayRows().map(row => `<li>${row}</li>`).join('')}
+                    </ul>
+                </div>
+                <div class="rounded-lg border border-slate-700/60 bg-slate-900/40 p-3">
+                    <p class="text-white text-sm font-semibold mb-1">Historical context</p>
+                    <p class="text-gray-300 text-xs leading-relaxed">History never overrides the live classification. It appears as extra context when the same stack size has at least ${HISTORICAL_MIN_SALES} prior sales, the price is within ${HISTORICAL_MEDIAN_TOLERANCE_PCT}% of your sales median or inside your sold range, and the valley has ${HISTORICAL_INFO_MAX_SELLERS} or fewer sellers.</p>
+                </div>
+            </div>
+            <div class="grid gap-3 md:grid-cols-3 mt-3">
+                <div class="rounded-lg border border-rose-500/20 bg-rose-900/10 p-3">
+                    <p class="text-rose-300 text-xs font-bold uppercase tracking-wide mb-1">Undercut Example</p>
+                    <p class="text-gray-300 text-xs leading-relaxed">A 12g stack against a 5g market low falls in the 5g-19g band, where only 5g and 30% are allowed. Its 7g gap and 140% delta keep it undercut even if it sold higher in the past.</p>
+                </div>
+                <div class="rounded-lg border border-amber-500/20 bg-amber-900/10 p-3">
+                    <p class="text-amber-300 text-xs font-bold uppercase tracking-wide mb-1">Competitive Example</p>
+                    <p class="text-gray-300 text-xs leading-relaxed">A 320g stack against a 315g market low falls in the 300g+ band, where up to 25g and 7% are allowed. Its 5g gap and 2% delta both stay safely competitive.</p>
+                </div>
+                <div class="rounded-lg border border-emerald-500/20 bg-emerald-900/10 p-3">
+                    <p class="text-emerald-300 text-xs font-bold uppercase tracking-wide mb-1">Leading Example</p>
+                    <p class="text-gray-300 text-xs leading-relaxed">If your stack matches or beats the current Home Valley low, it shows as leading regardless of historical pricing.</p>
+                </div>
+            </div>
+        <p class="text-gray-500 text-xs mt-3 italic">Data reflects gaming.tools' last hourly sync, while your Archives listings and sales history update immediately.</p>
+        </div>`;
 
     modal.classList.remove('hidden');
 

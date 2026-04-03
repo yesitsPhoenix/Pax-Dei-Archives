@@ -22,6 +22,7 @@ import {
     clearAvatarHash,
     hashAvatarId
 } from './services/gamingToolsService.js';
+import { getCompetitiveThresholds, classifyCompetitiveGap } from './modules/pricingBands.js';
 
 import {
     showAddListingModalBtn,
@@ -942,35 +943,35 @@ function initializeAutocomplete(allItems) {
             marketCol = `
             <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-1 mb-2 flex-wrap">
-                    <i class="fas fa-globe text-blue-400 text-xs"></i>
-                    <span class="text-blue-300 text-xs font-semibold uppercase tracking-wide">Live Market</span>
+                    <i class="fas fa-globe text-blue-400 text-sm"></i>
+                    <span class="text-blue-300 text-sm font-semibold uppercase tracking-wide">Live Market</span>
                     ${supplyTag}${qBadge}
                 </div>
                 <div class="space-y-1">
                     <div class="flex justify-between gap-2">
-                        <span class="text-gray-300 text-xs">Low/unit</span>
-                        <span class="text-amber-400 font-bold text-xs">${fmt(displayMd.marketLow)}g</span>
+                        <span class="text-gray-300 text-sm">Low/unit</span>
+                        <span class="text-amber-400 font-bold text-sm">${fmt(displayMd.marketLow)}g</span>
                     </div>
                     <div class="flex justify-between gap-2">
-                        <span class="text-gray-300 text-xs">Avg/unit</span>
-                        <span class="text-white text-xs">${fmt(displayMd.marketAvg)}g</span>
+                        <span class="text-gray-300 text-sm">Avg/unit</span>
+                        <span class="text-white text-sm">${fmt(displayMd.marketAvg)}g</span>
                     </div>
                     ${hasCount ? `
                     <div class="border-t border-slate-500/40 pt-1 mt-1">
                         <div class="flex justify-between gap-2">
-                            <span class="text-gray-300 text-xs">Low/stack <span class="text-gray-500 text-xs">(${count})</span></span>
-                            <span class="text-amber-400 font-bold text-xs">${fmt(displayMd.marketLow * count)}g</span>
+                            <span class="text-gray-300 text-sm">Low/stack <span class="text-gray-500 text-xs">(${count})</span></span>
+                            <span class="text-amber-400 font-bold text-sm">${fmt(displayMd.marketLow * count)}g</span>
                         </div>
                         <div class="flex justify-between gap-2 mt-0.5">
-                            <span class="text-gray-300 text-xs">Avg/stack</span>
-                            <span class="text-white text-xs">${fmt(displayMd.marketAvg * count)}g</span>
+                            <span class="text-gray-300 text-sm">Avg/stack</span>
+                            <span class="text-white text-sm">${fmt(displayMd.marketAvg * count)}g</span>
                         </div>
                     </div>` : `<div class="text-gray-500 text-xs italic mt-1">Enter count for stack prices</div>`}
                     ${qualityMd && md ? `
-                    <div class="mt-1 pt-1 border-t border-slate-500/30 text-gray-500 text-xs">
+                    <div class="mt-1 pt-1 border-t border-slate-500/30 text-gray-500 text-sm">
                         All quality: ${md.totalListings} listing${md.totalListings !== 1 ? 's' : ''} &middot; Low ${fmt(md.marketLow)}g
                     </div>` : ''}
-                    <div class="text-gray-500 text-xs mt-0.5">
+                    <div class="text-gray-500 text-sm mt-0.5">
                         ${displayMd.totalListings !== null
                             ? `${displayMd.totalListings} listing${displayMd.totalListings !== 1 ? 's' : ''} in your zone`
                             : 'Estimated from all-quality listings'}${_addListingOwnCount > 0 ? ` <span class="text-emerald-400">(${_addListingOwnCount} yours)</span>` : ''}
@@ -981,10 +982,10 @@ function initializeAutocomplete(allItems) {
             marketCol = `
             <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-1.5 mb-2">
-                    <i class="fas fa-globe text-gray-500 text-xs"></i>
-                    <span class="text-gray-400 text-xs font-semibold uppercase tracking-wide">Live Market</span>
+                    <i class="fas fa-globe text-gray-500 text-sm"></i>
+                    <span class="text-gray-400 text-sm font-semibold uppercase tracking-wide">Live Market</span>
                 </div>
-                <div class="text-gray-500 text-xs italic">No market data in your zone</div>
+                <div class="text-gray-500 text-sm italic">No market data in your zone</div>
             </div>`;
         }
 
@@ -994,10 +995,10 @@ function initializeAutocomplete(allItems) {
             histCol = `
             <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-1.5 mb-2">
-                    <i class="fas fa-chart-bar text-purple-400 text-xs"></i>
-                    <span class="text-purple-300 text-xs font-semibold uppercase tracking-wide">Your Sales</span>
+                    <i class="fas fa-chart-bar text-purple-400 text-sm"></i>
+                    <span class="text-purple-300 text-sm font-semibold uppercase tracking-wide">Your Sales</span>
                 </div>
-                <div class="text-gray-400 text-xs italic"><i class="fas fa-spinner fa-spin mr-1"></i>Loading&hellip;</div>
+                <div class="text-gray-400 text-sm italic"><i class="fas fa-spinner fa-spin mr-1"></i>Loading&hellip;</div>
             </div>`;
         } else if (hist) {
             const qHistKey    = `mc${isMastercrafted ? 1 : 0}enc${enchantmentTier}`;
@@ -1006,57 +1007,133 @@ function initializeAutocomplete(allItems) {
             histCol = `
             <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-1 mb-2 flex-wrap">
-                    <i class="fas fa-chart-bar text-purple-400 text-xs"></i>
-                    <span class="text-purple-300 text-xs font-semibold uppercase tracking-wide">Your Sales</span>
+                    <i class="fas fa-chart-bar text-purple-400 text-sm"></i>
+                    <span class="text-purple-300 text-sm font-semibold uppercase tracking-wide">Your Sales</span>
                     ${hasQBreakdown ? `<span class="text-xs font-semibold text-gray-400 bg-slate-700 border border-slate-500 rounded px-1.5 py-0.5">All quality</span>` : ''}
                 </div>
                 <div class="space-y-1">
                     <div class="flex justify-between gap-2">
-                        <span class="text-gray-300 text-xs">Avg/unit</span>
-                        <span class="text-purple-300 font-bold text-xs">${fmt(hist.avgPerUnit)}g</span>
+                        <span class="text-gray-300 text-sm">Avg/unit</span>
+                        <span class="text-purple-300 font-bold text-sm">${fmt(hist.avgPerUnit)}g</span>
                     </div>
                     <div class="flex justify-between gap-2">
-                        <span class="text-gray-300 text-xs">Avg/stack</span>
-                        <span class="text-white text-xs">${fmt(hist.avgPerStack)}g</span>
+                        <span class="text-gray-300 text-sm">Avg/stack</span>
+                        <span class="text-white text-sm">${fmt(hist.avgPerStack)}g</span>
                     </div>
                     ${hasCount ? `
                     <div class="border-t border-slate-500/40 pt-1 mt-1">
                         <div class="flex justify-between gap-2">
-                            <span class="text-gray-300 text-xs">Hist/stack <span class="text-gray-500 text-xs">(${count})</span></span>
-                            <span class="text-purple-300 font-bold text-xs">${fmt(hist.avgPerUnit * count)}g</span>
+                            <span class="text-gray-300 text-sm">Hist/stack <span class="text-gray-500 text-xs">(${count})</span></span>
+                            <span class="text-purple-300 font-bold text-sm">${fmt(hist.avgPerUnit * count)}g</span>
                         </div>
                     </div>` : ''}
                     ${hasQBreakdown ? `
                     <div class="mt-1.5 pt-1.5 border-t border-purple-500/30 bg-purple-900/10 rounded p-1.5">
-                        <div class="text-purple-300 text-xs font-semibold mb-1 flex items-center gap-1">
+                        <div class="text-purple-300 text-sm font-semibold mb-1 flex items-center gap-1">
                             <i class="fas fa-filter text-xs"></i> Same quality (${qualityHist.saleCount} sale${qualityHist.saleCount !== 1 ? 's' : ''})
                         </div>
                         <div class="flex justify-between gap-2">
-                            <span class="text-gray-300 text-xs">Avg/unit</span>
-                            <span class="text-purple-200 font-semibold text-xs">${fmt(qualityHist.avgPerUnit)}g</span>
+                            <span class="text-gray-300 text-sm">Avg/unit</span>
+                            <span class="text-purple-200 font-semibold text-sm">${fmt(qualityHist.avgPerUnit)}g</span>
                         </div>
                         ${hasCount ? `<div class="flex justify-between gap-2 mt-0.5">
-                            <span class="text-gray-300 text-xs">Avg/stack (${count})</span>
-                            <span class="text-purple-200 font-semibold text-xs">${fmt(qualityHist.avgPerUnit * count)}g</span>
+                            <span class="text-gray-300 text-sm">Avg/stack (${count})</span>
+                            <span class="text-purple-200 font-semibold text-sm">${fmt(qualityHist.avgPerUnit * count)}g</span>
                         </div>` : ''}
-                        <div class="text-gray-500 text-xs mt-0.5">Last sold ${getRelativeTime(qualityHist.lastSold)}</div>
+                        <div class="text-gray-500 text-sm mt-0.5">Last sold ${getRelativeTime(qualityHist.lastSold)}</div>
                     </div>` : ''}
-                    <div class="text-gray-500 text-xs mt-1">${hist.saleCount} sale${hist.saleCount !== 1 ? 's' : ''} &middot; last ${getRelativeTime(hist.lastSold)}</div>
+                    <div class="text-gray-500 text-sm mt-1">${hist.saleCount} sale${hist.saleCount !== 1 ? 's' : ''} &middot; last ${getRelativeTime(hist.lastSold)}</div>
                 </div>
             </div>`;
         } else {
             histCol = `
             <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-1.5 mb-2">
-                    <i class="fas fa-chart-bar text-gray-500 text-xs"></i>
-                    <span class="text-gray-400 text-xs font-semibold uppercase tracking-wide">Your Sales</span>
+                    <i class="fas fa-chart-bar text-gray-500 text-sm"></i>
+                    <span class="text-gray-400 text-sm font-semibold uppercase tracking-wide">Your Sales</span>
                 </div>
-                <div class="text-gray-500 text-xs italic">No sales recorded for this item</div>
+                <div class="text-gray-500 text-sm italic">No sales recorded for this item</div>
             </div>`;
         }
 
         // ── Build suggestion ─────────────────────────────────────────────────
         const suggestion = buildSuggestion(md, qualityMd, hist, count, stacks, isMastercrafted, enchantmentTier);
+
+        // ── Competitive range card ───────────────────────────────────────────
+        let competitiveCard = '';
+        const stackMarketLow = (displayMd && hasCount) ? (displayMd.marketLow * count) : null;
+        if (stackMarketLow !== null) {
+            const thresholds = getCompetitiveThresholds(stackMarketLow);
+            const enteredGap = hasPrice ? price - stackMarketLow : null;
+            const enteredGapPct = (hasPrice && stackMarketLow > 0)
+                ? Math.round((enteredGap / stackMarketLow) * 100)
+                : null;
+            const enteredStatus = hasPrice
+                ? classifyCompetitiveGap(enteredGap, enteredGapPct, stackMarketLow).status
+                : null;
+            const suggestionGap = suggestion?.suggestedPerStack !== null
+                ? suggestion.suggestedPerStack - stackMarketLow
+                : null;
+            const suggestionGapPct = (suggestion?.suggestedPerStack !== null && stackMarketLow > 0)
+                ? Math.round((suggestionGap / stackMarketLow) * 100)
+                : null;
+            const suggestionStatus = suggestion?.suggestedPerStack !== null
+                ? classifyCompetitiveGap(suggestionGap, suggestionGapPct, stackMarketLow).status
+                : null;
+
+            const statusPill = !hasPrice
+                ? `<span class="inline-flex items-center gap-1 rounded-full border border-slate-500/40 bg-slate-700/40 px-2 py-0.5 text-xs text-gray-300">Enter a price to compare</span>`
+                : enteredStatus === 'leading'
+                    ? `<span class="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-900/30 px-2 py-0.5 text-xs text-emerald-300"><i class="fas fa-trophy text-[10px]"></i> Leading</span>`
+                    : enteredStatus === 'competitive'
+                        ? `<span class="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-900/30 px-2 py-0.5 text-xs text-amber-300"><i class="fas fa-handshake text-[10px]"></i> Competitive</span>`
+                        : `<span class="inline-flex items-center gap-1 rounded-full border border-rose-500/40 bg-rose-900/30 px-2 py-0.5 text-xs text-rose-300"><i class="fas fa-triangle-exclamation text-[10px]"></i> Undercut</span>`;
+
+            const suggestionLine = suggestion?.suggestedPerStack !== null
+                ? `<div class="flex justify-between gap-2 text-xs">
+                        <span class="text-gray-300">Suggested status</span>
+                        <span class="${suggestionStatus === 'leading' ? 'text-emerald-300' : suggestionStatus === 'competitive' ? 'text-amber-300' : 'text-rose-300'} font-semibold">${suggestionStatus === 'leading' ? 'Leading' : suggestionStatus === 'competitive' ? 'Competitive' : 'Undercut'}</span>
+                   </div>`
+                : '';
+
+            competitiveCard = `
+            <div class="mt-2 p-3 bg-cyan-900/15 border border-cyan-500/30 rounded-xl">
+                <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-ruler-combined text-cyan-400 text-sm"></i>
+                        <span class="text-cyan-300 font-semibold text-sm uppercase tracking-widest">Competitive Range</span>
+                    </div>
+                    <span class="text-gray-400 text-sm">${thresholds.label}</span>
+                </div>
+                <div class="grid md:grid-cols-2 gap-3">
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between gap-2 text-sm">
+                            <span class="text-gray-300">Market low/stack</span>
+                            <span class="text-amber-300 font-bold">${fmt(stackMarketLow)}g</span>
+                        </div>
+                        <div class="flex justify-between gap-2 text-sm">
+                            <span class="text-gray-300">Competitive cap</span>
+                            <span class="text-white">${fmt(stackMarketLow + thresholds.maxGapGold)}g <span class="text-gray-500">(+${fmt(thresholds.maxGapGold)}g)</span></span>
+                        </div>
+                        <div class="flex justify-between gap-2 text-sm">
+                            <span class="text-gray-300">Percent limit</span>
+                            <span class="text-white">+${thresholds.maxGapPct}%</span>
+                        </div>
+                    </div>
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-gray-300 text-sm">Your entered price</span>
+                            ${statusPill}
+                        </div>
+                        ${hasPrice ? `<div class="flex justify-between gap-2 text-sm">
+                            <span class="text-gray-300">Gap vs low</span>
+                            <span class="${enteredStatus === 'leading' ? 'text-emerald-300' : enteredStatus === 'competitive' ? 'text-amber-300' : 'text-rose-300'} font-semibold whitespace-nowrap">${enteredGap > 0 ? '+' : ''}${fmt(enteredGap)}g (${enteredGapPct > 0 ? '+' : ''}${enteredGapPct}%)</span>
+                        </div>` : ''}
+                        ${suggestionLine}
+                    </div>
+                </div>
+            </div>`;
+        }
 
         // ── Quality note banner ──────────────────────────────────────────────
         let qualityBanner = '';
@@ -1083,23 +1160,23 @@ function initializeAutocomplete(allItems) {
             <div class="mt-2 p-3 bg-yellow-900/20 border border-yellow-500/40 rounded-xl">
                 <div class="flex items-center gap-2 mb-1.5">
                     <i class="fas fa-lightbulb text-yellow-400 text-sm"></i>
-                    <span class="text-yellow-300 font-semibold text-xs uppercase tracking-widest">Suggested Price</span>
+                    <span class="text-yellow-300 font-semibold text-sm uppercase tracking-widest">Suggested Price</span>
                 </div>
                 ${suggestion.suggestedPerStack !== null && hasCount
                     ? `<div class="flex flex-wrap items-baseline gap-2 mb-1">
                            <span class="text-yellow-300 font-bold text-2xl">${fmt(suggestion.suggestedPerStack)}g</span>
-                           <span class="text-gray-400 text-xs">/ stack of ${count}</span>
+                           <span class="text-gray-400 text-sm">/ stack of ${count}</span>
                            <button id="modal-use-suggested-price-btn" type="button"
                                class="px-2.5 py-1 text-xs font-semibold bg-yellow-500/20 hover:bg-yellow-500/40 text-yellow-300 border border-yellow-500/40 rounded-lg transition-colors">
                                Use this price
                            </button>
                        </div>
-                       ${hasStacks ? `<div class="text-gray-300 text-xs mb-1">${stacks} stack${stacks !== 1 ? 's' : ''} &times; ${fmt(suggestion.suggestedPerStack)}g = <span class="text-yellow-200 font-bold">${fmt(suggestion.suggestedPerStack * stacks)}g</span> total</div>` : ''}
+                       ${hasStacks ? `<div class="text-gray-300 text-sm mb-1">${stacks} stack${stacks !== 1 ? 's' : ''} &times; ${fmt(suggestion.suggestedPerStack)}g = <span class="text-yellow-200 font-bold">${fmt(suggestion.suggestedPerStack * stacks)}g</span> total</div>` : ''}
                        <div class="flex items-center gap-1.5">
                            <span class="inline-block w-2 h-2 rounded-full flex-shrink-0 ${bubbleCls}"></span>
-                           <span class="${suggestion.insightClass} text-xs">${suggestion.insight}</span>
+                           <span class="${suggestion.insightClass} text-sm">${suggestion.insight}</span>
                        </div>`
-                    : `<span class="text-gray-400 text-xs italic">Enter stack count to see suggestion</span>`
+                    : `<span class="text-gray-400 text-sm italic">Enter stack count to see suggestion</span>`
                 }
             </div>`;
         }
@@ -1110,7 +1187,7 @@ function initializeAutocomplete(allItems) {
             impactRow = `
             <div class="flex items-center gap-1.5 mt-1.5">
                 <span class="inline-block w-2 h-2 rounded-full flex-shrink-0 ${suggestion.impactNote.bubble}"></span>
-                <span class="${suggestion.impactNote.cls} text-xs">${suggestion.impactNote.text}</span>
+                <span class="${suggestion.impactNote.cls} text-sm">${suggestion.impactNote.text}</span>
             </div>`;
         }
 
@@ -1121,18 +1198,18 @@ function initializeAutocomplete(allItems) {
             const highTotal    = hasStacks ? highPerStack * stacks : null;
             highPriceRow = `
             <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2 pt-1.5 border-t border-slate-500/30">
-                <span class="text-white text-xs font-semibold flex items-center gap-1">
+                <span class="text-white text-sm font-semibold flex items-center gap-1">
                     <i class="fas fa-arrow-trend-up text-emerald-400"></i> High price option:
                 </span>
                 <span class="text-emerald-300 font-bold text-sm">${fmt(highPerStack)}g</span>
-                <span class="text-gray-400 text-xs">/stack (${count})</span>
+                <span class="text-gray-400 text-sm">/stack (${count})</span>
                 <button id="modal-use-high-price-btn" type="button"
                     class="px-2 py-0.5 text-xs font-semibold bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 border border-emerald-500/40 rounded transition-colors">Use</button>
-                ${highTotal !== null ? `<span class="text-gray-400 text-xs">&rarr; <span class="text-emerald-200 font-bold">${fmt(highTotal)}g</span> total</span>` : ''}
+                ${highTotal !== null ? `<span class="text-gray-400 text-sm">&rarr; <span class="text-emerald-200 font-bold">${fmt(highTotal)}g</span> total</span>` : ''}
             </div>
             <div class="flex items-center gap-1.5 mt-0.5">
                 <span class="inline-block w-2 h-2 rounded-full flex-shrink-0 bg-emerald-400"></span>
-                <span class="text-emerald-400 text-xs">Your highest ever sale — no live market to undercut.</span>
+                <span class="text-emerald-400 text-sm">Your highest ever sale — no live market to undercut.</span>
             </div>`;
         }
 
@@ -1143,13 +1220,14 @@ function initializeAutocomplete(allItems) {
             livePriceRow = `
             <div class="flex items-center gap-2 mt-2 pt-1.5 border-t border-slate-500/30">
                 <i class="fas fa-calculator text-gray-500 text-xs"></i>
-                <span class="text-gray-300 text-xs">At <span class="text-white font-semibold">${fmt(price)}g</span>/stack × ${stacks} = <span class="text-cyan-300 font-bold">${fmt(liveTotal)}g</span> total</span>
+                <span class="text-gray-300 text-sm">At <span class="text-white font-semibold">${fmt(price)}g</span>/stack × ${stacks} = <span class="text-cyan-300 font-bold">${fmt(liveTotal)}g</span> total</span>
             </div>`;
         }
 
         hintEl.innerHTML = `
             ${qualityBanner}
             <div class="flex gap-3">${marketCol}<div class="w-px bg-slate-500/40 self-stretch flex-shrink-0"></div>${histCol}</div>
+            ${competitiveCard}
             ${suggestionCard}
             ${impactRow}
             ${highPriceRow}

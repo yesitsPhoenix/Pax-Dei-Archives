@@ -400,6 +400,35 @@ export function getMarketDataByItemNameAndQuality(itemName, isMastercrafted, enc
 }
 
 /**
+ * Returns raw zone listings for a single item + quality variant.
+ * Used when the UI needs stack-aware comparisons instead of per-unit aggregates.
+ *
+ * @param {string|null} paxDeiSlug
+ * @param {string|null} itemName
+ * @param {boolean} isMastercrafted
+ * @param {number} enchantmentTier
+ * @returns {Array}
+ */
+export function getZoneListingsForItemByQuality(paxDeiSlug, itemName, isMastercrafted, enchantmentTier) {
+    if (!_currentZoneListings.length) return [];
+
+    const bareId = paxDeiSlug
+        ? toBareId(paxDeiSlug)
+        : (_currentNameMap && itemName ? _currentNameMap[itemName.toLowerCase().trim()] : null);
+
+    if (!bareId) return [];
+
+    const expectedMc = isMastercrafted ? 1 : 0;
+    const expectedEnc = enchantmentTier || 0;
+
+    return _currentZoneListings.filter(listing =>
+        listing.item_id === bareId &&
+        (listing.mastercraft ? 1 : 0) === expectedMc &&
+        (listing.enchantment_level || 0) === expectedEnc
+    );
+}
+
+/**
  * Returns name and URL for a given item_id from the items.json dictionary.
  *
  * @param {string} itemId - e.g. "wearable_leather_hands_pilgrim_0_t4_common"
