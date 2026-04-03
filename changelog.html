@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pax Dei Archives - Changelog</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="frontend/www/css/changelog.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.min.js"></script>
+</head>
+<body class="text-white">
+
+<div id="header-placeholder"></div>
+
+<main class="changelog-page">
+    <section class="changelog-hero-shell">
+        <div class="container px-4">
+            <div class="changelog-hero">
+                <div class="changelog-hero-copy">
+                    <span class="changelog-kicker">Archive Record</span>
+                    <h1 class="changelog-hero-title">The build history of the Pax Dei Archives.</h1>
+                    <p class="changelog-hero-description">
+                        This page tracks meaningful site updates.
+                    </p>
+
+                    <div class="changelog-stats">
+                        <div class="changelog-stat">
+                            <span class="changelog-stat-label">Entries</span>
+                            <span id="changelogEntryCount" class="changelog-stat-value">0</span>
+                        </div>
+                        <div class="changelog-stat">
+                            <span class="changelog-stat-label">Latest Update</span>
+                            <span id="changelogLatestDate" class="changelog-stat-value">Pending</span>
+                        </div>
+                    </div>
+                </div>
+
+                <aside id="changelogAdminPanel" class="changelog-admin-panel hidden">
+                    <div class="changelog-admin-card">
+                        <div class="changelog-admin-header">
+                            <div>
+                                <p class="changelog-section-label">Admin Tools</p>
+                                <h2 class="changelog-admin-title">Edit the changelog</h2>
+                            </div>
+                            <span class="changelog-admin-badge">Admin Only</span>
+                        </div>
+
+                        <form id="changelogEntryForm" class="changelog-form">
+                            <input type="hidden" id="changelogEntryId">
+
+                            <label for="changelogTitle">Title</label>
+                            <input id="changelogTitle" type="text" placeholder="Articles page revamp">
+
+                            <label for="changelogSummary">Summary</label>
+                            <textarea id="changelogSummary" rows="2" placeholder="Short overview for the timeline card."></textarea>
+
+                            <label for="changelogDate">Publish Date</label>
+                            <input id="changelogDate" type="datetime-local">
+
+                            <label for="changelogContent">Details (Markdown supported)</label>
+                            <textarea id="changelogContent" rows="8" placeholder="- Added category browsing&#10;- Upgraded modal navigation"></textarea>
+
+                            <div class="changelog-form-actions">
+                                <button id="changelogSaveButton" type="submit" class="changelog-primary-button">
+                                    <i class="fas fa-floppy-disk"></i> Save Entry
+                                </button>
+                                <button id="changelogResetButton" type="button" class="changelog-secondary-button">
+                                    Clear
+                                </button>
+                            </div>
+                            <p id="changelogFormMessage" class="changelog-form-message hidden"></p>
+                        </form>
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </section>
+
+    <section class="changelog-feed-shell">
+        <div class="container px-4 pb-16">
+            <div class="changelog-feed">
+                <div class="changelog-feed-header">
+                    <div>
+                        <p class="changelog-section-label">Change Feed</p>
+                        <h2 class="changelog-feed-title">Recent site updates</h2>
+                    </div>
+                    <div id="changelogViewerState" class="changelog-viewer-state">Read-only public view</div>
+                </div>
+
+                <div id="changelogMissingTableNotice" class="changelog-notice hidden"></div>
+                <div id="changelogEmptyState" class="changelog-empty-state hidden"></div>
+                <div id="changelogEntries" class="changelog-entries"></div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<div id="footer-placeholder"></div>
+
+<div id="floating-avatar-container">
+    <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar js-floating-avatar">
+</div>
+
+<div id="auth-modal">
+    <div class="modal-content-wrapper" id="modal-content-wrapper"></div>
+</div>
+
+<script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
+<script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
+<script type="module">
+import { setupAdminAuthListener } from './frontend/www/js/admin/adminManager.js';
+setupAdminAuthListener();
+</script>
+<script type="module" src="frontend/www/js/main.js"></script>
+<script type="module" src="frontend/www/js/changelog/changelog.js"></script>
+<script type="module" src="frontend/www/js/popoutAuth.js"></script>
+
+</body>
+</html>

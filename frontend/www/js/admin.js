@@ -689,6 +689,7 @@ function applyModalGating() {
 
     applySidebarLinkState('sidebarEditQuestLink',        currentUserHasQuestAccess, 'You do not have a quest editor role');
     applySidebarLinkState('sidebarCategorizeItemsLink', currentUserIsAdmin,        'Only admins can categorize items');
+    applySidebarLinkState('sidebarChangelogLink',       currentUserIsAdmin,        'Only admins can edit the changelog');
 
     // Show/hide Edit Lore link in the header nav dropdown
     // The header is loaded async but by the time roles resolve it will be in the DOM
