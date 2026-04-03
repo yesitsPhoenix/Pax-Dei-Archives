@@ -392,11 +392,6 @@ return null;
 
 //console.log('[QUESTS] Current quest:', currentQuest.quest_name, '| Category:', currentQuest.category);
 
-// Get user's archetype
-const character = questState.getActiveCharacter();
-const userArchetype = character?.archetype;
-//console.log('[QUESTS] User archetype:', userArchetype || 'none');
-
 // Get unlocked categories
 const unlockedCategoriesList = questState.getUnlockedCategories();
 const unlockedCategories = new Set(unlockedCategoriesList);
@@ -409,24 +404,8 @@ categoriesData.filter(c => c.is_secret).map(c => c.name)
 
 // Helper function to check if a quest is available to the user
 const isQuestAvailableToUser = (quest) => {
-// Check archetype restrictions
 const category = quest.category || "Uncategorized";
-if (category.startsWith('Archetype: ')) {
-const archetypeName = category.replace('Archetype: ', '').trim();
-    if (userArchetype !== archetypeName) {
-            //console.log('[QUESTS] Quest', quest.quest_name, 'filtered: wrong archetype (needs', archetypeName, ', user has', userArchetype || 'none', ')');
-            return false;
-        }
-    }
-    
-    // Check if quest has allowed_archetypes restriction
-    if (quest.allowed_archetypes && Array.isArray(quest.allowed_archetypes) && quest.allowed_archetypes.length > 0) {
-        if (!userArchetype || !quest.allowed_archetypes.includes(userArchetype)) {
-            //console.log('[QUESTS] Quest', quest.quest_name, 'filtered: archetype not in allowed list (needs one of', quest.allowed_archetypes, ', user has', userArchetype || 'none', ')');
-            return false;
-        }
-    }
-    
+
     // Check if category is secret and unlocked
 const isSecret = secretCategoryNames.has(category);
 const isUnlocked = unlockedCategories.has(category);
@@ -985,9 +964,6 @@ async function renderQuestsList() {
     const unlockedCategoriesList = questState.getUnlockedCategories();
     const unlockedCategories = new Set(unlockedCategoriesList);
     
-    const character = questState.getActiveCharacter();
-    const userArchetype = character?.archetype;
-
     const categoryProgress = {};
     userClaims.forEach(claim => {
         const quest = allQuests.find(q => q.id === claim.quest_id);
@@ -1003,20 +979,6 @@ async function renderQuestsList() {
         const isSecret = secretCategoryNames.has(category);
         const isUnlocked = unlockedCategories.has(category);
         
-        if (category.startsWith('Archetype: ')) {
-            const archetypeName = category.replace('Archetype: ', '').trim();
-            if (userArchetype !== archetypeName) {
-                return false;
-            }
-        }
-        
-        // Check if quest has allowed_archetypes restriction
-        if (quest.allowed_archetypes && Array.isArray(quest.allowed_archetypes) && quest.allowed_archetypes.length > 0) {
-            if (!userArchetype || !quest.allowed_archetypes.includes(userArchetype)) {
-                return false;
-            }
-        }
-
         // Secret quests are always hidden unless unlocked
         if (isSecret && !isUnlocked) {
             return false;

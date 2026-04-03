@@ -91,7 +91,7 @@ window.addEventListener('characterChanged', async (e) => {
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('[Chronicles] DOM loaded, initializing...');
+    // console.log('[Chronicles] DOM loaded, initializing...');
     
     if (!questState.isReady()) {
         await questState.initialize();
@@ -165,9 +165,6 @@ async function renderPage(allQuests, userClaims, allFeats, unlockedCategories, s
     if (firstStepsContainer) firstStepsContainer.innerHTML = ''; 
     if (featsContainer) featsContainer.innerHTML = '';
     
-    const character = questState.getActiveCharacter();
-    const userArchetype = character?.archetype;
-
     // Calculate progress for all categories (primary + additional)
     const categoryProgress = {};
     allQuests.forEach(q => {
@@ -196,14 +193,7 @@ async function renderPage(allQuests, userClaims, allFeats, unlockedCategories, s
     const tales = {};
     allQuests.forEach(q => {
         const cat = q.category || "Uncategorized";
-        
-        if (cat.startsWith('Archetype: ')) {
-            const archetypeName = cat.replace('Archetype: ', '').trim();
-            if (userArchetype !== archetypeName) {
-                return; // Skip quests from other archetypes
-            }
-        }
-        
+
         let taleName = "Uncategorized";
         let chapterName = cat;
 

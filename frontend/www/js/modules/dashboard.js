@@ -810,7 +810,7 @@ async function buildValleyAnalysisFromSupabase() {
                     break;
                 }
 
-                if (listing.stackPrice <= marketLowStack + 0.001) {
+                if (listing.stackPrice < marketLowStack - 0.001) {
                     const candidate = { bucket: 'leading', sortGap: 0, row: summaryRow };
                     if (!bestListingSummary || bestListingSummary.bucket !== 'leading' || listing.stackPrice < bestListingSummary.row.yourLow) {
                         bestListingSummary = candidate;
@@ -931,7 +931,7 @@ export async function openValleyPresenceModal() {
             </td>
             <td class="py-2.5 px-3 text-amber-200 text-sm text-right font-semibold">${fmtG(item.yourLow)}</td>
             <td class="py-2.5 px-3 text-emerald-300 text-sm text-right">${fmtG(item.marketLow)}</td>
-            <td class="py-2.5 px-3 text-amber-300 text-sm text-right whitespace-nowrap">+${fmtG(item.gap)} <span class="text-gray-400 text-xs">(+${item.gapPct}%)</span></td>
+            <td class="py-2.5 px-3 text-amber-300 text-sm text-right whitespace-nowrap">${item.gap <= 0.001 ? '<span class="text-amber-200 font-semibold">Matches market low</span>' : `+${fmtG(item.gap)} <span class="text-gray-400 text-xs">(+${item.gapPct}%)</span>`}</td>
             <td class="py-2.5 px-3 text-gray-300 text-sm text-right">${item.yourCount} / ${item.totalCount}</td>
             <td class="py-2.5 px-3 text-right">
                 <button class="valley-edit-btn inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white rounded-full border border-blue-400/40 transition-colors"
@@ -1056,11 +1056,11 @@ export async function openValleyPresenceModal() {
                 </div>
                 <div class="rounded-lg border border-amber-500/20 bg-amber-900/10 p-3">
                     <p class="text-amber-300 text-xs font-bold uppercase tracking-wide mb-1">Competitive Example</p>
-                    <p class="text-gray-300 text-xs leading-relaxed">A 320g stack against a 315g market low falls in the 300g+ band, where up to 25g and 7% are allowed. Its 5g gap and 2% delta both stay safely competitive.</p>
+                    <p class="text-gray-300 text-xs leading-relaxed">A 320g stack against a 320g market low is competitive because it matches the current floor. A 320g stack against 315g also stays competitive here because the 5g gap and 2% delta are still inside the 300g+ band.</p>
                 </div>
                 <div class="rounded-lg border border-emerald-500/20 bg-emerald-900/10 p-3">
                     <p class="text-emerald-300 text-xs font-bold uppercase tracking-wide mb-1">Leading Example</p>
-                    <p class="text-gray-300 text-xs leading-relaxed">If your stack matches or beats the current Home Valley low, it shows as leading regardless of historical pricing.</p>
+                    <p class="text-gray-300 text-xs leading-relaxed">If your stack is below the current Home Valley low, it shows as leading. Matching the low is treated as competitive, not leading.</p>
                 </div>
             </div>
         <p class="text-gray-500 text-xs mt-3 italic">Data reflects gaming.tools' last hourly sync, while your Archives listings and sales history update immediately.</p>
