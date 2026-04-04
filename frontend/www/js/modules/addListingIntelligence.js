@@ -150,8 +150,8 @@ export function buildAddListingSuggestion(md, qualityMd, hist, count, stacks, is
         }
     } else if (hasHist && hasCount) {
         const bestHistPerUnit = Math.max(effectiveHist.maxPerUnit || 0, effectiveHist.avgPerUnit || 0);
-        suggestedPerStack = Math.round(bestHistPerUnit * count * 1.10);
-        insight           = 'No live market listings - you can set the price. Priced 10% above your best historical sale.';
+        suggestedPerStack = Math.round(bestHistPerUnit * count);
+        insight           = 'No live market listings - anchoring to your best historical sale is the safest baseline.';
         insightClass      = 'text-emerald-400';
     }
 
@@ -211,6 +211,27 @@ function getCompetitivePriceRecommendation({ stackMarketLow, stackMarketAvg, sug
             ? 'Top end of the competitive band before you drift out of the safe pricing range.'
             : 'Highest price that still fits inside the competitive band.',
         subtext: `${thresholds.label} band: +${thresholds.maxGapGold}g / +${thresholds.maxGapPct}%`
+    };
+}
+
+function getHistoryOnlyPriceRecommendations(hist, count) {
+    if (!hist || !(count > 0)) return null;
+
+    const historyAvgPerStack = Number.isFinite(hist.avgPerUnit)
+        ? Math.round(hist.avgPerUnit * count)
+        : null;
+    const bestHistoryPerUnit = Math.max(hist.maxPerUnit || 0, hist.avgPerUnit || 0);
+    const suggestedPerStack = bestHistoryPerUnit > 0
+        ? Math.round(bestHistoryPerUnit * count)
+        : null;
+    const higherAskPerStack = suggestedPerStack !== null
+        ? Math.max(suggestedPerStack + getUndercutStep(suggestedPerStack), Math.round(suggestedPerStack * 1.1))
+        : null;
+
+    return {
+        historyAvgPerStack,
+        suggestedPerStack,
+        higherAskPerStack
     };
 }
 
@@ -607,6 +628,7 @@ export function createAddListingIntelligenceController({
                 <i class="fas ${icon} flex-shrink-0"></i><span>${q.text}</span></div>`;
         }
 
+        const hasHistoryOnlyCardSet = !displayMd && !!hist && hasCount;
         let suggestionCard = '';
         if (suggestion) {
             const bubbleCls = suggestion.insightClass === 'text-rose-400' ? 'bg-rose-400'
@@ -615,6 +637,9 @@ export function createAddListingIntelligenceController({
                 : suggestion.insightClass === 'text-fuchsia-300' ? 'bg-fuchsia-400'
                 : 'bg-gray-400';
             const suggestionOptions = [];
+            const historyOnlyRecommendations = !displayMd && hist && hasCount
+                ? getHistoryOnlyPriceRecommendations(hist, count)
+                : null;
 
             if (stackMarketLow !== null) {
                 const marketLowRecommendation = getMarketLowRecommendation(
@@ -639,7 +664,9 @@ export function createAddListingIntelligenceController({
                     label: 'Suggested Price',
                     badge: 'Recommended',
                     value: suggestion.suggestedPerStack,
-                    description: 'Balanced using live listings and your own sales history.',
+                    description: displayMd
+                        ? 'Balanced using live listings and your own sales history.'
+                        : 'Anchored to your own historical sales because there is no live market to compare against.',
                     subtext: suggestion.insight
                 });
             }
@@ -659,6 +686,34 @@ export function createAddListingIntelligenceController({
                     description: competitiveRecommendation.description,
                     subtext: competitiveRecommendation.subtext
                 });
+            } else if (historyOnlyRecommendations) {
+                if (
+                    historyOnlyRecommendations.historyAvgPerStack !== null
+                    && historyOnlyRecommendations.historyAvgPerStack !== suggestion.suggestedPerStack
+                ) {
+                    suggestionOptions.unshift({
+                        type: 'market-low',
+                        label: 'History Avg',
+                        badge: 'Safe',
+                        value: historyOnlyRecommendations.historyAvgPerStack,
+                        description: 'A conservative baseline based on your typical historical sale for this stack size.',
+                        subtext: `Avg historical pace across ${hist.saleCount} sale${hist.saleCount !== 1 ? 's' : ''}.`
+                    });
+                }
+
+                if (
+                    historyOnlyRecommendations.higherAskPerStack !== null
+                    && historyOnlyRecommendations.higherAskPerStack > suggestion.suggestedPerStack
+                ) {
+                    suggestionOptions.push({
+                        type: 'competitive',
+                        label: 'Higher Ask',
+                        badge: 'Stretch',
+                        value: historyOnlyRecommendations.higherAskPerStack,
+                        description: 'A higher ask if you are willing to wait longer without live competition data.',
+                        subtext: `About 10% above your best historical anchor of ${fmt(suggestion.suggestedPerStack)}g.`
+                    });
+                }
             }
 
             suggestionCard = `
@@ -690,7 +745,7 @@ export function createAddListingIntelligenceController({
         }
 
         let highPriceRow = '';
-        if (!md && hist?.maxPerUnit && hasCount) {
+        if (!hasHistoryOnlyCardSet && !displayMd && hist?.maxPerUnit && hasCount) {
             const highPerStack = Math.round(hist.maxPerUnit * count);
             const highTotal = hasStacks ? highPerStack * stacks : null;
             highPriceRow = `
