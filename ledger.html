@@ -560,7 +560,18 @@
                         <li class="flex gap-3">
                             <span class="bg-blue-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 mt-0.5">1</span>
                             <span>Open <strong>File Explorer</strong> and navigate to:<br>
-                                <code class="bg-slate-700 text-amber-300 px-2 py-0.5 rounded text-xs mt-1 inline-block">%LocalAppData%\PaxDei\Saved\Logs\</code>
+                                <span class="mt-1 flex flex-wrap items-center gap-2">
+                                    <code class="bg-slate-700 text-amber-300 px-2 py-0.5 rounded text-xs inline-block">%LocalAppData%\PaxDei\Saved\Logs\</code>
+                                    <button
+                                        id="avatarIdGuideCopyPathBtn"
+                                        type="button"
+                                        class="inline-flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 text-gray-200 px-2.5 py-1 rounded text-xs transition-colors"
+                                        data-copy-text="%LocalAppData%\PaxDei\Saved\Logs\"
+                                    >
+                                        <i class="fas fa-copy text-[10px]"></i>
+                                        <span id="avatarIdGuideCopyPathBtnLabel">Copy</span>
+                                    </button>
+                                </span>
                             </span>
                         </li>
                         <li class="flex gap-3">
@@ -569,7 +580,20 @@
                         </li>
                         <li class="flex gap-3">
                             <span class="bg-blue-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 mt-0.5">3</span>
-                            <span>Search (<kbd class="bg-slate-600 text-gray-200 px-1.5 py-0.5 rounded text-xs">Ctrl+F</kbd>) for <code class="bg-slate-700 text-amber-300 px-2 py-0.5 rounded text-xs">Set Local Avatar Id</code></span>
+                            <span>Search (<kbd class="bg-slate-600 text-gray-200 px-1.5 py-0.5 rounded text-xs">Ctrl+F</kbd>) for
+                                <span class="mt-1 inline-flex flex-wrap items-center gap-2">
+                                    <code class="bg-slate-700 text-amber-300 px-2 py-0.5 rounded text-xs">Set Local Avatar Id</code>
+                                    <button
+                                        id="avatarIdGuideCopySearchBtn"
+                                        type="button"
+                                        class="inline-flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 text-gray-200 px-2.5 py-1 rounded text-xs transition-colors"
+                                        data-copy-text="Set Local Avatar Id"
+                                    >
+                                        <i class="fas fa-copy text-[10px]"></i>
+                                        <span id="avatarIdGuideCopySearchBtnLabel">Copy</span>
+                                    </button>
+                                </span>
+                            </span>
                         </li>
                         <li class="flex gap-3">
                             <span class="bg-blue-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 mt-0.5">4</span>
