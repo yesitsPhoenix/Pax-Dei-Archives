@@ -74,33 +74,40 @@ function setupAvatarIdGuideModal() {
     const closeBtn2 = document.getElementById('avatarIdGuideClose2');
     const copyPathBtn = document.getElementById('avatarIdGuideCopyPathBtn');
     const copyPathBtnLabel = document.getElementById('avatarIdGuideCopyPathBtnLabel');
+    const copySearchBtn = document.getElementById('avatarIdGuideCopySearchBtn');
+    const copySearchBtnLabel = document.getElementById('avatarIdGuideCopySearchBtnLabel');
     if (!modal || !openBtn) return;
+
+    const wireCopyButton = (button, label, errorContext) => {
+        button?.addEventListener('click', async () => {
+            const text = button.dataset.copyText || '';
+            if (!text) return;
+
+            try {
+                await navigator.clipboard.writeText(text);
+                if (label) {
+                    label.textContent = 'Copied';
+                    window.setTimeout(() => {
+                        label.textContent = 'Copy';
+                    }, 1500);
+                }
+            } catch (error) {
+                console.error(errorContext, error);
+                if (label) {
+                    label.textContent = 'Failed';
+                    window.setTimeout(() => {
+                        label.textContent = 'Copy';
+                    }, 1500);
+                }
+            }
+        });
+    };
 
     openBtn.addEventListener('click', () => modal.classList.remove('hidden'));
     closeBtn?.addEventListener('click', () => modal.classList.add('hidden'));
     closeBtn2?.addEventListener('click', () => modal.classList.add('hidden'));
-    copyPathBtn?.addEventListener('click', async () => {
-        const pathText = copyPathBtn.dataset.copyText || '';
-        if (!pathText) return;
-
-        try {
-            await navigator.clipboard.writeText(pathText);
-            if (copyPathBtnLabel) {
-                copyPathBtnLabel.textContent = 'Copied';
-                window.setTimeout(() => {
-                    copyPathBtnLabel.textContent = 'Copy';
-                }, 1500);
-            }
-        } catch (error) {
-            console.error('[AvatarIDGuide] Failed to copy path:', error);
-            if (copyPathBtnLabel) {
-                copyPathBtnLabel.textContent = 'Failed';
-                window.setTimeout(() => {
-                    copyPathBtnLabel.textContent = 'Copy';
-                }, 1500);
-            }
-        }
-    });
+    wireCopyButton(copyPathBtn, copyPathBtnLabel, '[AvatarIDGuide] Failed to copy path:');
+    wireCopyButton(copySearchBtn, copySearchBtnLabel, '[AvatarIDGuide] Failed to copy search text:');
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
             modal.classList.add('hidden');
