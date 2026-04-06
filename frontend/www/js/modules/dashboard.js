@@ -607,7 +607,7 @@ export function renderMarketPulse(zoneSummary, ownSummary, character, loading = 
             return;
         }
         _lastValleyAnalysis = analysis;
-        const { leading, competitive, undercut, valleySharePct } = analysis;
+        const { leading, competitive, undercut, valleySharePct, valleyShareAvailable } = analysis;
 
         const leadingChip = leading.length > 0
             ? `<span class="inline-flex items-center gap-1.5 bg-emerald-900/40 border border-emerald-500/40 rounded-full px-3 py-1 text-sm">
@@ -632,10 +632,15 @@ export function renderMarketPulse(zoneSummary, ownSummary, character, loading = 
                    <span class="text-white">No above-range listings</span>
                </span>`;
 
-        const shareChip = `<span class="inline-flex items-center gap-1.5 bg-blue-900/40 border border-blue-500/40 rounded-full px-3 py-1 text-sm">
+        const shareChip = valleyShareAvailable
+            ? `<span class="inline-flex items-center gap-1.5 bg-blue-900/40 border border-blue-500/40 rounded-full px-3 py-1 text-sm">
                    <i class="fas fa-chart-pie text-blue-400 text-xs"></i>
                    <span class="text-white font-semibold">Valley share:</span>
                    <span class="text-blue-300 font-bold">${valleySharePct}%</span>
+               </span>`
+            : `<span class="inline-flex items-center gap-1.5 bg-slate-700/40 border border-slate-500/40 rounded-full px-3 py-1 text-sm">
+                   <i class="fas fa-circle-question text-gray-400 text-xs"></i>
+                   <span class="text-white">Valley share unavailable</span>
                </span>`;
 
         // Only update if panel is still showing (character hasn't changed)
@@ -663,7 +668,7 @@ export function renderMarketPulse(zoneSummary, ownSummary, character, loading = 
  * market data, and returns a structured analysis. Shared by both the ledger
  * page chips and the valley presence modal.
  *
- * @returns {Promise<{leading, competitive, undercut, valleySharePct, totalOwnListings, totalValleyListings}|null>}
+ * @returns {Promise<{leading, competitive, undercut, valleySharePct, totalOwnListings, totalValleyListings, valleyShareAvailable}|null>}
  */
 async function buildValleyAnalysisFromSupabase() {
     try {
@@ -869,11 +874,12 @@ async function buildValleyAnalysisFromSupabase() {
         );
 
         // Valley share uses gaming.tools avatar-hash data (best available for total count)
-        const gtAnalysis          = getSavedAvatarHash() ? analyzeOwnListings(getSavedAvatarHash()) : null;
-        const valleySharePct      = gtAnalysis?.valleySharePct      ?? 0;
-        const totalValleyListings = gtAnalysis?.totalValleyListings ?? 0;
+        const gtAnalysis = getSavedAvatarHash() ? analyzeOwnListings(getSavedAvatarHash()) : null;
+        const valleySharePct = gtAnalysis?.valleySharePct ?? null;
+        const totalValleyListings = gtAnalysis?.totalValleyListings ?? null;
+        const valleyShareAvailable = !!gtAnalysis;
 
-        return { leading, competitive, undercut, valleySharePct, totalOwnListings, totalValleyListings };
+        return { leading, competitive, undercut, valleySharePct, totalOwnListings, totalValleyListings, valleyShareAvailable };
     } catch (err) {
         console.error('[ValleyPresence] buildValleyAnalysisFromSupabase error:', err);
         return null;
@@ -900,9 +906,21 @@ export async function openValleyPresenceModal() {
     }
     _lastValleyAnalysis = analysis;
 
-    const { leading, competitive, undercut, valleySharePct, totalOwnListings, totalValleyListings } = _lastValleyAnalysis;
+    const { leading, competitive, undercut, valleySharePct, totalOwnListings, totalValleyListings, valleyShareAvailable } = _lastValleyAnalysis;
     const fmt  = (n) => typeof n === 'number' ? n.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—';
     const fmtG = (n) => `${fmt(n)}g`;
+    const shareChip = valleyShareAvailable
+        ? `<span class="inline-flex items-center gap-1.5 bg-blue-900/40 border border-blue-500/40 rounded-full px-3 py-1 text-sm">
+                <i class="fas fa-chart-pie text-blue-400 text-xs"></i>
+                <span class="text-white">Valley share:</span>
+                <span class="text-blue-300 font-bold">${valleySharePct}%</span>
+                <span class="text-gray-400 text-xs">(${totalOwnListings} of ${totalValleyListings})</span>
+            </span>`
+        : `<span class="inline-flex items-center gap-1.5 bg-slate-700/40 border border-slate-500/40 rounded-full px-3 py-1 text-sm">
+                <i class="fas fa-circle-question text-gray-400 text-xs"></i>
+                <span class="text-white">Valley share unavailable</span>
+                <span class="text-gray-400 text-xs">(${totalOwnListings} live listings found)</span>
+            </span>`;
 
     const undercutRows = undercut.map(item => `
         <tr class="border-b border-slate-700/60 hover:bg-slate-700/30">
@@ -981,12 +999,7 @@ export async function openValleyPresenceModal() {
     body.innerHTML = `
         <!-- Summary chips -->
         <div class="flex flex-wrap gap-2 mb-5">
-            <span class="inline-flex items-center gap-1.5 bg-blue-900/40 border border-blue-500/40 rounded-full px-3 py-1 text-sm">
-                <i class="fas fa-chart-pie text-blue-400 text-xs"></i>
-                <span class="text-white">Valley share:</span>
-                <span class="text-blue-300 font-bold">${valleySharePct}%</span>
-                <span class="text-gray-400 text-xs">(${totalOwnListings} of ${totalValleyListings})</span>
-            </span>
+            ${shareChip}
             <span class="inline-flex items-center gap-1.5 bg-emerald-900/40 border border-emerald-500/40 rounded-full px-3 py-1 text-sm">
                 <i class="fas fa-trophy text-emerald-400 text-xs"></i>
                 <span class="text-white">Leading on <span class="font-bold text-emerald-300">${leading.length}</span> item${leading.length !== 1 ? 's' : ''}</span>

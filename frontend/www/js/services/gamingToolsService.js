@@ -16,6 +16,7 @@
 const API_BASE = 'https://data-cdn.gaming.tools/paxdei/market';
 const CACHE_TTL_MS = 45 * 60 * 1000; // 45 minutes
 const CACHE_PREFIX = 'pda_gt_';
+const LEGACY_AVATAR_HASH_KEY = 'pda_avatar_hash';
 
 // ── Module-level state ──────────────────────────────────────────────────────
 
@@ -626,17 +627,32 @@ export function analyzeOwnListings(avatarHash) {
 // ── Avatar hash persistence (session only — never stores the raw ID) ─────────
 
 export function getSavedAvatarHash() {
-    return localStorage.getItem('pda_avatar_hash') || null;
+    const activeCharacterId = sessionStorage.getItem('active_character_id');
+    if (activeCharacterId) {
+        return localStorage.getItem(`${LEGACY_AVATAR_HASH_KEY}_${activeCharacterId}`) || null;
+    }
+    return localStorage.getItem(LEGACY_AVATAR_HASH_KEY) || null;
 }
 
 export function saveAvatarHash(hash) {
+    const activeCharacterId = sessionStorage.getItem('active_character_id');
     if (hash) {
-        localStorage.setItem('pda_avatar_hash', hash);
+        if (activeCharacterId) {
+            localStorage.setItem(`${LEGACY_AVATAR_HASH_KEY}_${activeCharacterId}`, hash);
+        }
+        localStorage.setItem(LEGACY_AVATAR_HASH_KEY, hash);
     } else {
-        localStorage.removeItem('pda_avatar_hash');
+        if (activeCharacterId) {
+            localStorage.removeItem(`${LEGACY_AVATAR_HASH_KEY}_${activeCharacterId}`);
+        }
+        localStorage.removeItem(LEGACY_AVATAR_HASH_KEY);
     }
 }
 
 export function clearAvatarHash() {
-    localStorage.removeItem('pda_avatar_hash');
+    const activeCharacterId = sessionStorage.getItem('active_character_id');
+    if (activeCharacterId) {
+        localStorage.removeItem(`${LEGACY_AVATAR_HASH_KEY}_${activeCharacterId}`);
+    }
+    localStorage.removeItem(LEGACY_AVATAR_HASH_KEY);
 }
