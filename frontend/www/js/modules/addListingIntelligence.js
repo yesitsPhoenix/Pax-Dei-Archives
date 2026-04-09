@@ -224,11 +224,15 @@ function getHistoryOnlyPriceRecommendations(hist, count) {
     const suggestedPerStack = bestHistoryPerUnit > 0
         ? Math.round(bestHistoryPerUnit * count)
         : null;
+    const marketLowPerStack = suggestedPerStack !== null
+        ? Math.max(1, suggestedPerStack - getUndercutStep(suggestedPerStack))
+        : historyAvgPerStack;
     const higherAskPerStack = suggestedPerStack !== null
         ? Math.max(suggestedPerStack + getUndercutStep(suggestedPerStack), Math.round(suggestedPerStack * 1.1))
         : null;
 
     return {
+        marketLowPerStack,
         historyAvgPerStack,
         suggestedPerStack,
         higherAskPerStack
@@ -687,17 +691,14 @@ export function createAddListingIntelligenceController({
                     subtext: competitiveRecommendation.subtext
                 });
             } else if (historyOnlyRecommendations) {
-                if (
-                    historyOnlyRecommendations.historyAvgPerStack !== null
-                    && historyOnlyRecommendations.historyAvgPerStack !== suggestion.suggestedPerStack
-                ) {
+                if (historyOnlyRecommendations.marketLowPerStack !== null) {
                     suggestionOptions.unshift({
                         type: 'market-low',
-                        label: 'History Avg',
-                        badge: 'Safe',
-                        value: historyOnlyRecommendations.historyAvgPerStack,
-                        description: 'A conservative baseline based on your typical historical sale for this stack size.',
-                        subtext: `Avg historical pace across ${hist.saleCount} sale${hist.saleCount !== 1 ? 's' : ''}.`
+                        label: 'Market Low',
+                        badge: 'Fastest',
+                        value: historyOnlyRecommendations.marketLowPerStack,
+                        description: 'A fast-move floor derived from your best historical sale when no live listings exist.',
+                        subtext: `Anchored from your best historical price of ${fmt(suggestion.suggestedPerStack)}g.`
                     });
                 }
 
