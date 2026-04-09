@@ -766,24 +766,13 @@ export function createAddListingIntelligenceController({
             </div>`;
         }
 
-        let livePriceRow = '';
-        if (hasPrice && hasStacks) {
-            const liveTotal = price * stacks;
-            livePriceRow = `
-            <div class="flex items-center gap-2 mt-2 pt-1.5 border-t border-slate-500/30">
-                <i class="fas fa-calculator text-gray-500 text-xs"></i>
-                <span class="text-gray-300 text-sm">At <span class="text-white font-semibold">${fmt(price)}g</span>/stack x ${stacks} = <span class="text-cyan-300 font-bold">${fmt(liveTotal)}g</span> total</span>
-            </div>`;
-        }
-
         hintEl.innerHTML = `
             ${qualityBanner}
             <div class="flex gap-3">${marketCol}<div class="w-px bg-slate-500/40 self-stretch flex-shrink-0"></div>${histCol}</div>
             ${competitiveCard}
             ${suggestionCard}
             ${impactRow}
-            ${highPriceRow}
-            ${livePriceRow}`;
+            ${highPriceRow}`;
         hintEl.classList.remove('hidden');
 
         hintEl.querySelectorAll('[data-suggested-price]').forEach((btn) => {
