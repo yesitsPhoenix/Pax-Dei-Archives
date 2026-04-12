@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const DEFAULT_AVATAR_URL = 'https://cdn.discordapp.com/embed/avatars/0.png';
 
     const setFloatingAvatar = (url, loaded = true) => {
+        if (!floatingAvatar) return;
         floatingAvatar.src = url;
         if (loaded) {
             floatingAvatar.classList.add('loaded');
@@ -21,6 +22,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const updateAuthUI = async () => {
+        if (!modalContentWrapper) return;
+
         if (await isLoggedIn()) {
             const userProfile = await getUserProfile();
             const userName = userProfile ? userProfile.username : 'Guest';
@@ -41,7 +44,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('logoutButton').addEventListener('click', async () => {
                 await logout();
                 sessionStorage.removeItem('userAvatarUrl');
-                authModal.classList.remove('open');
+                if (authModal) {
+                    authModal.classList.remove('open');
+                }
                 window.location.href = 'index.html';
             });
         } else {
@@ -76,6 +81,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     } else {
         setFloatingAvatar(DEFAULT_AVATAR_URL, false);
+    }
+
+    if (!floatingAvatarContainer || !authModal) {
+        await updateAuthUI();
+        return;
     }
 
     floatingAvatarContainer.addEventListener('mouseenter', () => {

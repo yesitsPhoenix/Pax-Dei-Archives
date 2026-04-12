@@ -9,7 +9,9 @@ export const initializePageAuth = async () => {
     const user = questState.getUser();
     
     const loginContainer = document.getElementById('traderLoginContainer');
-    const questContent = document.getElementById('quest-log-main-content');
+    const questContent = document.getElementById('quest-log-main-content')
+        || document.getElementById('contracts-main-content')
+        || document.getElementById('post-contract-main-content');
     const discordBtn = document.getElementById('traderDiscordLoginButton');
     const sidebar = document.getElementById('sidebar');
     const errorMsg = document.getElementById('traderLoginError');
