@@ -3,6 +3,7 @@ import { questState } from './questStateManager.js';
 import { boardQuestState } from './boardQuestState.js';
 import {
     acceptBoardQuest,
+    cancelBoardQuest,
     confirmBoardQuestCompletion,
     rejectBoardQuestCompletion,
     reportBoardQuest,
@@ -547,6 +548,8 @@ function renderActionButtons(post) {
     const acceptance = post.currentCharacterAcceptance;
     const signedIn = isSignedIn();
     const expired = isBoardQuestExpired(post);
+    const isOwnPost = getActiveCharacter()?.character_id && getActiveCharacter().character_id === post.author_character_id;
+    const canManagePost = signedIn && isOwnPost && post.status === 'posted';
     const buttons = [];
 
     if (acceptance) {
@@ -554,13 +557,17 @@ function renderActionButtons(post) {
             buttons.push(`<button class="board-btn board-btn-primary" data-board-action="submit" data-acceptance-id="${escapeHtml(acceptance.id)}"><i class="fa-solid fa-flag-checkered"></i>Submit Completion</button>`);
             buttons.push(`<button class="board-btn board-btn-danger" data-board-action="withdraw" data-acceptance-id="${escapeHtml(acceptance.id)}"><i class="fa-solid fa-arrow-rotate-left"></i>Withdraw</button>`);
         }
+    } else if (isOwnPost) {
+        buttons.push(`<button class="board-btn board-btn-primary" data-board-action="edit" data-post-id="${escapeHtml(post.id)}" ${canManagePost ? '' : 'disabled'}><i class="fa-solid fa-pen-to-square"></i>Edit Contract</button>`);
+        buttons.push(`<button class="board-btn board-btn-danger" data-board-action="cancel-post" data-post-id="${escapeHtml(post.id)}" ${canManagePost ? '' : 'disabled'}><i class="fa-solid fa-ban"></i>Cancel Contract</button>`);
     } else {
-        const isOwnPost = getActiveCharacter()?.character_id && getActiveCharacter().character_id === post.author_character_id;
-        buttons.push(`<button class="board-btn board-btn-primary" data-board-action="accept" data-post-id="${escapeHtml(post.id)}" ${(!signedIn || expired || isOwnPost) ? 'disabled' : ''}><i class="fa-solid fa-handshake-angle"></i>${signedIn ? (isOwnPost ? 'Own Post' : expired ? 'Expired' : 'Accept Contract') : 'Login To Accept'}</button>`);
+        buttons.push(`<button class="board-btn board-btn-primary" data-board-action="accept" data-post-id="${escapeHtml(post.id)}" ${(!signedIn || expired) ? 'disabled' : ''}><i class="fa-solid fa-handshake-angle"></i>${signedIn ? (expired ? 'Expired' : 'Accept Contract') : 'Login To Accept'}</button>`);
     }
 
     buttons.push(`<button class="board-btn" data-board-action="share" data-post-id="${escapeHtml(post.id)}"><i class="fa-solid fa-link"></i>Copy Link</button>`);
-    buttons.push(`<button class="board-btn" data-board-action="report" data-post-id="${escapeHtml(post.id)}" ${signedIn ? '' : 'disabled'}><i class="fa-solid fa-flag"></i>Report</button>`);
+    if (!isOwnPost) {
+        buttons.push(`<button class="board-btn" data-board-action="report" data-post-id="${escapeHtml(post.id)}" ${signedIn ? '' : 'disabled'}><i class="fa-solid fa-flag"></i>Report</button>`);
+    }
     return `<div class="board-action-row">${buttons.join('')}</div>`;
 }
 
@@ -620,6 +627,18 @@ function attachDetailActions(post) {
                     }
                     await acceptBoardQuest(postId);
                     showToast('Contract accepted.');
+                } else if (action === 'edit') {
+                    window.location.href = `post_contract.html?edit=${encodeURIComponent(postId)}`;
+                    return;
+                } else if (action === 'cancel-post') {
+                    const values = await openActionModal({
+                        title: 'Cancel Contract',
+                        copy: 'Cancel this posted contract. Existing acceptances will no longer appear as active board work.',
+                        submitLabel: 'Cancel Contract',
+                    });
+                    if (values === ACTION_MODAL_CANCELLED) return;
+                    await cancelBoardQuest(postId);
+                    showToast('Contract cancelled.');
                 } else if (action === 'withdraw') {
                     const values = await openActionModal({
                         title: 'Withdraw Contract',
@@ -636,17 +655,17 @@ function attachDetailActions(post) {
                 } else if (action === 'submit') {
                     const values = await openActionModal({
                         title: 'Submit Completion',
-                        copy: 'Send the poster a completion note. Add a proof link if this contract asks for one.',
+                        copy: post.proof_mode === 'self_complete'
+                            ? 'Mark this contract complete and leave a short completion note for your records.'
+                            : 'Send the poster a completion note. The poster can confirm or reject it from their Posted tab.',
                         submitLabel: 'Submit Completion',
                         fields: [
                             { name: 'completionNote', label: 'Completion Note', type: 'textarea', required: true, placeholder: 'What did you complete?' },
-                            { name: 'proofUrl', label: 'Proof Link', placeholder: 'Optional screenshot or proof URL...' },
                         ],
                     });
                     if (values === ACTION_MODAL_CANCELLED) return;
                     await submitBoardQuestCompletion(acceptanceId, {
                         completionNote: values.completionNote || '',
-                        proofUrl: values.proofUrl || '',
                     });
                     showToast('Completion submitted.');
                 } else if (action === 'confirm-completion') {

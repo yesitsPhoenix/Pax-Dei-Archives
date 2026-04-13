@@ -1,13 +1,13 @@
 import { questState } from './questStateManager.js';
-import { createBoardQuest } from './boardQuestService.js';
+import { createBoardQuest, getBoardQuestById, updateBoardQuest } from './boardQuestService.js';
 
 const el = {};
 let goalCounter = 0;
+let editingPost = null;
 
 const PROOF_MODE_HELP = {
     self_complete: 'The accepting character can mark this contract complete themselves. Best for simple goodwill tasks, guide runs, and low-risk help requests.',
     submit_for_confirmation: 'The accepting character submits completion, then the poster confirms it. Best for deliveries, paid work, or contracts where you need to verify the result.',
-    external_proof_note: 'The accepting character should include a proof note or link. Best for hunts, scouting, screenshots, or work completed away from the poster.',
 };
 
 function escapeHtml(value = '') {
@@ -121,6 +121,10 @@ function updateProofModeHelp() {
     el.proofModeHelp.textContent = PROOF_MODE_HELP[el.proofMode.value] || '';
 }
 
+function getEditPostId() {
+    return new URL(window.location.href).searchParams.get('edit');
+}
+
 function buildGoalRow(goal = {}) {
     goalCounter += 1;
     const rowId = `contract-goal-${goalCounter}`;
@@ -154,6 +158,13 @@ function buildGoalRow(goal = {}) {
 
 function addGoal(goal = {}) {
     el.goalsList.insertAdjacentHTML('beforeend', buildGoalRow(goal));
+}
+
+function resetGoals(goals = []) {
+    goalCounter = 0;
+    el.goalsList.innerHTML = '';
+    const normalizedGoals = goals.length ? goals : [{ type: 'checkbox', label: '' }];
+    normalizedGoals.forEach((goal) => addGoal(goal));
 }
 
 function bindGoals() {
@@ -192,6 +203,19 @@ function buildExpiresAt() {
     return expiresAt.toISOString();
 }
 
+function getExpiresDaysValue(expiresAt) {
+    if (!expiresAt) return '';
+    const expiresDate = new Date(expiresAt);
+    if (Number.isNaN(expiresDate.getTime())) return '7';
+
+    const msRemaining = expiresDate.getTime() - Date.now();
+    const daysRemaining = Math.max(1, Math.round(msRemaining / 86400000));
+    const supported = [3, 7, 14, 30];
+    return String(supported.reduce((best, candidate) => (
+        Math.abs(candidate - daysRemaining) < Math.abs(best - daysRemaining) ? candidate : best
+    ), 7));
+}
+
 function buildPayload() {
     const character = getActiveCharacter();
     const goals = readGoals();
@@ -223,10 +247,10 @@ function buildPayload() {
         capacity: Math.max(1, Number(el.capacity.value || 1)),
         expires_at: buildExpiresAt(),
         visibility_scope: 'public',
-        posting_region: character.region || character.region_name || null,
-        posting_shard: character.shard || null,
-        posting_province: character.province || null,
-        posting_home_valley: character.home_valley || null,
+        posting_region: editingPost?.posting_region || character.region || character.region_name || null,
+        posting_shard: editingPost?.posting_shard || character.shard || null,
+        posting_province: editingPost?.posting_province || character.province || null,
+        posting_home_valley: editingPost?.posting_home_valley || character.home_valley || null,
         destination_region: getValue('contract-destination-region') || null,
         destination_shard: getValue('contract-destination-shard') || null,
         destination_province: getValue('contract-destination-province') || null,
@@ -239,20 +263,66 @@ function buildPayload() {
     };
 }
 
+function setFieldValue(id, value = '') {
+    const node = document.getElementById(id);
+    if (node) node.value = value || '';
+}
+
+function fillFormFromPost(post) {
+    setFieldValue('contract-title', post.title);
+    setFieldValue('contract-category', post.player_contract_category);
+    setFieldValue('contract-proof-mode', post.proof_mode === 'external_proof_note' ? 'submit_for_confirmation' : post.proof_mode);
+    setFieldValue('contract-capacity', post.capacity || 1);
+    setFieldValue('contract-expires-days', getExpiresDaysValue(post.expires_at));
+    setFieldValue('contract-summary', post.summary);
+    setFieldValue('contract-body', post.body_markdown);
+    setFieldValue('contract-reward', post.reward_note);
+    setFieldValue('contract-contact', post.contact_note);
+
+    populateDestinationRegions(post.destination_region || '');
+    populateDestinationShards(post.destination_shard || '');
+    populateDestinationProvinces(post.destination_province || '');
+    populateDestinationHomeValleys(post.destination_home_valley || '');
+
+    el.travelRequired.checked = post.travel_required === true;
+    el.remoteDelivery.checked = post.remote_delivery_allowed === true;
+    resetGoals(post.board_quest_goals || post.tracking_goals || []);
+    updateProofModeHelp();
+}
+
+async function loadEditPostIfNeeded() {
+    const editPostId = getEditPostId();
+    if (!editPostId) return;
+
+    editingPost = await getBoardQuestById(editPostId);
+    const activeCharacter = getActiveCharacter();
+    if (!activeCharacter?.character_id || activeCharacter.character_id !== editingPost.author_character_id) {
+        throw new Error('Only the posting character can edit this contract.');
+    }
+
+    document.querySelector('#post-contract-main-content h1').textContent = 'Edit Contract';
+    el.submit.innerHTML = '<i class="fa-solid fa-floppy-disk"></i>Save Contract';
+    fillFormFromPost(editingPost);
+}
+
 async function handleSubmit(event) {
     event.preventDefault();
     showError('');
     el.submit.disabled = true;
-    el.submit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>Posting...';
+    el.submit.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>${editingPost ? 'Saving...' : 'Posting...'}`;
 
     try {
-        const created = await createBoardQuest(buildPayload());
+        const created = editingPost
+            ? await updateBoardQuest(editingPost.id, buildPayload())
+            : await createBoardQuest(buildPayload());
         window.location.href = `contracts.html?post=${encodeURIComponent(created.id)}`;
     } catch (error) {
         console.error('[PostContract] Failed:', error);
-        showError(error.message || 'Failed to post contract.');
+        showError(error.message || `Failed to ${editingPost ? 'save' : 'post'} contract.`);
         el.submit.disabled = false;
-        el.submit.innerHTML = '<i class="fa-solid fa-thumbtack"></i>Post Contract';
+        el.submit.innerHTML = editingPost
+            ? '<i class="fa-solid fa-floppy-disk"></i>Save Contract'
+            : '<i class="fa-solid fa-thumbtack"></i>Post Contract';
     }
 }
 
@@ -281,10 +351,11 @@ async function init() {
     if (!questState.getUser()) return;
 
     fillLocationDefaults();
-    addGoal({ type: 'checkbox', label: '' });
+    resetGoals();
     bindGoals();
     bindDestinationLocation();
     updateProofModeHelp();
+    await loadEditPostIfNeeded();
     el.proofMode.addEventListener('change', updateProofModeHelp);
     el.form.addEventListener('submit', handleSubmit);
 }
