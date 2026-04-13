@@ -229,7 +229,6 @@ export async function listBoardQuests(options = {}) {
             pendingConfirmationCount: post.author_character_id === activeCharacter?.character_id
                 ? summary.pendingConfirmationCount
                 : 0,
-            slotsRemaining: Math.max(0, (post.capacity || 0) - summary.activeAcceptanceCount),
         };
     });
 
@@ -262,7 +261,6 @@ export async function getBoardQuestById(boardQuestId, options = {}) {
         currentCharacterAcceptance: summary.currentCharacterAcceptance,
         pendingConfirmationCount: post.author_character_id === activeCharacterId ? summary.pendingConfirmationCount : 0,
         pendingConfirmations,
-        slotsRemaining: Math.max(0, (post.capacity || 0) - summary.activeAcceptanceCount),
     };
 }
 

@@ -74,6 +74,20 @@
         <div class="container mx-auto px-4 max-w-5xl pb-16">
             <form id="post-contract-form" class="post-contract-shell">
                 <section class="post-contract-panel">
+                    <div class="post-contract-character-head">
+                        <div>
+                            <h2 class="board-section-title" style="margin:0;"><i class="fa-solid fa-user-shield"></i>Posting Character</h2>
+                            <p class="board-muted-copy">Contracts are posted from the selected character and their current home location.</p>
+                        </div>
+                        <div class="board-character-switcher post-contract-character-switcher" id="post-contract-character-select-wrap">
+                            <label class="board-label board-character-switch-label" for="post-contract-character-select">Switch Character:</label>
+                            <select id="post-contract-character-select" class="board-select"></select>
+                        </div>
+                    </div>
+                    <div id="post-contract-character-card" class="post-contract-character-card"></div>
+                </section>
+
+                <section class="post-contract-panel">
                     <div class="post-contract-panel-head">
                         <div>
                             <h2 class="board-section-title" style="margin:0;"><i class="fa-solid fa-feather-pointed"></i>Contract Details</h2>
@@ -104,11 +118,6 @@
                                 <option value="submit_for_confirmation">Submit For Confirmation</option>
                             </select>
                             <p id="contract-proof-mode-help" class="post-contract-help"></p>
-                        </div>
-                        <div class="board-field">
-                            <label class="board-label" for="contract-capacity">Capacity</label>
-                            <input id="contract-capacity" class="board-input" type="number" min="1" max="20" value="1" required>
-                            <p class="post-contract-help">How many characters can accept this contract at the same time before it is considered full.</p>
                         </div>
                         <div class="board-field">
                             <label class="board-label" for="contract-expires-days">Expires In</label>
@@ -219,6 +228,6 @@
     <script type="module" src="frontend/www/js/popoutAuth.js"></script>
     <script type="module" src="frontend/www/js/redemption/auth.js"></script>
     <script type="module" src="frontend/www/js/main.js"></script>
-    <script type="module" src="frontend/www/js/redemption/postContractPage.js?v=20260412-contract-edit-modes"></script>
+    <script type="module" src="frontend/www/js/redemption/postContractPage.js?v=20260413-single-acceptance"></script>
 </body>
 </html>

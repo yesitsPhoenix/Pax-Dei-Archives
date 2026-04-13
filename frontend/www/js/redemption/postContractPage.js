@@ -32,6 +32,15 @@ function getActiveCharacter() {
     return questState.getActiveCharacter();
 }
 
+function getCharacterRegion(character = {}) {
+    const source = character || {};
+    return source.region || source.region_name || '';
+}
+
+function formatLocationPart(value = '') {
+    return value || 'Not set';
+}
+
 function uniqueSorted(values = []) {
     return [...new Set(values.filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b)));
 }
@@ -99,7 +108,7 @@ function resetDestinationAfter(level) {
 
 function fillLocationDefaults() {
     const character = getActiveCharacter();
-    const region = character?.region || character?.region_name || '';
+    const region = getCharacterRegion(character);
     const shard = character?.shard || '';
     const province = character?.province || '';
     const homeValley = character?.home_valley || '';
@@ -108,6 +117,97 @@ function fillLocationDefaults() {
     populateDestinationShards(shard);
     populateDestinationProvinces(province);
     populateDestinationHomeValleys(homeValley);
+}
+
+function renderCharacterPanel() {
+    const characters = questState.getCharacters() || [];
+    const activeCharacter = getActiveCharacter();
+
+    if (!el.characterSelect || !el.characterCard) return;
+
+    if (!characters.length) {
+        el.characterSelectWrap?.classList.add('hidden');
+        el.characterCard.innerHTML = `
+            <div class="post-contract-character-empty">
+                <strong>No character found.</strong>
+                <span>Create or select a character before posting a player contract.</span>
+            </div>
+        `;
+        return;
+    }
+
+    el.characterSelectWrap?.classList.remove('hidden');
+    el.characterSelect.innerHTML = characters.map((character) => `
+        <option value="${escapeHtml(character.character_id)}"${character.character_id === activeCharacter?.character_id ? ' selected' : ''}>
+            ${escapeHtml(character.character_name)}
+        </option>
+    `).join('');
+
+    if (!activeCharacter) {
+        el.characterCard.innerHTML = `
+            <div class="post-contract-character-empty">
+                <strong>No active character.</strong>
+                <span>Choose who is posting this contract.</span>
+            </div>
+        `;
+        return;
+    }
+
+    const canEdit = !editingPost || activeCharacter.character_id === editingPost.author_character_id;
+    const location = [
+        { label: 'Region', value: getCharacterRegion(activeCharacter) },
+        { label: 'Shard', value: activeCharacter.shard },
+        { label: 'Province', value: activeCharacter.province },
+        { label: 'Home Valley', value: activeCharacter.home_valley },
+    ];
+
+    el.characterCard.innerHTML = `
+        <div class="post-contract-character-name">
+            <i class="fa-solid fa-user"></i>
+            <span>${escapeHtml(activeCharacter.character_name || 'Selected Character')}</span>
+        </div>
+        <div class="post-contract-character-location-grid">
+            ${location.map((item) => `
+                <div class="post-contract-character-fact">
+                    <span>${escapeHtml(item.label)}</span>
+                    <strong>${escapeHtml(formatLocationPart(item.value))}</strong>
+                </div>
+            `).join('')}
+        </div>
+        ${canEdit ? '' : `
+            <p class="post-contract-character-warning">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                Only the posting character can save changes to this contract.
+            </p>
+        `}
+    `;
+}
+
+async function switchPostingCharacter(characterId, options = {}) {
+    if (!characterId) return;
+    el.characterSelect.disabled = true;
+    showError('');
+
+    try {
+        await questState.setActiveCharacter(characterId);
+        renderCharacterPanel();
+        if (!editingPost && options.updateDefaults !== false) {
+            fillLocationDefaults();
+        }
+    } catch (error) {
+        console.error('[PostContract] Character switch failed:', error);
+        showError(error.message || 'Failed to switch characters.');
+        renderCharacterPanel();
+    } finally {
+        el.characterSelect.disabled = false;
+    }
+}
+
+function bindCharacterSelect() {
+    if (!el.characterSelect) return;
+    el.characterSelect.addEventListener('change', async () => {
+        await switchPostingCharacter(el.characterSelect.value);
+    });
 }
 
 function bindDestinationLocation() {
@@ -223,6 +323,9 @@ function buildPayload() {
     if (!character) {
         throw new Error('Choose a character before posting a contract.');
     }
+    if (editingPost && character.character_id !== editingPost.author_character_id) {
+        throw new Error('Only the posting character can save changes to this contract.');
+    }
     if (!getValue('contract-title')) {
         throw new Error('Contract title is required.');
     }
@@ -244,10 +347,10 @@ function buildPayload() {
         player_contract_category: el.category.value,
         post_type: 'contract',
         proof_mode: el.proofMode.value,
-        capacity: Math.max(1, Number(el.capacity.value || 1)),
+        capacity: 1,
         expires_at: buildExpiresAt(),
         visibility_scope: 'public',
-        posting_region: editingPost?.posting_region || character.region || character.region_name || null,
+        posting_region: editingPost?.posting_region || getCharacterRegion(character) || null,
         posting_shard: editingPost?.posting_shard || character.shard || null,
         posting_province: editingPost?.posting_province || character.province || null,
         posting_home_valley: editingPost?.posting_home_valley || character.home_valley || null,
@@ -272,7 +375,6 @@ function fillFormFromPost(post) {
     setFieldValue('contract-title', post.title);
     setFieldValue('contract-category', post.player_contract_category);
     setFieldValue('contract-proof-mode', post.proof_mode === 'external_proof_note' ? 'submit_for_confirmation' : post.proof_mode);
-    setFieldValue('contract-capacity', post.capacity || 1);
     setFieldValue('contract-expires-days', getExpiresDaysValue(post.expires_at));
     setFieldValue('contract-summary', post.summary);
     setFieldValue('contract-body', post.body_markdown);
@@ -295,8 +397,15 @@ async function loadEditPostIfNeeded() {
     if (!editPostId) return;
 
     editingPost = await getBoardQuestById(editPostId);
+    const characters = questState.getCharacters() || [];
+    const authorCharacter = characters.find((character) => character.character_id === editingPost.author_character_id);
+    if (authorCharacter && questState.getActiveCharacterId() !== editingPost.author_character_id) {
+        await switchPostingCharacter(editingPost.author_character_id, { updateDefaults: false });
+    }
+
     const activeCharacter = getActiveCharacter();
     if (!activeCharacter?.character_id || activeCharacter.character_id !== editingPost.author_character_id) {
+        renderCharacterPanel();
         throw new Error('Only the posting character can edit this contract.');
     }
 
@@ -328,10 +437,12 @@ async function handleSubmit(event) {
 
 function cacheElements() {
     el.form = document.getElementById('post-contract-form');
+    el.characterSelectWrap = document.getElementById('post-contract-character-select-wrap');
+    el.characterSelect = document.getElementById('post-contract-character-select');
+    el.characterCard = document.getElementById('post-contract-character-card');
     el.category = document.getElementById('contract-category');
     el.proofMode = document.getElementById('contract-proof-mode');
     el.proofModeHelp = document.getElementById('contract-proof-mode-help');
-    el.capacity = document.getElementById('contract-capacity');
     el.expiresDays = document.getElementById('contract-expires-days');
     el.destinationRegion = document.getElementById('contract-destination-region');
     el.destinationShard = document.getElementById('contract-destination-shard');
@@ -350,8 +461,10 @@ async function init() {
     await questState.initialize();
     if (!questState.getUser()) return;
 
+    renderCharacterPanel();
     fillLocationDefaults();
     resetGoals();
+    bindCharacterSelect();
     bindGoals();
     bindDestinationLocation();
     updateProofModeHelp();

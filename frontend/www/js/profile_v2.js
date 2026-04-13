@@ -206,6 +206,7 @@ const characterSelect = document.getElementById('characterSelect');
 const characterDetails = document.getElementById('characterDetails');
 const featsSummary = document.getElementById('featsSummary');
 const questSummary = document.getElementById('questSummary');
+const contractsSummary = document.getElementById('contractsSummary');
 const stallsContainer = document.getElementById('stallsContainer');
 
 // Buttons
@@ -369,6 +370,7 @@ async function loadCharacterData(characterId) {
         characterDetails.innerHTML = '<p class="text-gray-400 text-center py-8">Select a character to view details</p>';
         featsSummary.innerHTML = '<p class="text-gray-400 text-sm text-center py-4">Select a character</p>';
         questSummary.innerHTML = '<p class="text-gray-400 text-sm text-center py-4">Select a character</p>';
+        contractsSummary.innerHTML = '<p class="text-gray-400 text-sm text-center py-4">Select a character</p>';
         stallsContainer.innerHTML = '<p class="text-gray-400 text-center py-8">Select a character to view stalls</p>';
         deleteCharacterBtn.style.display = 'none';
         createStallBtn.style.display = 'none';
@@ -387,6 +389,7 @@ async function loadCharacterData(characterId) {
     await loadCharacterDetails(characterId);
     await loadFeatsSummary(characterId);
     await loadQuestSummary(characterId);
+    await loadContractsSummary(characterId);
     await loadMarketStalls(characterId);
 }
 
@@ -579,6 +582,48 @@ async function loadQuestSummary(characterId) {
                 <p class="text-gray-400 text-sm mb-2">Coming Soon</p>
             </div>
         `;
+    }
+}
+
+/**
+ * Load player contract summary for character
+ */
+async function loadContractsSummary(characterId) {
+    try {
+        const { count: completedCount, error: completedError } = await supabase
+            .from('board_quest_acceptances')
+            .select('*', { count: 'exact', head: true })
+            .eq('character_id', characterId)
+            .eq('status', 'completed');
+
+        if (completedError) throw completedError;
+
+        const { count: activeCount, error: activeError } = await supabase
+            .from('board_quest_acceptances')
+            .select('*', { count: 'exact', head: true })
+            .eq('character_id', characterId)
+            .in('status', ['accepted', 'in_progress', 'awaiting_confirmation']);
+
+        if (activeError) throw activeError;
+
+        const completed = completedCount || 0;
+        const active = activeCount || 0;
+
+        contractsSummary.innerHTML = `
+            <div class="text-center py-4">
+                <div class="text-3xl font-bold text-white mb-1">${completed}</div>
+                <p class="text-gray-400 text-sm">Completed</p>
+                <div class="mt-4 flex items-center justify-center gap-2 text-sm">
+                    <span class="px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-300">
+                        ${active} active
+                    </span>
+                </div>
+            </div>
+        `;
+
+    } catch (error) {
+        console.error('Error loading contracts:', error);
+        contractsSummary.innerHTML = '<p class="text-red-400 text-center py-4">Failed to load contracts</p>';
     }
 }
 

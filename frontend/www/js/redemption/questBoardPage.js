@@ -53,10 +53,22 @@ function formatDateTime(value) {
 }
 
 function formatStatusLabel(status = '') {
+    if (status === 'filled') return 'Filled';
     return status
         .split('_')
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
         .join(' ');
+}
+
+function isBoardQuestFilled(post) {
+    return !post?.currentCharacterAcceptance && Number(post?.activeAcceptanceCount || 0) > 0;
+}
+
+function getBoardQuestDisplayStatus(post) {
+    if (isBoardQuestExpired(post)) return 'expired';
+    if (post?.currentCharacterAcceptance?.status) return post.currentCharacterAcceptance.status;
+    if (isBoardQuestFilled(post)) return 'filled';
+    return post?.status || 'posted';
 }
 
 function showToast(message, type = '') {
@@ -351,7 +363,7 @@ function renderFeed(posts = []) {
     const visiblePosts = getVisiblePosts(posts);
     const isCompletedTab = currentBoardTab === 'completed';
     el.feedCount.textContent = `${visiblePosts.length} ${getTabLabel()}`;
-    el.heroOpenCount.textContent = String(getPostsForTab('available', posts).length);
+    el.heroOpenCount.textContent = String(getPostsForTab('available', posts).filter((post) => !isBoardQuestFilled(post)).length);
     syncBoardTabs();
     renderBanner();
 
@@ -423,7 +435,7 @@ function renderFeed(posts = []) {
     }
 
     el.feedGrid.innerHTML = pagePosts.map((post) => {
-        const status = isBoardQuestExpired(post) ? 'expired' : (post.currentCharacterAcceptance?.status || post.status);
+        const status = getBoardQuestDisplayStatus(post);
         const subtitle = post.summary || post.body_markdown || 'Pinned by a fellow traveler looking for hands, supplies, or steel.';
         const pendingCount = Number(post.pendingConfirmationCount || 0);
         const needsPosterReview = currentBoardTab === 'posted' && pendingCount > 0;
@@ -453,7 +465,6 @@ function renderFeed(posts = []) {
                     </div>
                     <div class="notice-card-status">
                         <span class="board-status-pill board-status-${escapeHtml(status)}">${escapeHtml(formatStatusLabel(status))}</span>
-                        <div class="notice-card-kicker" style="margin-top:0.45rem;">${post.slotsRemaining} slot${post.slotsRemaining === 1 ? '' : 's'} open</div>
                     </div>
                 </div>
             </button>
@@ -548,6 +559,7 @@ function renderActionButtons(post) {
     const acceptance = post.currentCharacterAcceptance;
     const signedIn = isSignedIn();
     const expired = isBoardQuestExpired(post);
+    const filled = isBoardQuestFilled(post);
     const isOwnPost = getActiveCharacter()?.character_id && getActiveCharacter().character_id === post.author_character_id;
     const canManagePost = signedIn && isOwnPost && post.status === 'posted';
     const buttons = [];
@@ -561,7 +573,9 @@ function renderActionButtons(post) {
         buttons.push(`<button class="board-btn board-btn-primary" data-board-action="edit" data-post-id="${escapeHtml(post.id)}" ${canManagePost ? '' : 'disabled'}><i class="fa-solid fa-pen-to-square"></i>Edit Contract</button>`);
         buttons.push(`<button class="board-btn board-btn-danger" data-board-action="cancel-post" data-post-id="${escapeHtml(post.id)}" ${canManagePost ? '' : 'disabled'}><i class="fa-solid fa-ban"></i>Cancel Contract</button>`);
     } else {
-        buttons.push(`<button class="board-btn board-btn-primary" data-board-action="accept" data-post-id="${escapeHtml(post.id)}" ${(!signedIn || expired) ? 'disabled' : ''}><i class="fa-solid fa-handshake-angle"></i>${signedIn ? (expired ? 'Expired' : 'Accept Contract') : 'Login To Accept'}</button>`);
+        const acceptDisabled = !signedIn || expired || filled;
+        const acceptLabel = !signedIn ? 'Login To Accept' : expired ? 'Expired' : filled ? 'Filled' : 'Accept Contract';
+        buttons.push(`<button class="board-btn board-btn-primary" data-board-action="accept" data-post-id="${escapeHtml(post.id)}" ${acceptDisabled ? 'disabled' : ''}><i class="fa-solid fa-handshake-angle"></i>${escapeHtml(acceptLabel)}</button>`);
     }
 
     buttons.push(`<button class="board-btn" data-board-action="share" data-post-id="${escapeHtml(post.id)}"><i class="fa-solid fa-link"></i>Copy Link</button>`);
@@ -743,7 +757,7 @@ function openContractModal(post) {
 
 function buildDetailHtml(post) {
     const acceptance = post.currentCharacterAcceptance;
-    const displayStatus = isBoardQuestExpired(post) ? 'expired' : (acceptance?.status || post.status);
+    const displayStatus = getBoardQuestDisplayStatus(post);
     const bodyHtml = renderMarkdown(post.body_markdown || post.summary || '');
 
     return `
