@@ -136,9 +136,14 @@
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <div class="profile-card rounded-xl p-6">
-                    <h3 class="text-xl font-bold mb-4 flex items-center">
-                        <i class="fas fa-id-card mr-2 text-yellow-500"></i>Character Details
-                    </h3>
+                    <div class="flex items-center justify-between gap-4 mb-4">
+                        <h3 class="text-xl font-bold flex items-center">
+                            <i class="fas fa-id-card mr-2 text-yellow-500"></i>Character Details
+                        </h3>
+                        <button id="editLocationBtn" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 rounded-lg font-semibold transition text-sm" style="display: none;">
+                            <i class="fas fa-map-marker-alt mr-2"></i>Edit Location
+                        </button>
+                    </div>
                     <div id="characterDetails" class="space-y-3">
                         <p class="text-gray-400 text-center py-8">Select a character to view details</p>
                     </div>
@@ -274,6 +279,62 @@
         </div>
     </div>
 
+    <div id="editLocationModal" class="hidden fixed inset-0 z-50 overflow-y-auto modal-backdrop flex items-center justify-center">
+        <div class="profile-card rounded-xl p-8 max-w-md w-full mx-4 relative">
+            <button id="closeEditLocationModal" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+                <i class="fas fa-times text-2xl"></i>
+            </button>
+
+            <h3 class="text-2xl font-bold mb-2 text-white">
+                <i class="fas fa-map-marker-alt mr-2"></i>Edit Home Location
+            </h3>
+            <p class="text-gray-400 text-sm mb-6">Update this character's current home. Existing contracts keep the location they were posted with.</p>
+
+            <form id="editLocationForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Region *</label>
+                    <select id="editLocationRegionSelect" required
+                        class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500">
+                        <option value="">Select Region</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Shard *</label>
+                    <select id="editLocationShardSelect" required
+                        class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500">
+                        <option value="">Select Region First</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Province *</label>
+                    <select id="editLocationProvinceSelect" required
+                        class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500">
+                        <option value="">Select Shard First</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Home Valley *</label>
+                    <select id="editLocationHomeValleySelect" required
+                        class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500">
+                        <option value="">Select Province First</option>
+                    </select>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="submit" class="flex-1 px-6 py-3 bg-amber-600 hover:bg-amber-700 rounded-lg font-semibold transition">
+                        <i class="fas fa-check mr-2"></i>Save Location
+                    </button>
+                    <button type="button" id="cancelEditLocation" class="px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold transition">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 <div id="createStallModal" class="hidden fixed inset-0 z-50 overflow-y-auto modal-backdrop flex items-center justify-center">
         <div class="profile-card rounded-xl p-8 max-w-md w-full mx-4 relative">
             <button id="closeCreateStallModal" class="absolute top-4 right-4 text-gray-400 hover:text-white">
@@ -339,7 +400,7 @@
     <script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script type="module" src="frontend/www/js/popoutAuth.js"></script>
-    <script type="module" src="frontend/www/js/profile_v2.js?v=20260413-contracts-card"></script>
+    <script type="module" src="frontend/www/js/profile_v2.js?v=20260413-location-edit"></script>
     <script type="module" src="frontend/www/js/main.js"></script>
 
 </body>

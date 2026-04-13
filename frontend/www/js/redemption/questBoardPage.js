@@ -61,7 +61,20 @@ function formatStatusLabel(status = '') {
 }
 
 function isBoardQuestFilled(post) {
+    if (post?.participation_mode === 'open') return false;
     return !post?.currentCharacterAcceptance && Number(post?.activeAcceptanceCount || 0) > 0;
+}
+
+function isOpenParticipation(post) {
+    return post?.participation_mode === 'open';
+}
+
+function getParticipationLabel(post) {
+    const count = Number(post?.activeAcceptanceCount || 0);
+    if (isOpenParticipation(post)) {
+        return count === 1 ? '1 participating' : `${count} participating`;
+    }
+    return count === 1 ? '1 accepted' : 'Single participant';
 }
 
 function getBoardQuestDisplayStatus(post) {
@@ -456,6 +469,7 @@ function renderFeed(posts = []) {
                 </div>
                 <div class="notice-card-meta">
                     <span class="notice-paper-pill">${escapeHtml(category)}</span>
+                    <span class="notice-paper-pill"><i class="fa-solid fa-users"></i>${escapeHtml(getParticipationLabel(post))}</span>
                     <span class="notice-paper-pill"><i class="fa-solid fa-location-dot"></i>${escapeHtml(buildPostLocation(post))}</span>
                 </div>
                 <div class="notice-card-footer">
@@ -772,6 +786,10 @@ function buildDetailHtml(post) {
                 <p class="board-char-meta" style="margin-top:0.65rem;">Posted by ${escapeHtml(post.author_character_name || 'Unknown')}</p>
                 <div class="board-modal-action-line">
                     ${renderActionButtons(post)}
+                    <div class="board-modal-expires">
+                        <span>Participation</span>
+                        <strong>${escapeHtml(getParticipationLabel(post))}</strong>
+                    </div>
                     <div class="board-modal-expires">
                         <span>Expires</span>
                         <strong>${escapeHtml(formatDateTime(post.expires_at))}</strong>

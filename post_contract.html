@@ -85,6 +85,36 @@
                         </div>
                     </div>
                     <div id="post-contract-character-card" class="post-contract-character-card"></div>
+                    <div class="mt-6">
+                        <h3 class="board-section-title" style="margin:0 0 0.35rem;"><i class="fa-solid fa-location-dot"></i>Posting Location</h3>
+                        <p class="board-muted-copy">Defaults to the selected character's current home. Changing it only affects this contract.</p>
+                        <div class="post-contract-grid post-contract-location-grid mt-4">
+                            <div class="board-field">
+                                <label class="board-label" for="contract-posting-region">Posting Region</label>
+                                <select id="contract-posting-region" class="board-select">
+                                    <option value="">Select Region</option>
+                                </select>
+                            </div>
+                            <div class="board-field">
+                                <label class="board-label" for="contract-posting-shard">Posting Shard</label>
+                                <select id="contract-posting-shard" class="board-select" disabled>
+                                    <option value="">Select Region First</option>
+                                </select>
+                            </div>
+                            <div class="board-field">
+                                <label class="board-label" for="contract-posting-province">Posting Province</label>
+                                <select id="contract-posting-province" class="board-select" disabled>
+                                    <option value="">Select Shard First</option>
+                                </select>
+                            </div>
+                            <div class="board-field">
+                                <label class="board-label" for="contract-posting-home-valley">Posting Home Valley</label>
+                                <select id="contract-posting-home-valley" class="board-select" disabled>
+                                    <option value="">Select Province First</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
                 </section>
 
                 <section class="post-contract-panel">
@@ -118,6 +148,14 @@
                                 <option value="submit_for_confirmation">Submit For Confirmation</option>
                             </select>
                             <p id="contract-proof-mode-help" class="post-contract-help"></p>
+                        </div>
+                        <div class="board-field">
+                            <label class="board-label" for="contract-participation-mode">Participation</label>
+                            <select id="contract-participation-mode" class="board-select" required>
+                                <option value="single">One accepted character</option>
+                                <option value="open">Open to multiple characters</option>
+                            </select>
+                            <p id="contract-participation-help" class="post-contract-help"></p>
                         </div>
                         <div class="board-field">
                             <label class="board-label" for="contract-expires-days">Expires In</label>
@@ -228,6 +266,6 @@
     <script type="module" src="frontend/www/js/popoutAuth.js"></script>
     <script type="module" src="frontend/www/js/redemption/auth.js"></script>
     <script type="module" src="frontend/www/js/main.js"></script>
-    <script type="module" src="frontend/www/js/redemption/postContractPage.js?v=20260413-single-acceptance"></script>
+    <script type="module" src="frontend/www/js/redemption/postContractPage.js?v=20260413-participation-mode"></script>
 </body>
 </html>

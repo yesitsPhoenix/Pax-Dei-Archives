@@ -804,6 +804,7 @@ body.quest-board-page.board-modal-open {
     color: rgba(255, 255, 255, 0.72);
     line-height: 1.35;
     flex-shrink: 0;
+    min-width: 7.5rem;
 }
 
 .board-modal-expires span {

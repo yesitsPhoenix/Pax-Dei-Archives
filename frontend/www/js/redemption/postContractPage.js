@@ -10,6 +10,11 @@ const PROOF_MODE_HELP = {
     submit_for_confirmation: 'The accepting character submits completion, then the poster confirms it. Best for deliveries, paid work, or contracts where you need to verify the result.',
 };
 
+const PARTICIPATION_HELP = {
+    single: 'The contract closes to new acceptances after one character accepts it.',
+    open: 'Multiple characters can accept this contract independently. Best for events, gatherings, and open invitations.',
+};
+
 function escapeHtml(value = '') {
     return String(value)
         .replace(/&/g, '&amp;')
@@ -61,48 +66,75 @@ function setSelectOptions(select, values = [], placeholder = 'Select...', select
     }
 }
 
-function populateDestinationRegions(selectedValue = '') {
-    const regions = uniqueSorted(getRegionRows().map((row) => row.region_name));
-    setSelectOptions(el.destinationRegion, regions, 'Select Region', selectedValue);
+function getLocationControls(kind) {
+    return kind === 'posting'
+        ? {
+            region: el.postingRegion,
+            shard: el.postingShard,
+            province: el.postingProvince,
+            homeValley: el.postingHomeValley,
+        }
+        : {
+            region: el.destinationRegion,
+            shard: el.destinationShard,
+            province: el.destinationProvince,
+            homeValley: el.destinationHomeValley,
+        };
 }
 
-function populateDestinationShards(selectedValue = '') {
-    const region = el.destinationRegion.value;
+function populateLocationRegions(kind, selectedValue = '') {
+    const controls = getLocationControls(kind);
+    const regions = uniqueSorted(getRegionRows().map((row) => row.region_name));
+    setSelectOptions(controls.region, regions, 'Select Region', selectedValue);
+}
+
+function populateLocationShards(kind, selectedValue = '') {
+    const controls = getLocationControls(kind);
+    const region = controls.region.value;
     const shards = uniqueSorted(getRegionRows()
         .filter((row) => row.region_name === region)
         .map((row) => row.shard));
-    setSelectOptions(el.destinationShard, shards, region ? 'Select Shard' : 'Select Region First', selectedValue);
+    setSelectOptions(controls.shard, shards, region ? 'Select Shard' : 'Select Region First', selectedValue);
 }
 
-function populateDestinationProvinces(selectedValue = '') {
-    const region = el.destinationRegion.value;
-    const shard = el.destinationShard.value;
+function populateLocationProvinces(kind, selectedValue = '') {
+    const controls = getLocationControls(kind);
+    const region = controls.region.value;
+    const shard = controls.shard.value;
     const provinces = uniqueSorted(getRegionRows()
         .filter((row) => row.region_name === region && row.shard === shard)
         .map((row) => row.province));
-    setSelectOptions(el.destinationProvince, provinces, shard ? 'Select Province' : 'Select Shard First', selectedValue);
+    setSelectOptions(controls.province, provinces, shard ? 'Select Province' : 'Select Shard First', selectedValue);
 }
 
-function populateDestinationHomeValleys(selectedValue = '') {
-    const region = el.destinationRegion.value;
-    const shard = el.destinationShard.value;
-    const province = el.destinationProvince.value;
+function populateLocationHomeValleys(kind, selectedValue = '') {
+    const controls = getLocationControls(kind);
+    const region = controls.region.value;
+    const shard = controls.shard.value;
+    const province = controls.province.value;
     const homeValleys = uniqueSorted(getRegionRows()
         .filter((row) => row.region_name === region && row.shard === shard && row.province === province)
         .map((row) => row.home_valley));
-    setSelectOptions(el.destinationHomeValley, homeValleys, province ? 'Select Home Valley' : 'Select Province First', selectedValue);
+    setSelectOptions(controls.homeValley, homeValleys, province ? 'Select Home Valley' : 'Select Province First', selectedValue);
 }
 
-function resetDestinationAfter(level) {
+function fillLocation(kind, location = {}) {
+    populateLocationRegions(kind, location.region || '');
+    populateLocationShards(kind, location.shard || '');
+    populateLocationProvinces(kind, location.province || '');
+    populateLocationHomeValleys(kind, location.homeValley || '');
+}
+
+function resetLocationAfter(kind, level) {
     if (level === 'region') {
-        populateDestinationShards();
-        populateDestinationProvinces();
-        populateDestinationHomeValleys();
+        populateLocationShards(kind);
+        populateLocationProvinces(kind);
+        populateLocationHomeValleys(kind);
     } else if (level === 'shard') {
-        populateDestinationProvinces();
-        populateDestinationHomeValleys();
+        populateLocationProvinces(kind);
+        populateLocationHomeValleys(kind);
     } else if (level === 'province') {
-        populateDestinationHomeValleys();
+        populateLocationHomeValleys(kind);
     }
 }
 
@@ -113,10 +145,9 @@ function fillLocationDefaults() {
     const province = character?.province || '';
     const homeValley = character?.home_valley || '';
 
-    populateDestinationRegions(region);
-    populateDestinationShards(shard);
-    populateDestinationProvinces(province);
-    populateDestinationHomeValleys(homeValley);
+    const location = { region, shard, province, homeValley };
+    fillLocation('posting', location);
+    fillLocation('destination', location);
 }
 
 function renderCharacterPanel() {
@@ -210,15 +241,29 @@ function bindCharacterSelect() {
     });
 }
 
-function bindDestinationLocation() {
-    el.destinationRegion.addEventListener('change', () => resetDestinationAfter('region'));
-    el.destinationShard.addEventListener('change', () => resetDestinationAfter('shard'));
-    el.destinationProvince.addEventListener('change', () => resetDestinationAfter('province'));
+function bindLocationControls(kind) {
+    const controls = getLocationControls(kind);
+    controls.region.addEventListener('change', () => resetLocationAfter(kind, 'region'));
+    controls.shard.addEventListener('change', () => resetLocationAfter(kind, 'shard'));
+    controls.province.addEventListener('change', () => resetLocationAfter(kind, 'province'));
 }
 
 function updateProofModeHelp() {
     if (!el.proofModeHelp) return;
     el.proofModeHelp.textContent = PROOF_MODE_HELP[el.proofMode.value] || '';
+}
+
+function updateParticipationHelp() {
+    if (!el.participationHelp) return;
+    el.participationHelp.textContent = PARTICIPATION_HELP[el.participationMode.value] || '';
+}
+
+function syncParticipationDefault() {
+    if (!el.participationMode || editingPost) return;
+    if (String(el.category.value || '').toLowerCase().includes('event')) {
+        el.participationMode.value = 'open';
+    }
+    updateParticipationHelp();
 }
 
 function getEditPostId() {
@@ -347,13 +392,14 @@ function buildPayload() {
         player_contract_category: el.category.value,
         post_type: 'contract',
         proof_mode: el.proofMode.value,
+        participation_mode: el.participationMode.value,
         capacity: 1,
         expires_at: buildExpiresAt(),
         visibility_scope: 'public',
-        posting_region: editingPost?.posting_region || getCharacterRegion(character) || null,
-        posting_shard: editingPost?.posting_shard || character.shard || null,
-        posting_province: editingPost?.posting_province || character.province || null,
-        posting_home_valley: editingPost?.posting_home_valley || character.home_valley || null,
+        posting_region: getValue('contract-posting-region') || getCharacterRegion(character) || null,
+        posting_shard: getValue('contract-posting-shard') || character.shard || null,
+        posting_province: getValue('contract-posting-province') || character.province || null,
+        posting_home_valley: getValue('contract-posting-home-valley') || character.home_valley || null,
         destination_region: getValue('contract-destination-region') || null,
         destination_shard: getValue('contract-destination-shard') || null,
         destination_province: getValue('contract-destination-province') || null,
@@ -375,21 +421,31 @@ function fillFormFromPost(post) {
     setFieldValue('contract-title', post.title);
     setFieldValue('contract-category', post.player_contract_category);
     setFieldValue('contract-proof-mode', post.proof_mode === 'external_proof_note' ? 'submit_for_confirmation' : post.proof_mode);
+    setFieldValue('contract-participation-mode', post.participation_mode || 'single');
     setFieldValue('contract-expires-days', getExpiresDaysValue(post.expires_at));
     setFieldValue('contract-summary', post.summary);
     setFieldValue('contract-body', post.body_markdown);
     setFieldValue('contract-reward', post.reward_note);
     setFieldValue('contract-contact', post.contact_note);
 
-    populateDestinationRegions(post.destination_region || '');
-    populateDestinationShards(post.destination_shard || '');
-    populateDestinationProvinces(post.destination_province || '');
-    populateDestinationHomeValleys(post.destination_home_valley || '');
+    fillLocation('posting', {
+        region: post.posting_region || '',
+        shard: post.posting_shard || '',
+        province: post.posting_province || '',
+        homeValley: post.posting_home_valley || '',
+    });
+    fillLocation('destination', {
+        region: post.destination_region || '',
+        shard: post.destination_shard || '',
+        province: post.destination_province || '',
+        homeValley: post.destination_home_valley || '',
+    });
 
     el.travelRequired.checked = post.travel_required === true;
     el.remoteDelivery.checked = post.remote_delivery_allowed === true;
     resetGoals(post.board_quest_goals || post.tracking_goals || []);
     updateProofModeHelp();
+    updateParticipationHelp();
 }
 
 async function loadEditPostIfNeeded() {
@@ -443,7 +499,13 @@ function cacheElements() {
     el.category = document.getElementById('contract-category');
     el.proofMode = document.getElementById('contract-proof-mode');
     el.proofModeHelp = document.getElementById('contract-proof-mode-help');
+    el.participationMode = document.getElementById('contract-participation-mode');
+    el.participationHelp = document.getElementById('contract-participation-help');
     el.expiresDays = document.getElementById('contract-expires-days');
+    el.postingRegion = document.getElementById('contract-posting-region');
+    el.postingShard = document.getElementById('contract-posting-shard');
+    el.postingProvince = document.getElementById('contract-posting-province');
+    el.postingHomeValley = document.getElementById('contract-posting-home-valley');
     el.destinationRegion = document.getElementById('contract-destination-region');
     el.destinationShard = document.getElementById('contract-destination-shard');
     el.destinationProvince = document.getElementById('contract-destination-province');
@@ -466,10 +528,14 @@ async function init() {
     resetGoals();
     bindCharacterSelect();
     bindGoals();
-    bindDestinationLocation();
+    bindLocationControls('posting');
+    bindLocationControls('destination');
     updateProofModeHelp();
+    syncParticipationDefault();
     await loadEditPostIfNeeded();
     el.proofMode.addEventListener('change', updateProofModeHelp);
+    el.participationMode.addEventListener('change', updateParticipationHelp);
+    el.category.addEventListener('change', syncParticipationDefault);
     el.form.addEventListener('submit', handleSubmit);
 }
 
