@@ -174,9 +174,28 @@ export function createTraderPageController({
     }
 
     function setupChartTimeframeListeners() {
-        document.getElementById('viewDaily')?.addEventListener('click', () => updateAllCharts('daily'));
-        document.getElementById('viewWeekly')?.addEventListener('click', () => updateAllCharts('weekly'));
-        document.getElementById('viewMonthly')?.addEventListener('click', () => updateAllCharts('monthly'));
+        const periodButtons = [
+            { id: 'viewDaily',   timeframe: 'daily' },
+            { id: 'viewWeekly',  timeframe: 'weekly' },
+            { id: 'viewMonthly', timeframe: 'monthly' },
+        ];
+
+        periodButtons.forEach(({ id, timeframe }) => {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            btn.addEventListener('click', () => {
+                periodButtons.forEach(({ id: otherId }) => {
+                    const other = document.getElementById(otherId);
+                    if (other) {
+                        other.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                        other.classList.add('bg-slate-700', 'hover:bg-slate-600');
+                    }
+                });
+                btn.classList.remove('bg-slate-700', 'hover:bg-slate-600');
+                btn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                updateAllCharts(timeframe);
+            });
+        });
     }
 
     function setupAvatarIdListeners() {

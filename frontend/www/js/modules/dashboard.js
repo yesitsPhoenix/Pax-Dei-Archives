@@ -190,7 +190,7 @@ export const renderDashboard = async (dashboardStats, characterData, allActivity
     // Populate ledger-specific cards if elements exist
     if (ledgerMostProfitableItemEl && allActivityData) {
         calculateAndRenderMostProfitableAndSold(allActivityData, formatCurrency);
-        calculateAndRenderAvgTimeOnMarket(allActivityData);
+        calculateAndRenderAvgTimeOnMarket();
         calculateAndRenderBestMarketStall(allActivityData, formatCurrency);
     }
     
@@ -255,51 +255,59 @@ function calculateAndRenderMostProfitableAndSold(allActivityData, formatCurrency
     }
 }
 
-function calculateAndRenderAvgTimeOnMarket(allActivityData) {
-    const salesData = allActivityData.filter(activity => activity.type === 'Sale');
-    
-    if (salesData.length === 0) {
-        if (ledgerAvgTimeOnMarketEl) ledgerAvgTimeOnMarketEl.textContent = '-';
-        if (ledgerTimeOnMarketUnitEl) ledgerTimeOnMarketUnitEl.textContent = 'No sales data';
-        return;
-    }
+async function calculateAndRenderAvgTimeOnMarket() {
+    try {
+        const { supabase } = await import('../supabaseClient.js');
+        const { currentCharacterId } = await import('./characters.js');
 
-    let totalTimeMs = 0;
-    let countWithDates = 0;
-    
-    salesData.forEach(sale => {
-        if (sale.listing_date && sale.date) {
-            const listingDate = new Date(sale.listing_date);
-            const saleDate = new Date(sale.date);
-            const timeOnMarket = saleDate - listingDate;
-            if (timeOnMarket > 0) {
-                totalTimeMs += timeOnMarket;
-                countWithDates++;
+        if (!currentCharacterId) {
+            if (ledgerAvgTimeOnMarketEl) ledgerAvgTimeOnMarketEl.textContent = '-';
+            if (ledgerTimeOnMarketUnitEl) ledgerTimeOnMarketUnitEl.textContent = '-';
+            return;
+        }
+
+        const { data: activeListings, error } = await supabase
+            .from('market_listings')
+            .select('listing_date')
+            .eq('character_id', currentCharacterId)
+            .is('is_fully_sold', false)
+            .is('is_cancelled', false);
+
+        if (error) {
+            console.error('[Dashboard] Error fetching active listings for avg time on market:', error);
+            if (ledgerAvgTimeOnMarketEl) ledgerAvgTimeOnMarketEl.textContent = '-';
+            if (ledgerTimeOnMarketUnitEl) ledgerTimeOnMarketUnitEl.textContent = 'Error';
+            return;
+        }
+
+        const listingsWithDates = (activeListings || []).filter(l => l.listing_date);
+
+        if (listingsWithDates.length === 0) {
+            if (ledgerAvgTimeOnMarketEl) ledgerAvgTimeOnMarketEl.textContent = '-';
+            if (ledgerTimeOnMarketUnitEl) ledgerTimeOnMarketUnitEl.textContent = 'No active listings';
+            return;
+        }
+
+        const now = new Date();
+        const totalTimeMs = listingsWithDates.reduce((sum, l) => sum + (now - new Date(l.listing_date)), 0);
+        const avgTimeMs = totalTimeMs / listingsWithDates.length;
+        const avgDays = Math.floor(avgTimeMs / (1000 * 60 * 60 * 24));
+        const avgHours = Math.floor((avgTimeMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+
+        if (ledgerAvgTimeOnMarketEl && ledgerTimeOnMarketUnitEl) {
+            if (avgDays > 0) {
+                ledgerAvgTimeOnMarketEl.textContent = avgDays;
+                ledgerTimeOnMarketUnitEl.textContent = avgDays === 1 ? 'day' : 'days';
+            } else if (avgHours > 0) {
+                ledgerAvgTimeOnMarketEl.textContent = avgHours;
+                ledgerTimeOnMarketUnitEl.textContent = avgHours === 1 ? 'hour' : 'hours';
+            } else {
+                ledgerAvgTimeOnMarketEl.textContent = '<1';
+                ledgerTimeOnMarketUnitEl.textContent = 'hour';
             }
         }
-    });
-    
-    if (countWithDates === 0) {
-        if (ledgerAvgTimeOnMarketEl) ledgerAvgTimeOnMarketEl.textContent = '-';
-        if (ledgerTimeOnMarketUnitEl) ledgerTimeOnMarketUnitEl.textContent = 'No listing dates available';
-        return;
-    }
-    
-    const avgTimeMs = totalTimeMs / countWithDates;
-    const avgDays = Math.floor(avgTimeMs / (1000 * 60 * 60 * 24));
-    const avgHours = Math.floor((avgTimeMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    
-    if (ledgerAvgTimeOnMarketEl && ledgerTimeOnMarketUnitEl) {
-        if (avgDays > 0) {
-            ledgerAvgTimeOnMarketEl.textContent = avgDays;
-            ledgerTimeOnMarketUnitEl.textContent = avgDays === 1 ? 'day' : 'days';
-        } else if (avgHours > 0) {
-            ledgerAvgTimeOnMarketEl.textContent = avgHours;
-            ledgerTimeOnMarketUnitEl.textContent = avgHours === 1 ? 'hour' : 'hours';
-        } else {
-            ledgerAvgTimeOnMarketEl.textContent = '<1';
-            ledgerTimeOnMarketUnitEl.textContent = 'hour';
-        }
+    } catch (err) {
+        console.error('[Dashboard] calculateAndRenderAvgTimeOnMarket error:', err);
     }
 }
 
