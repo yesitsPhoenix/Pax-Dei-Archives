@@ -99,6 +99,102 @@ async function populateCharacterRegionDropdowns() {
     });
 }
 
+async function ensureRegionCache() {
+    if (cachedRegions) return cachedRegions;
+
+    const { data, error } = await supabase
+        .from('regions')
+        .select('id, region_name, shard, province, home_valley')
+        .order('region_name', { ascending: true })
+        .order('shard', { ascending: true })
+        .order('province', { ascending: true })
+        .order('home_valley', { ascending: true });
+
+    if (error) throw error;
+    cachedRegions = data || [];
+    return cachedRegions;
+}
+
+function uniqueSorted(values = []) {
+    return [...new Set(values.filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b)));
+}
+
+function setLocationSelectOptions(select, values = [], placeholder = 'Select...', selectedValue = '') {
+    if (!select) return;
+
+    select.innerHTML = '';
+    const placeholderOption = document.createElement('option');
+    placeholderOption.value = '';
+    placeholderOption.textContent = placeholder;
+    select.appendChild(placeholderOption);
+
+    values.forEach((value) => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value === 'USA' ? 'NA' : value;
+        if (value === selectedValue) option.selected = true;
+        select.appendChild(option);
+    });
+
+    select.disabled = values.length === 0;
+}
+
+async function populateEditableLocationDropdowns(selected = {}) {
+    await ensureRegionCache();
+
+    const fillRegions = () => {
+        const regions = uniqueSorted(cachedRegions.map((row) => row.region_name));
+        setLocationSelectOptions(editLocationRegionSelect, regions, 'Select Region', selected.region || '');
+    };
+
+    const fillShards = (selectedValue = '') => {
+        const region = editLocationRegionSelect.value;
+        const shards = uniqueSorted(cachedRegions
+            .filter((row) => row.region_name === region)
+            .map((row) => row.shard));
+        setLocationSelectOptions(editLocationShardSelect, shards, region ? 'Select Shard' : 'Select Region First', selectedValue);
+    };
+
+    const fillProvinces = (selectedValue = '') => {
+        const region = editLocationRegionSelect.value;
+        const shard = editLocationShardSelect.value;
+        const provinces = uniqueSorted(cachedRegions
+            .filter((row) => row.region_name === region && row.shard === shard)
+            .map((row) => row.province));
+        setLocationSelectOptions(editLocationProvinceSelect, provinces, shard ? 'Select Province' : 'Select Shard First', selectedValue);
+    };
+
+    const fillHomeValleys = (selectedValue = '') => {
+        const region = editLocationRegionSelect.value;
+        const shard = editLocationShardSelect.value;
+        const province = editLocationProvinceSelect.value;
+        const rows = cachedRegions
+            .filter((row) => row.region_name === region && row.shard === shard && row.province === province);
+        setLocationSelectOptions(editLocationHomeValleySelect, rows.map((row) => row.home_valley), province ? 'Select Home Valley' : 'Select Province First', selectedValue);
+
+        rows.forEach((row) => {
+            const option = [...editLocationHomeValleySelect.options].find((item) => item.value === row.home_valley);
+            if (option) option.dataset.id = row.id;
+        });
+    };
+
+    editLocationRegionSelect.onchange = () => {
+        fillShards();
+        fillProvinces();
+        fillHomeValleys();
+    };
+    editLocationShardSelect.onchange = () => {
+        fillProvinces();
+        fillHomeValleys();
+    };
+    editLocationProvinceSelect.onchange = () => fillHomeValleys();
+
+    fillRegions();
+    fillShards(selected.shard || '');
+    fillProvinces(selected.province || '');
+    fillHomeValleys(selected.home_valley || '');
+}
+
 
 /**
  * Load heroic feats summary
@@ -206,12 +302,14 @@ const characterSelect = document.getElementById('characterSelect');
 const characterDetails = document.getElementById('characterDetails');
 const featsSummary = document.getElementById('featsSummary');
 const questSummary = document.getElementById('questSummary');
+const contractsSummary = document.getElementById('contractsSummary');
 const stallsContainer = document.getElementById('stallsContainer');
 
 // Buttons
 const createCharacterBtn = document.getElementById('createCharacterBtn');
 const deleteCharacterBtn = document.getElementById('deleteCharacterBtn');
 const createStallBtn = document.getElementById('createStallBtn');
+const editLocationBtn = document.getElementById('editLocationBtn');
 
 // Modals
 const createCharacterModal = document.getElementById('createCharacterModal');
@@ -223,6 +321,15 @@ const createStallModal = document.getElementById('createStallModal');
 const closeCreateStallModal = document.getElementById('closeCreateStallModal');
 const cancelCreateStall = document.getElementById('cancelCreateStall');
 const createStallForm = document.getElementById('createStallForm');
+
+const editLocationModal = document.getElementById('editLocationModal');
+const closeEditLocationModal = document.getElementById('closeEditLocationModal');
+const cancelEditLocation = document.getElementById('cancelEditLocation');
+const editLocationForm = document.getElementById('editLocationForm');
+const editLocationRegionSelect = document.getElementById('editLocationRegionSelect');
+const editLocationShardSelect = document.getElementById('editLocationShardSelect');
+const editLocationProvinceSelect = document.getElementById('editLocationProvinceSelect');
+const editLocationHomeValleySelect = document.getElementById('editLocationHomeValleySelect');
 
 // State
 let currentUserId = null;
@@ -369,9 +476,11 @@ async function loadCharacterData(characterId) {
         characterDetails.innerHTML = '<p class="text-gray-400 text-center py-8">Select a character to view details</p>';
         featsSummary.innerHTML = '<p class="text-gray-400 text-sm text-center py-4">Select a character</p>';
         questSummary.innerHTML = '<p class="text-gray-400 text-sm text-center py-4">Select a character</p>';
+        contractsSummary.innerHTML = '<p class="text-gray-400 text-sm text-center py-4">Select a character</p>';
         stallsContainer.innerHTML = '<p class="text-gray-400 text-center py-8">Select a character to view stalls</p>';
         deleteCharacterBtn.style.display = 'none';
         createStallBtn.style.display = 'none';
+        editLocationBtn.style.display = 'none';
         currentCharacterId = null;
         return;
     }
@@ -379,14 +488,16 @@ async function loadCharacterData(characterId) {
     currentCharacterId = characterId;
     deleteCharacterBtn.style.display = 'inline-block';
     createStallBtn.style.display = 'inline-block';
+    editLocationBtn.style.display = 'inline-block';
 
     // Set as active character in state manager
-    marketState.setActiveCharacter(characterId);
+    await marketState.setActiveCharacter(characterId);
 
     // Load all sections
     await loadCharacterDetails(characterId);
     await loadFeatsSummary(characterId);
     await loadQuestSummary(characterId);
+    await loadContractsSummary(characterId);
     await loadMarketStalls(characterId);
 }
 
@@ -579,6 +690,48 @@ async function loadQuestSummary(characterId) {
                 <p class="text-gray-400 text-sm mb-2">Coming Soon</p>
             </div>
         `;
+    }
+}
+
+/**
+ * Load player contract summary for character
+ */
+async function loadContractsSummary(characterId) {
+    try {
+        const { count: completedCount, error: completedError } = await supabase
+            .from('board_quest_acceptances')
+            .select('*', { count: 'exact', head: true })
+            .eq('character_id', characterId)
+            .eq('status', 'completed');
+
+        if (completedError) throw completedError;
+
+        const { count: activeCount, error: activeError } = await supabase
+            .from('board_quest_acceptances')
+            .select('*', { count: 'exact', head: true })
+            .eq('character_id', characterId)
+            .in('status', ['accepted', 'in_progress', 'awaiting_confirmation']);
+
+        if (activeError) throw activeError;
+
+        const completed = completedCount || 0;
+        const active = activeCount || 0;
+
+        contractsSummary.innerHTML = `
+            <div class="text-center py-4">
+                <div class="text-3xl font-bold text-white mb-1">${completed}</div>
+                <p class="text-gray-400 text-sm">Completed</p>
+                <div class="mt-4 flex items-center justify-center gap-2 text-sm">
+                    <span class="px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-300">
+                        ${active} active
+                    </span>
+                </div>
+            </div>
+        `;
+
+    } catch (error) {
+        console.error('Error loading contracts:', error);
+        contractsSummary.innerHTML = '<p class="text-red-400 text-center py-4">Failed to load contracts</p>';
     }
 }
 
@@ -806,6 +959,79 @@ async function handleDeleteCharacter() {
     } catch (error) {
         console.error('Error deleting character:', error);
         await showCustomModal('Error', `Failed to delete character: ${error.message}`, [{ text: 'OK', value: true }]);
+    }
+}
+
+async function openEditLocation() {
+    if (!currentCharacterId) {
+        await showCustomModal('Select Character', 'Please select a character before editing location.', [{ text: 'OK', value: true }]);
+        return;
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('characters')
+            .select('region, shard, province, home_valley, region_entry_id')
+            .eq('character_id', currentCharacterId)
+            .eq('user_id', currentUserId)
+            .single();
+
+        if (error) throw error;
+
+        openModal(editLocationModal);
+        await populateEditableLocationDropdowns(data || {});
+    } catch (error) {
+        console.error('Error opening location editor:', error);
+        await showCustomModal('Error', `Failed to load character location: ${error.message}`, [{ text: 'OK', value: true }]);
+    }
+}
+
+async function handleEditLocation(e) {
+    e.preventDefault();
+
+    if (!currentCharacterId) return;
+
+    const selectedValley = editLocationHomeValleySelect.options[editLocationHomeValleySelect.selectedIndex];
+    const payload = {
+        region: editLocationRegionSelect.value,
+        shard: editLocationShardSelect.value,
+        province: editLocationProvinceSelect.value,
+        home_valley: editLocationHomeValleySelect.value,
+        region_entry_id: selectedValley?.dataset.id || null,
+    };
+
+    if (!payload.region || !payload.shard || !payload.province || !payload.home_valley) {
+        await showCustomModal('Validation Error', 'Please select a complete home location.', [{ text: 'OK', value: true }]);
+        return;
+    }
+
+    try {
+        const { error } = await supabase
+            .from('characters')
+            .update(payload)
+            .eq('character_id', currentCharacterId)
+            .eq('user_id', currentUserId);
+
+        if (error) throw error;
+
+        const cachedCharacter = marketState.cache.characters.find((character) => character.character_id === currentCharacterId);
+        if (cachedCharacter) Object.assign(cachedCharacter, payload);
+        if (marketState.cache.characterData[currentCharacterId]?.character) {
+            Object.assign(marketState.cache.characterData[currentCharacterId].character, payload);
+        }
+        if (marketState.cache.activeCharacter?.character_id === currentCharacterId) {
+            Object.assign(marketState.cache.activeCharacter, payload);
+        }
+        await marketState.setActiveCharacter(currentCharacterId);
+        await marketState.refreshCharacterData();
+
+        await loadCharacterDetails(currentCharacterId);
+        await loadMarketStalls(currentCharacterId);
+        closeModal(editLocationModal);
+        await showCustomModal('Location Updated', 'Character home location updated.', [{ text: 'OK', value: true }]);
+    } catch (error) {
+        console.error('Error updating character location:', error);
+        await showCustomModal('Error', `Failed to update location: ${error.message}`, [{ text: 'OK', value: true }]);
     }
 }
 
@@ -1058,9 +1284,9 @@ document.addEventListener('DOMContentLoaded', () => {
     init();
 
     // Character selection
-    characterSelect.addEventListener('change', (e) => {
+    characterSelect.addEventListener('change', async (e) => {
         const characterId = e.target.value || null;
-        loadCharacterData(characterId);
+        await loadCharacterData(characterId);
     });
 
     // Create character - populate regions on open
@@ -1075,6 +1301,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Delete character - FIX: Use arrow function to avoid passing event object
     deleteCharacterBtn.addEventListener('click', () => handleDeleteCharacter());
+
+    // Edit character home location
+    editLocationBtn.addEventListener('click', () => openEditLocation());
+    closeEditLocationModal.addEventListener('click', () => closeModal(editLocationModal));
+    cancelEditLocation.addEventListener('click', () => closeModal(editLocationModal));
+    editLocationForm.addEventListener('submit', handleEditLocation);
 
     // Create stall - populate dropdowns on open
     createStallBtn.addEventListener('click', async () => {

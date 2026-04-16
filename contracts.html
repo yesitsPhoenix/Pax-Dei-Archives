@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta property="og:title" content="Pax Dei Archives - Contracts">
+    <meta property="og:description" content="Pinned requests, settlement contracts, hunts, and trade work gathered into a public board for the Archives.">
+    <meta property="og:image" content="https://yesitsphoenix.github.io/Pax-Dei-Archives/frontend/www/assets/banner.png">
+    <meta property="og:url" content="https://yesitsphoenix.github.io/Pax-Dei-Archives/contracts.html">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Pax Dei Archives - Contracts">
+    <meta name="twitter:description" content="Pinned requests, settlement contracts, hunts, and trade work gathered into a public board for the Archives.">
+    <title>Pax Dei Archives - Contracts</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="frontend/www/css/sidebar.css">
+    <link rel="stylesheet" href="frontend/www/css/quest_board.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        .board-filters-horizontal {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            align-items: flex-end;
+        }
+        
+        /* Unified row container */
+        .board-controls-row {
+            display: flex;
+            gap: 2rem;
+            align-items: flex-start;
+        }
+
+        .board-char-column {
+            flex: 0 0 240px;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            padding-right: 2rem;
+        }
+
+        .board-filter-column {
+            flex: 1;
+        }
+
+        /* Responsive stack */
+        @media (max-width: 1024px) {
+            .board-controls-row {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+            .board-char-column {
+                border-right: none;
+                padding-right: 0;
+                width: 100%;
+                flex: none;
+            }
+        }
+    </style>
+</head>
+<body class="quest-board-page text-white">
+    <div id="header-placeholder"></div>
+
+    <aside id="sidebar" class="bg-[#1c1c1c] border-r-4 border-amber-300 shadow-lg px-3 py-4 cursor-pointer fixed z-50 top-[220px] collapsed overflow-hidden">
+        <ul class="space-y-2 font-medium">
+            <li>
+                <a href="quests.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                    <i class="fas fa-scroll w-5 h-5 text-gray-400"></i>
+                    <span class="ml-3 sidebar-text"> Quest Log</span>
+                </a>
+            </li>
+            <li>
+                <a href="contracts.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900 active">
+                    <i class="fas fa-thumbtack fa-fw w-5 h-5 text-center text-gray-400"></i>
+                    <span class="ml-3 sidebar-text"> Contracts</span>
+                </a>
+            </li>
+            <li>
+                <a href="chronicles.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                    <i class="fas fa-trophy w-5 h-5 text-gray-400"></i>
+                    <span class="ml-3 sidebar-text"> Chronicles & Feats</span>
+                </a>
+            </li>
+        </ul>
+    </aside>
+
+    <div id="traderLoginContainer" class="hidden animate-fade-in">
+        <div class="max-w-md mx-auto bg-gradient-to-br from-slate-800 to-slate-900 p-8 rounded-2xl shadow-2xl border border-amber-400/20">
+            <div class="text-center">
+                <i class="fas fa-lock text-amber-400 text-6xl mb-4"></i>
+                <p class="text-white text-lg mb-6">Please log in to view Contracts.</p>
+                <button id="traderDiscordLoginButton" class="w-full bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-3">
+                    <i class="fab fa-discord text-xl"></i>
+                    <span>Login with Discord</span>
+                </button>
+                <p id="traderLoginError" class="text-red-400 text-md mt-4 hidden"></p>
+            </div>
+        </div>
+    </div>
+
+    <main id="contracts-main-content" style="display: none;">
+        <h1 class="text-xl font-semibold mt-4 mb-2 text-white text-center">Contracts</h1>
+        <div class="h-1 w-24 bg-[#FFD700] mx-auto rounded-full mb-4"></div>
+
+        <p class="max-w-6xl mx-auto text-center text-gray-400 italic text-md mb-6 px-6">
+            "Accept contracts left by fellow travelers, settlements, traders, and hunters. Accepted work follows your active character in the Archives."
+        </p>
+
+        <div class="container mx-auto px-4 max-w-8xl">
+            <section class="board-summary-banner mb-6">
+                <div class="board-banner-row">
+                    <div class="board-banner-icon">
+                        <img src="https://d3tyjtqxpxwenc.cloudfront.net/uRpNp6/Pax_Dei_Monogram_4k_light_b1efe6e9f1.png"
+                             alt="Pax Dei Logo"
+                             class="w-12 h-12 object-contain opacity-80">
+                    </div>
+                    <div class="board-banner-copy">
+                        <div class="board-banner-title-row">
+                            <h2 class="board-banner-title" id="board-banner-character-name">Contracts</h2>
+                            <span class="board-banner-badge">Active</span>
+                        </div>
+                        <p class="board-banner-subtitle" id="board-banner-character-subtitle">Contract Board</p>
+                    </div>
+                    <div class="board-banner-stats">
+                        <div class="board-banner-count-heading">Contracts</div>
+                        <div class="board-banner-count-pair">
+                            <span id="board-hero-open-count" class="board-banner-stat-primary">0</span>
+                            <span class="board-banner-count-label">open</span>
+                        </div>
+                        <div class="board-banner-count-pair">
+                            <span id="board-hero-accepted-count" class="board-banner-stat-primary">0</span>
+                            <span class="board-banner-count-label">accepted</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="board-controls-panel mb-6">
+                <div class="board-controls-head">
+                    <div>
+                        <h2 class="board-section-title" style="margin-top:0;"><i class="fa-solid fa-filter"></i>Filters</h2>
+                        <p class="board-filter-subtitle">Narrow the board by location, family, status, and proof requirements.</p>
+                    </div>
+                    <div class="board-character-switcher hidden" id="board-character-select-wrap">
+                        <label class="board-label board-character-switch-label" for="board-character-select">Switch Character:</label>
+                        <select id="board-character-select" class="board-select"></select>
+                    </div>
+                    <div id="board-character-card" class="board-character-card-hidden"></div>
+                </div>
+
+                <div class="board-filter-column">
+                    <div class="board-filters-horizontal board-filters-primary">
+                        <div class="board-field">
+                            <label class="board-label" for="board-province">Province</label>
+                            <select id="board-province" class="board-select">
+                                <option value="">All Provinces</option>
+                            </select>
+                        </div>
+                        <div class="board-field">
+                            <label class="board-label" for="board-home-valley">Home Valley</label>
+                            <select id="board-home-valley" class="board-select">
+                                <option value="">All Home Valleys</option>
+                            </select>
+                        </div>
+                        <div class="board-field board-field-search">
+                            <label class="board-label" for="board-search">Search</label>
+                            <input id="board-search" class="board-input" type="text" placeholder="Settlements, hunts, deliveries...">
+                        </div>
+                    </div>
+                    <div class="board-filters-horizontal board-filters-secondary">
+                        <div class="board-field">
+                            <label class="board-label" for="board-status">Status</label>
+                            <select id="board-status" class="board-select">
+                                <option value="active">Active Contracts</option>
+                                <option value="all">All Contracts</option>
+                                <option value="fulfilled">Fulfilled</option>
+                                <option value="expired">Expired</option>
+                                <option value="cancelled">Cancelled</option>
+                                <option value="archived">Archived</option>
+                            </select>
+                        </div>
+                        <div class="board-field">
+                            <label class="board-label" for="board-category">Contract Family</label>
+                            <select id="board-category" class="board-select">
+                                <option value="">All Contract Families</option>
+                            </select>
+                        </div>
+                        <div class="board-field">
+                            <label class="board-label" for="board-proof-mode">Proof Mode</label>
+                            <select id="board-proof-mode" class="board-select">
+                                <option value="">All Proof Modes</option>
+                                <option value="self_complete">Self Complete</option>
+                                <option value="submit_for_confirmation">Submit For Confirmation</option>
+                            </select>
+                        </div>
+                        <div class="board-field board-filter-check-field">
+                            <label class="board-chip board-filter-check">
+                                <input id="board-include-remote" type="checkbox">
+                                Include drop-off contracts
+                            </label>
+                        </div>
+                        <div class="board-field board-filter-action-field">
+                            <button type="button" id="board-clear-filters" class="board-btn board-btn-quiet">
+                                <i class="fa-solid fa-filter-circle-xmark"></i>Remove Filters
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <select id="board-post-type" class="hidden" aria-hidden="true" tabindex="-1">
+                    <option value="">All Contract Types</option>
+                </select>
+            </section>
+
+            <section class="board-feed-frame">
+                <div class="board-feed-toolbar">
+                    <div>
+                        <h2 class="board-section-title" style="margin:0;" id="board-feed-title"><i class="fa-solid fa-thumbtack"></i>Available Contracts</h2>
+                        <div class="board-feed-count" id="board-feed-count">0 notices on the board</div>
+                    </div>
+                    <div class="board-feed-actions">
+                        <div class="board-tab-row" role="tablist" aria-label="Quest board notice views">
+                            <button type="button" class="board-tab is-active" id="board-tab-available" data-board-tab="available" role="tab" aria-selected="true">Available</button>
+                            <button type="button" class="board-tab" id="board-tab-accepted" data-board-tab="accepted" role="tab" aria-selected="false">Accepted</button>
+                            <button type="button" class="board-tab" id="board-tab-posted" data-board-tab="posted" role="tab" aria-selected="false">Posted</button>
+                            <button type="button" class="board-tab" id="board-tab-completed" data-board-tab="completed" role="tab" aria-selected="false">Completed</button>
+                        </div>
+                        <a href="post_contract.html" class="board-btn board-btn-primary board-post-link">
+                            <i class="fa-solid fa-square-plus"></i>Post Contract
+                        </a>
+                    </div>
+                </div>
+                <div class="board-grid" id="board-feed-grid"></div>
+                <div class="board-pagination" id="board-pagination"></div>
+            </section>
+        </div>
+    </main>
+
+    <div id="footer-placeholder"></div>
+
+    <div id="floating-avatar-container">
+        <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" class="floating-avatar js-floating-avatar">
+    </div>
+
+    <div id="auth-modal">
+        <div class="modal-content-wrapper" id="modal-content-wrapper"></div>
+    </div>
+
+    <div id="board-contract-modal" class="board-contract-modal" aria-hidden="true">
+        <div class="board-contract-modal-card" role="dialog" aria-modal="true" aria-labelledby="board-contract-modal-title">
+            <button type="button" class="board-contract-modal-close" id="board-contract-modal-close" aria-label="Close contract details">&times;</button>
+            <div id="board-contract-modal-body"></div>
+        </div>
+    </div>
+
+    <div id="board-action-modal" class="board-action-modal" aria-hidden="true">
+        <form id="board-action-modal-form" class="board-action-modal-card" role="dialog" aria-modal="true" aria-labelledby="board-action-modal-title">
+            <button type="button" class="board-action-modal-close" id="board-action-modal-close" aria-label="Close action modal">&times;</button>
+            <div class="board-action-modal-head">
+                <h3 id="board-action-modal-title">Contract Action</h3>
+                <p id="board-action-modal-copy"></p>
+            </div>
+            <div id="board-action-modal-fields" class="board-action-modal-fields"></div>
+            <div class="board-action-modal-footer">
+                <button type="button" class="board-btn" id="board-action-modal-cancel">Cancel</button>
+                <button type="submit" class="board-btn board-btn-primary" id="board-action-modal-submit">Submit</button>
+            </div>
+        </form>
+    </div>
+
+    <div id="board-toast-wrap" class="board-toast-wrap"></div>
+
+    <script type="module">
+        import { setupAdminAuthListener } from './frontend/www/js/admin/adminManager.js';
+        setupAdminAuthListener();
+    </script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script type="module" src="frontend/www/js/small_sidebar.js"></script>
+    <script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
+    <script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
+    <script type="module" src="frontend/www/js/popoutAuth.js"></script>
+    <script type="module" src="frontend/www/js/redemption/auth.js"></script>
+    <script type="module" src="frontend/www/js/main.js"></script>
+    <script type="module" src="frontend/www/js/redemption/questBoardPage.js?v=20260413-participation-mode"></script>
+</body>
+</html>

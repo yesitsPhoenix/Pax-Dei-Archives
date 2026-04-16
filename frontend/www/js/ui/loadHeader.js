@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const headerPlaceholder = document.getElementById('header-placeholder');
     if (!headerPlaceholder) return;
 
-    const url = 'frontend/www/templates/header_template.html';
+    const url = 'frontend/www/templates/header_template.html?v=20260413-contracts-nav';
 
     fetch(url)
         .then(response => {

@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta property="og:title" content="Pax Dei Archives - Post Contract">
+    <meta property="og:description" content="Post a player contract for fellow travelers in the Archives.">
+    <meta property="og:image" content="https://yesitsphoenix.github.io/Pax-Dei-Archives/frontend/www/assets/banner.png">
+    <meta property="og:url" content="https://yesitsphoenix.github.io/Pax-Dei-Archives/post_contract.html">
+    <meta property="og:type" content="website">
+    <title>Pax Dei Archives - Post Contract</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="frontend/www/css/sidebar.css">
+    <link rel="stylesheet" href="frontend/www/css/quest_board.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body class="quest-board-page text-white">
+    <div id="header-placeholder"></div>
+
+    <aside id="sidebar" class="bg-[#1c1c1c] border-r-4 border-amber-300 shadow-lg px-3 py-4 cursor-pointer fixed z-50 top-[220px] collapsed overflow-hidden">
+        <ul class="space-y-2 font-medium">
+            <li>
+                <a href="quests.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                    <i class="fas fa-scroll w-5 h-5 text-gray-400"></i>
+                    <span class="ml-3 sidebar-text"> Quest Log</span>
+                </a>
+            </li>
+            <li>
+                <a href="contracts.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                    <i class="fas fa-thumbtack fa-fw w-5 h-5 text-center text-gray-400"></i>
+                    <span class="ml-3 sidebar-text"> Contracts</span>
+                </a>
+            </li>
+            <li>
+                <a href="post_contract.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900 active">
+                    <i class="fas fa-square-plus fa-fw w-5 h-5 text-center text-gray-400"></i>
+                    <span class="ml-3 sidebar-text"> Post Contract</span>
+                </a>
+            </li>
+            <li>
+                <a href="chronicles.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+                    <i class="fas fa-trophy w-5 h-5 text-gray-400"></i>
+                    <span class="ml-3 sidebar-text"> Chronicles & Feats</span>
+                </a>
+            </li>
+        </ul>
+    </aside>
+
+    <div id="traderLoginContainer" class="hidden animate-fade-in">
+        <div class="max-w-md mx-auto bg-gradient-to-br from-slate-800 to-slate-900 p-8 rounded-2xl shadow-2xl border border-amber-400/20">
+            <div class="text-center">
+                <i class="fas fa-lock text-amber-400 text-6xl mb-4"></i>
+                <p class="text-white text-lg mb-6">Please log in to post Contracts.</p>
+                <button id="traderDiscordLoginButton" class="w-full bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-3">
+                    <i class="fab fa-discord text-xl"></i>
+                    <span>Login with Discord</span>
+                </button>
+                <p id="traderLoginError" class="text-red-400 text-md mt-4 hidden"></p>
+            </div>
+        </div>
+    </div>
+
+    <main id="post-contract-main-content" style="display: none;">
+        <h1 class="text-xl font-semibold mt-4 mb-2 text-white text-center">Post Contract</h1>
+        <div class="h-1 w-24 bg-[#FFD700] mx-auto rounded-full mb-4"></div>
+
+        <p class="max-w-6xl mx-auto text-center text-gray-400 italic text-md mb-6 px-6">
+            "Leave clear work for the right traveler. The better the notice, the easier it is for someone to answer."
+        </p>
+
+        <div class="container mx-auto px-4 max-w-5xl pb-16">
+            <form id="post-contract-form" class="post-contract-shell">
+                <section class="post-contract-panel">
+                    <div class="post-contract-character-head">
+                        <div>
+                            <h2 class="board-section-title" style="margin:0;"><i class="fa-solid fa-user-shield"></i>Posting Character</h2>
+                            <p class="board-muted-copy">Contracts are posted from the selected character and their current home location.</p>
+                        </div>
+                        <div class="board-character-switcher post-contract-character-switcher" id="post-contract-character-select-wrap">
+                            <label class="board-label board-character-switch-label" for="post-contract-character-select">Switch Character:</label>
+                            <select id="post-contract-character-select" class="board-select"></select>
+                        </div>
+                    </div>
+                    <div id="post-contract-character-card" class="post-contract-character-card"></div>
+                    <div class="mt-6">
+                        <h3 class="board-section-title" style="margin:0 0 0.35rem;"><i class="fa-solid fa-location-dot"></i>Posting Location</h3>
+                        <p class="board-muted-copy">Defaults to the selected character's current home. Changing it only affects this contract.</p>
+                        <div class="post-contract-grid post-contract-location-grid mt-4">
+                            <div class="board-field">
+                                <label class="board-label" for="contract-posting-region">Posting Region</label>
+                                <select id="contract-posting-region" class="board-select">
+                                    <option value="">Select Region</option>
+                                </select>
+                            </div>
+                            <div class="board-field">
+                                <label class="board-label" for="contract-posting-shard">Posting Shard</label>
+                                <select id="contract-posting-shard" class="board-select" disabled>
+                                    <option value="">Select Region First</option>
+                                </select>
+                            </div>
+                            <div class="board-field">
+                                <label class="board-label" for="contract-posting-province">Posting Province</label>
+                                <select id="contract-posting-province" class="board-select" disabled>
+                                    <option value="">Select Shard First</option>
+                                </select>
+                            </div>
+                            <div class="board-field">
+                                <label class="board-label" for="contract-posting-home-valley">Posting Home Valley</label>
+                                <select id="contract-posting-home-valley" class="board-select" disabled>
+                                    <option value="">Select Province First</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="post-contract-panel">
+                    <div class="post-contract-panel-head">
+                        <div>
+                            <h2 class="board-section-title" style="margin:0;"><i class="fa-solid fa-feather-pointed"></i>Contract Details</h2>
+                            <p class="board-muted-copy">These fields become the contract card and detail modal.</p>
+                        </div>
+                        <a href="contracts.html" class="board-btn"><i class="fa-solid fa-arrow-left"></i>Back To Contracts</a>
+                    </div>
+
+                    <div class="post-contract-grid">
+                        <div class="board-field post-contract-span-2">
+                            <label class="board-label" for="contract-title">Title</label>
+                            <input id="contract-title" class="board-input" maxlength="120" required placeholder="Escort Needed For Iron Cave Run">
+                        </div>
+                        <div class="board-field">
+                            <label class="board-label" for="contract-category">Contract Family</label>
+                            <select id="contract-category" class="board-select" required>
+                                <option value="Player Contracts: Settlement Work">Settlement Work</option>
+                                <option value="Player Contracts: Requests & Help">Requests & Help</option>
+                                <option value="Player Contracts: Trade & Delivery">Trade & Delivery</option>
+                                <option value="Player Contracts: Hunts & Expeditions">Hunts & Expeditions</option>
+                                <option value="Player Contracts: Events & Gatherings">Events & Gatherings</option>
+                            </select>
+                        </div>
+                        <div class="board-field">
+                            <label class="board-label" for="contract-proof-mode">Proof Mode</label>
+                            <select id="contract-proof-mode" class="board-select" required>
+                                <option value="self_complete">Self Complete</option>
+                                <option value="submit_for_confirmation">Submit For Confirmation</option>
+                            </select>
+                            <p id="contract-proof-mode-help" class="post-contract-help"></p>
+                        </div>
+                        <div class="board-field">
+                            <label class="board-label" for="contract-participation-mode">Participation</label>
+                            <select id="contract-participation-mode" class="board-select" required>
+                                <option value="single">One accepted character</option>
+                                <option value="open">Open to multiple characters</option>
+                            </select>
+                            <p id="contract-participation-help" class="post-contract-help"></p>
+                        </div>
+                        <div class="board-field">
+                            <label class="board-label" for="contract-expires-days">Expires In</label>
+                            <select id="contract-expires-days" class="board-select">
+                                <option value="3">3 days</option>
+                                <option value="7" selected>7 days</option>
+                                <option value="14">14 days</option>
+                                <option value="30">30 days</option>
+                                <option value="">No expiry</option>
+                            </select>
+                        </div>
+                        <div class="board-field post-contract-span-2">
+                            <label class="board-label" for="contract-summary">Summary</label>
+                            <input id="contract-summary" class="board-input" maxlength="180" required placeholder="Short card summary for the board.">
+                        </div>
+                        <div class="board-field post-contract-span-2">
+                            <label class="board-label" for="contract-body">Details</label>
+                            <textarea id="contract-body" class="board-input post-contract-textarea" required placeholder="Describe the route, items, timing, expectations, or proof needed."></textarea>
+                        </div>
+                        <div class="board-field post-contract-span-2">
+                            <label class="board-label" for="contract-reward">Reward</label>
+                            <input id="contract-reward" class="board-input" maxlength="180" placeholder="Coin on delivery, supplied materials, public thanks...">
+                        </div>
+                    </div>
+                </section>
+
+                <section class="post-contract-panel">
+                    <h2 class="board-section-title"><i class="fa-solid fa-road"></i>Location & Contact</h2>
+                    <div class="post-contract-grid post-contract-location-grid">
+                        <div class="board-field">
+                            <label class="board-label" for="contract-destination-region">Destination Region</label>
+                            <select id="contract-destination-region" class="board-select">
+                                <option value="">Select Region</option>
+                            </select>
+                        </div>
+                        <div class="board-field">
+                            <label class="board-label" for="contract-destination-shard">Destination Shard</label>
+                            <select id="contract-destination-shard" class="board-select" disabled>
+                                <option value="">Select Region First</option>
+                            </select>
+                        </div>
+                        <div class="board-field">
+                            <label class="board-label" for="contract-destination-province">Destination Province</label>
+                            <select id="contract-destination-province" class="board-select" disabled>
+                                <option value="">Select Shard First</option>
+                            </select>
+                        </div>
+                        <div class="board-field">
+                            <label class="board-label" for="contract-destination-home-valley">Destination Home Valley</label>
+                            <select id="contract-destination-home-valley" class="board-select" disabled>
+                                <option value="">Select Province First</option>
+                            </select>
+                        </div>
+                        <label class="board-chip post-contract-check">
+                            <input id="contract-travel-required" type="checkbox" style="accent-color:#d69a3f;">
+                            Travel required
+                        </label>
+                        <label class="board-chip post-contract-check">
+                            <input id="contract-remote-delivery" type="checkbox" style="accent-color:#d69a3f;">
+                            Drop-off allowed
+                        </label>
+                        <div class="board-field post-contract-span-2">
+                            <label class="board-label" for="contract-contact">Contact Note</label>
+                            <input id="contract-contact" class="board-input" maxlength="180" placeholder="Who to ask for, where to meet, proof details...">
+                        </div>
+                    </div>
+                </section>
+
+                <section class="post-contract-panel">
+                    <div class="post-contract-panel-head">
+                        <div>
+                            <h2 class="board-section-title" style="margin:0;"><i class="fa-solid fa-list-check"></i>Goals</h2>
+                            <p class="board-muted-copy">Add one or more checklist/counter goals for tracking.</p>
+                        </div>
+                        <button type="button" id="add-contract-goal" class="board-btn"><i class="fa-solid fa-plus"></i>Add Goal</button>
+                    </div>
+                    <div id="contract-goals-list" class="post-contract-goals"></div>
+                </section>
+
+                <div class="post-contract-submit-row">
+                    <p id="post-contract-error" class="post-contract-error hidden"></p>
+                    <button type="submit" id="post-contract-submit" class="board-btn board-btn-primary">
+                        <i class="fa-solid fa-thumbtack"></i>Post Contract
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <div id="footer-placeholder"></div>
+
+    <div id="floating-avatar-container">
+        <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" class="floating-avatar js-floating-avatar">
+    </div>
+
+    <div id="auth-modal">
+        <div class="modal-content-wrapper" id="modal-content-wrapper"></div>
+    </div>
+
+    <script type="module">
+        import { setupAdminAuthListener } from './frontend/www/js/admin/adminManager.js';
+        setupAdminAuthListener();
+    </script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script type="module" src="frontend/www/js/small_sidebar.js"></script>
+    <script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
+    <script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
+    <script type="module" src="frontend/www/js/popoutAuth.js"></script>
+    <script type="module" src="frontend/www/js/redemption/auth.js"></script>
+    <script type="module" src="frontend/www/js/main.js"></script>
+    <script type="module" src="frontend/www/js/redemption/postContractPage.js?v=20260413-participation-mode"></script>
+</body>
+</html>

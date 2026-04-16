@@ -98,6 +98,34 @@ function buildHistoricalPricingNote({ stackPrice, sellerCount, historicalStats }
     return `History context: ${historicalStats.count} sales, median ${historicalStats.median.toLocaleString(undefined, { maximumFractionDigits: 2 })}g, range ${historicalStats.min.toLocaleString(undefined, { maximumFractionDigits: 2 })}g-${historicalStats.max.toLocaleString(undefined, { maximumFractionDigits: 2 })}g`;
 }
 
+function getListingUnitPrice(listing) {
+    const price = Number(listing?.price) || 0;
+    const quantity = Math.max(Number(listing?.quantity) || 1, 1);
+    return price / quantity;
+}
+
+function getStackAwareMarketLow({ exactStackListings, marketVariantListings, mktData, stackSize, stackPrice, avatarHash }) {
+    if (exactStackListings.length > 0) {
+        return Math.min(...exactStackListings.map(marketListing => Number(marketListing.price) || 0));
+    }
+
+    const externalListings = avatarHash
+        ? marketVariantListings.filter(marketListing => marketListing.avatar_hash !== avatarHash)
+        : marketVariantListings;
+
+    if (externalListings.length > 0) {
+        return Math.min(...externalListings.map(getListingUnitPrice)) * stackSize;
+    }
+
+    if (marketVariantListings.length > 0) {
+        return stackPrice;
+    }
+
+    return (mktData?.marketLow ?? null) !== null
+        ? (mktData.marketLow * stackSize)
+        : null;
+}
+
 function getValleyBucketRank(bucket) {
     if (bucket === 'leading') return 0;
     if (bucket === 'competitive') return 1;
@@ -757,6 +785,7 @@ async function buildValleyAnalysisFromSupabase() {
         const competitive = [];
         const undercut = [];
         let totalOwnListings = 0;
+        const avatarHash = getSavedAvatarHash();
 
         for (const own of Object.values(ownByVariant)) {
             totalOwnListings += own.count;
@@ -788,11 +817,14 @@ async function buildValleyAnalysisFromSupabase() {
                         .map(marketListing => marketListing.avatar_hash)
                         .filter(Boolean)
                 ).size;
-                const marketLowStack = exactStackListings.length > 0
-                    ? Math.min(...exactStackListings.map(marketListing => Number(marketListing.price) || 0))
-                    : (mktData?.marketLow ?? null) !== null
-                        ? (mktData.marketLow * listing.stackSize)
-                        : null;
+                const marketLowStack = getStackAwareMarketLow({
+                    exactStackListings,
+                    marketVariantListings,
+                    mktData,
+                    stackSize: listing.stackSize,
+                    stackPrice: listing.stackPrice,
+                    avatarHash
+                });
                 const historicalStats = summarizeHistoricalSales(
                     salesByHistoryKey[buildHistoryKey(own.itemId, own.isMastercrafted, own.enchantmentTier, listing.stackSize)] || []
                 );
@@ -882,7 +914,7 @@ async function buildValleyAnalysisFromSupabase() {
         );
 
         // Valley share uses gaming.tools avatar-hash data (best available for total count)
-        const gtAnalysis = getSavedAvatarHash() ? analyzeOwnListings(getSavedAvatarHash()) : null;
+        const gtAnalysis = avatarHash ? analyzeOwnListings(avatarHash) : null;
         const valleySharePct = gtAnalysis?.valleySharePct ?? null;
         const totalValleyListings = gtAnalysis?.totalValleyListings ?? null;
         const valleyShareAvailable = !!gtAnalysis;
