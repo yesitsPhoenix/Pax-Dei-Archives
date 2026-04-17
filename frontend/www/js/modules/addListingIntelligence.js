@@ -50,19 +50,29 @@ export async function fetchItemSalesHistoryForListing({ supabase, currentCharact
     }
 }
 
-export function buildAddListingSuggestion(md, qualityMd, hist, count, stacks, isMastercrafted, enchantmentTier, ownCount = 0) {
+function getQualityMultiplier(isMastercrafted, enchantmentTier) {
     const ENCHANT_PREMIUMS = [0, 0.10, 0.20, 0.30];
     const mcPremium   = isMastercrafted ? 0.15 : 0;
     const encPremium  = ENCHANT_PREMIUMS[enchantmentTier || 0] || 0;
-    const qualityMult = (1 + mcPremium) * (1 + encPremium);
-    const isQuality   = isMastercrafted || ((enchantmentTier || 0) > 0);
+    return (1 + mcPremium) * (1 + encPremium);
+}
 
-    const effectiveMd = qualityMd || (md && isQuality ? {
+function getEstimatedQualityMarketData(md, qualityMult) {
+    if (!md) return null;
+
+    return {
         marketLow:     parseFloat((md.marketLow  * qualityMult).toFixed(2)),
         marketAvg:     parseFloat((md.marketAvg  * qualityMult).toFixed(2)),
         totalListings: null,
         isEstimated:   true
-    } : md);
+    };
+}
+
+export function buildAddListingSuggestion(md, qualityMd, hist, count, stacks, isMastercrafted, enchantmentTier, ownCount = 0) {
+    const qualityMult = getQualityMultiplier(isMastercrafted, enchantmentTier);
+    const isQuality   = isMastercrafted || ((enchantmentTier || 0) > 0);
+
+    const effectiveMd = qualityMd || (isQuality ? getEstimatedQualityMarketData(md, qualityMult) : md);
 
     const qHistKey    = `mc${isMastercrafted ? 1 : 0}enc${enchantmentTier || 0}`;
     const qualityHist = hist?.byQuality?.[qHistKey] || null;
@@ -416,9 +426,10 @@ export function createAddListingIntelligenceController({
         const hasPrice = price > 0;
         const fmt = (v) => v.toLocaleString(undefined, { maximumFractionDigits: 2 });
 
-        const displayMd = qualityMd || md;
-        const supplyCount = displayMd?.totalListings ?? 0;
-        const supplyTag = displayMd
+        const qualityMult = getQualityMultiplier(isMastercrafted, enchantmentTier);
+        const displayMd = qualityMd || (isQuality ? getEstimatedQualityMarketData(md, qualityMult) : md);
+        const supplyCount = displayMd?.totalListings;
+        const supplyTag = displayMd && supplyCount !== null && supplyCount !== undefined
             ? supplyCount <= 3
                 ? `<span class="ml-1 text-xs font-semibold text-emerald-300 bg-emerald-900/50 border border-emerald-500/40 rounded px-1.5 py-0.5">Low supply</span>`
                 : supplyCount > 20
@@ -460,7 +471,7 @@ export function createAddListingIntelligenceController({
                             <span class="text-white text-sm">${fmt(displayMd.marketAvg * count)}g</span>
                         </div>
                     </div>` : `<div class="text-gray-500 text-xs italic mt-1">Enter count for stack prices</div>`}
-                    ${qualityMd && md ? `
+                    ${isQuality && md ? `
                     <div class="mt-1 pt-1 border-t border-slate-500/30 text-gray-500 text-sm">
                         All quality: ${md.totalListings} listing${md.totalListings !== 1 ? 's' : ''} &middot; Low ${fmt(md.marketLow)}g
                     </div>` : ''}
