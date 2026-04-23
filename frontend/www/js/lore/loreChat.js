@@ -251,25 +251,42 @@ function renderSourcesBlock(html) {
 // ---------------------------------------------------------------------------
 
 // Set of valid "Category:slug" keys — populated from server health check
-let validCitationKeys = new Set();
+let validCitationMap = new Map();
+
+function normalizeCitationKey(key) {
+    return key.trim().toLowerCase();
+}
+
+function buildCitationMap(citations = []) {
+    const map = new Map();
+    for (const citation of citations) {
+        if (!citation || !citation.key) continue;
+        map.set(normalizeCitationKey(citation.key), citation);
+    }
+    return map;
+}
+
+function resolveCitationMeta(category, slug, registry) {
+    const key = `${category.trim()}:${slug.trim()}`;
+    return registry.get(normalizeCitationKey(key)) || null;
+}
 
 /**
  * Remove any [[Category:slug|Title]] citations where Category:slug
  * does not exist in the valid set. Prevents hallucinated links.
  */
-function stripInvalidCitations(text) {
-    if (validCitationKeys.size === 0) return text; // No keys loaded, skip validation
+function stripInvalidCitations(text, registry = validCitationMap) {
+    if (registry.size === 0) return text;
 
     return text.replace(/\[\[([^:\]]+):([^\]|]+)\|([^\]]+)\]\]/g, (match, category, slug, title) => {
-        const key = `${category.trim()}:${slug.trim()}`;
-        // Check exact match
-        if (validCitationKeys.has(key)) return match;
-        // Check case-insensitive match
-        const keyLower = key.toLowerCase();
-        for (const valid of validCitationKeys) {
-            if (valid.toLowerCase() === keyLower) return match;
+        const meta = resolveCitationMeta(category, slug, registry);
+        if (meta) {
+            const canonical = `[[${meta.category}:${meta.slug}|${meta.title}]]`;
+            if (title.trim() !== meta.title || category.trim() !== meta.category || slug.trim() !== meta.slug) {
+                console.warn(`[Lore Chat] Canonicalized citation: ${match} -> ${canonical}`);
+            }
+            return canonical;
         }
-        // Invalid citation — return just the title text without the link
         console.warn(`[Lore Chat] Stripped invalid citation: ${match}`);
         return title.trim();
     });
@@ -280,8 +297,8 @@ function stripInvalidCitations(text) {
  * Remove source lines that reference invalid keys, and remove the
  * entire block if no valid sources remain.
  */
-function stripInvalidSources(text) {
-    if (validCitationKeys.size === 0) return text;
+function stripInvalidSources(text, registry = validCitationMap) {
+    if (registry.size === 0) return text;
 
     return text.replace(/\[\[Sources\]\]([\s\S]*?)\[\[\/Sources\]\]/gi, (match, inner) => {
         // Find all citations within the sources block
@@ -289,16 +306,9 @@ function stripInvalidSources(text) {
         const citationRegex = /\[\[([^:\]]+):([^\]|]+)\|([^\]]+)\]\]/g;
         let citMatch;
         while ((citMatch = citationRegex.exec(inner)) !== null) {
-            const key = `${citMatch[1].trim()}:${citMatch[2].trim()}`;
-            const keyLower = key.toLowerCase();
-            let isValid = validCitationKeys.has(key);
-            if (!isValid) {
-                for (const valid of validCitationKeys) {
-                    if (valid.toLowerCase() === keyLower) { isValid = true; break; }
-                }
-            }
-            if (isValid) {
-                validLines.push(citMatch[0]);
+            const meta = resolveCitationMeta(citMatch[1], citMatch[2], registry);
+            if (meta) {
+                validLines.push(`[[${meta.category}:${meta.slug}|${meta.title}]]`);
             } else {
                 console.warn(`[Lore Chat] Stripped invalid source: ${citMatch[0]}`);
             }
@@ -349,8 +359,8 @@ async function checkServerHealth() {
 
             // Store valid citation keys for validation
             if (data.valid_citations && Array.isArray(data.valid_citations)) {
-                validCitationKeys = new Set(data.valid_citations.map(c => c.key));
-                console.log(`[Lore Chat] Loaded ${validCitationKeys.size} valid citation keys`);
+                validCitationMap = buildCitationMap(data.valid_citations);
+                console.log(`[Lore Chat] Loaded ${validCitationMap.size} valid citation keys`);
             }
 
             void triggerWarmup('health_check');
@@ -483,13 +493,14 @@ function updateStreamingMessage(content) {
     scrollToBottom();
 }
 
-function finalizeStreamingMessage(content) {
+function finalizeStreamingMessage(content, allowedCitationMap = null) {
     const streamingText = document.getElementById('streaming-text');
     if (!streamingText) return;
 
     // Validate citations — strip any the model invented
-    let validated = stripInvalidCitations(content);
-    validated = stripInvalidSources(validated);
+    const registry = allowedCitationMap && allowedCitationMap.size > 0 ? allowedCitationMap : validCitationMap;
+    let validated = stripInvalidCitations(content, registry);
+    validated = stripInvalidSources(validated, registry);
 
     // Final render WITH full citation parsing and source cards
     streamingText.innerHTML = renderMarkdownSafe(validated, true);
@@ -556,6 +567,7 @@ async function sendMessage(text, source = 'text_entry') {
     let t_last_chunk = null;
     let t_done_chunk = null;
     let chunkCount = 0;
+    let allowedCitationMap = null;
 
     function scheduleRender() {
         if (renderScheduled) return;
@@ -617,10 +629,16 @@ async function sendMessage(text, source = 'text_entry') {
 
                     if (chunk.meta) {
                         if (chunk.meta.phase === 'search_complete') {
+                            if (Array.isArray(chunk.meta.allowed_citations)) {
+                                allowedCitationMap = buildCitationMap(chunk.meta.allowed_citations);
+                            }
                             const count = chunk.meta.relevant_scrolls;
                             if (typeof count === 'number' && count > 0) {
                                 updateStreamingStatus(`Found ${count} relevant scrolls...`);
                                 logTiming(requestId, 'search_complete', t_send, `relevant_scrolls=${count}`);
+                            } else if (count === 0) {
+                                updateStreamingStatus('No relevant scrolls found.');
+                                logTiming(requestId, 'search_complete', t_send, 'relevant_scrolls=0');
                             } else {
                                 updateStreamingStatus('Searching the Archives...');
                                 logTiming(requestId, 'search_complete', t_send);
@@ -666,7 +684,7 @@ async function sendMessage(text, source = 'text_entry') {
         }
 
         const t_render_start = performance.now();
-        finalizeStreamingMessage(fullResponse);
+        finalizeStreamingMessage(fullResponse, allowedCitationMap);
         const finalizeMs = Math.round(performance.now() - t_render_start);
         const totalMs = Math.round(performance.now() - t_send);
         const firstVisibleMs = t_first_chunk === null ? 'n/a' : Math.round(t_first_chunk - t_send);

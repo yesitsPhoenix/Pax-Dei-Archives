@@ -104,6 +104,7 @@ EMBED_MODEL = "nomic-embed-text"
 MIN_CTX_SIZE = int(os.getenv("LORE_BOT_MIN_CTX_SIZE", "8192"))
 MAX_CTX_SIZE = int(os.getenv("LORE_BOT_MAX_CTX_SIZE", "32768"))
 CTX_HEADROOM_TOKENS = int(os.getenv("LORE_BOT_CTX_HEADROOM_TOKENS", "1024"))
+MIN_VECTOR_SCORE = float(os.getenv("LORE_BOT_MIN_VECTOR_SCORE", "0.35"))
 
 ollama_client: Optional[httpx.AsyncClient] = None
 starter_prompt_cache: dict[str, dict] = {}
@@ -222,6 +223,14 @@ class LoreEntry:
         block += f"\n{self.prompt_content}"
         return block
 
+    def to_citation_meta(self) -> dict[str, str]:
+        return {
+            "key": f"{self.category}:{self.slug}",
+            "category": self.category,
+            "slug": self.slug,
+            "title": self.title,
+        }
+
 
 class LoreSearchIndex:
     """Simple TF-IDF search index over lore entries."""
@@ -296,7 +305,14 @@ class LoreSearchIndex:
             print(f"[WARN] {missing_embeddings} entries have no embedding — run embed_lore.py")
 
         scores.sort(key=lambda x: x[0], reverse=True)
-        return [entry for _, entry in scores[:top_k]]
+        filtered = [entry for score, entry in scores if score >= MIN_VECTOR_SCORE]
+        if not filtered and scores:
+            top_score, top_entry = scores[0]
+            print(
+                f"[RAG:vector] No entries met threshold {MIN_VECTOR_SCORE:.2f} "
+                f"for query '{query[:80]}' (best={top_score:.3f} '{top_entry.title}')"
+            )
+        return filtered[:top_k]
 
     def search(self, query: str, top_k: int = 5) -> list[LoreEntry]:
         """Compatibility shim — used by TF-IDF path in build_rag_prompt."""
@@ -423,9 +439,12 @@ CITATION RULES — MANDATORY
 - Cite every fact using EXACTLY this format: [[Category:slug|Title]]
 - Category, slug, and Title MUST exactly match a Citation key from the entries. Copy it exactly.
 - Only cite entries provided. Never cite an entry not in the list. If you cannot find its Citation key, omit that claim.
-- End EVERY response with a Sources block:
+- End EVERY response with a Sources block using this exact structure:
   [[Sources]]
-  [[Redeemers:meirothea|2nd - Meirothea]]
+  [[Category:slug|Exact Title]]
+  [[/Sources]]
+- If no provided entry supports the answer, reply exactly "The Archives hold no record of this." and end with an empty Sources block:
+  [[Sources]]
   [[/Sources]]
 - A response without [[Sources]]...[[/Sources]] is INVALID.
 """
@@ -704,19 +723,25 @@ async def build_rag_prompt(query: str) -> tuple[str, dict]:
         timing['search_ms'] = round((time.perf_counter() - t_search) * 1000)
         search_mode = "tfidf"
 
-    if not results:
-        results = search_index.entries[:3]
 
     # Keyword injection — catch entries missed by semantic search (e.g. minor named characters)
     if search_mode in ("vector", "tfidf", "tfidf-fallback"):
         results = keyword_inject(results, query, RAG_TOP_K)
 
     t_build = time.perf_counter()
-    entries_text = "\n\n---\n\n".join(entry.to_prompt_block() for entry in results)
+    if results:
+        entries_text = "\n\n---\n\n".join(entry.to_prompt_block() for entry in results)
+    else:
+        entries_text = (
+            "No relevant lore entries were found for this question.\n"
+            "You must answer exactly: The Archives hold no record of this.\n"
+            "Then emit an empty [[Sources]] block."
+        )
     prompt = RAG_PROMPT.format(lore_content=entries_text)
     timing['prompt_build_ms'] = round((time.perf_counter() - t_build) * 1000)
     timing['total_rag_ms'] = round((time.perf_counter() - t_start) * 1000)
     timing['result_count'] = len(results)
+    timing['citations'] = [entry.to_citation_meta() for entry in results]
 
     titles = [e.title for e in results]
     print(f"[RAG:{search_mode}] Query: '{query[:80]}' → {len(results)} entries: {titles}")
@@ -963,6 +988,7 @@ async def chat(request: Request, chat_req: ChatRequest):
                 "meta": {
                     "phase": "search_complete",
                     "relevant_scrolls": rag_timing.get("result_count") if USE_RAG else None,
+                    "allowed_citations": rag_timing.get("citations") if USE_RAG else None,
                 }
             }) + "\n"
             log_request_timing(request_id, "ollama_request_start", t_request_start, "mode=stream")
@@ -979,6 +1005,7 @@ async def chat(request: Request, chat_req: ChatRequest):
 
                 t_first_token = None
                 token_count = 0
+                full_response = ""
 
                 async for line in resp.aiter_lines():
                     if line.strip():
@@ -1001,6 +1028,7 @@ async def chat(request: Request, chat_req: ChatRequest):
 
                             if content:
                                 token_count += 1
+                                full_response += content
 
                             yield json.dumps({"content": content, "done": done}) + "\n"
 
@@ -1015,6 +1043,16 @@ async def chat(request: Request, chat_req: ChatRequest):
                                     t_request_start,
                                     f"chunks={token_count} generation={gen_ms}ms chunks_per_sec={tps} total={total_ms}ms",
                                 )
+                                if USE_RAG and rag_timing.get("result_count", 0) == 0:
+                                    normalized = strip_citation_markup(full_response)
+                                    if normalized != "The Archives hold no record of this.":
+                                        preview = full_response.replace("\n", "\\n")[:240]
+                                        log_request_timing(
+                                            request_id,
+                                            "no_record_violation",
+                                            t_request_start,
+                                            f"raw_response={preview}",
+                                        )
 
                         except json.JSONDecodeError:
                             continue
