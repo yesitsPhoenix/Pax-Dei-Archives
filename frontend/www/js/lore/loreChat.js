@@ -176,27 +176,27 @@ function renderSourcesBlock(html) {
     const sourcesRegex = /(?:<p>)?\[\[Sources\]\](?:<\/p>)?([\s\S]*?)(?:<p>)?\[\[\/Sources\]\](?:<\/p>)?/i;
     const match = html.match(sourcesRegex);
     
-    if (!match) return html;
-
-    const sourcesContent = match[1];
+    const sourcesContent = match ? match[1] : html;
     
     // Parse individual source citations from the block
     const citationRegex = /<a href="([^"]+)" class="lore-citation-link" title="([^"]*)">([\s\S]*?)<\/a>/g;
     const sources = [];
+    const seen = new Set();
     let citMatch;
     
     while ((citMatch = citationRegex.exec(sourcesContent)) !== null) {
         const href = citMatch[1];
         const titleAttr = citMatch[2]; // "Title (Category)"
-        const innerHtml = citMatch[3];
-        
         // Extract category from title attr
         const catMatch = titleAttr.match(/\(([^)]+)\)$/);
         const category = catMatch ? catMatch[1] : '';
         const title = titleAttr.replace(/\s*\([^)]+\)$/, '');
+        const dedupeKey = `${href}|${title}|${category}`;
+        if (seen.has(dedupeKey)) continue;
+        seen.add(dedupeKey);
         const icon = getCategoryIcon(category);
 
-        sources.push({ href, title, category, icon, innerHtml });
+        sources.push({ href, title, category, icon });
     }
 
     // Also catch any raw [[category:slug|title]] that weren't pre-parsed
@@ -206,14 +206,17 @@ function renderSourcesBlock(html) {
         const category = normalizeCategoryForUrl(rawMatch[1].trim());
         const slug = rawMatch[2].trim();
         const title = rawMatch[3].trim();
-        const icon = getCategoryIcon(category);
         const href = `${LORE_PAGE_BASE}?category=${encodeURIComponent(category)}&item=${encodeURIComponent(slug)}`;
+        const dedupeKey = `${href}|${title}|${category}`;
+        if (seen.has(dedupeKey)) continue;
+        seen.add(dedupeKey);
+        const icon = getCategoryIcon(category);
         sources.push({ href, title, category, icon });
     }
 
     if (sources.length === 0) {
-        // Remove the empty sources block
-        return html.replace(sourcesRegex, '');
+        // Remove the empty sources block, or leave the message alone if no block exists
+        return match ? html.replace(sourcesRegex, '') : html;
     }
 
     // Build the styled sources section
@@ -243,7 +246,7 @@ function renderSourcesBlock(html) {
         </div>
     `;
 
-    return html.replace(sourcesRegex, sourcesHtml);
+    return match ? html.replace(sourcesRegex, sourcesHtml) : `${html}${sourcesHtml}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -634,7 +637,7 @@ async function sendMessage(text, source = 'text_entry') {
                             }
                             const count = chunk.meta.relevant_scrolls;
                             if (typeof count === 'number' && count > 0) {
-                                updateStreamingStatus(`Found ${count} relevant scrolls...`);
+                                updateStreamingStatus('Consulting relevant scrolls...');
                                 logTiming(requestId, 'search_complete', t_send, `relevant_scrolls=${count}`);
                             } else if (count === 0) {
                                 updateStreamingStatus('No relevant scrolls found.');
