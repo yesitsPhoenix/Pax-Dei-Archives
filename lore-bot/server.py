@@ -644,6 +644,7 @@ async def build_rag_prompt(query: str) -> tuple[str, dict]:
     prompt = RAG_PROMPT.format(lore_content=entries_text)
     timing['prompt_build_ms'] = round((time.perf_counter() - t_build) * 1000)
     timing['total_rag_ms'] = round((time.perf_counter() - t_start) * 1000)
+    timing['result_count'] = len(results)
 
     titles = [e.title for e in results]
     print(f"[RAG:{search_mode}] Query: '{query[:80]}' → {len(results)} entries: {titles}")
@@ -866,6 +867,12 @@ async def chat(request: Request, chat_req: ChatRequest):
 
     async def stream_response():
         try:
+            yield json.dumps({
+                "meta": {
+                    "phase": "search_complete",
+                    "relevant_scrolls": rag_timing.get("result_count") if USE_RAG else None,
+                }
+            }) + "\n"
             log_request_timing(request_id, "ollama_request_start", t_request_start, "mode=stream")
             async with get_ollama_client().stream(
                 "POST", f"{OLLAMA_URL}/api/chat", json=ollama_payload, timeout=120,

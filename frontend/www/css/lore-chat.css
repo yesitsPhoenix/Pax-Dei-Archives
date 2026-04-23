@@ -195,6 +195,13 @@
 }
 
 /* Typing indicator */
+.streaming-status {
+    font-size: 13px;
+    color: rgba(255, 215, 0, 0.78);
+    margin-bottom: 10px;
+    letter-spacing: 0.01em;
+}
+
 .typing-indicator {
     display: flex;
     gap: 4px;

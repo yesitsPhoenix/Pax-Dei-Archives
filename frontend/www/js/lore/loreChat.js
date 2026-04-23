@@ -421,6 +421,7 @@ function addStreamingMessage() {
         <div class="message-content">
             <div class="message-sender">Lore Keeper</div>
             <div class="message-text" id="streaming-text">
+                <div class="streaming-status" id="streaming-status">Searching the Archives...</div>
                 <div class="typing-indicator">
                     <span></span><span></span><span></span>
                 </div>
@@ -432,6 +433,13 @@ function addStreamingMessage() {
     scrollToBottom();
 
     return messageDiv;
+}
+
+function updateStreamingStatus(text) {
+    const streamingStatus = document.getElementById('streaming-status');
+    if (!streamingStatus) return;
+    streamingStatus.textContent = text;
+    scrollToBottom();
 }
 
 function updateStreamingMessage(content) {
@@ -573,6 +581,20 @@ async function sendMessage(text) {
 
                     if (chunk.error) {
                         throw new Error(chunk.error);
+                    }
+
+                    if (chunk.meta) {
+                        if (chunk.meta.phase === 'search_complete') {
+                            const count = chunk.meta.relevant_scrolls;
+                            if (typeof count === 'number' && count > 0) {
+                                updateStreamingStatus(`Found ${count} relevant scrolls...`);
+                                logTiming(requestId, 'search_complete', t_send, `relevant_scrolls=${count}`);
+                            } else {
+                                updateStreamingStatus('Searching the Archives...');
+                                logTiming(requestId, 'search_complete', t_send);
+                            }
+                        }
+                        continue;
                     }
 
                     if (chunk.content) {
