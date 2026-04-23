@@ -640,10 +640,10 @@ async function sendMessage(text, source = 'text_entry') {
                             const count = chunk.meta.relevant_scrolls;
                             if (typeof count === 'number' && count > 0) {
                                 updateStreamingStatus('Consulting relevant scrolls...');
-                                logTiming(requestId, 'search_complete', t_send, `relevant_scrolls=${count}`);
+                                logTiming(requestId, 'search_complete', t_send);
                             } else if (count === 0) {
                                 updateStreamingStatus('No relevant scrolls found.');
-                                logTiming(requestId, 'search_complete', t_send, 'relevant_scrolls=0');
+                                logTiming(requestId, 'search_complete', t_send);
                             } else {
                                 updateStreamingStatus('Searching the Archives...');
                                 logTiming(requestId, 'search_complete', t_send);
