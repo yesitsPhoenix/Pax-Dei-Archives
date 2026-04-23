@@ -348,6 +348,10 @@ def build_chat_messages(system_prompt: str, messages: list["ChatMessage"]) -> li
     recent_messages = messages[-MAX_CHAT_HISTORY_MESSAGES:] if MAX_CHAT_HISTORY_MESSAGES > 0 else messages
     ollama_messages = [{"role": "system", "content": system_prompt}]
     for msg in recent_messages:
+        # Do not resend prior assistant answers; a hallucination in one turn can
+        # otherwise contaminate the next question even when retrieval is correct.
+        if msg.role == "assistant":
+            continue
         content = compact_message_content(msg.role, msg.content)
         if content:
             ollama_messages.append({"role": msg.role, "content": content})
@@ -639,6 +643,33 @@ def keyword_inject(results: list[LoreEntry], query: str, top_k: int) -> list[Lor
     return combined[:top_k]
 
 
+def prioritize_exact_keyword_matches(results: list[LoreEntry], query: str, top_k: int) -> list[LoreEntry]:
+    """
+    For named-entity style queries, move exact term matches to the front and
+    discard unrelated entries when we have direct lexical hits.
+    """
+    terms = extract_keyword_terms(query)
+    if not terms:
+        return results[:top_k]
+
+    exact_hits = []
+    seen = set()
+
+    for entry in search_index.entries:
+        searchable = (entry.title + " " + entry.content).lower()
+        if all(term in searchable for term in terms):
+            exact_hits.append(entry)
+            seen.add(entry.slug)
+
+    if not exact_hits:
+        return results[:top_k]
+
+    remaining = [entry for entry in results if entry.slug not in seen]
+    combined = exact_hits + remaining
+    print(f"[RAG:exact-match] Prioritizing {len(exact_hits)} entries for query terms {terms}: {[e.title for e in exact_hits[:top_k]]}")
+    return combined[:top_k]
+
+
 def get_category_flood_entries(query: str) -> list[LoreEntry]:
     """
     If the query clearly references a category name, return ALL entries from that
@@ -727,6 +758,7 @@ async def build_rag_prompt(query: str) -> tuple[str, dict]:
     # Keyword injection — catch entries missed by semantic search (e.g. minor named characters)
     if search_mode in ("vector", "tfidf", "tfidf-fallback"):
         results = keyword_inject(results, query, RAG_TOP_K)
+        results = prioritize_exact_keyword_matches(results, query, RAG_TOP_K)
 
     t_build = time.perf_counter()
     if results:
