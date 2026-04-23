@@ -67,6 +67,7 @@ USE_RAG = True
 
 # How many lore entries to include per question when RAG is enabled
 RAG_TOP_K = 12
+MODEL_KEEP_ALIVE = os.getenv("LORE_BOT_MODEL_KEEP_ALIVE", "30m")
 
 # Keep only the recent conversation turns that materially help the current answer.
 MAX_CHAT_HISTORY_MESSAGES = int(os.getenv("LORE_BOT_MAX_HISTORY_MESSAGES", "6"))
@@ -105,6 +106,16 @@ MAX_CTX_SIZE = int(os.getenv("LORE_BOT_MAX_CTX_SIZE", "32768"))
 CTX_HEADROOM_TOKENS = int(os.getenv("LORE_BOT_CTX_HEADROOM_TOKENS", "1024"))
 
 ollama_client: Optional[httpx.AsyncClient] = None
+starter_prompt_cache: dict[str, dict] = {}
+STARTER_QUESTIONS = [
+    "What happened before the Tenth Creation?",
+    "Tell me about the Redeemers and their roles.",
+    "Who are the Fay and where did they come from?",
+    "What is the Cult of Zeb?",
+    "Tell me about Thelonius the Scribe.",
+    "What was the Great Cataclysm?",
+]
+STARTER_QUESTION_KEYS = {q.strip().lower() for q in STARTER_QUESTIONS}
 
 # ---------------------------------------------------------------------------
 # Corpus Compression (for prompt only — original .md files untouched)
@@ -337,6 +348,55 @@ def choose_context_size(messages: list[dict[str, str]]) -> tuple[int, int]:
     ctx_size = max(MIN_CTX_SIZE, min(MAX_CTX_SIZE, desired_ctx))
     return ctx_size, prompt_tokens
 
+
+async def warm_embed_model() -> None:
+    await get_embedding("Lore Keeper warmup")
+
+
+async def warm_generation_model() -> None:
+    resp = await get_ollama_client().post(
+        f"{OLLAMA_URL}/api/chat",
+        json={
+            "model": OLLAMA_MODEL,
+            "stream": False,
+            "keep_alive": MODEL_KEEP_ALIVE,
+            "messages": [{"role": "system", "content": "Warm the model."}],
+            "options": {
+                "temperature": 0,
+                "num_predict": 1,
+                "num_ctx": MIN_CTX_SIZE,
+            },
+        },
+        timeout=HTTP_READ_TIMEOUT_S,
+    )
+    resp.raise_for_status()
+
+
+async def warm_starter_cache() -> dict[str, int]:
+    built = 0
+    reused = 0
+    for question in STARTER_QUESTIONS:
+        cache_key = normalize_cache_key(question)
+        if cache_key in starter_prompt_cache:
+            reused += 1
+            continue
+        await build_rag_prompt(question)
+        built += 1
+    return {"built": built, "reused": reused, "cached_total": len(starter_prompt_cache)}
+
+
+async def run_warmup() -> dict[str, object]:
+    t_start = time.perf_counter()
+    await warm_embed_model()
+    await warm_generation_model()
+    cache_stats = await warm_starter_cache()
+    return {
+        "status": "ok",
+        "keep_alive": MODEL_KEEP_ALIVE,
+        "starter_cache": cache_stats,
+        "elapsed_ms": round((time.perf_counter() - t_start) * 1000),
+    }
+
 # ---------------------------------------------------------------------------
 # System Prompts
 # ---------------------------------------------------------------------------
@@ -496,6 +556,10 @@ def normalize_query(query: str) -> str:
     return normalized
 
 
+def normalize_cache_key(query: str) -> str:
+    return re.sub(r"\s+", " ", query.strip().lower())
+
+
 def extract_keyword_terms(query: str) -> list[str]:
     """
     Extract likely proper nouns and significant keywords from a query for
@@ -578,6 +642,14 @@ def get_category_flood_entries(query: str) -> list[LoreEntry]:
 
 async def build_rag_prompt(query: str) -> tuple[str, dict]:
     """Returns (prompt, timing) where timing contains per-phase durations in ms."""
+    cache_key = normalize_cache_key(query)
+    cached = starter_prompt_cache.get(cache_key)
+    if cached:
+        print(f"[RAG:starter-cache] Query: '{query[:80]}' → cached starter bundle")
+        cached_timing = dict(cached["timing"])
+        cached_timing["cache_hit"] = True
+        return cached["prompt"], cached_timing
+
     t_start = time.perf_counter()
     timing: dict = {}
 
@@ -649,6 +721,14 @@ async def build_rag_prompt(query: str) -> tuple[str, dict]:
     titles = [e.title for e in results]
     print(f"[RAG:{search_mode}] Query: '{query[:80]}' → {len(results)} entries: {titles}")
     print(f"[RAG:{search_mode}] Prompt size: {len(prompt):,} chars (~{len(prompt) // 4:,} tokens)")
+
+    if cache_key in STARTER_QUESTION_KEYS:
+        starter_prompt_cache[cache_key] = {
+            "prompt": prompt,
+            "timing": dict(timing),
+            "titles": titles,
+        }
+
     return prompt, timing
 
 
@@ -676,6 +756,7 @@ class ChatRequest(BaseModel):
     messages: list[ChatMessage]
     stream: Optional[bool] = True
     request_id: Optional[str] = None
+    request_source: Optional[str] = "text_entry"
 
 
 def log_request_timing(request_id: str, phase: str, started_at: float, extra: str = "") -> None:
@@ -711,6 +792,7 @@ async def startup_event():
     print(f"[INFO] Embed model: {EMBED_MODEL} ({'ON' if USE_VECTOR_SEARCH else 'OFF — TF-IDF fallback'})")
     print(f"[INFO] Supabase URL: {SUPABASE_URL}")
     print(f"[INFO] RAG mode: {'ON (top {})'.format(RAG_TOP_K) if USE_RAG else 'OFF (full corpus)'}")
+    print(f"[INFO] Model keep-alive: {MODEL_KEEP_ALIVE}")
     print(f"[INFO] Server will listen on {HOST}:{PORT}")
     print()
 
@@ -728,6 +810,13 @@ async def startup_event():
                 print(f"       ollama pull {OLLAMA_MODEL}")
     except Exception as e:
         print(f"[WARN] Cannot reach Ollama at {OLLAMA_URL}: {e}")
+
+    try:
+        warmup = await run_warmup()
+        print(f"[INFO] Warmup complete in {warmup['elapsed_ms']}ms "
+              f"(starter cache: {warmup['starter_cache']})")
+    except Exception as e:
+        print(f"[WARN] Warmup failed: {e}")
 
     print()
     print(f"[READY] Lore Keeper is ready. Listening on http://{HOST}:{PORT}")
@@ -792,7 +881,7 @@ async def chat(request: Request, chat_req: ChatRequest):
         request_id,
         "request_received",
         t_request_start,
-        f"ip={client_ip} messages={len(chat_req.messages)} stream={chat_req.stream}",
+        f"source={chat_req.request_source} ip={client_ip} messages={len(chat_req.messages)} stream={chat_req.stream}",
     )
 
     if USE_RAG:
@@ -804,17 +893,19 @@ async def chat(request: Request, chat_req: ChatRequest):
             t_request_start,
             " ".join(
                 [
+                    f"source={chat_req.request_source}",
                     f"embed={rag_timing.get('embed_ms', '—')}ms",
                     f"search={rag_timing.get('search_ms', '—')}ms",
                     f"prompt_build={rag_timing.get('prompt_build_ms', '—')}ms",
                     f"total_rag={rag_timing.get('total_rag_ms', '—')}ms",
+                    f"cache_hit={rag_timing.get('cache_hit', False)}",
                 ]
             ),
         )
     else:
         rag_timing = {}
         system_prompt = full_corpus_prompt
-        log_request_timing(request_id, "rag_ready", t_request_start, "mode=full_corpus")
+        log_request_timing(request_id, "rag_ready", t_request_start, f"source={chat_req.request_source} mode=full_corpus")
 
     ollama_messages = build_chat_messages(system_prompt, chat_req.messages)
     ctx_size, estimated_prompt_tokens = choose_context_size(ollama_messages)
@@ -823,7 +914,7 @@ async def chat(request: Request, chat_req: ChatRequest):
         request_id,
         "ollama_payload_ready",
         t_request_start,
-        f"prompt_tokens~{estimated_prompt_tokens} messages={len(ollama_messages)} ctx_size={ctx_size}",
+        f"source={chat_req.request_source} prompt_tokens~{estimated_prompt_tokens} messages={len(ollama_messages)} ctx_size={ctx_size}",
     )
     if TIMING_DEBUG:
         global _last_request_wall
@@ -842,6 +933,7 @@ async def chat(request: Request, chat_req: ChatRequest):
         "model": OLLAMA_MODEL,
         "messages": ollama_messages,
         "stream": chat_req.stream,
+        "keep_alive": MODEL_KEEP_ALIVE,
         "options": {
             "temperature": 0.3,
             "top_p": 0.85,
@@ -942,6 +1034,7 @@ async def chat(request: Request, chat_req: ChatRequest):
 
 @app.post("/api/reload-lore")
 async def reload_lore():
+    starter_prompt_cache.clear()
     load_lore_corpus()
     return {
         "status": "reloaded",
@@ -949,6 +1042,14 @@ async def reload_lore():
         "corpus_size_chars": len(full_corpus_prompt),
         "rag_enabled": USE_RAG,
     }
+
+
+@app.post("/api/warmup")
+async def warmup():
+    try:
+        return await run_warmup()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Warmup failed: {e}")
 
 
 if __name__ == "__main__":

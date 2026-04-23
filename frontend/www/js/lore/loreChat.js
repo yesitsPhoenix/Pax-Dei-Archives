@@ -29,6 +29,7 @@ const LORE_PAGE_BASE = 'lore.html';
 // Measures: click/send -> HTTP response -> first chunk -> stream end -> finalize render.
 // All output goes to browser console (F12 -> Console).
 const TIMING_DEBUG = true;
+let warmupStarted = false;
 
 function createRequestId() {
     const randomPart = Math.random().toString(36).slice(2, 8);
@@ -40,6 +41,34 @@ function logTiming(requestId, phase, startedAt, extra = '') {
     const elapsed = Math.round(performance.now() - startedAt);
     const suffix = extra ? ` | ${extra}` : '';
     console.log(`[Lore Timing][${requestId}] ${phase}: ${elapsed}ms${suffix}`);
+}
+
+async function triggerWarmup(reason = 'page_load') {
+    if (warmupStarted || !serverConnected) return;
+    warmupStarted = true;
+    const startedAt = performance.now();
+
+    try {
+        const response = await fetch(`${LORE_BOT_URL}/api/warmup`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (!response.ok) {
+            throw new Error(`Warmup failed (${response.status})`);
+        }
+
+        const data = await response.json();
+        if (TIMING_DEBUG) {
+            console.log(
+                `[Lore Warmup] ${reason}: ${Math.round(performance.now() - startedAt)}ms ` +
+                `(keep_alive=${data.keep_alive}, starter_cache=${JSON.stringify(data.starter_cache)})`
+            );
+        }
+    } catch (error) {
+        warmupStarted = false;
+        console.warn('[Lore Warmup] Unable to warm lore-bot:', error);
+    }
 }
 
 function stripCitationMarkup(text) {
@@ -324,6 +353,8 @@ async function checkServerHealth() {
                 console.log(`[Lore Chat] Loaded ${validCitationKeys.size} valid citation keys`);
             }
 
+            void triggerWarmup('health_check');
+
             return true;
         }
     } catch (e) {
@@ -482,7 +513,7 @@ function scrollToBottom() {
 // Chat Sending & Streaming
 // ---------------------------------------------------------------------------
 
-async function sendMessage(text) {
+async function sendMessage(text, source = 'text_entry') {
     if (!text.trim() || isStreaming || !serverConnected) return;
 
     const userMessage = text.trim();
@@ -519,7 +550,7 @@ async function sendMessage(text) {
 
     // Timing
     const t_send = performance.now();
-    logTiming(requestId, 'submit', t_send, `request_messages=${requestMessages.length}`);
+    logTiming(requestId, 'submit', t_send, `source=${source} request_messages=${requestMessages.length}`);
     let t_http_response = null;
     let t_first_chunk = null;
     let t_last_chunk = null;
@@ -543,6 +574,7 @@ async function sendMessage(text) {
                 messages: requestMessages,
                 stream: true,
                 request_id: requestId,
+                request_source: source,
             }),
         });
 
@@ -713,14 +745,14 @@ function autoResizeTextarea() {
 
 // Send on button click
 sendButton.addEventListener('click', () => {
-    sendMessage(chatInput.value);
+    sendMessage(chatInput.value, 'text_entry');
 });
 
 // Send on Enter (Shift+Enter for new line)
 chatInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        sendMessage(chatInput.value);
+        sendMessage(chatInput.value, 'text_entry');
     }
 });
 
@@ -738,7 +770,7 @@ if (suggestionsContainer) {
         if (chip) {
             const question = chip.dataset.question;
             if (question) {
-                sendMessage(question);
+                sendMessage(question, 'starter_pill');
             }
         }
     });
