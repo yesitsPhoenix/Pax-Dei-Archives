@@ -176,43 +176,45 @@ function renderSourcesBlock(html) {
     const sourcesRegex = /(?:<p>)?\[\[Sources\]\](?:<\/p>)?([\s\S]*?)(?:<p>)?\[\[\/Sources\]\](?:<\/p>)?/i;
     const match = html.match(sourcesRegex);
     
-    const sourcesContent = match ? match[1] : html;
-    
-    // Parse individual source citations from the block
-    const citationRegex = /<a href="([^"]+)" class="lore-citation-link" title="([^"]*)">([\s\S]*?)<\/a>/g;
-    const sources = [];
-    const seen = new Set();
-    let citMatch;
-    
-    while ((citMatch = citationRegex.exec(sourcesContent)) !== null) {
-        const href = citMatch[1];
-        const titleAttr = citMatch[2]; // "Title (Category)"
-        // Extract category from title attr
-        const catMatch = titleAttr.match(/\(([^)]+)\)$/);
-        const category = catMatch ? catMatch[1] : '';
-        const title = titleAttr.replace(/\s*\([^)]+\)$/, '');
-        const dedupeKey = `${href}|${title}|${category}`;
-        if (seen.has(dedupeKey)) continue;
-        seen.add(dedupeKey);
-        const icon = getCategoryIcon(category);
+    const bodyHtml = match ? html.replace(sourcesRegex, '') : html;
 
-        sources.push({ href, title, category, icon });
+    function extractSources(content) {
+        const citationRegex = /<a href="([^"]+)" class="lore-citation-link" title="([^"]*)">([\s\S]*?)<\/a>/g;
+        const rawCitRegex = /\[\[([^:\]]+):([^\]|]+)\|([^\]]+)\]\]/g;
+        const sources = [];
+        const seen = new Set();
+        let citMatch;
+
+        while ((citMatch = citationRegex.exec(content)) !== null) {
+            const href = citMatch[1];
+            const titleAttr = citMatch[2];
+            const catMatch = titleAttr.match(/\(([^)]+)\)$/);
+            const category = catMatch ? catMatch[1] : '';
+            const title = titleAttr.replace(/\s*\([^)]+\)$/, '');
+            const dedupeKey = `${href}|${title}|${category}`;
+            if (seen.has(dedupeKey)) continue;
+            seen.add(dedupeKey);
+            sources.push({ href, title, category, icon: getCategoryIcon(category) });
+        }
+
+        let rawMatch;
+        while ((rawMatch = rawCitRegex.exec(content)) !== null) {
+            const category = normalizeCategoryForUrl(rawMatch[1].trim());
+            const slug = rawMatch[2].trim();
+            const title = rawMatch[3].trim();
+            const href = `${LORE_PAGE_BASE}?category=${encodeURIComponent(category)}&item=${encodeURIComponent(slug)}`;
+            const dedupeKey = `${href}|${title}|${category}`;
+            if (seen.has(dedupeKey)) continue;
+            seen.add(dedupeKey);
+            sources.push({ href, title, category, icon: getCategoryIcon(category) });
+        }
+
+        return sources;
     }
 
-    // Also catch any raw [[category:slug|title]] that weren't pre-parsed
-    const rawCitRegex = /\[\[([^:\]]+):([^\]|]+)\|([^\]]+)\]\]/g;
-    let rawMatch;
-    while ((rawMatch = rawCitRegex.exec(sourcesContent)) !== null) {
-        const category = normalizeCategoryForUrl(rawMatch[1].trim());
-        const slug = rawMatch[2].trim();
-        const title = rawMatch[3].trim();
-        const href = `${LORE_PAGE_BASE}?category=${encodeURIComponent(category)}&item=${encodeURIComponent(slug)}`;
-        const dedupeKey = `${href}|${title}|${category}`;
-        if (seen.has(dedupeKey)) continue;
-        seen.add(dedupeKey);
-        const icon = getCategoryIcon(category);
-        sources.push({ href, title, category, icon });
-    }
+    const bodySources = extractSources(bodyHtml);
+    const blockSources = match ? extractSources(match[1]) : [];
+    const sources = bodySources.length > 0 ? bodySources : blockSources;
 
     if (sources.length === 0) {
         // Remove the empty sources block, or leave the message alone if no block exists
