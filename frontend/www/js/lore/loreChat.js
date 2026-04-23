@@ -15,7 +15,9 @@
 // const LORE_BOT_URL = 'http://192.168.1.22:8642';
 const LORE_BOT_URL = 'https://lorekeeper.yesitsphoenix.dev';
 
-const MAX_HISTORY_MESSAGES = 20; // Keep last N messages for context
+const MAX_HISTORY_MESSAGES = 20; // Full local UI history
+const MAX_REQUEST_MESSAGES = 6; // Smaller request window for faster server prefill
+const MAX_REQUEST_MESSAGE_CHARS = 1500;
 
 // Base URL for lore page links (relative works for same-origin)
 const LORE_PAGE_BASE = 'lore.html';
@@ -24,9 +26,51 @@ const LORE_PAGE_BASE = 'lore.html';
 // Timing Debug
 // ---------------------------------------------------------------------------
 // Set to true to log detailed client-side timing for every request.
-// Measures: send → HTTP response, first chunk, last chunk, finalize render.
-// All output goes to browser console (F12 → Console).
-const TIMING_DEBUG = false;
+// Measures: click/send -> HTTP response -> first chunk -> stream end -> finalize render.
+// All output goes to browser console (F12 -> Console).
+const TIMING_DEBUG = true;
+
+function createRequestId() {
+    const randomPart = Math.random().toString(36).slice(2, 8);
+    return `lore-${Date.now().toString(36)}-${randomPart}`;
+}
+
+function logTiming(requestId, phase, startedAt, extra = '') {
+    if (!TIMING_DEBUG) return;
+    const elapsed = Math.round(performance.now() - startedAt);
+    const suffix = extra ? ` | ${extra}` : '';
+    console.log(`[Lore Timing][${requestId}] ${phase}: ${elapsed}ms${suffix}`);
+}
+
+function stripCitationMarkup(text) {
+    return text
+        .replace(/\[\[Sources\]\][\s\S]*?\[\[\/Sources\]\]/gi, '')
+        .replace(/\[\[([^:\]]+):([^\]|]+)\|([^\]]+)\]\]/g, '$3')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function compactMessageForRequest(message) {
+    const normalized = message.role === 'assistant'
+        ? stripCitationMarkup(message.content)
+        : message.content.replace(/\s+/g, ' ').trim();
+
+    if (normalized.length <= MAX_REQUEST_MESSAGE_CHARS) {
+        return { role: message.role, content: normalized };
+    }
+
+    return {
+        role: message.role,
+        content: normalized.slice(0, MAX_REQUEST_MESSAGE_CHARS - 1).trimEnd() + '…',
+    };
+}
+
+function buildRequestMessages() {
+    return conversationHistory
+        .slice(-MAX_REQUEST_MESSAGES)
+        .map(compactMessageForRequest)
+        .filter(message => message.content);
+}
 
 // ---------------------------------------------------------------------------
 // Category icon mapping (matches lore.js)
@@ -434,6 +478,7 @@ async function sendMessage(text) {
     if (!text.trim() || isStreaming || !serverConnected) return;
 
     const userMessage = text.trim();
+    const requestId = createRequestId();
 
     // Hide suggestions after first message
     if (suggestionsContainer) {
@@ -462,12 +507,15 @@ async function sendMessage(text) {
     const streamingDiv = addStreamingMessage();
     let fullResponse = '';
     let renderScheduled = false;
+    const requestMessages = buildRequestMessages();
 
     // Timing
     const t_send = performance.now();
+    logTiming(requestId, 'submit', t_send, `request_messages=${requestMessages.length}`);
     let t_http_response = null;
     let t_first_chunk = null;
     let t_last_chunk = null;
+    let t_done_chunk = null;
     let chunkCount = 0;
 
     function scheduleRender() {
@@ -484,15 +532,19 @@ async function sendMessage(text) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                messages: conversationHistory,
+                messages: requestMessages,
                 stream: true,
+                request_id: requestId,
             }),
         });
 
         t_http_response = performance.now();
-        if (TIMING_DEBUG) {
-            console.log(`[Timing] HTTP response received: ${Math.round(t_http_response - t_send)}ms after send`);
-        }
+        logTiming(
+            requestId,
+            'http_response',
+            t_send,
+            `status=${response.status}${response.ok ? '' : ' error'}`
+        );
 
         if (!response.ok) {
             const errData = await response.json().catch(() => ({}));
@@ -528,15 +580,16 @@ async function sendMessage(text) {
                         t_last_chunk = performance.now();
                         if (t_first_chunk === null) {
                             t_first_chunk = t_last_chunk;
-                            if (TIMING_DEBUG) {
-                                console.log(`[Timing] First content chunk: ${Math.round(t_first_chunk - t_send)}ms after send  (${Math.round(t_first_chunk - t_http_response)}ms after HTTP response)`);
-                            }
+                            const afterHttp = t_http_response === null ? 'n/a' : Math.round(t_first_chunk - t_http_response);
+                            logTiming(requestId, 'first_chunk', t_send, `after_http=${afterHttp}ms`);
                         }
                         fullResponse += chunk.content;
                         scheduleRender();
                     }
 
                     if (chunk.done) {
+                        t_done_chunk = performance.now();
+                        logTiming(requestId, 'done_chunk', t_send, `chunks=${chunkCount}`);
                         break;
                     }
                 } catch (parseErr) {
@@ -550,17 +603,27 @@ async function sendMessage(text) {
 
         // Finalize with full citation rendering
         const t_stream_end = performance.now();
-        if (TIMING_DEBUG && t_first_chunk !== null) {
+        if (t_first_chunk !== null) {
             const genMs = Math.round(t_last_chunk - t_first_chunk);
             const tps = genMs > 0 ? (chunkCount / (genMs / 1000)).toFixed(1) : '?';
-            console.log(`[Timing] Stream complete: ${chunkCount} chunks over ${genMs}ms (${tps} chunks/s)  total=${Math.round(t_stream_end - t_send)}ms`);
+            logTiming(requestId, 'stream_complete', t_send, `chunks=${chunkCount} stream_window=${genMs}ms chunks_per_sec=${tps}`);
+        } else {
+            logTiming(requestId, 'stream_complete', t_send, `chunks=${chunkCount}`);
         }
+
         const t_render_start = performance.now();
         finalizeStreamingMessage(fullResponse);
-        if (TIMING_DEBUG) {
-            console.log(`[Timing] Citation render + finalize: ${Math.round(performance.now() - t_render_start)}ms`);
-            console.log(`[Timing] ── Full journey: send → first visible text = ${Math.round(t_first_chunk - t_send)}ms | send → complete = ${Math.round(performance.now() - t_send)}ms ──`);
-        }
+        const finalizeMs = Math.round(performance.now() - t_render_start);
+        const totalMs = Math.round(performance.now() - t_send);
+        const firstVisibleMs = t_first_chunk === null ? 'n/a' : Math.round(t_first_chunk - t_send);
+        const doneGapMs = t_done_chunk === null ? 'n/a' : Math.round(performance.now() - t_done_chunk);
+        logTiming(requestId, 'finalize_render', t_send, `render_ms=${finalizeMs}`);
+        logTiming(
+            requestId,
+            'complete',
+            t_send,
+            `first_visible=${firstVisibleMs}ms total=${totalMs}ms post_done_render=${doneGapMs}ms`
+        );
 
         // Add assistant response to history
         if (fullResponse) {
@@ -569,6 +632,7 @@ async function sendMessage(text) {
 
     } catch (error) {
         console.error('Chat error:', error);
+        logTiming(requestId, 'error', t_send, error.message || 'unknown');
 
         // Remove the streaming message
         const streamingMsg = document.getElementById('streaming-message');

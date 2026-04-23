@@ -37,6 +37,8 @@ from pydantic import BaseModel
 # Ollama connection
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:14b")
+HTTP_CONNECT_TIMEOUT_S = float(os.getenv("LORE_BOT_CONNECT_TIMEOUT_S", "5"))
+HTTP_READ_TIMEOUT_S = float(os.getenv("LORE_BOT_READ_TIMEOUT_S", "120"))
 
 # Server settings
 HOST = os.getenv("LORE_BOT_HOST", "0.0.0.0")
@@ -66,6 +68,10 @@ USE_RAG = True
 # How many lore entries to include per question when RAG is enabled
 RAG_TOP_K = 12
 
+# Keep only the recent conversation turns that materially help the current answer.
+MAX_CHAT_HISTORY_MESSAGES = int(os.getenv("LORE_BOT_MAX_HISTORY_MESSAGES", "6"))
+MAX_MESSAGE_CHARS = int(os.getenv("LORE_BOT_MAX_MESSAGE_CHARS", "1500"))
+
 # ---------------------------------------------------------------------------
 # Timing Debug
 # ---------------------------------------------------------------------------
@@ -74,7 +80,7 @@ RAG_TOP_K = 12
 # Covers: RAG retrieval, embed call, prompt build, Ollama time-to-first-token,
 # total generation time, and tokens-per-second estimate.
 # Safe to leave on in production — logs go to stdout only.
-TIMING_DEBUG = False
+TIMING_DEBUG = os.getenv("LORE_BOT_TIMING_DEBUG", "").lower() in {"1", "true", "yes", "on"}
 
 # Tracks wall-clock time of the last chat request to measure inter-request gap.
 _last_request_wall: float = 0.0
@@ -91,6 +97,14 @@ USE_VECTOR_SEARCH = True
 # Ollama model used for generating query embeddings at search time.
 # Must match the model used when embed_lore.py was run.
 EMBED_MODEL = "nomic-embed-text"
+
+# Context sizing: avoid paying the memory/perf cost of a very large window
+# when the current prompt is much smaller, while still leaving headroom.
+MIN_CTX_SIZE = int(os.getenv("LORE_BOT_MIN_CTX_SIZE", "8192"))
+MAX_CTX_SIZE = int(os.getenv("LORE_BOT_MAX_CTX_SIZE", "32768"))
+CTX_HEADROOM_TOKENS = int(os.getenv("LORE_BOT_CTX_HEADROOM_TOKENS", "1024"))
+
+ollama_client: Optional[httpx.AsyncClient] = None
 
 # ---------------------------------------------------------------------------
 # Corpus Compression (for prompt only — original .md files untouched)
@@ -127,14 +141,14 @@ async def get_embedding(text: str) -> list[float]:
     Uses the current Ollama /api/embed endpoint (replaces the deprecated /api/embeddings).
     Response shape: { "embeddings": [[...]] }
     """
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(
-            f"{OLLAMA_URL}/api/embed",
-            json={"model": EMBED_MODEL, "input": text},
-            timeout=30,
-        )
-        resp.raise_for_status()
-        return resp.json()["embeddings"][0]
+    client = get_ollama_client()
+    resp = await client.post(
+        f"{OLLAMA_URL}/api/embed",
+        json={"model": EMBED_MODEL, "input": text},
+        timeout=30,
+    )
+    resp.raise_for_status()
+    return resp.json()["embeddings"][0]
 
 
 # ---------------------------------------------------------------------------
@@ -279,6 +293,49 @@ class LoreSearchIndex:
 
 
 search_index = LoreSearchIndex()
+
+
+def get_ollama_client() -> httpx.AsyncClient:
+    if ollama_client is None:
+        raise RuntimeError("Ollama HTTP client not initialized.")
+    return ollama_client
+
+
+def strip_citation_markup(text: str) -> str:
+    """Remove sources blocks and inline citation syntax before resending history."""
+    text = re.sub(r"\[\[Sources\]\][\s\S]*?\[\[/Sources\]\]", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\[\[([^:\]]+):([^\]|]+)\|([^\]]+)\]\]", r"\3", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
+def compact_message_content(role: str, content: str) -> str:
+    """Trim prior turns so follow-up requests do not re-prefill unnecessary tokens."""
+    compacted = strip_citation_markup(content) if role == "assistant" else re.sub(r"\s+", " ", content).strip()
+    if len(compacted) <= MAX_MESSAGE_CHARS:
+        return compacted
+    return compacted[: max(MAX_MESSAGE_CHARS - 1, 0)].rstrip() + "…"
+
+
+def build_chat_messages(system_prompt: str, messages: list["ChatMessage"]) -> list[dict[str, str]]:
+    recent_messages = messages[-MAX_CHAT_HISTORY_MESSAGES:] if MAX_CHAT_HISTORY_MESSAGES > 0 else messages
+    ollama_messages = [{"role": "system", "content": system_prompt}]
+    for msg in recent_messages:
+        content = compact_message_content(msg.role, msg.content)
+        if content:
+            ollama_messages.append({"role": msg.role, "content": content})
+    return ollama_messages
+
+
+def estimate_token_count(text: str) -> int:
+    return max(1, len(text) // 4)
+
+
+def choose_context_size(messages: list[dict[str, str]]) -> tuple[int, int]:
+    prompt_tokens = sum(estimate_token_count(msg["content"]) for msg in messages)
+    desired_ctx = prompt_tokens + CTX_HEADROOM_TOKENS
+    ctx_size = max(MIN_CTX_SIZE, min(MAX_CTX_SIZE, desired_ctx))
+    return ctx_size, prompt_tokens
 
 # ---------------------------------------------------------------------------
 # System Prompts
@@ -617,6 +674,13 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     messages: list[ChatMessage]
     stream: Optional[bool] = True
+    request_id: Optional[str] = None
+
+
+def log_request_timing(request_id: str, phase: str, started_at: float, extra: str = "") -> None:
+    elapsed_ms = round((time.perf_counter() - started_at) * 1000)
+    suffix = f" | {extra}" if extra else ""
+    print(f"[Lore Timing][{request_id}] {phase}: {elapsed_ms}ms{suffix}")
 
 
 def check_rate_limit(client_ip: str) -> bool:
@@ -633,6 +697,11 @@ def check_rate_limit(client_ip: str) -> bool:
 
 @app.on_event("startup")
 async def startup_event():
+    global ollama_client
+    ollama_client = httpx.AsyncClient(
+        timeout=httpx.Timeout(HTTP_READ_TIMEOUT_S, connect=HTTP_CONNECT_TIMEOUT_S)
+    )
+
     print("=" * 60)
     print("  Pax Dei Archives — Lore Keeper Bot")
     print("=" * 60)
@@ -647,22 +716,29 @@ async def startup_event():
     load_lore_corpus()
 
     try:
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(f"{OLLAMA_URL}/api/tags", timeout=5)
-            if resp.status_code == 200:
-                models = resp.json().get("models", [])
-                model_names = [m.get("name", "") for m in models]
-                print(f"[INFO] Ollama is reachable. Available models: {', '.join(model_names)}")
-                model_base = OLLAMA_MODEL.split(":")[0]
-                if not any(model_base in name for name in model_names):
-                    print(f"[WARN] Model '{OLLAMA_MODEL}' not found. Pull it with:")
-                    print(f"       ollama pull {OLLAMA_MODEL}")
+        resp = await get_ollama_client().get(f"{OLLAMA_URL}/api/tags", timeout=5)
+        if resp.status_code == 200:
+            models = resp.json().get("models", [])
+            model_names = [m.get("name", "") for m in models]
+            print(f"[INFO] Ollama is reachable. Available models: {', '.join(model_names)}")
+            model_base = OLLAMA_MODEL.split(":")[0]
+            if not any(model_base in name for name in model_names):
+                print(f"[WARN] Model '{OLLAMA_MODEL}' not found. Pull it with:")
+                print(f"       ollama pull {OLLAMA_MODEL}")
     except Exception as e:
         print(f"[WARN] Cannot reach Ollama at {OLLAMA_URL}: {e}")
 
     print()
     print(f"[READY] Lore Keeper is ready. Listening on http://{HOST}:{PORT}")
     print("=" * 60)
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    global ollama_client
+    if ollama_client is not None:
+        await ollama_client.aclose()
+        ollama_client = None
 
 
 @app.get("/health")
@@ -710,37 +786,56 @@ async def chat(request: Request, chat_req: ChatRequest):
 
     t_request_start = time.perf_counter()
     t_request_wall = time.time()
+    request_id = chat_req.request_id or f"server-{int(t_request_wall * 1000)}"
+    log_request_timing(
+        request_id,
+        "request_received",
+        t_request_start,
+        f"ip={client_ip} messages={len(chat_req.messages)} stream={chat_req.stream}",
+    )
 
     if USE_RAG:
         user_query = chat_req.messages[-1].content if chat_req.messages else ""
         system_prompt, rag_timing = await build_rag_prompt(user_query)
-        # Pin context window at 32768 — hardware (2x RTX 3060 12GB, 24GB pooled)
-        # has sufficient VRAM to hold the full KV cache at this size for all RAG prompts.
-        # Consistent ctx_size means consistent model behaviour across queries.
-        estimated_prompt_tokens = len(system_prompt) // 4
-        ctx_size = 32768
-        print(f"[CTX] Prompt ~{estimated_prompt_tokens} tokens → ctx_size pinned to {ctx_size}")
-        if TIMING_DEBUG:
-            global _last_request_wall
-            ts = datetime.fromtimestamp(t_request_wall).strftime('%H:%M:%S')
-            gap = round(t_request_wall - _last_request_wall) if _last_request_wall else None
-            gap_str = f"  gap_since_last={gap}s" if gap is not None else "  gap_since_last=first"
-            print(f"[TIMING] Request @ {ts}{gap_str}")
-            _last_request_wall = t_request_wall
+        log_request_timing(
+            request_id,
+            "rag_ready",
+            t_request_start,
+            " ".join(
+                [
+                    f"embed={rag_timing.get('embed_ms', '—')}ms",
+                    f"search={rag_timing.get('search_ms', '—')}ms",
+                    f"prompt_build={rag_timing.get('prompt_build_ms', '—')}ms",
+                    f"total_rag={rag_timing.get('total_rag_ms', '—')}ms",
+                ]
+            ),
+        )
+    else:
+        rag_timing = {}
+        system_prompt = full_corpus_prompt
+        log_request_timing(request_id, "rag_ready", t_request_start, "mode=full_corpus")
+
+    ollama_messages = build_chat_messages(system_prompt, chat_req.messages)
+    ctx_size, estimated_prompt_tokens = choose_context_size(ollama_messages)
+
+    log_request_timing(
+        request_id,
+        "ollama_payload_ready",
+        t_request_start,
+        f"prompt_tokens~{estimated_prompt_tokens} messages={len(ollama_messages)} ctx_size={ctx_size}",
+    )
+    if TIMING_DEBUG:
+        global _last_request_wall
+        ts = datetime.fromtimestamp(t_request_wall).strftime('%H:%M:%S')
+        gap = round(t_request_wall - _last_request_wall) if _last_request_wall else None
+        gap_str = f"  gap_since_last={gap}s" if gap is not None else "  gap_since_last=first"
+        print(f"[TIMING] Request @ {ts}{gap_str}")
+        _last_request_wall = t_request_wall
+        if USE_RAG:
             print(f"[TIMING] RAG phases: embed={rag_timing.get('embed_ms','—')}ms  "
                   f"search={rag_timing.get('search_ms','—')}ms  "
                   f"prompt_build={rag_timing.get('prompt_build_ms','—')}ms  "
                   f"total_rag={rag_timing.get('total_rag_ms','—')}ms")
-    else:
-        rag_timing = {}
-        system_prompt = full_corpus_prompt
-        ctx_size = 32768
-
-    ollama_messages = [
-        {"role": "system", "content": system_prompt}
-    ]
-    for msg in chat_req.messages:
-        ollama_messages.append({"role": msg.role, "content": msg.content})
 
     ollama_payload = {
         "model": OLLAMA_MODEL,
@@ -757,65 +852,78 @@ async def chat(request: Request, chat_req: ChatRequest):
 
     if not chat_req.stream:
         try:
-            async with httpx.AsyncClient() as client:
-                resp = await client.post(
-                    f"{OLLAMA_URL}/api/chat", json=ollama_payload, timeout=120,
-                )
-                if resp.status_code != 200:
-                    raise HTTPException(status_code=502, detail="Ollama returned an error.")
-                data = resp.json()
-                return {"message": data.get("message", {}).get("content", ""), "done": True}
+            log_request_timing(request_id, "ollama_request_start", t_request_start, "mode=non_stream")
+            resp = await get_ollama_client().post(
+                f"{OLLAMA_URL}/api/chat", json=ollama_payload, timeout=120,
+            )
+            if resp.status_code != 200:
+                raise HTTPException(status_code=502, detail="Ollama returned an error.")
+            data = resp.json()
+            log_request_timing(request_id, "non_stream_complete", t_request_start)
+            return {"message": data.get("message", {}).get("content", ""), "done": True}
         except httpx.ConnectError:
             raise HTTPException(status_code=503, detail="Cannot connect to Ollama. Is it running?")
 
     async def stream_response():
         try:
-            async with httpx.AsyncClient() as client:
-                async with client.stream(
-                    "POST", f"{OLLAMA_URL}/api/chat", json=ollama_payload, timeout=120,
-                ) as resp:
-                    if resp.status_code != 200:
-                        error_body = await resp.aread()
-                        yield json.dumps({"error": f"Ollama error: {error_body.decode()}"}) + "\n"
-                        return
+            log_request_timing(request_id, "ollama_request_start", t_request_start, "mode=stream")
+            async with get_ollama_client().stream(
+                "POST", f"{OLLAMA_URL}/api/chat", json=ollama_payload, timeout=120,
+            ) as resp:
+                if resp.status_code != 200:
+                    error_body = await resp.aread()
+                    log_request_timing(request_id, "ollama_http_error", t_request_start, f"status={resp.status_code}")
+                    yield json.dumps({"error": f"Ollama error: {error_body.decode()}"}) + "\n"
+                    return
 
-                    t_first_token = None
-                    token_count = 0
+                log_request_timing(request_id, "ollama_http_response", t_request_start, f"status={resp.status_code}")
 
-                    async for line in resp.aiter_lines():
-                        if line.strip():
-                            try:
-                                chunk = json.loads(line)
-                                content = chunk.get("message", {}).get("content", "")
-                                done = chunk.get("done", False)
+                t_first_token = None
+                token_count = 0
 
-                                if content and t_first_token is None:
-                                    t_first_token = time.perf_counter()
-                                    if TIMING_DEBUG:
-                                        ttft = round((t_first_token - t_request_start) * 1000)
-                                        print(f"[TIMING] Time to first token: {ttft}ms "
-                                              f"(RAG={rag_timing.get('total_rag_ms','—')}ms + "
-                                              f"Ollama prefill={ttft - rag_timing.get('total_rag_ms', 0)}ms)")
+                async for line in resp.aiter_lines():
+                    if line.strip():
+                        try:
+                            chunk = json.loads(line)
+                            content = chunk.get("message", {}).get("content", "")
+                            done = chunk.get("done", False)
 
-                                if content:
-                                    token_count += 1
+                            if content and t_first_token is None:
+                                t_first_token = time.perf_counter()
+                                ttft = round((t_first_token - t_request_start) * 1000)
+                                rag_ms = rag_timing.get('total_rag_ms', 0) or 0
+                                prefill_ms = ttft - rag_ms
+                                log_request_timing(
+                                    request_id,
+                                    "first_token",
+                                    t_request_start,
+                                    f"ttft={ttft}ms rag={rag_ms}ms prefill={prefill_ms}ms",
+                                )
 
-                                yield json.dumps({"content": content, "done": done}) + "\n"
+                            if content:
+                                token_count += 1
 
-                                if done and TIMING_DEBUG:
-                                    t_done = time.perf_counter()
-                                    total_ms = round((t_done - t_request_start) * 1000)
-                                    gen_ms = round((t_done - t_first_token) * 1000) if t_first_token else 0
-                                    tps = round(token_count / (gen_ms / 1000), 1) if gen_ms > 0 else 0
-                                    print(f"[TIMING] Generation complete: "
-                                          f"{token_count} chunks in {gen_ms}ms ({tps} tok/s)  "
-                                          f"total wall time={total_ms}ms")
+                            yield json.dumps({"content": content, "done": done}) + "\n"
 
-                            except json.JSONDecodeError:
-                                continue
+                            if done:
+                                t_done = time.perf_counter()
+                                total_ms = round((t_done - t_request_start) * 1000)
+                                gen_ms = round((t_done - t_first_token) * 1000) if t_first_token else 0
+                                tps = round(token_count / (gen_ms / 1000), 1) if gen_ms > 0 else 0
+                                log_request_timing(
+                                    request_id,
+                                    "stream_complete",
+                                    t_request_start,
+                                    f"chunks={token_count} generation={gen_ms}ms chunks_per_sec={tps} total={total_ms}ms",
+                                )
+
+                        except json.JSONDecodeError:
+                            continue
         except httpx.ConnectError:
+            log_request_timing(request_id, "connect_error", t_request_start)
             yield json.dumps({"error": "Cannot connect to Ollama. Is it running?"}) + "\n"
         except Exception as e:
+            log_request_timing(request_id, "stream_exception", t_request_start, str(e))
             yield json.dumps({"error": str(e)}) + "\n"
 
     return StreamingResponse(

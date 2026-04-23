@@ -4,7 +4,7 @@
 
 The lore-bot is a Python FastAPI server (`server.py`) that acts as middleware between the frontend chat UI and a local Ollama LLM instance.
 
-**Request flow:** `lore-chat.html` → `loreChat.js` → `lore-bot server` → `Ollama (qwen2.5:7b)`
+**Request flow:** `lore-chat.html` → `loreChat.js` → `lore-bot server` → `Ollama`
 
 ---
 
@@ -19,7 +19,7 @@ On startup, the server fetches all rows from the `lore_items` table via the Supa
 ## Search Modes
 
 **RAG mode (default — `USE_RAG = True`)**
-When a question comes in, a TF-IDF search index finds the 7 most relevant lore entries and injects only those into the prompt. Faster and more accurate.
+When a question comes in, the bot retrieves the most relevant lore entries and injects only those into the prompt. It also keeps only a short recent chat window when forwarding conversation history, which reduces prompt prefill time before streaming begins.
 
 **Full corpus mode (`USE_RAG = False`)**
 Sends every lore entry with every request. Much heavier — requires `num_ctx = 32768`.
@@ -30,7 +30,7 @@ Sends every lore entry with every request. Much heavier — requires `num_ctx = 
 
 The bot operates as a strict "Lore Keeper" persona — it can only cite what is present in the provided entries. Citations are formatted as `[[Category:slug|Title]]` and every response must close with a `[[Sources]]...[[/Sources]]` block.
 
-`loreChat.js` validates those citations against the keys returned by `/health`, strips any hallucinated ones, and renders valid citations as clickable links to `lore.html`.
+`loreChat.js` validates those citations against the keys returned by `/health`, strips any hallucinated ones, and renders valid citations as clickable links to `lore.html`. Before a follow-up request is sent, the page also strips prior citation markup from assistant replies so the model does not have to reread a large citation block on every turn.
 
 ---
 
@@ -65,3 +65,6 @@ Entries with an empty `content` field are silently skipped with a `[WARN]` log. 
 
 **Hallucinated citations**
 `loreChat.js` strips any citation keys not returned by `/health`. If a valid entry's citations are being stripped, verify the `slug` and `category` in Supabase exactly match what the bot is generating — the check is case-insensitive but the key format must be `Category:slug`.
+
+**Slow first token / long pause before streaming**
+The main causes are usually prompt size and model prefill, not browser rendering. The bot now trims resent chat history and sizes `num_ctx` to the estimated prompt instead of pinning every request to the maximum window. For deeper troubleshooting, start the server with `LORE_BOT_TIMING_DEBUG=true` and inspect the per-phase logs.
