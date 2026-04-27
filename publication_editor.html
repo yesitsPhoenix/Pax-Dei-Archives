@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pax Dei Archives - Publication Editor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="frontend/www/css/articles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body class="text-white">
+
+<div id="header-placeholder"></div>
+
+<main class="publication-editor-page">
+    <section class="publication-editor-shell">
+        <header class="publication-editor-header">
+            <div>
+                <p class="articles-section-label">Chronicle CMS</p>
+                <h1>Publication Editor</h1>
+                <p>Create or load a publication first, then add entries to that issue.</p>
+            </div>
+            <a href="publications.html" class="publication-editor-link">
+                <i class="fa-solid fa-newspaper"></i>
+                View Latest Publication
+            </a>
+        </header>
+
+        <section class="publication-manager-panel">
+            <div class="publication-manager-header">
+                <div>
+                    <p class="articles-section-label">Publication</p>
+                    <h2>Manage Publication</h2>
+                    <p>Create a new issue, load an existing draft, or review a published publication.</p>
+                </div>
+            </div>
+
+            <div class="publication-editor-grid">
+                <label>
+                    Existing Publication
+                    <select id="existingPublicationSelect">
+                        <option value="">Loading publications...</option>
+                    </select>
+                </label>
+                <div class="publication-manager-actions align-end">
+                    <button type="button" id="loadSelectedPublicationButton" class="publication-editor-secondary">
+                        <i class="fas fa-folder-open"></i>
+                        Load Selected
+                    </button>
+                    <button type="button" id="newPublicationButton" class="publication-editor-secondary">
+                        <i class="fas fa-file-circle-plus"></i>
+                        New Publication
+                    </button>
+                    <button type="button" id="clearPublicationButton" class="publication-editor-secondary">
+                        <i class="fas fa-eraser"></i>
+                        Clear Loaded
+                    </button>
+                </div>
+            </div>
+
+            <div class="publication-editor-grid">
+                <label>
+                    Issue Number
+                    <input type="number" id="publicationIssueNumber" min="18" required>
+                </label>
+                <label>
+                    Publication Title
+                    <input type="text" id="publicationTitle" placeholder="Pax Dei Chronicle">
+                </label>
+            </div>
+
+            <div class="publication-editor-grid">
+                <label>
+                    Publication Release Date
+                    <input type="date" id="publicationReleaseDate" required>
+                </label>
+                <label>
+                    Publication Status
+                    <select id="publicationStatus">
+                        <option value="">Not loaded</option>
+                        <option value="draft">Draft</option>
+                        <option value="published">Published</option>
+                        <option value="archived">Archived</option>
+                    </select>
+                </label>
+            </div>
+
+            <div class="publication-manager-footer">
+                <p id="publicationManagerHelp">Draft publications stay hidden from the public Publications page until published.</p>
+                <div class="publication-manager-actions">
+                    <button type="button" id="loadPublicationButton" class="publication-editor-secondary">
+                        <i class="fas fa-magnifying-glass"></i>
+                        Load by Issue
+                    </button>
+                    <button type="button" id="savePublicationButton" class="publication-editor-submit">
+                        <i class="fas fa-save"></i>
+                        Save Publication
+                    </button>
+                </div>
+            </div>
+        </section>
+    </section>
+
+    <section class="publication-editor-shell publication-entry-shell">
+        <div class="publication-editor-layout">
+            <form id="addArticleForm" class="publication-editor-form" autocomplete="off">
+                <div id="entryEditorFieldset" class="entry-editor-fields">
+                    <div class="entry-editor-heading">
+                        <div>
+                            <p class="articles-section-label">Entry</p>
+                            <h2>Add Publication Entry</h2>
+                        </div>
+                    <p id="activePublicationNotice">Create or load a publication before adding or editing entries.</p>
+                    </div>
+
+                    <div class="publication-editor-grid">
+                        <label>
+                            Title
+                            <input type="text" id="entryTitle" required>
+                        </label>
+                        <label>
+                            Slug
+                            <input type="text" id="entrySlug" readonly>
+                        </label>
+                    </div>
+
+                    <label>
+                        Summary
+                        <textarea id="entrySummary" rows="3" required></textarea>
+                    </label>
+
+                    <label>
+                        Card Image URL
+                        <input type="url" id="entryImageUrl" placeholder="https://... or frontend/www/assets/...">
+                    </label>
+
+                    <div class="publication-editor-grid">
+                        <label>
+                            Author
+                            <input type="text" id="entryAuthor" required>
+                        </label>
+                        <label>
+                            Section
+                            <select id="entrySection" required></select>
+                        </label>
+                    </div>
+
+                    <div class="publication-markdown-editor">
+                        <label for="entryContent">Content (Markdown)</label>
+                        <div class="publication-preview-tabs" role="tablist" aria-label="Entry content editor mode">
+                            <button type="button" class="publication-preview-tab active" data-markdown-mode="edit">
+                                <i class="fa-solid fa-code"></i>
+                                Edit
+                            </button>
+                            <button type="button" class="publication-preview-tab" data-markdown-mode="preview">
+                                <i class="fa-solid fa-eye"></i>
+                                Preview
+                            </button>
+                            <button type="button" class="publication-preview-tab" data-markdown-mode="split">
+                                <i class="fa-solid fa-columns"></i>
+                                Split
+                            </button>
+                        </div>
+                        <div id="entryMarkdownEditMode">
+                            <textarea id="entryContent" rows="12" required></textarea>
+                        </div>
+                        <div id="entryMarkdownPreviewMode" class="hidden">
+                            <div id="entryMarkdownPreview" class="publication-preview-content markdown-content"></div>
+                        </div>
+                        <div id="entryMarkdownSplitMode" class="publication-markdown-split hidden">
+                            <textarea id="entryContentSplit" rows="12"></textarea>
+                            <div id="entryMarkdownPreviewSplit" class="publication-preview-content markdown-content"></div>
+                        </div>
+                    </div>
+
+                    <p class="publication-editor-note">
+                        Entries are saved to the selected draft publication.
+                    </p>
+
+                    <div id="publicationEditorMessage" class="hidden"></div>
+
+                    <div class="publication-editor-actions">
+                        <button type="submit" class="publication-editor-submit">
+                            <i class="fas fa-plus"></i>
+                        Save Entry
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <aside class="publication-draft-panel">
+                <div class="publication-draft-panel-header">
+                    <div>
+                        <p class="articles-section-label">Draft Queue</p>
+                        <h2 id="draftPublicationTitle">No Publication Loaded</h2>
+                        <p id="draftPublicationMeta">Create or load an issue to begin.</p>
+                    </div>
+                    <span id="draftPublicationStatus" class="publication-status-pill">None</span>
+                </div>
+
+                <div id="draftEntryList" class="draft-entry-list">
+                    <div class="empty-draft-state">Saved entries for the selected issue will appear here.</div>
+                </div>
+
+                <button type="button" id="publishPublicationButton" class="publication-editor-submit publish-publication-button" disabled>
+                    <i class="fas fa-upload"></i>
+                    Publish Publication
+                </button>
+            </aside>
+        </div>
+    </section>
+</main>
+
+<div id="footer-placeholder"></div>
+<script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
+<script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
+<script type="module">
+import { setupAdminAuthListener } from './frontend/www/js/admin/adminManager.js';
+setupAdminAuthListener();
+</script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script type="module" src="frontend/www/js/articles/publicationEditor.js"></script>
+<script type="module" src="frontend/www/js/main.js"></script>
+<script type="module" src="frontend/www/js/popoutAuth.js"></script>
+
+</body>
+</html>

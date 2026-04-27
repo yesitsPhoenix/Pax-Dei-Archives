@@ -136,7 +136,7 @@ async function fetchDashboardStats() {
         { count: totalComments },
         { count: commentsThisMonth },
         { count: totalLore },
-        { count: totalArticles },
+        { count: totalPublications },
         { count: adminUsers },
         { count: totalCharacters },
         { count: totalItems },
@@ -151,7 +151,7 @@ async function fetchDashboardStats() {
         supabase.from('developer_comments').select('*', { count: 'exact', head: true }),
         supabase.from('developer_comments').select('*', { count: 'exact', head: true }).gte('comment_date', startOfMonth).lte('comment_date', endOfMonth),
         supabase.from('lore_items').select('*', { count: 'exact', head: true }),
-        supabase.from('articles').select('*', { count: 'exact', head: true }),
+        supabase.from('publications').select('*', { count: 'exact', head: true }).eq('status', 'published'),
         supabase.from('admin_users').select('*', { count: 'exact', head: true }),
         supabase.from('characters').select('*', { count: 'exact', head: true }),
         supabase.from('items').select('*', { count: 'exact', head: true }),
@@ -167,7 +167,7 @@ async function fetchDashboardStats() {
     dashboardStatsCache = {
         totalQuests, questCategories,
         totalComments, commentsThisMonth,
-        totalLore, totalArticles,
+        totalLore, totalPublications,
         adminUsers, totalCharacters,
         totalItems, totalListings, activeListings,
         totalSales, totalRevenue,
@@ -185,7 +185,7 @@ function applyStatsToDOM(s) {
     set('stat-total-comments',    formatNumber(s.totalComments));
     set('stat-comments-month',    formatNumber(s.commentsThisMonth) + ' this month');
     set('stat-total-lore',        formatNumber(s.totalLore));
-    set('stat-total-articles',    formatNumber(s.totalArticles));
+    set('stat-total-articles',    formatNumber(s.totalPublications));
     set('stat-admin-users',       formatNumber(s.adminUsers));
     set('stat-total-characters',  formatNumber(s.totalCharacters));
     set('stat-total-items',       formatNumber(s.totalItems));
@@ -203,11 +203,11 @@ async function fetchRecentActivity() {
     const [
         { data: lastComment },
         { data: lastLore },
-        { data: lastArticle },
+        { data: lastPublication },
     ] = await Promise.all([
         supabase.from('developer_comments').select('author, comment_date, content').order('comment_date', { ascending: false }).limit(1).single(),
         supabase.from('lore_items').select('title, created_at, category').order('created_at', { ascending: false }).limit(1).single(),
-        supabase.from('articles').select('title, publication_date, author').order('publication_date', { ascending: false }).limit(1).single(),
+        supabase.from('publications').select('title, release_date, issue_number').eq('status', 'published').order('release_date', { ascending: false }).limit(1).single(),
     ]);
 
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || '--'; };
@@ -222,10 +222,10 @@ async function fetchRecentActivity() {
         set('recent-lore-date',     formatDate(lastLore.created_at));
         set('recent-lore-category', lastLore.category ? 'Category: ' + lastLore.category : '--');
     }
-    if (lastArticle) {
-        set('recent-article-title',  lastArticle.title || '--');
-        set('recent-article-date',   formatDate(lastArticle.publication_date));
-        set('recent-article-author', lastArticle.author ? 'By ' + lastArticle.author : '--');
+    if (lastPublication) {
+        set('recent-article-title',  lastPublication.title || (lastPublication.issue_number ? 'Issue ' + lastPublication.issue_number : '--'));
+        set('recent-article-date',   formatDate(lastPublication.release_date));
+        set('recent-article-author', lastPublication.issue_number ? 'Issue ' + lastPublication.issue_number : '--');
     }
 }
 
@@ -674,7 +674,7 @@ function applySidebarLinkState(btnId, allowed, disabledTitle) {
 
 function applyModalGating() {
     applySidebarLinkState('openDevCommentModalBtn',   currentUserCanComment,      'You do not have the comment_adder role');
-    applySidebarLinkState('openArticleModalBtn',      currentUserCanPostArticles, 'You do not have the can_post_articles role');
+    applySidebarLinkState('sidebarPublicationEditorLink', currentUserCanPostArticles, 'You do not have the can_post_articles role');
     applySidebarLinkState('openAddUserRoleModalBtn',  currentUserIsAdmin,         'Only admins can manage user roles');
 
     // Show/hide Edit Lore sidebar link based on lore role
@@ -700,6 +700,12 @@ function applyModalGating() {
         } else {
             editLoreNav.classList.add('hidden');
         }
+    }
+
+    const publicationEditorNav = document.getElementById('publication-editor-nav');
+    if (publicationEditorNav) {
+        publicationEditorNav.hidden = !currentUserCanPostArticles;
+        publicationEditorNav.classList.toggle('hidden', !currentUserCanPostArticles);
     }
 }
 
@@ -926,15 +932,6 @@ function setupModalHandlers() {
     }
     if (closeDevComment) closeDevComment.addEventListener('click', function() { if (devCommentModal) devCommentModal.classList.add('hidden'); });
     if (devCommentModal) devCommentModal.addEventListener('click', function(e) { if (e.target === devCommentModal) devCommentModal.classList.add('hidden'); });
-
-    // Article modal
-    const openArticle  = document.getElementById('openArticleModalBtn');
-    const articleModal = document.getElementById('articleModal');
-    const closeArticle = document.getElementById('closeArticleModalBtn');
-
-    if (openArticle)  openArticle.addEventListener('click',  function(e) { e.preventDefault(); if (!currentUserCanPostArticles) return; if (articleModal) articleModal.classList.remove('hidden'); });
-    if (closeArticle) closeArticle.addEventListener('click', function()  { if (articleModal) articleModal.classList.add('hidden'); });
-    if (articleModal) articleModal.addEventListener('click', function(e) { if (e.target === articleModal) articleModal.classList.add('hidden'); });
 
     // Add User Role modal
     const openUserRole  = document.getElementById('openAddUserRoleModalBtn');

@@ -5,38 +5,43 @@ import { authSession } from '../authSessionManager.js';
 const _roleCache = {
     questRole: null,
     loreRole: null,
+    canPostArticles: false,
     resolved: false
 };
 
 export async function getAdminRoles() {
     if (_roleCache.resolved) {
-        return { questRole: _roleCache.questRole, loreRole: _roleCache.loreRole };
+        return { questRole: _roleCache.questRole, loreRole: _roleCache.loreRole, canPostArticles: _roleCache.canPostArticles };
     }
 
     const user = await authSession.getUser();
     if (!user) {
         _roleCache.questRole = null;
         _roleCache.loreRole  = null;
+        _roleCache.canPostArticles = false;
         _roleCache.resolved  = true;
-        return { questRole: null, loreRole: null };
+        return { questRole: null, loreRole: null, canPostArticles: false };
     }
 
     try {
         const { data, error } = await supabase
             .from('admin_users')
-            .select('quest_role, lore_role')
+            .select('quest_role, lore_role, is_admin, can_post_articles')
             .eq('user_id', user.id);
 
-        _roleCache.questRole = (!error && data && data.length > 0) ? data[0].quest_role : null;
-        _roleCache.loreRole  = (!error && data && data.length > 0) ? data[0].lore_role  : null;
+        const record = (!error && data && data.length > 0) ? data[0] : null;
+        _roleCache.questRole = record ? record.quest_role : null;
+        _roleCache.loreRole  = record ? record.lore_role  : null;
+        _roleCache.canPostArticles = record ? (record.is_admin === true || record.can_post_articles === true) : false;
         _roleCache.resolved  = true;
     } catch (err) {
         _roleCache.questRole = null;
         _roleCache.loreRole  = null;
+        _roleCache.canPostArticles = false;
         _roleCache.resolved  = true;
     }
 
-    return { questRole: _roleCache.questRole, loreRole: _roleCache.loreRole };
+    return { questRole: _roleCache.questRole, loreRole: _roleCache.loreRole, canPostArticles: _roleCache.canPostArticles };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -73,13 +78,14 @@ export async function handleAdminAccess(user) {
     try {
         const { data, error } = await supabase
             .from('admin_users')
-            .select('is_admin, is_editor, quest_role, lore_role')
+            .select('is_admin, is_editor, can_post_articles, quest_role, lore_role')
             .eq('user_id', user.id);
 
         const record = (!error && data && data.length > 0) ? data[0] : null;
 
         const isAdmin       = record?.is_admin  === true;   // user management within admin panel
         const isEditor      = record?.is_editor === true;   // grants access to admin.html
+        const canPostArticles = isAdmin || record?.can_post_articles === true;
         const questRole     = record?.quest_role ?? null;
         const loreRole      = record?.lore_role  ?? null;
 
@@ -90,15 +96,21 @@ export async function handleAdminAccess(user) {
         // Populate shared cache so getAdminRoles() is free for the rest of this session
         _roleCache.questRole = questRole;
         _roleCache.loreRole  = loreRole;
+        _roleCache.canPostArticles = canPostArticles;
         _roleCache.resolved  = true;
 
         // ── Check if current page requires a role the user doesn't have ─────────
         // Only protected pages are gated; all other pages are freely accessible.
         const allowedPages = new Set();
 
-        // admin.html access is controlled solely by is_editor
+        // admin.html access is controlled solely by is_editor.
         if (isEditor) {
             allowedPages.add('admin.html');
+        }
+
+        // Publication editing is controlled by the article poster role, not general editor access.
+        if (canPostArticles) {
+            allowedPages.add('publication_editor.html');
         }
 
         // categorize_items.html is restricted to is_admin only
@@ -155,6 +167,18 @@ export async function handleAdminAccess(user) {
             if (el) el.classList.remove('hidden');
         }
 
+        const publicationEditorNav = document.getElementById('publication-editor-nav');
+        if (publicationEditorNav) {
+            if (canPostArticles) {
+                const el = publicationEditorNav;
+                el.hidden = false;
+                el.classList.remove('hidden');
+            } else {
+                publicationEditorNav.hidden = true;
+                publicationEditorNav.classList.add('hidden');
+            }
+        }
+
         // ── Enforce page access ───────────────────────────────────────────────
         // Only redirect if this is a protected page the user doesn't have access to.
         if (protectedPages.includes(currentPage) && !allowedPages.has(currentPage)) {
@@ -175,7 +199,7 @@ export async function handleAdminAccess(user) {
 // ── Auth listener bootstrap ───────────────────────────────────────────────────
 
 // Pages that require specific roles to access. Everything else is freely accessible.
-const protectedPages = ['admin.html', 'categorize_items.html', 'edit_lore.html', 'edit_quest.html', 'panel.html', 'quest_flow.html', 'features.html'];
+const protectedPages = ['admin.html', 'publication_editor.html', 'categorize_items.html', 'edit_lore.html', 'edit_quest.html', 'panel.html', 'quest_flow.html', 'features.html'];
 
 export function setupAdminAuthListener() {
     const path        = window.location.pathname;
@@ -197,6 +221,11 @@ export function setupAdminAuthListener() {
                 handleAdminAccess(user);
             }
         } else if (event === 'SIGNED_OUT') {
+            const publicationEditorNav = document.getElementById('publication-editor-nav');
+            if (publicationEditorNav) {
+                publicationEditorNav.hidden = true;
+                publicationEditorNav.classList.add('hidden');
+            }
             if (protectedPages.includes(currentPage)) {
                 window.location.href = getUnauthorizedRedirect(currentPage);
             }

@@ -2,154 +2,341 @@ import { supabase } from '../supabaseClient.js';
 import { formatCommentDateTime, replaceEmojiShortcodes, slugify } from '../utils.js';
 import DOMPurify from 'https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.es.min.js';
 
-const ARTICLE_LIST_CACHE_KEY = 'paxDeiArticleList';
-const ARTICLE_LIST_CACHE_EXPIRY_MS = 10 * 60 * 1000;
+const PUBLICATION_CACHE_KEY = 'paxDeiPublications:v2';
+const PUBLICATION_CACHE_EXPIRY_MS = 10 * 60 * 1000;
+const FALLBACK_IMAGE = 'frontend/www/assets/banner.png';
 
-let allArticles = [];
-let filteredArticles = [];
-let activeCategory = 'All';
-
-export async function fetchAndRenderArticles(containerId, searchTerm = null, limit = null) {
-  const shouldUseCache = !searchTerm && !limit;
-  let articlesData = [];
-
-  if (shouldUseCache) {
-    const cachedData = sessionStorage.getItem(ARTICLE_LIST_CACHE_KEY);
-    if (cachedData) {
-      const parsedCache = JSON.parse(cachedData);
-      if (Date.now() - parsedCache.timestamp < ARTICLE_LIST_CACHE_EXPIRY_MS) {
-        articlesData = parsedCache.data;
-      } else {
-        sessionStorage.removeItem(ARTICLE_LIST_CACHE_KEY);
-      }
-    }
-  }
-
-  if (articlesData.length === 0 || searchTerm || limit) {
-    try {
-      let query = supabase
-        .from('articles')
-        .select('*')
-        .order('publication_date', { ascending: false });
-
-      if (searchTerm) {
-        query = query.or(`title.ilike.%${searchTerm}%,content.ilike.%${searchTerm}%,summary.ilike.%${searchTerm}%`);
-      }
-
-      if (limit) {
-        query = query.limit(limit);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      articlesData = (data || []).map(normalizeArticle);
-
-      if (shouldUseCache) {
-        sessionStorage.setItem(ARTICLE_LIST_CACHE_KEY, JSON.stringify({ data: articlesData, timestamp: Date.now() }));
-      }
-    } catch (error) {
-      console.error('Error fetching articles:', error);
-      return [];
-    }
-  } else {
-    articlesData = articlesData.map(normalizeArticle);
-  }
-
-  if (searchTerm) {
-    return articlesData;
-  }
-
-  allArticles = articlesData;
-  filteredArticles = [...allArticles];
-
-  if (containerId) {
-    renderArticlesPage(filteredArticles);
-  }
-
-  return articlesData;
-}
-
-function normalizeArticle(article) {
-  const content = article.content || '';
-  const summary = article.summary || createExcerpt(content, 180);
-  const category = article.category?.trim() || 'Uncategorized';
-  const slug = article.slug || (article.title ? slugify(article.title) : '');
-  const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
-  const readTime = Math.max(1, Math.ceil(wordCount / 220));
-
-  return {
-    ...article,
-    content,
-    summary,
-    category,
-    slug,
-    readTime,
-  };
-}
-
-function renderArticlesPage(articles) {
-  renderStats(articles);
-  renderFeaturedArticle(articles[0] || null);
-  renderCategoryBar(allArticles, activeCategory);
-  renderSpotlightSections(articles);
-  renderArchiveList(articles);
-  updateResultsMeta(articles);
-  attachReadHandlers();
-}
-
-function renderStats(articles) {
-  const articleCount = document.getElementById('articleCountStat');
-  const categoryCount = document.getElementById('categoryCountStat');
-  const latestDate = document.getElementById('latestDateStat');
-  const categories = new Set(allArticles.map(article => article.category));
-
-  if (articleCount) articleCount.textContent = String(allArticles.length);
-  if (categoryCount) categoryCount.textContent = String(categories.size);
-  if (latestDate) latestDate.textContent = articles[0]?.publication_date ? formatCommentDateTime(articles[0].publication_date) : 'No entries';
-}
-
-function renderFeaturedArticle(article) {
-  const panel = document.getElementById('featuredArticlePanel');
-  if (!panel) return;
-
-  if (!article) {
-    panel.innerHTML = '<div class="empty-articles-state">No articles are available yet.</div>';
-    return;
-  }
-
-  panel.innerHTML = `
-    <div class="featured-article-content">
-      <span class="article-category-tag">${escapeHtml(article.category)}</span>
-      <h2 class="featured-article-title">${escapeHtml(article.title)}</h2>
-      <div class="article-meta-row">
-        <span><i class="fa fa-user"></i> ${escapeHtml(article.author || 'Unknown')}</span>
-        <span><i class="fa fa-calendar"></i> ${formatArticleDate(article.publication_date)}</span>
-        <span><i class="fa-regular fa-clock"></i> ${article.readTime} min read</span>
-      </div>
-      <p class="featured-article-summary">${escapeHtml(article.summary)}</p>
-      <div class="featured-article-actions">
-        <button class="article-cta js-read-article" data-slug="${escapeHtml(article.slug)}">
-          <i class="fa-solid fa-book-open"></i> Read Featured Story
-        </button>
-        <button class="article-cta secondary js-filter-category" data-category="${escapeHtml(article.category)}">
-          <i class="fa-solid fa-layer-group"></i> More In ${escapeHtml(article.category)}
-        </button>
-      </div>
-    </div>
-  `;
-
-  panel.querySelector('.js-filter-category')?.addEventListener('click', () => {
-    setActiveCategory(article.category);
-    document.getElementById('articlesBrowserSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+if (window.marked?.setOptions) {
+  marked.setOptions({
+    gfm: true,
+    breaks: true,
   });
 }
 
-function renderCategoryBar(sourceArticles, selectedCategory) {
+const SECTION_DEFINITIONS = [
+  'Weekly News & Updates',
+  'Dev Updates',
+  'Community Outreach',
+  'Community Reminder',
+  'Exploration',
+  'Scholarly News',
+  'Map Updates',
+  'Economic Impact',
+  'Expert Tips',
+  'Building Highlights',
+  'Clan Highlights',
+  'Community Events',
+  'For Trade',
+  'Thaumaturgy',
+  'Crafting & Metallurgy',
+];
+
+const SECTION_ALIASES = new Map([
+  ['updates', 'Weekly News & Updates'],
+  ['game updates', 'Weekly News & Updates'],
+  ['news', 'Weekly News & Updates'],
+  ['main game updates', 'Weekly News & Updates'],
+  ['buildings', 'Building Highlights'],
+  ['building highlights', 'Building Highlights'],
+  ['trading', 'For Trade'],
+  ['trade', 'For Trade'],
+  ['crafting', 'Crafting & Metallurgy'],
+  ['metallurgy', 'Crafting & Metallurgy'],
+  ['magic', 'Thaumaturgy'],
+]);
+
+let allPublications = [];
+let allEntries = [];
+let filteredEntries = [];
+let activeCategory = 'All';
+let activePublicationKey = null;
+let isLegacyArchive = false;
+
+export async function fetchAndRenderArticles(containerId, searchTerm = null, limit = null) {
+  if (searchTerm) {
+    return searchPublicationEntries(searchTerm, limit);
+  }
+
+  const publicationLimit = limit ?? (getPublicationPageMode() === 'latest' ? 1 : null);
+
+  try {
+    allPublications = await fetchPublications(publicationLimit);
+    isLegacyArchive = false;
+    if (!allPublications.length) {
+      allPublications = await fetchArchivedPublications(publicationLimit);
+      isLegacyArchive = allPublications.length > 0;
+    }
+  } catch (error) {
+    console.warn('Publication tables unavailable; using legacy article archive fallback.', error);
+    allPublications = await fetchLegacyPublications(publicationLimit);
+    isLegacyArchive = true;
+  }
+
+  allEntries = allPublications.flatMap(publication => publication.entries);
+  activePublicationKey = getInitialPublicationKey();
+  filteredEntries = getActivePublicationEntries();
+
+  if (containerId) {
+    renderArticlesPage(filteredEntries);
+  }
+
+  return allEntries;
+}
+
+async function fetchPublications(limit = null) {
+  const cachedData = sessionStorage.getItem(PUBLICATION_CACHE_KEY);
+  if (!limit && cachedData) {
+    const parsedCache = JSON.parse(cachedData);
+    if (Date.now() - parsedCache.timestamp < PUBLICATION_CACHE_EXPIRY_MS) {
+      return parsedCache.data.map(normalizePublication);
+    }
+    sessionStorage.removeItem(PUBLICATION_CACHE_KEY);
+  }
+
+  let query = supabase
+    .from('publications')
+    .select('*, publication_entries(*)')
+    .eq('status', 'published')
+    .order('release_date', { ascending: false })
+    .order('issue_number', { ascending: false });
+
+  if (limit) query = query.limit(limit);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const publications = (data || []).map(normalizePublication);
+  if (!limit) {
+    sessionStorage.setItem(PUBLICATION_CACHE_KEY, JSON.stringify({ data: publications, timestamp: Date.now() }));
+  }
+  return publications;
+}
+
+async function fetchLegacyPublications(limit = null) {
+  let query = supabase
+    .from('articles')
+    .select('*')
+    .order('publication_date', { ascending: false });
+
+  if (limit) query = query.limit(limit);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const groups = new Map();
+  (data || []).forEach(article => {
+    const key = getPublicationKey(article.publication_date);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(article);
+  });
+
+  return [...groups.entries()]
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([key, articles]) => ({
+      id: key,
+      key,
+      issueNumber: null,
+      title: 'Legacy Article Archive',
+      releaseDate: key,
+      displayDate: formatPublicationDate(key),
+      status: 'legacy',
+      entries: articles.map(normalizeLegacyArticleEntry).sort(sortEntries),
+    }));
+}
+
+async function fetchArchivedPublications(limit = null) {
+  let query = supabase
+    .from('article_archive')
+    .select('*')
+    .order('publication_date', { ascending: false });
+
+  if (limit) query = query.limit(limit);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const groups = new Map();
+  (data || []).forEach(article => {
+    const key = getPublicationKey(article.publication_date);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(article);
+  });
+
+  return [...groups.entries()]
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([key, articles]) => ({
+      id: `archive-${key}`,
+      key: `archive-${key}`,
+      issueNumber: null,
+      title: 'Legacy Article Archive',
+      releaseDate: key,
+      displayDate: formatPublicationDate(key),
+      status: 'legacy',
+      entries: articles.map(normalizeLegacyArticleEntry).sort(sortEntries),
+    }));
+}
+
+async function searchPublicationEntries(searchTerm, limit = null) {
+  try {
+    let query = supabase
+      .from('publication_entries')
+      .select('*, publications(issue_number, release_date, title, status)')
+      .or(`title.ilike.%${searchTerm}%,content.ilike.%${searchTerm}%,summary.ilike.%${searchTerm}%`);
+
+    if (limit) query = query.limit(limit);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    if (data?.length) {
+      return data.map(entry => normalizeEntry(entry, entry.publications || {}));
+    }
+
+    const { data: archiveData, error: archiveError } = await supabase
+      .from('article_archive')
+      .select('*')
+      .or(`title.ilike.%${searchTerm}%,content.ilike.%${searchTerm}%,summary.ilike.%${searchTerm}%`);
+    if (!archiveError) return (archiveData || []).map(normalizeLegacyArticleEntry);
+    return [];
+  } catch (error) {
+    let query = supabase
+      .from('articles')
+      .select('*')
+      .or(`title.ilike.%${searchTerm}%,content.ilike.%${searchTerm}%,summary.ilike.%${searchTerm}%`);
+
+    if (limit) query = query.limit(limit);
+
+    const { data, error: articleError } = await query;
+    if (!articleError) return (data || []).map(normalizeLegacyArticleEntry);
+
+    const { data: archiveData } = await supabase
+      .from('article_archive')
+      .select('*')
+      .or(`title.ilike.%${searchTerm}%,content.ilike.%${searchTerm}%,summary.ilike.%${searchTerm}%`);
+    return (archiveData || []).map(normalizeLegacyArticleEntry);
+  }
+}
+
+function normalizePublication(publication) {
+  const releaseKey = publication.release_date || publication.releaseDate || getPublicationKey(publication.created_at);
+  const publicationShell = {
+    id: publication.id,
+    key: publication.key || String(publication.id),
+    issueNumber: publication.issue_number ?? publication.issueNumber ?? null,
+    title: publication.title || `Issue ${publication.issue_number ?? publication.issueNumber ?? ''}`.trim(),
+    releaseDate: releaseKey,
+    displayDate: formatPublicationDate(releaseKey),
+    status: publication.status || 'draft',
+  };
+  const sourceEntries = publication.publication_entries || publication.entries || [];
+
+  return {
+    ...publicationShell,
+    entries: sourceEntries
+      .map(entry => normalizeEntry(entry, publicationShell))
+      .sort(sortEntries),
+  };
+}
+
+function normalizeEntry(entry, publication) {
+  const content = entry.content || '';
+  const section = matchKnownSection(entry.section_key || entry.category || 'Weekly News & Updates');
+  const summary = entry.summary || createExcerpt(stripImages(content), 180);
+  const slug = entry.slug || slugify(`${publication.issueNumber || publication.releaseDate || 'publication'}-${section}-${entry.title || entry.id}`);
+  const releaseDate = publication.releaseDate || publication.release_date || entry.releaseDate || entry.publication_date || getPublicationKey(entry.created_at);
+  const heroImage = entry.image_url || entry.heroImage || entry.image || extractFirstImage(content) || '';
+
+  return {
+    id: entry.id,
+    title: entry.title || section,
+    slug,
+    author: entry.author || 'Unknown',
+    category: section,
+    sectionKey: section,
+    summary,
+    content,
+    publication_date: releaseDate,
+    releaseDate,
+    issueNumber: publication.issueNumber || publication.issue_number || null,
+    publicationTitle: publication.title || null,
+    sortOrder: entry.sort_order ?? entry.sortOrder ?? sectionSortIndex(section),
+    heroImage,
+    source: entry.source || '',
+    readTime: entry.readTime || estimateReadTime(content),
+  };
+}
+
+function normalizeLegacyArticleEntry(article) {
+  const content = article.content || '';
+  const category = matchKnownSection(article.category || 'Weekly News & Updates');
+  const releaseDate = getPublicationKey(article.publication_date);
+
+  return {
+    ...article,
+    title: article.title || category,
+    slug: article.slug || slugify(article.title || article.id),
+    author: article.author || 'Unknown',
+    category,
+    sectionKey: category,
+    summary: article.summary || createExcerpt(stripImages(content), 180),
+    content,
+    publication_date: releaseDate,
+    releaseDate,
+    issueNumber: null,
+    publicationTitle: 'Legacy Article Archive',
+    sortOrder: sectionSortIndex(category),
+    heroImage: article.image_url || article.image || extractFirstImage(content) || '',
+    readTime: estimateReadTime(content),
+  };
+}
+
+function renderArticlesPage(entries) {
+  renderPublicationSelect();
+  renderCategoryBar(getActivePublicationEntries(), activeCategory);
+  renderPublicationGrid(entries);
+  renderPublicationArchive();
+  updateResultsMeta(entries);
+  attachReadHandlers();
+}
+
+function renderPublicationSelect() {
+  const select = document.getElementById('publicationSelect');
+  if (!select) return;
+  const selectablePublications = getSelectablePublications();
+
+  if (!selectablePublications.length) {
+    select.innerHTML = '<option>No publications yet</option>';
+    select.disabled = true;
+    return;
+  }
+
+  select.disabled = false;
+  select.innerHTML = selectablePublications.map(publication => `
+    <option value="${escapeHtml(publication.key)}" ${publication.key === activePublicationKey ? 'selected' : ''}>
+      ${escapeHtml(formatPublicationLabel(publication))}
+    </option>
+  `).join('');
+
+  select.onchange = () => {
+    activePublicationKey = select.value;
+    activeCategory = 'All';
+    filteredEntries = getActivePublicationEntries();
+    renderArticlesPage(filteredEntries);
+    updatePublicationUrl();
+  };
+}
+
+function renderCategoryBar(sourceEntries, selectedCategory) {
   const categoryBar = document.getElementById('articleCategoryBar');
   if (!categoryBar) return;
 
-  const categories = ['All', ...new Set(sourceArticles.map(article => article.category))];
+  const availableSections = new Set(sourceEntries.map(entry => entry.category));
+  const knownSections = SECTION_DEFINITIONS.filter(section => availableSections.has(section));
+  const extraSections = [...availableSections]
+    .filter(section => !SECTION_DEFINITIONS.includes(section))
+    .sort((a, b) => a.localeCompare(b));
+  const categories = ['All', ...knownSections, ...extraSections];
+
   categoryBar.innerHTML = categories.map(category => `
     <button
       class="article-category-chip ${category === selectedCategory ? 'active' : ''}"
@@ -161,119 +348,109 @@ function renderCategoryBar(sourceArticles, selectedCategory) {
   `).join('');
 
   categoryBar.querySelectorAll('[data-category]').forEach(button => {
+    button.addEventListener('click', () => setActiveCategory(button.dataset.category || 'All'));
+  });
+}
+
+function renderPublicationGrid(entries) {
+  const grid = document.getElementById('chronicleGrid');
+  if (!grid) return;
+
+  const publicationEntries = getActivePublicationEntries();
+  if (!publicationEntries.length) {
+    grid.innerHTML = '<div class="empty-articles-state">No publication entries are available yet.</div>';
+    return;
+  }
+
+  const activeEntries = activeCategory === 'All'
+    ? publicationEntries
+    : publicationEntries.filter(entry => entry.category === activeCategory);
+
+  grid.innerHTML = activeEntries.length
+    ? activeEntries.map((entry, index) => renderPublicationCard(entry, index === 0 ? 'lead' : '')).join('')
+    : '<div class="empty-articles-state">No entries match this section in the selected publication.</div>';
+}
+
+function renderPublicationCard(entry, modifier = '') {
+  const imageMarkup = entry.heroImage
+    ? `<img src="${escapeHtml(entry.heroImage)}" alt="${escapeHtml(entry.title)}" loading="lazy">`
+    : `<img src="${FALLBACK_IMAGE}" alt="">`;
+  const summaryLimit = modifier === 'lead' ? 260 : 170;
+  const previewText = entry.content || entry.summary || '';
+
+  return `
+    <article class="chronicle-card ${modifier ? `chronicle-card-${modifier}` : ''}">
+      <header class="chronicle-card-header">
+        <h2>${escapeHtml(entry.category)}</h2>
+      </header>
+      <button class="chronicle-image js-read-article" type="button" data-slug="${escapeHtml(entry.slug)}">
+        ${imageMarkup}
+      </button>
+      <div class="chronicle-card-body">
+        <h3>
+          <button class="chronicle-title-link js-read-article" type="button" data-slug="${escapeHtml(entry.slug)}">
+            ${escapeHtml(entry.title)}
+          </button>
+        </h3>
+        <div class="article-meta-row">
+          <span><i class="fa fa-user"></i> ${escapeHtml(entry.author)}</span>
+          <span><i class="fa fa-calendar"></i> ${formatPublicationDate(entry.releaseDate)}</span>
+        </div>
+        <p>${escapeHtml(createExcerpt(previewText, summaryLimit))}</p>
+        <button class="chronicle-read-link js-read-article" type="button" data-slug="${escapeHtml(entry.slug)}">
+          Read entry
+        </button>
+      </div>
+    </article>
+  `;
+}
+
+function renderPublicationArchive() {
+  const archive = document.getElementById('publicationArchiveList');
+  if (!archive) return;
+
+  const archivedPublications = getSelectablePublications();
+
+  if (!archivedPublications.length) {
+    archive.innerHTML = '<div class="empty-articles-state">No past publications are available yet.</div>';
+    return;
+  }
+
+  archive.innerHTML = archivedPublications.map(publication => {
+    const categories = [...new Set(publication.entries.map(entry => entry.category))].slice(0, 4);
+    return `
+      <button class="publication-archive-item ${publication.key === activePublicationKey ? 'active' : ''}" type="button" data-publication="${escapeHtml(publication.key)}">
+        <span>${publication.issueNumber ? `Issue ${escapeHtml(publication.issueNumber)}` : 'Legacy Archive'}</span>
+        <strong>${escapeHtml(publication.title || publication.displayDate)}</strong>
+        <small>${escapeHtml(publication.displayDate)} - ${publication.entries.length} ${publication.entries.length === 1 ? 'entry' : 'entries'}${categories.length ? ` - ${escapeHtml(categories.join(', '))}` : ''}</small>
+      </button>
+    `;
+  }).join('');
+
+  archive.querySelectorAll('[data-publication]').forEach(button => {
     button.addEventListener('click', () => {
-      setActiveCategory(button.dataset.category || 'All');
+      activePublicationKey = button.dataset.publication;
+      activeCategory = 'All';
+      filteredEntries = getActivePublicationEntries();
+      renderArticlesPage(filteredEntries);
+      updatePublicationUrl();
+      document.querySelector('.chronicle-controls')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   });
 }
 
-function renderSpotlightSections(articles) {
-  const primaryContainer = document.getElementById('spotlightPrimaryContainer');
-  const gridContainer = document.getElementById('spotlightGridContainer');
-  if (!primaryContainer || !gridContainer) return;
-
-  const spotlightPrimary = articles[1] || articles[0] || null;
-  const spotlightGrid = articles.slice(spotlightPrimary ? 2 : 0, spotlightPrimary ? 5 : 4);
-
-  if (spotlightPrimary) {
-    primaryContainer.innerHTML = `
-      <article class="spotlight-primary-card">
-        <div class="spotlight-primary-content">
-          <span class="article-category-tag">${escapeHtml(spotlightPrimary.category)}</span>
-          <h3 class="spotlight-primary-title">${escapeHtml(spotlightPrimary.title)}</h3>
-          <div class="article-meta-row">
-            <span><i class="fa fa-user"></i> ${escapeHtml(spotlightPrimary.author || 'Unknown')}</span>
-            <span><i class="fa fa-calendar"></i> ${formatArticleDate(spotlightPrimary.publication_date)}</span>
-          </div>
-          <p class="spotlight-primary-summary">${escapeHtml(spotlightPrimary.summary)}</p>
-          <div class="featured-article-actions">
-            <button class="article-cta js-read-article" data-slug="${escapeHtml(spotlightPrimary.slug)}">
-              <i class="fa-solid fa-feather-pointed"></i> Open Story
-            </button>
-          </div>
-        </div>
-      </article>
-    `;
-  } else {
-    primaryContainer.innerHTML = '<div class="empty-articles-state">Nothing to spotlight yet.</div>';
-  }
-
-  if (!spotlightGrid.length) {
-    gridContainer.innerHTML = '';
-    return;
-  }
-
-  gridContainer.innerHTML = spotlightGrid.map(article => `
-    <article class="spotlight-card">
-      <div class="spotlight-card-content">
-        <span class="article-category-tag">${escapeHtml(article.category)}</span>
-        <h4 class="spotlight-card-title">${escapeHtml(article.title)}</h4>
-        <div class="article-meta-row">
-          <span><i class="fa fa-calendar"></i> ${formatArticleDate(article.publication_date)}</span>
-          <span><i class="fa-regular fa-clock"></i> ${article.readTime} min</span>
-        </div>
-        <p class="spotlight-card-summary">${escapeHtml(createExcerpt(article.summary, 120))}</p>
-        <div class="featured-article-actions">
-          <button class="article-cta secondary js-read-article" data-slug="${escapeHtml(article.slug)}">
-            Read
-          </button>
-        </div>
-      </div>
-    </article>
-  `).join('');
-}
-
-function renderArchiveList(articles) {
-  const archiveContainer = document.getElementById('articlesArchiveContainer');
-  if (!archiveContainer) return;
-
-  const archiveArticles = articles.slice(spotlightOffset(articles));
-
-  if (!archiveArticles.length) {
-    archiveContainer.innerHTML = '<div class="empty-articles-state">No entries match this category yet.</div>';
-    return;
-  }
-
-  archiveContainer.innerHTML = archiveArticles.map(article => `
-    <article class="archive-item">
-      <div class="archive-item-content">
-        <div class="archive-item-header">
-          <div>
-            <span class="article-category-tag">${escapeHtml(article.category)}</span>
-            <h4 class="archive-item-title">${escapeHtml(article.title)}</h4>
-            <div class="article-meta-row">
-              <span><i class="fa fa-user"></i> ${escapeHtml(article.author || 'Unknown')}</span>
-              <span><i class="fa fa-calendar"></i> ${formatArticleDate(article.publication_date)}</span>
-            </div>
-          </div>
-          <button class="archive-item-button js-read-article" type="button" data-slug="${escapeHtml(article.slug)}">
-            Open
-          </button>
-        </div>
-        <p class="archive-item-summary">${escapeHtml(createExcerpt(article.summary, 150))}</p>
-      </div>
-    </article>
-  `).join('');
-}
-
-function updateResultsMeta(articles) {
+function updateResultsMeta(entries) {
   const activeCategoryLabel = document.getElementById('activeCategoryLabel');
   const resultCountLabel = document.getElementById('resultCountLabel');
 
   if (activeCategoryLabel) {
-    activeCategoryLabel.textContent = activeCategory === 'All' ? 'All categories' : activeCategory;
+    activeCategoryLabel.textContent = isLegacyArchive ? 'Legacy archive' : (activeCategory === 'All' ? 'All sections' : activeCategory);
   }
 
   if (resultCountLabel) {
-    const label = articles.length === 1 ? 'entry' : 'entries';
-    resultCountLabel.textContent = `${articles.length} ${label}`;
+    const label = entries.length === 1 ? 'entry' : 'entries';
+    resultCountLabel.textContent = `${entries.length} ${label}`;
   }
-}
-
-function spotlightOffset(articles) {
-  if (!articles.length) return 0;
-  if (articles.length === 1) return 1;
-  return Math.min(5, articles.length);
 }
 
 function attachReadHandlers() {
@@ -287,68 +464,86 @@ function attachReadHandlers() {
 
 function setActiveCategory(category) {
   activeCategory = category;
-  filteredArticles = category === 'All'
-    ? [...allArticles]
-    : allArticles.filter(article => article.category === category);
+  const publicationEntries = getActivePublicationEntries();
+  filteredEntries = category === 'All'
+    ? [...publicationEntries]
+    : publicationEntries.filter(entry => entry.category === category);
 
-  renderArticlesPage(filteredArticles);
+  renderArticlesPage(filteredEntries);
 }
 
 export async function displayFullArticle(slug) {
-  let article = allArticles.find(entry => entry.slug === slug);
+  let entry = allEntries.find(item => item.slug === slug);
 
-  if (!article) {
-    const { data } = await supabase.from('articles').select('*').eq('slug', slug).single();
-    article = data ? normalizeArticle(data) : null;
+  if (!entry) {
+    entry = await fetchSingleEntry(slug);
   }
 
-  if (!article) return;
+  if (!entry) return;
 
-  $('#articleModalTitle').text(article.title);
-  $('#articleModalAuthor').html(`<i class="fa fa-user text-[#FFD700]"></i> ${escapeHtml(article.author || 'Unknown')}`);
-  $('#articleModalDate').html(`<i class="fa fa-calendar text-[#FFD700]"></i> ${formatArticleDate(article.publication_date)}`);
+  $('#articleModalTitle').text(entry.title);
+  $('#articleModalAuthor').html(`<i class="fa fa-user text-[#FFD700]"></i> ${escapeHtml(entry.author || 'Unknown')}`);
+  $('#articleModalDate').html(`<i class="fa fa-calendar text-[#FFD700]"></i> ${formatPublicationDate(entry.releaseDate || entry.publication_date)}`);
 
   const categoryEl = $('#articleModalCategory');
-  if (article.category) {
-    categoryEl.text(article.category).removeClass('hidden');
+  if (entry.category) {
+    categoryEl.text(entry.category).removeClass('hidden');
   } else {
     categoryEl.addClass('hidden').text('');
   }
 
   const readTimeEl = $('#articleModalReadTime');
-  readTimeEl.html(`<i class="fa-regular fa-clock text-[#FFD700]"></i> ${article.readTime} min read`).removeClass('hidden');
+  readTimeEl.html(`<i class="fa-regular fa-clock text-[#FFD700]"></i> ${entry.readTime} min read`).removeClass('hidden');
 
-  const markdownHtml = marked.parse(replaceEmojiShortcodes(article.content || ''));
-  $('#articleModalContent').html(DOMPurify.sanitize(markdownHtml));
+  const heroImageHtml = entry.heroImage
+    ? `<figure class="article-modal-hero-image"><img src="${escapeHtml(entry.heroImage)}" alt="${escapeHtml(entry.title)}"></figure>`
+    : '';
+  const markdownHtml = renderMarkdown(entry.content || '');
+  $('#articleModalContent').html(DOMPurify.sanitize(heroImageHtml + markdownHtml));
 
   const sourceLink = $('#articleModalSourceLink');
-  if (article.source?.startsWith('http')) {
-    sourceLink.attr('href', article.source).removeClass('hidden');
+  if (entry.source?.startsWith('http')) {
+    sourceLink.attr('href', entry.source).removeClass('hidden');
   } else {
     sourceLink.addClass('hidden').removeAttr('href');
   }
 
-  syncModalNavigation(article.slug);
+  syncModalNavigation(entry.slug);
   $('#fullArticleModalOverlay').removeClass('hidden').addClass('flex');
   $('body').css('overflow', 'hidden');
+}
+
+async function fetchSingleEntry(slug) {
+  const { data, error } = await supabase
+    .from('publication_entries')
+    .select('*, publications(issue_number, release_date, title, status)')
+    .eq('slug', slug)
+    .single();
+
+  if (!error && data) {
+    return normalizeEntry(data, data.publications || {});
+  }
+
+  const { data: legacyData } = await supabase.from('articles').select('*').eq('slug', slug).single();
+  return legacyData ? normalizeLegacyArticleEntry(legacyData) : null;
 }
 
 function syncModalNavigation(slug) {
   const prevButton = document.getElementById('articleModalPrev');
   const nextButton = document.getElementById('articleModalNext');
-  const activeList = filteredArticles.length ? filteredArticles : allArticles;
-  const index = activeList.findIndex(article => article.slug === slug);
-  const previousArticle = index > 0 ? activeList[index - 1] : null;
-  const nextArticle = index >= 0 && index < activeList.length - 1 ? activeList[index + 1] : null;
+  const activeList = filteredEntries.length ? filteredEntries : getActivePublicationEntries();
+  const index = activeList.findIndex(entry => entry.slug === slug);
+  const previousEntry = index > 0 ? activeList[index - 1] : null;
+  const nextEntry = index >= 0 && index < activeList.length - 1 ? activeList[index + 1] : null;
 
   if (prevButton) {
-    prevButton.disabled = !previousArticle;
-    prevButton.dataset.slug = previousArticle?.slug || '';
+    prevButton.disabled = !previousEntry;
+    prevButton.dataset.slug = previousEntry?.slug || '';
   }
 
   if (nextButton) {
-    nextButton.disabled = !nextArticle;
-    nextButton.dataset.slug = nextArticle?.slug || '';
+    nextButton.disabled = !nextEntry;
+    nextButton.dataset.slug = nextEntry?.slug || '';
   }
 }
 
@@ -384,29 +579,127 @@ export function setupArticleModalListeners() {
 
 export async function handleArticlePageLogic() {
   const urlParams = new URLSearchParams(window.location.search);
-  const articleSlug = urlParams.get('item');
+  const entrySlug = urlParams.get('item');
 
   setupArticleModalListeners();
-  await fetchAndRenderArticles('featuredArticlePanel');
+  await fetchAndRenderArticles('chronicleGrid');
 
-  if (articleSlug) {
-    await displayFullArticle(articleSlug);
+  if (entrySlug) {
+    await displayFullArticle(entrySlug);
   }
 }
 
-function formatArticleDate(dateValue) {
-  return dateValue ? formatCommentDateTime(dateValue) : 'No Date';
+function getPublicationPageMode() {
+  return document.querySelector('[data-publication-mode]')?.dataset.publicationMode || 'archive';
+}
+
+function getActivePublication() {
+  const selectablePublications = getSelectablePublications();
+  return selectablePublications.find(publication => publication.key === activePublicationKey) || selectablePublications[0] || null;
+}
+
+function getActivePublicationEntries() {
+  return getActivePublication()?.entries || [];
+}
+
+function getInitialPublicationKey() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const publicationKey = urlParams.get('publication');
+  const selectablePublications = getSelectablePublications();
+  if (publicationKey && selectablePublications.some(publication => publication.key === publicationKey)) return publicationKey;
+  return selectablePublications[0]?.key || null;
+}
+
+function getSelectablePublications() {
+  return getPublicationPageMode() === 'archive' ? allPublications.slice(1) : allPublications;
+}
+
+function updatePublicationUrl() {
+  if (!activePublicationKey) return;
+  const url = new URL(window.location.href);
+  url.searchParams.set('publication', activePublicationKey);
+  window.history.replaceState({}, '', url);
+}
+
+function formatPublicationLabel(publication) {
+  const issueLabel = publication.issueNumber ? `Issue ${publication.issueNumber}` : publication.title;
+  return `${issueLabel} - ${publication.displayDate} (${publication.entries.length})`;
+}
+
+function getPublicationKey(dateValue) {
+  if (!dateValue) return 'undated';
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return 'undated';
+  return date.toISOString().slice(0, 10);
+}
+
+function formatPublicationDate(dateValue) {
+  const key = dateValue?.length > 10 ? getPublicationKey(dateValue) : dateValue;
+  if (!key || key === 'undated') return 'Undated';
+  return new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date(`${key}T12:00:00`));
+}
+
+function matchKnownSection(category) {
+  const alias = SECTION_ALIASES.get(String(category).toLowerCase());
+  if (alias) return alias;
+
+  const known = SECTION_DEFINITIONS.find(section => section.toLowerCase() === String(category).toLowerCase());
+  return known || category;
+}
+
+function sectionSortIndex(section) {
+  const index = SECTION_DEFINITIONS.indexOf(section);
+  return index === -1 ? SECTION_DEFINITIONS.length : index;
+}
+
+function sortEntries(a, b) {
+  return (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.title.localeCompare(b.title);
+}
+
+function extractFirstImage(markdown) {
+  const markdownMatch = markdown.match(/!\[[^\]]*]\(([^)\s]+)(?:\s+"[^"]*")?\)/);
+  if (markdownMatch?.[1]) return markdownMatch[1];
+
+  const htmlMatch = markdown.match(/<img[^>]+src=["']([^"']+)["']/i);
+  if (htmlMatch?.[1]) return htmlMatch[1];
+
+  return '';
+}
+
+function stripImages(content) {
+  return content.replace(/!\[[^\]]*]\([^)]+\)/g, '').replace(/<img[^>]*>/gi, '');
+}
+
+function renderMarkdown(content) {
+  if (!content) return '';
+  return marked.parse(replaceEmojiShortcodes(normalizeMarkdownInput(content)));
+}
+
+function normalizeMarkdownInput(content) {
+  return content
+    .replace(/\]\(\((https?:\/\/[^)\s]+)\)\)/g, ']($1)')
+    .replace(/\]\(\s+(https?:\/\/[^)\s]+)\s+\)/g, ']($1)');
+}
+
+function estimateReadTime(content) {
+  const words = stripImages(content).trim() ? stripImages(content).trim().split(/\s+/).length : 0;
+  return Math.max(1, Math.ceil(words / 220));
 }
 
 function createExcerpt(content, maxLength) {
-  const plainContent = content.replace(/[#_*`>\-\[\]\(\)]/g, ' ').replace(/\s+/g, ' ').trim();
+  const plainContent = stripImages(content)
+    .replace(/\[([^\]]+)]\([^)]+\)/g, '$1')
+    .replace(/`{1,3}([^`]+)`{1,3}/g, '$1')
+    .replace(/[#_*~>|-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
   if (!plainContent) return '';
   if (plainContent.length <= maxLength) return plainContent;
   return `${plainContent.slice(0, maxLength).trim()}...`;
 }
 
 function escapeHtml(value) {
-  return String(value)
+  return String(value ?? '')
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')

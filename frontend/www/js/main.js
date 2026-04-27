@@ -90,9 +90,9 @@ async function performSearch(searchTerm) {
         });
 
         articles.forEach(article => {
-            const articleLink = `articles.html?item=${encodeURIComponent(article.slug)}`;
+            const articleLink = `publications.html?item=${encodeURIComponent(article.slug)}`;
             allResults.push({
-                type: 'Article',
+                type: 'Publication',
                 title: article.title,
                 content: article.summary || article.content,
                 date: article.publication_date,
@@ -138,7 +138,7 @@ async function performSearch(searchTerm) {
 
                 const formattedDateForDisplay = item.date ?
                     (item.type === 'Developer Comment' ? formatCommentDateTime(item.date) :
-                        (item.type === 'News Update' || item.type === 'Article' ? formatNewsDate(item.date) : '')) : '';
+                        (item.type === 'News Update' || item.type === 'Publication' ? formatNewsDate(item.date) : '')) : '';
 
                 const mainLink = item.link ? item.link : '#';
                 let displayedContent = item.content;
@@ -146,7 +146,7 @@ async function performSearch(searchTerm) {
                     const contentString = item.content ?? ''; 
                     const snippet = contentString.length > 200 ? contentString.substring(0, 200) + '...' : contentString;
                     displayedContent = marked.parse(snippet);
-                } else if (item.type === 'News Update' || item.type === 'Article') {
+                } else if (item.type === 'News Update' || item.type === 'Publication') {
                     const contentString = item.content ?? '';
                     displayedContent = contentString.length > 200 ? contentString.substring(0, 200) + '...' : contentString;
                 }
@@ -157,7 +157,7 @@ async function performSearch(searchTerm) {
                 let headingContent;
                 if (item.type === 'Developer Comment') {
                     headingContent = `${authorPrefix}${dateSuffix}`;
-                } else if (item.type === 'Article') {
+                } else if (item.type === 'Publication') {
                     headingContent = `${item.title} - ${item.author || 'Unknown'} ${dateSuffix}`;
                 } else if (item.type === 'Ability') {
                     headingContent = `${item.title}`;
@@ -170,7 +170,7 @@ async function performSearch(searchTerm) {
                         <div class="down-content">
                             ${item.link ? `<h6><a href="${mainLink}">${headingContent}</a></h6>` : `<h6>${headingContent}</h6>`}
                             <p>${displayedContent}</p> ${sourceDisplay ? sourceDisplay : ''}
-                            ${item.link && (['News Update', 'Lore Post', 'Article', 'Ability'].includes(item.type)) ? `<div class="main-button"><a href="${mainLink}" ${item.type === 'News Update' || item.type === 'Article' ? 'target="_blank"' : ''}>Read More</a></div>` : ''}
+                            ${item.link && (['News Update', 'Lore Post', 'Publication', 'Ability'].includes(item.type)) ? `<div class="main-button"><a href="${mainLink}" ${item.type === 'News Update' || item.type === 'Publication' ? 'target="_blank"' : ''}>Read More</a></div>` : ''}
                         </div>
                     </div>`;
                 searchResultsDropdown.append(resultHtml);
@@ -229,7 +229,7 @@ $(document).ready(async function() {
         fetchAndRenderNewsUpdates('news-updates-home', 3);
     } else if (currentPage === 'news-updates.html') {
         fetchAndRenderNewsUpdates('news-updates-container');
-    } else if (currentPage === 'articles.html') {
+    } else if (currentPage === 'publications.html' || currentPage === 'publication_archive.html') {
         handleArticlePageLogic();
     }
 });

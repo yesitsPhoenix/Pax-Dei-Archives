@@ -105,11 +105,6 @@
         #devCommentModal select option { color: white; background: #1e293b; }
         #devCommentModal input[readonly],
         #devCommentModal textarea[readonly] { color: #6b7280 !important; }
-        #articleModal input,
-        #articleModal textarea,
-        #articleModal select { color: white !important; }
-        #articleModal select option { color: white; background: #1e293b; }
-        #articleModal input[readonly] { color: #6b7280 !important; }
         #addUserRoleModal input { color: white !important; }
         /* datetime-local calendar icon fix */
         input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
@@ -117,18 +112,11 @@
         /* ── Global colour baseline ── */
         body { color: #e2e8f0; }
 
-        /* ── Ensure option elements in modals are always white on dark bg ── */
-        #articleModal select,
-        #articleModal select option,
-        #articleModal select optgroup { color: white !important; background-color: #1e293b !important; }
-
-        /* ── Article & form status messages ── */
-        #addArticleMessage { color: #e2e8f0; }
+        /* ── Form status messages ── */
         #formMessage { color: #e2e8f0; }
 
         /* ── Placeholder colours ── */
         #devCommentModal ::placeholder { color: #64748b; }
-        #articleModal    ::placeholder { color: #64748b; }
         #addUserRoleModal ::placeholder { color: #64748b; }
     </style>
 </head>
@@ -171,9 +159,9 @@
       </a>
     </li>
     <li>
-      <a href="#" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900" id="openArticleModalBtn">
-        <i class="fas fa-newspaper w-5 h-5 text-gray-400 transition duration-75"></i>
-        <span class="ml-3">Add Article</span>
+      <a id="sidebarPublicationEditorLink" href="publication_editor.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
+        <i class="fas fa-pen-to-square w-5 h-5 text-gray-400 transition duration-75"></i>
+        <span class="ml-3">Publication Editor</span>
       </a>
     </li>
     <li id="sidebarEditLoreLink" class="hidden">
@@ -276,7 +264,7 @@
 
             <div class="stat-card bg-gradient-to-br from-amber-900/40 to-amber-800/40 rounded-xl p-5 border border-amber-500/30 shadow-lg">
                 <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-amber-300 text-md font-semibold uppercase leading-tight">Articles</h3>
+                    <h3 class="text-amber-300 text-md font-semibold uppercase leading-tight">Publications</h3>
                     <i class="fas fa-newspaper text-amber-400 text-lg flex-shrink-0"></i>
                 </div>
                 <p id="stat-total-articles" class="text-white text-2xl font-bold">--</p>
@@ -370,7 +358,7 @@
             <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-5 border border-violet-400/20 shadow-lg">
                 <div class="flex items-center gap-2 mb-3">
                     <i class="fas fa-clock-rotate-left text-amber-400"></i>
-                    <h3 class="text-amber-300 text-md font-semibold uppercase">Latest Article</h3>
+                    <h3 class="text-amber-300 text-md font-semibold uppercase">Latest Publication</h3>
                 </div>
                 <p id="recent-article-title" class="text-white font-semibold text-sm">--</p>
                 <p id="recent-article-date" class="text-gray-500 text-md mt-1">--</p>
@@ -417,7 +405,7 @@
                                 <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Admin</th>
                                 <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Dev Comments</th>
                                 <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Quest Role</th>
-                                <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Article Poster</th>
+                                <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Publication Poster</th>
                                 <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Lore Editor</th>
                                 <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">General Access</th>
                                 <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Actions</th>
@@ -536,87 +524,6 @@
 </div>
 
 <!-- 
-     MODAL: Add Article
- -->
-<div id="articleModal" class="hidden fixed inset-0 bg-gray-900/80 flex items-center justify-center z-50 modal-backdrop overflow-y-auto px-4 py-6">
-    <div class="bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl border border-amber-500/30">
-        <div class="flex items-center justify-between p-6 border-b border-slate-700">
-            <h3 class="text-xl font-bold text-white flex items-center gap-2">
-                <i class="fas fa-newspaper text-amber-400"></i>
-                Add New Article
-            </h3>
-            <button id="closeArticleModalBtn" class="text-gray-400 hover:text-white transition-colors">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-        </div>
-        <div class="p-6">
-            <form id="addArticleForm" class="space-y-4">
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div class="flex flex-col">
-                        <label class="text-md uppercase font-bold text-gray-400 mb-1">Title</label>
-                        <input type="text" id="articleTitle" required
-                            class="bg-[#1e293b] border border-slate-600 rounded-lg p-2 text-white outline-none focus:border-amber-500">
-                    </div>
-                    <div class="flex flex-col">
-                        <label class="text-md uppercase font-bold text-gray-500 mb-1">Slug (Auto)</label>
-                        <input type="text" id="articleSlug" readonly
-                            class="bg-[#0f172a] border border-slate-700 rounded-lg p-2 text-gray-500 cursor-not-allowed">
-                    </div>
-                </div>
-
-                <div class="flex flex-col">
-                    <label class="text-md uppercase font-bold text-gray-400 mb-1">Summary</label>
-                    <textarea id="articleSummary" rows="2" required
-                        class="bg-[#1e293b] border border-slate-600 rounded-lg p-2 text-white outline-none focus:border-amber-500 resize-none"></textarea>
-                </div>
-
-                <div class="flex flex-col">
-                    <label class="text-md uppercase font-bold text-gray-400 mb-1">Content (Markdown)</label>
-                    <textarea id="articleContent" rows="10" required
-                        class="bg-[#1e293b] border border-slate-600 rounded-lg p-2 text-white font-mono text-sm outline-none focus:border-amber-500 resize-y"></textarea>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div class="flex flex-col">
-                        <label class="text-md uppercase font-bold text-gray-400 mb-1">Author</label>
-                        <input type="text" id="articleAuthor" required
-                            class="bg-[#1e293b] border border-slate-600 rounded-lg p-2 text-white outline-none focus:border-amber-500">
-                    </div>
-                    <div class="flex flex-col">
-                        <label class="text-md uppercase font-bold text-gray-400 mb-1">Date</label>
-                        <input type="datetime-local" id="articlePublicationDate"
-                            class="bg-[#1e293b] border border-slate-600 rounded-lg p-2 text-white outline-none focus:border-amber-500">
-                    </div>
-                </div>
-
-                <div class="flex flex-col sm:flex-row gap-3">
-                    <select id="articleCategory" required
-                        class="flex-grow bg-[#1e293b] border border-slate-600 rounded-lg p-2 text-white outline-none focus:border-amber-500">
-                    </select>
-                    <div class="flex">
-                        <input type="text" id="addNewArticleCategoryInput" placeholder="New category"
-                            class="bg-[#1e293b] border border-slate-600 rounded-l-lg p-2 text-white outline-none focus:border-amber-500 border-r-0 w-36">
-                        <button type="button" id="addNewArticleCategoryButton"
-                            class="bg-slate-600 hover:bg-slate-500 text-white text-sm px-3 py-2 rounded-r-lg transition-all">Add</button>
-                    </div>
-                </div>
-
-                <div id="addArticleMessage" class="hidden text-sm text-gray-200"></div>
-
-                <div class="pt-4 border-t border-slate-700">
-                    <button type="submit"
-                        class="w-full bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 text-white font-bold py-3 rounded-lg transition-all duration-300">
-                        <i class="fas fa-paper-plane mr-2"></i> Publish Article
-                    </button>
-                </div>
-
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- 
      MODAL: Manage User Roles (Grant / Edit)
  -->
 <div id="addUserRoleModal" class="hidden fixed inset-0 bg-gray-900/80 flex items-center justify-center z-50 modal-backdrop px-4 overflow-y-auto py-6">
@@ -655,7 +562,7 @@
 
                 <label class="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg cursor-pointer hover:bg-slate-700 transition-all">
                     <input type="checkbox" id="roleCheck_can_post_articles" class="rounded text-violet-600 focus:ring-violet-500 w-4 h-4">
-                    <span class="text-white text-sm"><span class="role-badge article mr-2"><i class="fas fa-newspaper"></i> can_post_articles</span> Can write and publish articles</span>
+                    <span class="text-white text-sm"><span class="role-badge article mr-2"><i class="fas fa-newspaper"></i> can_post_articles</span> Can create and publish publications</span>
                 </label>
 
                 <label class="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg cursor-pointer hover:bg-slate-700 transition-all">
@@ -713,7 +620,6 @@ setupAdminAuthListener();
 <script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
 <script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
 <script type="module" src="frontend/www/js/admin.js"></script>
-<script type="module" src="frontend/www/js/articles/articlePosts.js"></script>
 <script type="module" src="frontend/www/js/main.js"></script>
 <script type="module" src="frontend/www/js/popoutAuth.js"></script>
 <script type="module" src="frontend/www/js/sidebar.js"></script>

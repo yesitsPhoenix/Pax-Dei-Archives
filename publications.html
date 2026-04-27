@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pax Dei Archives - Publications</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="frontend/www/css/articles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <style>
+        .markdown-content img {
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+        }
+        .markdown-content img:hover {
+            opacity: 0.85;
+        }
+        #image-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 20000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+        }
+        #image-overlay.active {
+            display: flex;
+        }
+        #image-overlay img {
+            max-width: 90%;
+            max-height: 90vh;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            cursor: pointer;
+        }
+        #image-overlay-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 48px;
+            color: #fff;
+            cursor: pointer;
+            z-index: 20001;
+            background: rgba(0, 0, 0, 0.5);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            transition: all 0.2s ease;
+        }
+        #image-overlay-close:hover {
+            background: rgba(255, 215, 0, 0.3);
+            transform: scale(1.1);
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/emoji-js@3.9.0/lib/emoji.min.js"></script>
+    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+</head>
+<body class="text-white">
+
+<div id="header-placeholder"></div>
+
+<main class="articles-page" data-publication-mode="latest">
+    <section class="chronicle-shell">
+        <div class="publication-archive-header latest-publication-header">
+            <div>
+                <p class="articles-section-label">Latest Publication</p>
+                <h2>Most Recent Issue</h2>
+            </div>
+            <a href="publication_archive.html" class="publication-editor-link">
+                <i class="fas fa-box-archive"></i>
+                Publications Archive
+            </a>
+        </div>
+
+        <section id="chronicleGrid" class="chronicle-grid" aria-live="polite">
+            <div class="chronicle-loading">Loading the Chronicle...</div>
+        </section>
+    </section>
+</main>
+
+<div id="fullArticleModalOverlay" class="fixed inset-0 bg-black/90 backdrop-blur-md z-[10000] hidden items-center justify-center p-4">
+    <div class="article-modal-panel">
+        <button id="closeArticleModal" class="article-modal-close" aria-label="Close article">&times;</button>
+
+        <div class="article-modal-header">
+            <div class="article-modal-header-copy">
+                <span id="articleModalCategory" class="article-modal-category hidden"></span>
+                <h2 id="articleModalTitle" class="article-modal-title"></h2>
+
+                <div class="article-modal-meta">
+                    <span id="articleModalAuthor" class="flex items-center gap-2">
+                        <i class="fa fa-user text-[#FFD700]"></i>
+                    </span>
+                    <span id="articleModalDate" class="flex items-center gap-2">
+                        <i class="fa fa-calendar text-[#FFD700]"></i>
+                    </span>
+                    <span id="articleModalReadTime" class="hidden flex items-center gap-2">
+                        <i class="fa-regular fa-clock text-[#FFD700]"></i>
+                    </span>
+                </div>
+            </div>
+
+            <div class="article-modal-actions">
+                <button id="articleModalPrev" class="article-modal-nav" type="button">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    Previous
+                </button>
+                <button id="articleModalNext" class="article-modal-nav" type="button">
+                    Next
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+                <a id="articleModalSourceLink" href="#" target="_blank" rel="noopener noreferrer" class="hidden article-modal-source">
+                    <i class="fas fa-external-link-alt"></i> View Original Source
+                </a>
+            </div>
+        </div>
+
+        <div id="articleModalContent" class="article-modal-content markdown-content"></div>
+    </div>
+</div>
+
+<div id="footer-placeholder"></div>
+<script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
+<script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
+
+<div id="floating-avatar-container">
+    <img id="floating-avatar" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="User Avatar" class="floating-avatar js-floating-avatar">
+</div>
+
+<div id="auth-modal">
+    <div class="modal-content-wrapper" id="modal-content-wrapper"></div>
+</div>
+
+<script type="module">
+import { setupAdminAuthListener } from './frontend/www/js/admin/adminManager.js';
+setupAdminAuthListener();
+</script>
+<script type="module" src="frontend/www/js/main.js"></script>
+<script type="module" src="frontend/www/js/articles/articles.js"></script>
+<script type="module" src="frontend/www/js/ui/imageEnlargement.js"></script>
+<script type="module" src="frontend/www/js/popoutAuth.js"></script>
+
+<div id="image-overlay">
+    <span id="image-overlay-close">&times;</span>
+    <img id="image-overlay-img" src="" alt="Enlarged view">
+</div>
+
+</body>
+</html>

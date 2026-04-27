@@ -18,6 +18,10 @@ export function initImageEnlargement() {
     
     // Add click event to all images in markdown content
     document.addEventListener('click', function(e) {
+        if (e.target.closest('.js-read-article, .chronicle-card')) {
+            return;
+        }
+
         if (e.target.tagName === 'IMG' && e.target.closest('.markdown-content')) {
             const overlay = document.getElementById('image-overlay');
             const overlayImg = document.getElementById('image-overlay-img');
