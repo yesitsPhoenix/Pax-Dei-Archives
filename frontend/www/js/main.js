@@ -182,6 +182,37 @@ async function performSearch(searchTerm) {
     }
 }
 
+function setupRoadmapModal() {
+    const roadmapLink = document.getElementById('roadmapLink');
+    const roadmapModalOverlay = document.getElementById('roadmapModalOverlay');
+    const closeRoadmapModal = document.getElementById('closeRoadmapModal');
+
+    if (!roadmapLink || !roadmapModalOverlay || !closeRoadmapModal) return;
+
+    const openModal = (event) => {
+        event.preventDefault();
+        roadmapModalOverlay.classList.add('active');
+        document.body.classList.add('modal-open');
+    };
+
+    const closeModal = () => {
+        roadmapModalOverlay.classList.remove('active');
+        document.body.classList.remove('modal-open');
+    };
+
+    roadmapLink.addEventListener('click', openModal);
+    closeRoadmapModal.addEventListener('click', closeModal);
+    roadmapModalOverlay.addEventListener('click', (event) => {
+        if (event.target === roadmapModalOverlay) closeModal();
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && roadmapModalOverlay.classList.contains('active')) {
+            closeModal();
+        }
+    });
+}
+
 $(document).ready(async function() {
     const utcClockDisplay = document.getElementById('utc-clock-display');
     if (utcClockDisplay) {
@@ -225,6 +256,7 @@ $(document).ready(async function() {
     const currentPage = window.location.pathname.split('/').pop();
 
     if (currentPage === 'index.html' || currentPage === '') {
+        setupRoadmapModal();
         fetchAndRenderDeveloperComments('recent-comments-home', 9);
         fetchAndRenderNewsUpdates('news-updates-home', 3);
     } else if (currentPage === 'news-updates.html') {

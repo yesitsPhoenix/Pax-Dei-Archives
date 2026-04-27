@@ -14,6 +14,7 @@ let currentFilters = {
 
 let currentPage = 1;
 const commentsPerPage = 20;
+const homeCommentPreviewLength = 280;
 let allComments = [];
 let filteredComments = [];
 
@@ -414,25 +415,26 @@ function renderComments(container, comments) {
         const authorType = comment.author_type || 'default';
         const authorColor = authorRoleColors[authorType] || authorRoleColors['default'];
 
+        const isHomeComments = container.id === 'recent-comments-home';
         const rawCommentContent = comment.content || '';
-        const markdownHtml = marked.parse(rawCommentContent);
-
-        const sanitizedHtmlContent = DOMPurify.sanitize(markdownHtml);
+        const displayedCommentContent = isHomeComments
+            ? `<p>${escapeHtml(createCommentExcerpt(rawCommentContent, homeCommentPreviewLength))}</p>`
+            : DOMPurify.sanitize(marked.parse(rawCommentContent));
 
         const tagDataAttribute = comment.tag && Array.isArray(comment.tag) ? JSON.stringify(comment.tag) : '[]';
 
         const commentHtml = `
-            <div class="${container.id === 'recent-comments-home' ? 'col-lg-6 col-md-6 item' : 'col-md-6 mb-4 dev-comment-item'}"
+            <div class="${isHomeComments ? 'dev-comment-item home-dev-comment-item' : 'col-md-6 mb-4 dev-comment-item'}"
                 data-author="${comment.author || ''}"
                 data-tag='${tagDataAttribute}'
                 data-date="${formattedDateForData}">
-                <div class="${container.id === 'recent-comments-home' ? 'item' : ''}">
+                <div>
                     <div class="down-content">
                         <h6>
                             <span class="comment-author-name" style="color: ${authorColor};">${comment.author || 'Unknown'}</span> -
                             <span class="comment-date">${formattedDate}</span>
                         </h6>
-                        <div class="comment-content-text text-base">${sanitizedHtmlContent}</div>
+                        <div class="comment-content-text text-base">${displayedCommentContent}</div>
                         ${sourceDisplay ? `<span class="comment-source">${sourceDisplay}</span>` : ''}
                     </div>
                 </div>
@@ -442,3 +444,25 @@ function renderComments(container, comments) {
     });
 }
 
+function createCommentExcerpt(content, maxLength) {
+    const plainContent = String(content || '')
+        .replace(/!\[[^\]]*]\([^)]+\)/g, '')
+        .replace(/\[([^\]]+)]\([^)]+\)/g, '$1')
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/`{1,3}([^`]+)`{1,3}/g, '$1')
+        .replace(/[#_*~>|-]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    if (!plainContent || plainContent.length <= maxLength) return plainContent;
+    return `${plainContent.slice(0, maxLength).trim()}...`;
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
