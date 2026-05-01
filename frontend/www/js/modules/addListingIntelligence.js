@@ -50,6 +50,30 @@ export async function fetchItemSalesHistoryForListing({ supabase, currentCharact
     }
 }
 
+export async function fetchActiveListingsForListing({ supabase, currentCharacterId, itemId }) {
+    try {
+        const { data, error } = await supabase
+            .from('market_listings')
+            .select('listing_id, quantity_listed, total_listed_price, listed_price_per_unit, listing_date, is_mastercrafted, enchantment_tier, market_stall_id')
+            .eq('item_id', itemId)
+            .eq('character_id', currentCharacterId)
+            .eq('is_cancelled', false)
+            .eq('is_fully_sold', false)
+            .order('listed_price_per_unit', { ascending: true })
+            .limit(100);
+
+        if (error || !data) return [];
+        return data;
+    } catch {
+        return [];
+    }
+}
+
+function normalizeEnchantTier(value) {
+    const parsed = parseInt(value || '0', 10);
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function getQualityMultiplier(isMastercrafted, enchantmentTier) {
     const ENCHANT_PREMIUMS = [0, 0.10, 0.20, 0.30];
     const mcPremium   = isMastercrafted ? 0.15 : 0;
@@ -210,6 +234,43 @@ function getMarketLowRecommendation(stackMarketLow, ownCount, totalListings, own
     };
 }
 
+function getMatchExistingRecommendation(activeListings, count) {
+    if (!Array.isArray(activeListings) || !activeListings.length || !(count > 0)) return null;
+
+    const sameStackListings = activeListings.filter((listing) => Number(listing.quantity_listed) === count);
+    if (sameStackListings.length) {
+        const lowestSameStack = sameStackListings.reduce((best, listing) => {
+            const price = Number(listing.total_listed_price) || 0;
+            if (!best || price < (Number(best.total_listed_price) || 0)) return listing;
+            return best;
+        }, null);
+        const value = Math.round(Number(lowestSameStack?.total_listed_price) || 0);
+        if (value > 0) {
+            return {
+                value,
+                description: `Match your lowest active ${count}-count stack for this item.`,
+                subtext: `${sameStackListings.length} active matching stack${sameStackListings.length !== 1 ? 's' : ''} already listed.`
+            };
+        }
+    }
+
+    const lowestUnitListing = activeListings.reduce((best, listing) => {
+        const unitPrice = Number(listing.listed_price_per_unit) || 0;
+        if (!best || unitPrice < (Number(best.listed_price_per_unit) || 0)) return listing;
+        return best;
+    }, null);
+    const unitPrice = Number(lowestUnitListing?.listed_price_per_unit) || 0;
+    if (!(unitPrice > 0)) return null;
+
+    const sourceQuantity = Number(lowestUnitListing.quantity_listed) || 1;
+    const sourceStackPrice = Math.round(Number(lowestUnitListing.total_listed_price) || unitPrice * sourceQuantity);
+    return {
+        value: Math.max(1, Math.round(unitPrice * count)),
+        description: 'Match your active per-unit floor adjusted to this stack size.',
+        subtext: `Based on your ${sourceQuantity}-count stack at ${sourceStackPrice}g.`
+    };
+}
+
 function getCompetitivePriceRecommendation({ stackMarketLow, stackMarketAvg, suggestionValue, hasHistory }) {
     const roundedLow = Math.round(stackMarketLow);
     const thresholds = getCompetitiveThresholds(roundedLow);
@@ -260,6 +321,16 @@ function isOwnListingAtMarketLow(ownListings, marketLowPerUnit) {
 }
 
 function getPriceOptionTheme(type) {
+    if (type === 'match-existing') {
+        return {
+            card: 'border-emerald-500/45 bg-emerald-950/28 shadow-[inset_0_1px_0_rgba(52,211,153,0.14)]',
+            badge: 'border-emerald-400/50 bg-emerald-500/20 text-emerald-200',
+            price: 'text-emerald-300',
+            button: 'bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-200 border-emerald-400/45',
+            meta: 'text-emerald-200'
+        };
+    }
+
     if (type === 'market-low') {
         return {
             card: 'border-orange-500/45 bg-orange-950/30 shadow-[inset_0_1px_0_rgba(251,146,60,0.14)]',
@@ -372,6 +443,8 @@ export function createAddListingIntelligenceController({
         marketData: null,
         ownCount: 0,
         ownListings: [],
+        activeListings: [],
+        activeListingsLoading: false,
         historyData: null,
         historyLoading: false,
         selectedItem: null,
@@ -386,8 +459,10 @@ export function createAddListingIntelligenceController({
         const md = state.marketData;
         const hist = state.historyData;
         const loading = state.historyLoading;
+        const activeLoading = state.activeListingsLoading;
+        const hasActiveListings = Array.isArray(state.activeListings) && state.activeListings.length > 0;
 
-        if (!md && !hist && !loading) {
+        if (!md && !hist && !loading && !activeLoading && !hasActiveListings) {
             if (!state.selectedItem) {
                 hintEl.innerHTML = '';
                 hintEl.classList.add('hidden');
@@ -441,6 +516,10 @@ export function createAddListingIntelligenceController({
             : isQuality && md
                 ? `<span class="ml-1 text-xs font-semibold text-amber-300 bg-amber-900/30 border border-amber-500/30 rounded px-1.5 py-0.5">Est. x quality</span>`
                 : '';
+        const activeListingsForQuality = (state.activeListings || []).filter((listing) => {
+            return !!listing.is_mastercrafted === isMastercrafted
+                && normalizeEnchantTier(listing.enchantment_tier) === enchantmentTier;
+        });
 
         let marketCol;
         if (displayMd) {
@@ -559,6 +638,69 @@ export function createAddListingIntelligenceController({
             </div>`;
         }
 
+        let activeCol;
+        if (activeLoading) {
+            activeCol = `
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-1.5 mb-2">
+                    <i class="fas fa-store text-emerald-400 text-sm"></i>
+                    <span class="text-emerald-300 text-sm font-semibold uppercase tracking-wide">Active Listings</span>
+                </div>
+                <div class="text-gray-400 text-sm italic"><i class="fas fa-spinner fa-spin mr-1"></i>Loading...</div>
+            </div>`;
+        } else if (activeListingsForQuality.length) {
+            const sameStackCount = hasCount
+                ? activeListingsForQuality.filter((listing) => Number(listing.quantity_listed) === count).length
+                : 0;
+            const sortedActiveListings = [...activeListingsForQuality].sort((a, b) => {
+                const aStack = Number(a.total_listed_price) || 0;
+                const bStack = Number(b.total_listed_price) || 0;
+                return aStack - bStack;
+            });
+            const lowestListing = sortedActiveListings[0];
+            const lowestStack = Math.round(Number(lowestListing?.total_listed_price) || 0);
+            const lowestUnit = Number(lowestListing?.listed_price_per_unit) || 0;
+            const visibleListings = sortedActiveListings.slice(0, 3);
+            activeCol = `
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-1 mb-2 flex-wrap">
+                    <i class="fas fa-store text-emerald-400 text-sm"></i>
+                    <span class="text-emerald-300 text-sm font-semibold uppercase tracking-wide">Active Listings</span>
+                    ${sameStackCount > 0 ? `<span class="text-xs font-semibold text-emerald-300 bg-emerald-900/40 border border-emerald-500/40 rounded px-1.5 py-0.5">${sameStackCount} same stack</span>` : ''}
+                </div>
+                <div class="space-y-1">
+                    <div class="flex justify-between gap-2">
+                        <span class="text-gray-300 text-sm">Lowest active</span>
+                        <span class="text-emerald-300 font-bold text-sm">${fmt(lowestStack)}g</span>
+                    </div>
+                    <div class="flex justify-between gap-2">
+                        <span class="text-gray-300 text-sm">Lowest/unit</span>
+                        <span class="text-white text-sm">${fmt(lowestUnit)}g</span>
+                    </div>
+                    <div class="border-t border-slate-500/40 pt-1 mt-1 space-y-1">
+                        ${visibleListings.map((listing) => {
+                            const quantity = Number(listing.quantity_listed) || 0;
+                            const stackPrice = Math.round(Number(listing.total_listed_price) || 0);
+                            return `<div class="flex justify-between gap-2 text-sm">
+                                <span class="text-gray-300 truncate">${quantity} count</span>
+                                <span class="text-emerald-200 font-semibold whitespace-nowrap">${fmt(stackPrice)}g</span>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                    <div class="text-gray-500 text-sm mt-1">${activeListingsForQuality.length} unsold listing${activeListingsForQuality.length !== 1 ? 's' : ''} in your Ledger</div>
+                </div>
+            </div>`;
+        } else {
+            activeCol = `
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-1.5 mb-2">
+                    <i class="fas fa-store text-gray-500 text-sm"></i>
+                    <span class="text-gray-400 text-sm font-semibold uppercase tracking-wide">Active Listings</span>
+                </div>
+                <div class="text-gray-500 text-sm italic">No active Ledger listings for this quality</div>
+            </div>`;
+        }
+
         const suggestion = buildAddListingSuggestion(md, qualityMd, hist, count, stacks, isMastercrafted, enchantmentTier, state.ownCount);
 
         let competitiveCard = '';
@@ -570,11 +712,12 @@ export function createAddListingIntelligenceController({
             const enteredGap = hasPrice ? price - roundedStackMarketLow : null;
             const enteredGapPct = (hasPrice && roundedStackMarketLow > 0) ? Math.round((enteredGap / roundedStackMarketLow) * 100) : null;
             const enteredStatus = hasPrice ? classifyCompetitiveGap(enteredGap, enteredGapPct, roundedStackMarketLow).status : null;
-            const suggestionGap = suggestion?.suggestedPerStack !== null ? suggestion.suggestedPerStack - roundedStackMarketLow : null;
-            const suggestionGapPct = (suggestion?.suggestedPerStack !== null && roundedStackMarketLow > 0)
+            const hasSuggestedStackPrice = Number.isFinite(suggestion?.suggestedPerStack);
+            const suggestionGap = hasSuggestedStackPrice ? suggestion.suggestedPerStack - roundedStackMarketLow : null;
+            const suggestionGapPct = (hasSuggestedStackPrice && roundedStackMarketLow > 0)
                 ? Math.round((suggestionGap / roundedStackMarketLow) * 100)
                 : null;
-            const suggestionStatus = suggestion?.suggestedPerStack !== null
+            const suggestionStatus = hasSuggestedStackPrice
                 ? classifyCompetitiveGap(suggestionGap, suggestionGapPct, roundedStackMarketLow).status
                 : null;
             const enteredStatusDisplay = hasPrice ? getCompetitiveStatusPresentation(enteredStatus) : null;
@@ -645,18 +788,32 @@ export function createAddListingIntelligenceController({
 
         const hasHistoryOnlyCardSet = !displayMd && !!hist && hasCount;
         let suggestionCard = '';
-        if (suggestion) {
-            const bubbleCls = suggestion.insightClass === 'text-rose-400' ? 'bg-rose-400'
-                : suggestion.insightClass === 'text-amber-400' ? 'bg-amber-400'
-                : suggestion.insightClass === 'text-emerald-400' ? 'bg-emerald-400'
-                : suggestion.insightClass === 'text-fuchsia-300' ? 'bg-fuchsia-400'
+        if (suggestion || (hasCount && activeListingsForQuality.length)) {
+            const pricingInsight = suggestion?.insight || 'You already have active listings for this item - matching your current price keeps the market stall consistent.';
+            const pricingInsightClass = suggestion?.insightClass || 'text-emerald-400';
+            const bubbleCls = pricingInsightClass === 'text-rose-400' ? 'bg-rose-400'
+                : pricingInsightClass === 'text-amber-400' ? 'bg-amber-400'
+                : pricingInsightClass === 'text-emerald-400' ? 'bg-emerald-400'
+                : pricingInsightClass === 'text-fuchsia-300' ? 'bg-fuchsia-400'
                 : 'bg-gray-400';
             const suggestionOptions = [];
             const historyOnlyRecommendations = !displayMd && hist && hasCount
                 ? getHistoryOnlyPriceRecommendations(hist, count)
                 : null;
+            const matchExistingRecommendation = hasCount
+                ? getMatchExistingRecommendation(activeListingsForQuality, count)
+                : null;
 
-            if (stackMarketLow !== null) {
+            if (matchExistingRecommendation) {
+                suggestionOptions.push({
+                    type: 'match-existing',
+                    label: 'Match Existing',
+                    badge: 'Consistent',
+                    value: matchExistingRecommendation.value,
+                    description: matchExistingRecommendation.description,
+                    subtext: matchExistingRecommendation.subtext
+                });
+            } else if (stackMarketLow !== null) {
                 const marketLowRecommendation = getMarketLowRecommendation(
                     stackMarketLow,
                     state.ownCount,
@@ -673,7 +830,7 @@ export function createAddListingIntelligenceController({
                 });
             }
 
-            if (suggestion.suggestedPerStack !== null && hasCount) {
+            if (suggestion && suggestion.suggestedPerStack !== null && hasCount) {
                 suggestionOptions.push({
                     type: 'suggested',
                     label: 'Suggested Price',
@@ -740,7 +897,7 @@ export function createAddListingIntelligenceController({
                        </div>
                        <div class="flex items-center gap-1.5 mt-2">
                            <span class="inline-block w-2 h-2 rounded-full flex-shrink-0 ${bubbleCls}"></span>
-                           <span class="${suggestion.insightClass} text-sm">${suggestion.insight}</span>
+                           <span class="${pricingInsightClass} text-sm">${pricingInsight}</span>
                        </div>`
                     : `<span class="text-gray-400 text-sm italic">Enter stack count to see suggestion</span>`
                 }
@@ -779,7 +936,13 @@ export function createAddListingIntelligenceController({
 
         hintEl.innerHTML = `
             ${qualityBanner}
-            <div class="flex gap-3">${marketCol}<div class="w-px bg-slate-500/40 self-stretch flex-shrink-0"></div>${histCol}</div>
+            <div class="flex flex-col lg:flex-row gap-3">
+                ${marketCol}
+                <div class="hidden lg:block w-px bg-slate-500/40 self-stretch flex-shrink-0"></div>
+                ${histCol}
+                <div class="hidden lg:block w-px bg-slate-500/40 self-stretch flex-shrink-0"></div>
+                ${activeCol}
+            </div>
             ${competitiveCard}
             ${suggestionCard}
             ${impactRow}
@@ -851,17 +1014,26 @@ export function createAddListingIntelligenceController({
             const requestId = state.historyRequestId + 1;
             state.historyRequestId = requestId;
             state.historyData = null;
+            state.activeListings = [];
             state.historyLoading = true;
+            state.activeListingsLoading = true;
             renderHint();
-            const hist = await fetchItemSalesHistoryForListing({ supabase, currentCharacterId, itemId: selectedItem.item_id });
+            const [hist, activeListings] = await Promise.all([
+                fetchItemSalesHistoryForListing({ supabase, currentCharacterId, itemId: selectedItem.item_id }),
+                fetchActiveListingsForListing({ supabase, currentCharacterId, itemId: selectedItem.item_id })
+            ]);
             if (requestId !== state.historyRequestId || state.selectedItem !== selectedItem) return;
             state.historyData = hist;
+            state.activeListings = activeListings;
             state.historyLoading = false;
+            state.activeListingsLoading = false;
             renderHint();
         } else {
             state.historyRequestId += 1;
             state.historyData = null;
+            state.activeListings = [];
             state.historyLoading = false;
+            state.activeListingsLoading = false;
             renderHint();
         }
     }
