@@ -1,3 +1,8 @@
+// ─── AWAY BANNER TOGGLE ────────────────────────────────────────────────────
+// Set to true to show the banner, false to disable it entirely.
+const AWAY_BANNER_ENABLED = true;
+// ────────────────────────────────────────────────────────────────────────────
+
 document.addEventListener('DOMContentLoaded', () => {
     const headerPlaceholder = document.getElementById('header-placeholder');
     if (!headerPlaceholder) return;
@@ -44,6 +49,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             });
+
+            // ── Away banner init ─────────────────────────────────────────────────────
+            if (AWAY_BANNER_ENABLED) {
+                const STORAGE_KEY = 'away_banner_dismissed_v1';
+                const banner = headerElement.querySelector('#away-banner');
+                if (banner && localStorage.getItem(STORAGE_KEY) !== 'true') {
+                    banner.style.display = 'flex';
+                    const closeBtn = banner.querySelector('#away-banner-close');
+                    if (closeBtn) {
+                        closeBtn.addEventListener('click', function () {
+                            banner.style.display = 'none';
+                            localStorage.setItem(STORAGE_KEY, 'true');
+                        });
+                    }
+                }
+            }
+            // ────────────────────────────────────────────────────────────────────────
         })
         .catch(e => {
             console.error('Error in header loading or activation:', e);
