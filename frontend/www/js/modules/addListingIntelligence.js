@@ -703,6 +703,28 @@ export function createAddListingIntelligenceController({
                 && normalizeEnchantTier(listing.enchantment_tier) === enchantmentTier;
         });
 
+        const provinceMarketRows = provinceLoading
+            ? `<div class="mt-1 pt-1 border-t border-slate-500/30 text-gray-400 text-sm">
+                   <i class="fas fa-spinner fa-spin mr-1"></i>Checking province market...
+               </div>`
+            : provinceDisplayMd
+                ? `<div class="mt-1 pt-1 border-t border-indigo-500/30">
+                       <div class="flex justify-between gap-2">
+                           <span class="text-gray-300 text-sm">Province low/unit</span>
+                           <span class="text-indigo-300 font-bold text-sm">${fmt(provinceDisplayMd.marketLow)}g</span>
+                       </div>
+                       ${hasCount ? `<div class="flex justify-between gap-2 mt-0.5">
+                           <span class="text-gray-300 text-sm">Province low/stack <span class="text-gray-500 text-xs">(${count})</span></span>
+                           <span class="text-indigo-300 font-bold text-sm">${fmt(provinceDisplayMd.marketLow * count)}g</span>
+                       </div>` : ''}
+                       <div class="text-gray-500 text-sm mt-0.5">
+                           ${provinceDisplayMd.totalListings} listing${provinceDisplayMd.totalListings !== 1 ? 's' : ''} across ${provinceDisplayMd.valleyCount || provinceContext?.loadedValleys?.length || 0} valley${(provinceDisplayMd.valleyCount || provinceContext?.loadedValleys?.length || 0) !== 1 ? 's' : ''}
+                       </div>
+                   </div>`
+                : provinceContext
+                    ? `<div class="mt-1 pt-1 border-t border-slate-500/30 text-gray-500 text-sm">No province-wide listings found</div>`
+                    : '';
+
         let marketCol;
         if (displayMd) {
             marketCol = `
@@ -741,6 +763,7 @@ export function createAddListingIntelligenceController({
                             ? `${displayMd.totalListings} listing${displayMd.totalListings !== 1 ? 's' : ''} in your zone`
                             : 'Estimated from all-quality listings'}${state.ownCount > 0 ? ` <span class="text-emerald-400">(${state.ownCount} yours)</span>` : ''}
                     </div>
+                    ${provinceMarketRows}
                 </div>
             </div>`;
         } else {
@@ -751,6 +774,7 @@ export function createAddListingIntelligenceController({
                     <span class="text-gray-400 text-sm font-semibold uppercase tracking-wide">Live Market</span>
                 </div>
                 <div class="text-gray-500 text-sm italic">No market data in your zone</div>
+                ${provinceMarketRows}
             </div>`;
         }
 
@@ -936,6 +960,12 @@ export function createAddListingIntelligenceController({
                         <span class="${suggestionStatusDisplay.text} font-semibold">${suggestionStatusDisplay.label}</span>
                    </div>`
                 : '';
+            const impactLine = suggestion?.impactNote
+                ? `<div class="mt-2 pt-2 border-t border-cyan-500/20 flex items-center gap-1.5">
+                        <span class="inline-block w-2 h-2 rounded-full flex-shrink-0 ${suggestion.impactNote.bubble}"></span>
+                        <span class="${suggestion.impactNote.cls} text-sm">${suggestion.impactNote.text}</span>
+                   </div>`
+                : '';
 
             competitiveCard = `
             <div class="mt-2 p-3 bg-cyan-900/15 border border-cyan-500/30 rounded-xl">
@@ -973,6 +1003,7 @@ export function createAddListingIntelligenceController({
                         ${suggestionLine}
                     </div>
                 </div>
+                ${impactLine}
             </div>`;
         }
 
@@ -1103,22 +1134,9 @@ export function createAddListingIntelligenceController({
 
             suggestionCard = `
             <div class="mt-3">
-                <div class="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
-                    <div class="flex items-center gap-2">
-                    <i class="fas fa-lightbulb text-gray-300 text-sm"></i>
-                        <span class="text-gray-100 font-semibold text-sm uppercase tracking-widest">Price Options</span>
-                    </div>
-                    <span class="text-gray-400 text-xs">Standard choices plus province floor</span>
-                </div>
+                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4">Price Options</p>
                 ${suggestionOptions.length > 0
                     ? `<div class="rounded-xl border border-blue-400/25 bg-slate-950/15 p-2.5">
-                           <div class="mb-2 border-b border-blue-400/20 pb-1.5">
-                               <div class="flex items-center gap-2">
-                                   <span class="text-blue-300 text-xs font-semibold uppercase tracking-widest">Listing Price Choices</span>
-                                   <span class="text-gray-500 text-xs">${homeScopeSummary}</span>
-                                   ${provinceLowOption ? `<span class="text-indigo-300 text-xs">${provinceScopeSummary}</span>` : ''}
-                               </div>
-                           </div>
                            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
                                ${allPriceOptions.map(option => renderSuggestedPriceOptionCard(option, stacks, fmt)).join('')}
                                ${provinceOptions.length ? '' : provinceFloorLoadingCard}
@@ -1126,15 +1144,6 @@ export function createAddListingIntelligenceController({
                        </div>`
                     : `<span class="text-gray-400 text-sm italic">Enter stack count to see suggestion</span>`
                 }
-            </div>`;
-        }
-
-        let impactRow = '';
-        if (suggestion?.impactNote) {
-            impactRow = `
-            <div class="flex items-center gap-1.5 mt-1.5">
-                <span class="inline-block w-2 h-2 rounded-full flex-shrink-0 ${suggestion.impactNote.bubble}"></span>
-                <span class="${suggestion.impactNote.cls} text-sm">${suggestion.impactNote.text}</span>
             </div>`;
         }
 
@@ -1170,7 +1179,6 @@ export function createAddListingIntelligenceController({
             </div>
             ${competitiveCard}
             ${suggestionCard}
-            ${impactRow}
             ${highPriceRow}`;
         hintEl.classList.remove('hidden');
 
