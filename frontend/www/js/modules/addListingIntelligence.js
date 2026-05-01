@@ -1,4 +1,4 @@
-import { getCompetitiveThresholds } from './pricingBands.js';
+import { getCompetitiveThresholds, classifyCompetitiveGap } from './pricingBands.js';
 import { fetchZoneListings, loadItemsData } from '../services/gamingToolsService.js';
 
 export async function fetchItemSalesHistoryForListing({ supabase, currentCharacterId, itemId }) {
@@ -352,6 +352,16 @@ function getPriceOptionTheme(type) {
         };
     }
 
+    if (type === 'province-low') {
+        return {
+            card: 'border-indigo-500/55 bg-indigo-950/30 shadow-[inset_0_1px_0_rgba(129,140,248,0.16)]',
+            badge: 'border-indigo-400/55 bg-indigo-500/20 text-indigo-200',
+            price: 'text-indigo-300',
+            button: 'bg-indigo-500/20 hover:bg-indigo-500/35 text-indigo-200 border-indigo-400/45',
+            meta: 'text-indigo-200'
+        };
+    }
+
     return {
         card: 'border-fuchsia-500/45 bg-fuchsia-950/28 shadow-[inset_0_1px_0_rgba(217,70,239,0.14)]',
         badge: 'border-fuchsia-400/50 bg-fuchsia-500/20 text-fuchsia-200',
@@ -361,33 +371,57 @@ function getPriceOptionTheme(type) {
     };
 }
 
-function renderSuggestedPriceOptionRow(option, stacks, fmt, scopeLabel) {
+function getCompetitiveStatusPresentation(status) {
+    if (status === 'leading') {
+        return {
+            label: 'Leading',
+            pill: 'border-emerald-500/40 bg-emerald-900/30 text-emerald-300',
+            text: 'text-emerald-300',
+            icon: 'fa-trophy'
+        };
+    }
+
+    if (status === 'competitive') {
+        return {
+            label: 'Competitive',
+            pill: 'border-amber-500/40 bg-amber-900/30 text-amber-300',
+            text: 'text-amber-300',
+            icon: 'fa-handshake'
+        };
+    }
+
+    return {
+        label: 'Above Range',
+        pill: 'border-rose-500/40 bg-rose-900/30 text-rose-300',
+        text: 'text-rose-300',
+        icon: 'fa-triangle-exclamation'
+    };
+}
+
+function renderSuggestedPriceOptionCard(option, stacks, fmt) {
     const theme = getPriceOptionTheme(option.type);
     const total = stacks > 0 ? option.value * stacks : null;
 
     return `
-        <div class="grid h-[110px] grid-cols-[minmax(0,1fr)_88px_54px] items-center gap-2 rounded-lg border px-3 py-2.5 ${theme.card}">
+        <div class="min-h-[172px] rounded-lg border px-3 py-3 flex flex-col ${theme.card}">
             <div class="min-w-0">
-                <div class="flex items-center gap-2 min-w-0">
+                <div class="flex items-start justify-between gap-2">
                     <span class="text-white text-sm font-semibold leading-tight">${option.label}</span>
-                    <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${theme.badge}">${option.badge}</span>
+                    <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap ${theme.badge}">${option.badge}</span>
                 </div>
-                <div class="text-gray-300 text-sm leading-5 mt-1 overflow-hidden" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${option.description}</div>
-                <!-- Hidden for now: detailed price rationale felt too noisy in the compact modal layout.
-                <div class="flex flex-wrap gap-x-2 gap-y-0.5 text-xs mt-1">
-                    ${option.subtext ? `<span class="text-gray-400 leading-5">${option.subtext}</span>` : ''}
-                    ${total !== null ? `<span class="${theme.meta} font-semibold">${stacks}x ${fmt(total)}g total</span>` : ''}
+                <div class="text-gray-300 text-xs leading-5 mt-2 overflow-hidden" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${option.description}</div>
+            </div>
+            <div class="mt-auto pt-3 flex items-end justify-between gap-2">
+                <div>
+                    <div class="${theme.price} font-bold text-2xl leading-none">${fmt(option.value)}g</div>
+                    <div class="text-gray-400 text-xs mt-0.5">per stack</div>
+                    ${total !== null ? `<div class="${theme.meta} text-xs font-semibold mt-1">${fmt(total)}g total</div>` : ''}
                 </div>
-                -->
+                <button type="button" data-suggested-price="${option.value}"
+                    class="px-2 py-1 text-xs font-semibold border rounded-lg transition-colors ${theme.button}">
+                    Use
+                </button>
             </div>
-            <div class="text-right">
-                <div class="${theme.price} font-bold text-2xl leading-none">${fmt(option.value)}g</div>
-                <div class="text-gray-400 text-xs mt-0.5">per stack</div>
-            </div>
-            <button type="button" data-suggested-price="${option.value}"
-                class="justify-self-end px-2 py-1 text-xs font-semibold border rounded-lg transition-colors ${theme.button}">
-                Use
-            </button>
         </div>`;
 }
 
@@ -852,10 +886,9 @@ export function createAddListingIntelligenceController({
         const suggestion = buildAddListingSuggestion(md, qualityMd, hist, count, stacks, isMastercrafted, enchantmentTier, state.ownCount);
 
         const stackMarketLow = (displayMd && hasCount) ? (displayMd.marketLow * count) : null;
-        const provincePriceOptions = [];
+        let provinceLowOption = null;
         if (provinceContext && provinceDisplayMd) {
             const provinceStackLow = hasCount ? provinceDisplayMd.marketLow * count : null;
-            const provinceStackAvg = hasCount ? provinceDisplayMd.marketAvg * count : null;
             if (provinceStackLow !== null) {
                 const provinceLowRecommendation = getMarketLowRecommendation(
                     provinceStackLow,
@@ -863,40 +896,84 @@ export function createAddListingIntelligenceController({
                     provinceDisplayMd.totalListings,
                     false
                 );
-                provincePriceOptions.push({
-                    type: 'market-low',
+                provinceLowOption = {
+                    type: 'province-low',
                     label: 'Province Low',
-                    badge: 'Travel',
+                    badge: 'True Floor',
                     value: provinceLowRecommendation.value,
                     description: 'Match the broader province floor.',
                     subtext: provinceLowRecommendation.subtext.replace('live market', 'province-wide market')
-                });
+                };
+            }
+        }
 
-                const provinceCompetitiveRecommendation = getCompetitivePriceRecommendation({
-                    stackMarketLow: provinceStackLow,
-                    stackMarketAvg: provinceStackAvg,
-                    suggestionValue: provinceLowRecommendation.value,
-                    hasHistory: !!hist
-                });
-                provincePriceOptions.push({
-                    type: 'competitive',
-                    label: 'Province Competitive',
-                    badge: 'Broader',
-                    value: provinceCompetitiveRecommendation.value,
-                    description: 'Top end of the province band.',
-                    subtext: provinceCompetitiveRecommendation.subtext
-                });
-            }
-            if (provinceStackAvg !== null && Math.round(provinceStackAvg) > 0) {
-                provincePriceOptions.push({
-                    type: 'suggested',
-                    label: 'Province Avg',
-                    badge: 'Reference',
-                    value: Math.round(provinceStackAvg),
-                    description: 'Average province-wide stack price.',
-                    subtext: `${provinceDisplayMd.totalListings} listing${provinceDisplayMd.totalListings !== 1 ? 's' : ''} across ${provinceDisplayMd.valleyCount || provinceContext.loadedValleys.length} valley${(provinceDisplayMd.valleyCount || provinceContext.loadedValleys.length) !== 1 ? 's' : ''}.`
-                });
-            }
+        let competitiveCard = '';
+        if (stackMarketLow !== null) {
+            const roundedStackMarketLow = Math.round(stackMarketLow);
+            const thresholds = getCompetitiveThresholds(roundedStackMarketLow);
+            const competitiveCap = roundedStackMarketLow + thresholds.maxGapGold;
+            const enteredGap = hasPrice ? price - roundedStackMarketLow : null;
+            const enteredGapPct = (hasPrice && roundedStackMarketLow > 0) ? Math.round((enteredGap / roundedStackMarketLow) * 100) : null;
+            const enteredStatus = hasPrice ? classifyCompetitiveGap(enteredGap, enteredGapPct, roundedStackMarketLow).status : null;
+            const hasSuggestedStackPrice = Number.isFinite(suggestion?.suggestedPerStack);
+            const suggestionGap = hasSuggestedStackPrice ? suggestion.suggestedPerStack - roundedStackMarketLow : null;
+            const suggestionGapPct = (hasSuggestedStackPrice && roundedStackMarketLow > 0)
+                ? Math.round((suggestionGap / roundedStackMarketLow) * 100)
+                : null;
+            const suggestionStatus = hasSuggestedStackPrice
+                ? classifyCompetitiveGap(suggestionGap, suggestionGapPct, roundedStackMarketLow).status
+                : null;
+            const enteredStatusDisplay = hasPrice ? getCompetitiveStatusPresentation(enteredStatus) : null;
+            const suggestionStatusDisplay = suggestionStatus ? getCompetitiveStatusPresentation(suggestionStatus) : null;
+
+            const statusPill = !hasPrice
+                ? `<span class="inline-flex items-center gap-1 rounded-full border border-slate-500/40 bg-slate-700/40 px-2 py-0.5 text-xs text-gray-300">Enter a price to compare</span>`
+                : `<span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${enteredStatusDisplay.pill}"><i class="fas ${enteredStatusDisplay.icon} text-[10px]"></i> ${enteredStatusDisplay.label}</span>`;
+
+            const suggestionLine = suggestion?.suggestedPerStack !== null && suggestionStatusDisplay
+                ? `<div class="flex justify-between gap-2 text-xs">
+                        <span class="text-gray-300">Suggested status</span>
+                        <span class="${suggestionStatusDisplay.text} font-semibold">${suggestionStatusDisplay.label}</span>
+                   </div>`
+                : '';
+
+            competitiveCard = `
+            <div class="mt-2 p-3 bg-cyan-900/15 border border-cyan-500/30 rounded-xl">
+                <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-ruler-combined text-cyan-400 text-sm"></i>
+                        <span class="text-cyan-300 font-semibold text-sm uppercase tracking-widest">Competitive Range</span>
+                    </div>
+                    <span class="text-gray-400 text-sm">${thresholds.label}</span>
+                </div>
+                <div class="grid md:grid-cols-2 gap-3">
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between gap-2 text-sm">
+                            <span class="text-gray-300">Market low/stack</span>
+                            <span class="text-amber-300 font-bold">${fmt(roundedStackMarketLow)}g</span>
+                        </div>
+                        <div class="flex justify-between gap-2 text-sm">
+                            <span class="text-gray-300">Competitive cap</span>
+                            <span class="text-white">${fmt(competitiveCap)}g <span class="text-gray-500">(+${fmt(thresholds.maxGapGold)}g)</span></span>
+                        </div>
+                        <div class="flex justify-between gap-2 text-sm">
+                            <span class="text-gray-300">Percent limit</span>
+                            <span class="text-white">+${thresholds.maxGapPct}%</span>
+                        </div>
+                    </div>
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-gray-300 text-sm">Your entered price</span>
+                            ${statusPill}
+                        </div>
+                        ${hasPrice ? `<div class="flex justify-between gap-2 text-sm">
+                            <span class="text-gray-300">Gap vs low</span>
+                            <span class="${enteredStatusDisplay.text} font-semibold whitespace-nowrap">${enteredGap > 0 ? '+' : ''}${fmt(enteredGap)}g (${enteredGapPct > 0 ? '+' : ''}${enteredGapPct}%)</span>
+                        </div>` : ''}
+                        ${suggestionLine}
+                    </div>
+                </div>
+            </div>`;
         }
 
         let qualityBanner = '';
@@ -914,14 +991,7 @@ export function createAddListingIntelligenceController({
 
         const hasHistoryOnlyCardSet = !displayMd && !!hist && hasCount;
         let suggestionCard = '';
-        if (suggestion || (hasCount && activeListingsForQuality.length) || provincePriceOptions.length) {
-            const pricingInsight = suggestion?.insight || 'You already have active listings for this item - matching your current price keeps the market stall consistent.';
-            const pricingInsightClass = suggestion?.insightClass || 'text-emerald-400';
-            const bubbleCls = pricingInsightClass === 'text-rose-400' ? 'bg-rose-400'
-                : pricingInsightClass === 'text-amber-400' ? 'bg-amber-400'
-                : pricingInsightClass === 'text-emerald-400' ? 'bg-emerald-400'
-                : pricingInsightClass === 'text-fuchsia-300' ? 'bg-fuchsia-400'
-                : 'bg-gray-400';
+        if (suggestion || (hasCount && activeListingsForQuality.length) || provinceLowOption) {
             const suggestionOptions = [];
             const historyOnlyRecommendations = !displayMd && hist && hasCount
                 ? getHistoryOnlyPriceRecommendations(hist, count)
@@ -1023,6 +1093,13 @@ export function createAddListingIntelligenceController({
                     : provinceContext
                         ? 'No province-wide market data for this item'
                         : 'Province data unavailable';
+            const provinceOptions = [provinceLowOption].filter(Boolean);
+            const allPriceOptions = [...suggestionOptions, ...provinceOptions];
+            const provinceFloorLoadingCard = provinceLoading
+                ? `<div class="min-h-[172px] rounded-lg border border-indigo-400/20 bg-slate-950/10 px-3 py-3 flex items-center justify-center text-center text-gray-400 text-sm">
+                       <span><i class="fas fa-spinner fa-spin mr-1"></i>Checking province floor...</span>
+                   </div>`
+                : '';
 
             suggestionCard = `
             <div class="mt-3">
@@ -1031,41 +1108,22 @@ export function createAddListingIntelligenceController({
                     <i class="fas fa-lightbulb text-gray-300 text-sm"></i>
                         <span class="text-gray-100 font-semibold text-sm uppercase tracking-widest">Price Options</span>
                     </div>
-                    <span class="text-gray-400 text-xs">Grouped by market scope</span>
+                    <span class="text-gray-400 text-xs">Standard choices plus province floor</span>
                 </div>
-                ${(suggestionOptions.length > 0 || provincePriceOptions.length > 0)
-                    ? `<div class="grid lg:grid-cols-2 gap-3">
-                           <div class="min-w-0 rounded-xl border border-blue-400/25 bg-slate-950/15 p-2.5">
-                               <div class="mb-2 border-b border-blue-400/20 pb-1.5">
-                                   <div class="flex items-center gap-2">
-                                       <span class="text-blue-300 text-xs font-semibold uppercase tracking-widest">Home Valley Prices</span>
-                                       <span class="text-gray-500 text-xs">Local benchmark</span>
-                                   </div>
-                                   <div class="text-gray-400 text-xs mt-0.5">${homeScopeSummary}</div>
+                ${suggestionOptions.length > 0
+                    ? `<div class="rounded-xl border border-blue-400/25 bg-slate-950/15 p-2.5">
+                           <div class="mb-2 border-b border-blue-400/20 pb-1.5">
+                               <div class="flex items-center gap-2">
+                                   <span class="text-blue-300 text-xs font-semibold uppercase tracking-widest">Listing Price Choices</span>
+                                   <span class="text-gray-500 text-xs">${homeScopeSummary}</span>
+                                   ${provinceLowOption ? `<span class="text-indigo-300 text-xs">${provinceScopeSummary}</span>` : ''}
                                </div>
-                               ${suggestionOptions.length > 0
-                                   ? `<div class="space-y-1">${suggestionOptions.map(option => renderSuggestedPriceOptionRow(option, stacks, fmt, 'Home valley')).join('')}</div>`
-                                   : `<div class="rounded-lg border border-slate-600/40 bg-slate-900/35 px-3 py-2 text-gray-500 text-sm italic">No home valley price options yet.</div>`}
                            </div>
-                           <div class="min-w-0 rounded-xl border border-indigo-400/25 bg-slate-950/15 p-2.5">
-                               <div class="mb-2 border-b border-indigo-400/20 pb-1.5">
-                                   <div class="flex items-center gap-2">
-                                       <span class="text-indigo-300 text-xs font-semibold uppercase tracking-widest">Province-Wide Prices</span>
-                                       <span class="text-gray-500 text-xs">Travel-aware</span>
-                                   </div>
-                                   <div class="text-gray-400 text-xs mt-0.5">${provinceScopeSummary}</div>
-                               </div>
-                               ${provincePriceOptions.length > 0
-                                   ? `<div class="space-y-1">${provincePriceOptions.map(option => renderSuggestedPriceOptionRow(option, stacks, fmt, 'Province-wide')).join('')}</div>`
-                                   : `<div class="rounded-lg border border-slate-600/40 bg-slate-900/35 px-3 py-2 text-gray-500 text-sm italic">${provinceLoading ? 'Loading province-wide price options...' : 'No province-wide price options yet.'}</div>`}
+                           <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
+                               ${allPriceOptions.map(option => renderSuggestedPriceOptionCard(option, stacks, fmt)).join('')}
+                               ${provinceOptions.length ? '' : provinceFloorLoadingCard}
                            </div>
-                       </div>
-                       <!-- Hidden for now: this repeats rationale already implied by the selected options.
-                       ${suggestion ? `<div class="flex items-center gap-1.5 mt-2">
-                           <span class="inline-block w-2 h-2 rounded-full flex-shrink-0 ${bubbleCls}"></span>
-                           <span class="${pricingInsightClass} text-sm">${pricingInsight}</span>
-                       </div>` : ''}
-                       -->`
+                       </div>`
                     : `<span class="text-gray-400 text-sm italic">Enter stack count to see suggestion</span>`
                 }
             </div>`;
@@ -1110,6 +1168,7 @@ export function createAddListingIntelligenceController({
                 <div class="hidden lg:block w-px bg-slate-500/40 self-stretch flex-shrink-0"></div>
                 ${activeCol}
             </div>
+            ${competitiveCard}
             ${suggestionCard}
             ${impactRow}
             ${highPriceRow}`;
