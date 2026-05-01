@@ -375,8 +375,12 @@ function renderPublicationCard(entry, modifier = '') {
   const imageMarkup = entry.heroImage
     ? `<img src="${escapeHtml(entry.heroImage)}" alt="${escapeHtml(entry.title)}" loading="lazy">`
     : `<img src="${FALLBACK_IMAGE}" alt="">`;
-  const summaryLimit = modifier === 'lead' ? 260 : 170;
+  const isLatestIssue = getPublicationPageMode() === 'latest';
+  const summaryLimit = modifier === 'lead'
+    ? (isLatestIssue ? 1200 : 420)
+    : (isLatestIssue ? 720 : 260);
   const previewText = entry.content || entry.summary || '';
+  const excerptHtml = DOMPurify.sanitize(renderMarkdownExcerpt(previewText, summaryLimit));
 
   return `
     <article class="chronicle-card ${modifier ? `chronicle-card-${modifier}` : ''}">
@@ -396,7 +400,7 @@ function renderPublicationCard(entry, modifier = '') {
           <span><i class="fa fa-user"></i> ${escapeHtml(entry.author)}</span>
           <span><i class="fa fa-calendar"></i> ${formatPublicationDate(entry.releaseDate)}</span>
         </div>
-        <p>${escapeHtml(createExcerpt(previewText, summaryLimit))}</p>
+        <div class="chronicle-excerpt markdown-content">${excerptHtml}</div>
         <button class="chronicle-read-link js-read-article" type="button" data-slug="${escapeHtml(entry.slug)}">
           Read entry
         </button>
@@ -687,15 +691,63 @@ function estimateReadTime(content) {
 }
 
 function createExcerpt(content, maxLength) {
-  const plainContent = stripImages(content)
-    .replace(/\[([^\]]+)]\([^)]+\)/g, '$1')
-    .replace(/`{1,3}([^`]+)`{1,3}/g, '$1')
-    .replace(/[#_*~>|-]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  const plainContent = markdownToPlainText(content);
   if (!plainContent) return '';
   if (plainContent.length <= maxLength) return plainContent;
-  return `${plainContent.slice(0, maxLength).trim()}...`;
+
+  const excerpt = plainContent.slice(0, maxLength);
+  const lastBreak = Math.max(excerpt.lastIndexOf('. '), excerpt.lastIndexOf('! '), excerpt.lastIndexOf('? '));
+  const lastSpace = excerpt.lastIndexOf(' ');
+  const cutoff = lastBreak > maxLength * 0.65 ? lastBreak + 1 : lastSpace;
+  return `${excerpt.slice(0, cutoff > 0 ? cutoff : maxLength).trim()}...`;
+}
+
+function renderMarkdownExcerpt(content, maxLength) {
+  const markdownContent = normalizeMarkdownInput(stripImages(content || '')).trim();
+  if (!markdownContent) return '';
+  return renderMarkdown(truncateMarkdown(markdownContent, maxLength));
+}
+
+function truncateMarkdown(content, maxLength) {
+  if (content.length <= maxLength) return content;
+
+  const excerpt = content.slice(0, maxLength);
+  const lastParagraphBreak = excerpt.lastIndexOf('\n\n');
+  const lastSentenceBreak = Math.max(excerpt.lastIndexOf('. '), excerpt.lastIndexOf('! '), excerpt.lastIndexOf('? '));
+  const lastSpace = excerpt.lastIndexOf(' ');
+  const cutoff = lastParagraphBreak > maxLength * 0.55
+    ? lastParagraphBreak
+    : (lastSentenceBreak > maxLength * 0.65 ? lastSentenceBreak + 1 : lastSpace);
+
+  return `${excerpt.slice(0, cutoff > 0 ? cutoff : maxLength).trim()}...`;
+}
+
+function markdownToPlainText(content) {
+  const normalizedContent = normalizeMarkdownInput(stripImages(content || ''))
+    .replace(/\r\n?/g, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|li|h[1-6]|blockquote|tr)>/gi, '\n')
+    .replace(/```[\s\S]*?```/g, block => block.replace(/```[^\n]*\n?|```/g, '\n'))
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\[([^\]]+)]\([^)]+\)/g, '$1')
+    .replace(/^\s{0,3}#{1,6}\s+/gm, '')
+    .replace(/^\s{0,3}>\s?/gm, '')
+    .replace(/^\s*[-*+]\s+/gm, '')
+    .replace(/^\s*\d+[.)]\s+/gm, '')
+    .replace(/^\s*\|?[-: ]+\|[-|: ]+$/gm, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/[*_~]+/g, '')
+    .replace(/[ \t]*\n+[ \t]*/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return decodeHtmlEntities(normalizedContent);
+}
+
+function decodeHtmlEntities(value) {
+  const textarea = document.createElement('textarea');
+  textarea.innerHTML = value;
+  return textarea.value;
 }
 
 function escapeHtml(value) {

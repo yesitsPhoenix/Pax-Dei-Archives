@@ -1,4 +1,5 @@
-import { getCompetitiveThresholds, classifyCompetitiveGap } from './pricingBands.js';
+import { getCompetitiveThresholds } from './pricingBands.js';
+import { fetchZoneListings, loadItemsData } from '../services/gamingToolsService.js';
 
 export async function fetchItemSalesHistoryForListing({ supabase, currentCharacterId, itemId }) {
     try {
@@ -220,7 +221,7 @@ function getMarketLowRecommendation(stackMarketLow, ownCount, totalListings, own
     if (!hasExternalCompetition) {
         return {
             value: roundedLow,
-            description: 'Hold the current floor since the visible listings appear to be yours.',
+            description: 'Hold the current floor.',
             subtext: 'No outside listing to undercut right now.'
         };
     }
@@ -229,7 +230,7 @@ function getMarketLowRecommendation(stackMarketLow, ownCount, totalListings, own
     const value = Math.max(1, roundedLow - undercutStep);
     return {
         value,
-        description: 'Slip just under the current floor to become the cheapest external listing.',
+        description: 'Slip just under the current floor.',
         subtext: `${undercutStep}g below the live market low of ${roundedLow}g.`
     };
 }
@@ -248,7 +249,7 @@ function getMatchExistingRecommendation(activeListings, count) {
         if (value > 0) {
             return {
                 value,
-                description: `Match your lowest active ${count}-count stack for this item.`,
+                description: `Match your lowest active ${count}-count stack.`,
                 subtext: `${sameStackListings.length} active matching stack${sameStackListings.length !== 1 ? 's' : ''} already listed.`
             };
         }
@@ -266,7 +267,7 @@ function getMatchExistingRecommendation(activeListings, count) {
     const sourceStackPrice = Math.round(Number(lowestUnitListing.total_listed_price) || unitPrice * sourceQuantity);
     return {
         value: Math.max(1, Math.round(unitPrice * count)),
-        description: 'Match your active per-unit floor adjusted to this stack size.',
+        description: 'Match your active per-unit floor.',
         subtext: `Based on your ${sourceQuantity}-count stack at ${sourceStackPrice}g.`
     };
 }
@@ -279,8 +280,8 @@ function getCompetitivePriceRecommendation({ stackMarketLow, stackMarketAvg, sug
     return {
         value: bandCap,
         description: hasHistory
-            ? 'Top end of the competitive band before you drift out of the safe pricing range.'
-            : 'Highest price that still fits inside the competitive band.',
+            ? 'Top end of the competitive band.'
+            : 'Highest price inside the competitive band.',
         subtext: `${thresholds.label} band: +${thresholds.maxGapGold}g / +${thresholds.maxGapPct}%`
     };
 }
@@ -360,60 +361,33 @@ function getPriceOptionTheme(type) {
     };
 }
 
-function getCompetitiveStatusPresentation(status) {
-    if (status === 'leading') {
-        return {
-            label: 'Leading',
-            pill: 'border-emerald-500/40 bg-emerald-900/30 text-emerald-300',
-            text: 'text-emerald-300',
-            icon: 'fa-trophy'
-        };
-    }
-
-    if (status === 'competitive') {
-        return {
-            label: 'Competitive',
-            pill: 'border-amber-500/40 bg-amber-900/30 text-amber-300',
-            text: 'text-amber-300',
-            icon: 'fa-handshake'
-        };
-    }
-
-    return {
-        label: 'Above Range',
-        pill: 'border-rose-500/40 bg-rose-900/30 text-rose-300',
-        text: 'text-rose-300',
-        icon: 'fa-triangle-exclamation'
-    };
-}
-
-function renderSuggestedPriceOption(option, stacks, fmt) {
+function renderSuggestedPriceOptionRow(option, stacks, fmt, scopeLabel) {
     const theme = getPriceOptionTheme(option.type);
     const total = stacks > 0 ? option.value * stacks : null;
 
     return `
-        <div class="rounded-xl border p-4 ${theme.card}">
-            <div class="flex items-start justify-between gap-2 mb-2">
-                <div>
-                    <div class="text-white text-base font-semibold leading-tight">${option.label}</div>
-                    <div class="text-gray-300 text-sm leading-5 mt-1">${option.description}</div>
+        <div class="grid h-[110px] grid-cols-[minmax(0,1fr)_88px_54px] items-center gap-2 rounded-lg border px-3 py-2.5 ${theme.card}">
+            <div class="min-w-0">
+                <div class="flex items-center gap-2 min-w-0">
+                    <span class="text-white text-sm font-semibold leading-tight">${option.label}</span>
+                    <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${theme.badge}">${option.badge}</span>
                 </div>
-                <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${theme.badge}">${option.badge}</span>
-            </div>
-            <div class="flex items-end justify-between gap-3 flex-wrap mt-4">
-                <div>
-                    <div class="${theme.price} font-bold text-4xl leading-none">${fmt(option.value)}g</div>
-                    <div class="text-gray-400 text-sm mt-1">per stack</div>
+                <div class="text-gray-300 text-sm leading-5 mt-1 overflow-hidden" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${option.description}</div>
+                <!-- Hidden for now: detailed price rationale felt too noisy in the compact modal layout.
+                <div class="flex flex-wrap gap-x-2 gap-y-0.5 text-xs mt-1">
+                    ${option.subtext ? `<span class="text-gray-400 leading-5">${option.subtext}</span>` : ''}
+                    ${total !== null ? `<span class="${theme.meta} font-semibold">${stacks}x ${fmt(total)}g total</span>` : ''}
                 </div>
-                <button type="button" data-suggested-price="${option.value}"
-                    class="px-2.5 py-1 text-xs font-semibold border rounded-lg transition-colors ${theme.button}">
-                    Use this price
-                </button>
+                -->
             </div>
-            <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-sm">
-                ${option.subtext ? `<span class="text-gray-300 leading-5">${option.subtext}</span>` : ''}
-                ${total !== null ? `<span class="${theme.meta} font-semibold">${stacks} stack${stacks !== 1 ? 's' : ''}: ${fmt(total)}g total</span>` : ''}
+            <div class="text-right">
+                <div class="${theme.price} font-bold text-2xl leading-none">${fmt(option.value)}g</div>
+                <div class="text-gray-400 text-xs mt-0.5">per stack</div>
             </div>
+            <button type="button" data-suggested-price="${option.value}"
+                class="justify-self-end px-2 py-1 text-xs font-semibold border rounded-lg transition-colors ${theme.button}">
+                Use
+            </button>
         </div>`;
 }
 
@@ -427,9 +401,165 @@ function getRelativeTime(isoDate) {
     return months === 1 ? '1 month ago' : `${months} months ago`;
 }
 
+const provinceMarketCache = new Map();
+
+function toBareItemId(slug) {
+    if (!slug) return null;
+    const slash = slug.lastIndexOf('/');
+    return slash !== -1 ? slug.slice(slash + 1) : slug;
+}
+
+function namesMatch(a, b) {
+    return !!a && !!b && a.toLowerCase().trim() === b.toLowerCase().trim();
+}
+
+function findItemIdInItemsData(itemsData, itemName) {
+    if (!itemsData || !itemName) return null;
+    const normalized = itemName.toLowerCase().trim();
+    for (const [itemId, item] of Object.entries(itemsData)) {
+        if (namesMatch(item?.name, normalized)) return itemId;
+    }
+    return null;
+}
+
+async function resolveSelectedGamingToolsItemId(selectedItem, getItemNameForSlug, getItemIdByName) {
+    const itemsData = await loadItemsData();
+
+    if (selectedItem?.pax_dei_slug) {
+        const bareSlug = toBareItemId(selectedItem.pax_dei_slug);
+        const slugName = getItemNameForSlug(selectedItem.pax_dei_slug) || itemsData?.[bareSlug]?.name;
+        if (!slugName || namesMatch(slugName, selectedItem.item_name)) {
+            return bareSlug;
+        }
+    }
+
+    return getItemIdByName(selectedItem?.item_name)
+        || findItemIdInItemsData(itemsData, selectedItem?.item_name);
+}
+
+async function fetchProvinceValleys({ supabase, character }) {
+    const province = character?.province;
+    const shard = character?.shard;
+    if (!supabase || !province || !shard) return [];
+
+    const { data, error } = await supabase
+        .from('regions')
+        .select('home_valley')
+        .eq('shard', shard)
+        .eq('province', province)
+        .order('home_valley', { ascending: true });
+
+    if (error) {
+        console.warn('[Trader] Province valley lookup failed:', error.message);
+    }
+
+    const valleys = (data || [])
+        .map(row => row.home_valley)
+        .filter(Boolean);
+
+    if (character.home_valley && !valleys.includes(character.home_valley)) {
+        valleys.push(character.home_valley);
+    }
+
+    return [...new Set(valleys)];
+}
+
+async function fetchProvinceMarketContext({
+    supabase,
+    currentCharacterId,
+    getCurrentCharacter,
+    selectedItem,
+    getItemNameForSlug,
+    getItemIdByName
+}) {
+    if (!currentCharacterId || !selectedItem) return null;
+
+    const character = getCurrentCharacter
+        ? await getCurrentCharacter(true)
+        : null;
+
+    if (!character?.shard || !character?.province) return null;
+
+    const itemId = await resolveSelectedGamingToolsItemId(selectedItem, getItemNameForSlug, getItemIdByName);
+    if (!itemId) return null;
+
+    const cacheKey = `${character.shard}::${character.province}`;
+    const cached = provinceMarketCache.get(cacheKey);
+    const now = Date.now();
+    let provinceData = cached && now - cached.ts < 45 * 60 * 1000 ? cached : null;
+
+    if (!provinceData) {
+        const valleys = await fetchProvinceValleys({ supabase, character });
+        const results = await Promise.allSettled(
+            valleys.map(async (valley) => {
+                const listings = await fetchZoneListings(character.shard, character.province, valley);
+                return {
+                    valley,
+                    listings: (listings || []).map(listing => ({
+                        ...listing,
+                        _homeValley: valley
+                    }))
+                };
+            })
+        );
+
+        const loadedValleys = [];
+        const listings = [];
+        for (const result of results) {
+            if (result.status !== 'fulfilled') continue;
+            loadedValleys.push(result.value.valley);
+            listings.push(...result.value.listings);
+        }
+
+        provinceData = {
+            ts: now,
+            province: character.province,
+            homeValley: character.home_valley || null,
+            valleys,
+            loadedValleys,
+            listings
+        };
+        provinceMarketCache.set(cacheKey, provinceData);
+    }
+
+    return {
+        ...provinceData,
+        itemId
+    };
+}
+
+function buildMarketDataFromListings(listings, itemId, isMastercrafted = null, enchantmentTier = null) {
+    if (!Array.isArray(listings) || !itemId) return null;
+    const prices = [];
+    const valleys = new Set();
+
+    for (const listing of listings) {
+        if (listing.item_id !== itemId) continue;
+        if (isMastercrafted !== null && (listing.mastercraft ? 1 : 0) !== (isMastercrafted ? 1 : 0)) continue;
+        if (enchantmentTier !== null && (listing.enchantment_level || 0) !== (enchantmentTier || 0)) continue;
+
+        const quantity = Math.max(Number(listing.quantity) || 1, 1);
+        const price = Number(listing.price);
+        if (!(price > 0)) continue;
+        prices.push(price / quantity);
+        if (listing._homeValley) valleys.add(listing._homeValley);
+    }
+
+    if (!prices.length) return null;
+    const sorted = prices.slice().sort((a, b) => a - b);
+    const sum = sorted.reduce((total, price) => total + price, 0);
+    return {
+        marketLow: sorted[0],
+        marketAvg: parseFloat((sum / sorted.length).toFixed(2)),
+        totalListings: sorted.length,
+        valleyCount: valleys.size
+    };
+}
+
 export function createAddListingIntelligenceController({
     supabase,
     getCurrentCharacterId,
+    getCurrentCharacter,
     getSavedAvatarHash,
     getMarketDataForSlug,
     getMarketDataByItemName,
@@ -445,6 +575,8 @@ export function createAddListingIntelligenceController({
         ownListings: [],
         activeListings: [],
         activeListingsLoading: false,
+        provinceContext: null,
+        provinceLoading: false,
         historyData: null,
         historyLoading: false,
         selectedItem: null,
@@ -460,9 +592,11 @@ export function createAddListingIntelligenceController({
         const hist = state.historyData;
         const loading = state.historyLoading;
         const activeLoading = state.activeListingsLoading;
+        const provinceLoading = state.provinceLoading;
+        const provinceContext = state.provinceContext;
         const hasActiveListings = Array.isArray(state.activeListings) && state.activeListings.length > 0;
 
-        if (!md && !hist && !loading && !activeLoading && !hasActiveListings) {
+        if (!md && !hist && !loading && !activeLoading && !provinceLoading && !provinceContext && !hasActiveListings) {
             if (!state.selectedItem) {
                 hintEl.innerHTML = '';
                 hintEl.classList.add('hidden');
@@ -503,6 +637,20 @@ export function createAddListingIntelligenceController({
 
         const qualityMult = getQualityMultiplier(isMastercrafted, enchantmentTier);
         const displayMd = qualityMd || (isQuality ? getEstimatedQualityMarketData(md, qualityMult) : md);
+        const provinceAllQualityMd = provinceContext
+            ? buildMarketDataFromListings(provinceContext.listings, provinceContext.itemId)
+            : null;
+        const provinceQualityMd = provinceContext
+            ? buildMarketDataFromListings(provinceContext.listings, provinceContext.itemId, isMastercrafted, enchantmentTier)
+            : null;
+        const provinceEstimatedMd = isQuality && provinceAllQualityMd
+            ? {
+                ...getEstimatedQualityMarketData(provinceAllQualityMd, qualityMult),
+                totalListings: provinceAllQualityMd.totalListings,
+                valleyCount: provinceAllQualityMd.valleyCount
+            }
+            : null;
+        const provinceDisplayMd = provinceQualityMd || provinceEstimatedMd || provinceAllQualityMd;
         const supplyCount = displayMd?.totalListings;
         const supplyTag = displayMd && supplyCount !== null && supplyCount !== undefined
             ? supplyCount <= 3
@@ -703,74 +851,52 @@ export function createAddListingIntelligenceController({
 
         const suggestion = buildAddListingSuggestion(md, qualityMd, hist, count, stacks, isMastercrafted, enchantmentTier, state.ownCount);
 
-        let competitiveCard = '';
         const stackMarketLow = (displayMd && hasCount) ? (displayMd.marketLow * count) : null;
-        if (stackMarketLow !== null) {
-            const roundedStackMarketLow = Math.round(stackMarketLow);
-            const thresholds = getCompetitiveThresholds(roundedStackMarketLow);
-            const competitiveCap = roundedStackMarketLow + thresholds.maxGapGold;
-            const enteredGap = hasPrice ? price - roundedStackMarketLow : null;
-            const enteredGapPct = (hasPrice && roundedStackMarketLow > 0) ? Math.round((enteredGap / roundedStackMarketLow) * 100) : null;
-            const enteredStatus = hasPrice ? classifyCompetitiveGap(enteredGap, enteredGapPct, roundedStackMarketLow).status : null;
-            const hasSuggestedStackPrice = Number.isFinite(suggestion?.suggestedPerStack);
-            const suggestionGap = hasSuggestedStackPrice ? suggestion.suggestedPerStack - roundedStackMarketLow : null;
-            const suggestionGapPct = (hasSuggestedStackPrice && roundedStackMarketLow > 0)
-                ? Math.round((suggestionGap / roundedStackMarketLow) * 100)
-                : null;
-            const suggestionStatus = hasSuggestedStackPrice
-                ? classifyCompetitiveGap(suggestionGap, suggestionGapPct, roundedStackMarketLow).status
-                : null;
-            const enteredStatusDisplay = hasPrice ? getCompetitiveStatusPresentation(enteredStatus) : null;
-            const suggestionStatusDisplay = suggestionStatus ? getCompetitiveStatusPresentation(suggestionStatus) : null;
+        const provincePriceOptions = [];
+        if (provinceContext && provinceDisplayMd) {
+            const provinceStackLow = hasCount ? provinceDisplayMd.marketLow * count : null;
+            const provinceStackAvg = hasCount ? provinceDisplayMd.marketAvg * count : null;
+            if (provinceStackLow !== null) {
+                const provinceLowRecommendation = getMarketLowRecommendation(
+                    provinceStackLow,
+                    0,
+                    provinceDisplayMd.totalListings,
+                    false
+                );
+                provincePriceOptions.push({
+                    type: 'market-low',
+                    label: 'Province Low',
+                    badge: 'Travel',
+                    value: provinceLowRecommendation.value,
+                    description: 'Match the broader province floor.',
+                    subtext: provinceLowRecommendation.subtext.replace('live market', 'province-wide market')
+                });
 
-            const statusPill = !hasPrice
-                ? `<span class="inline-flex items-center gap-1 rounded-full border border-slate-500/40 bg-slate-700/40 px-2 py-0.5 text-xs text-gray-300">Enter a price to compare</span>`
-                : `<span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${enteredStatusDisplay.pill}"><i class="fas ${enteredStatusDisplay.icon} text-[10px]"></i> ${enteredStatusDisplay.label}</span>`;
-
-            const suggestionLine = suggestion?.suggestedPerStack !== null
-                ? `<div class="flex justify-between gap-2 text-xs">
-                        <span class="text-gray-300">Suggested status</span>
-                        <span class="${suggestionStatusDisplay.text} font-semibold">${suggestionStatusDisplay.label}</span>
-                   </div>`
-                : '';
-
-            competitiveCard = `
-            <div class="mt-2 p-3 bg-cyan-900/15 border border-cyan-500/30 rounded-xl">
-                <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
-                    <div class="flex items-center gap-2">
-                        <i class="fas fa-ruler-combined text-cyan-400 text-sm"></i>
-                        <span class="text-cyan-300 font-semibold text-sm uppercase tracking-widest">Competitive Range</span>
-                    </div>
-                    <span class="text-gray-400 text-sm">${thresholds.label}</span>
-                </div>
-                <div class="grid md:grid-cols-2 gap-3">
-                    <div class="space-y-1.5">
-                        <div class="flex justify-between gap-2 text-sm">
-                            <span class="text-gray-300">Market low/stack</span>
-                            <span class="text-amber-300 font-bold">${fmt(roundedStackMarketLow)}g</span>
-                        </div>
-                        <div class="flex justify-between gap-2 text-sm">
-                            <span class="text-gray-300">Competitive cap</span>
-                            <span class="text-white">${fmt(competitiveCap)}g <span class="text-gray-500">(+${fmt(thresholds.maxGapGold)}g)</span></span>
-                        </div>
-                        <div class="flex justify-between gap-2 text-sm">
-                            <span class="text-gray-300">Percent limit</span>
-                            <span class="text-white">+${thresholds.maxGapPct}%</span>
-                        </div>
-                    </div>
-                    <div class="space-y-1.5">
-                        <div class="flex items-center justify-between gap-2">
-                            <span class="text-gray-300 text-sm">Your entered price</span>
-                            ${statusPill}
-                        </div>
-                        ${hasPrice ? `<div class="flex justify-between gap-2 text-sm">
-                            <span class="text-gray-300">Gap vs low</span>
-                            <span class="${enteredStatusDisplay.text} font-semibold whitespace-nowrap">${enteredGap > 0 ? '+' : ''}${fmt(enteredGap)}g (${enteredGapPct > 0 ? '+' : ''}${enteredGapPct}%)</span>
-                        </div>` : ''}
-                        ${suggestionLine}
-                    </div>
-                </div>
-            </div>`;
+                const provinceCompetitiveRecommendation = getCompetitivePriceRecommendation({
+                    stackMarketLow: provinceStackLow,
+                    stackMarketAvg: provinceStackAvg,
+                    suggestionValue: provinceLowRecommendation.value,
+                    hasHistory: !!hist
+                });
+                provincePriceOptions.push({
+                    type: 'competitive',
+                    label: 'Province Competitive',
+                    badge: 'Broader',
+                    value: provinceCompetitiveRecommendation.value,
+                    description: 'Top end of the province band.',
+                    subtext: provinceCompetitiveRecommendation.subtext
+                });
+            }
+            if (provinceStackAvg !== null && Math.round(provinceStackAvg) > 0) {
+                provincePriceOptions.push({
+                    type: 'suggested',
+                    label: 'Province Avg',
+                    badge: 'Reference',
+                    value: Math.round(provinceStackAvg),
+                    description: 'Average province-wide stack price.',
+                    subtext: `${provinceDisplayMd.totalListings} listing${provinceDisplayMd.totalListings !== 1 ? 's' : ''} across ${provinceDisplayMd.valleyCount || provinceContext.loadedValleys.length} valley${(provinceDisplayMd.valleyCount || provinceContext.loadedValleys.length) !== 1 ? 's' : ''}.`
+                });
+            }
         }
 
         let qualityBanner = '';
@@ -788,7 +914,7 @@ export function createAddListingIntelligenceController({
 
         const hasHistoryOnlyCardSet = !displayMd && !!hist && hasCount;
         let suggestionCard = '';
-        if (suggestion || (hasCount && activeListingsForQuality.length)) {
+        if (suggestion || (hasCount && activeListingsForQuality.length) || provincePriceOptions.length) {
             const pricingInsight = suggestion?.insight || 'You already have active listings for this item - matching your current price keeps the market stall consistent.';
             const pricingInsightClass = suggestion?.insightClass || 'text-emerald-400';
             const bubbleCls = pricingInsightClass === 'text-rose-400' ? 'bg-rose-400'
@@ -837,8 +963,8 @@ export function createAddListingIntelligenceController({
                     badge: 'Recommended',
                     value: suggestion.suggestedPerStack,
                     description: displayMd
-                        ? 'Balanced using live listings and your own sales history.'
-                        : 'Anchored to your own historical sales because there is no live market to compare against.',
+                        ? 'Balanced market and sales signal.'
+                        : 'Anchored to your sales history.',
                     subtext: suggestion.insight
                 });
             }
@@ -865,7 +991,7 @@ export function createAddListingIntelligenceController({
                         label: 'Market Low',
                         badge: 'Fastest',
                         value: historyOnlyRecommendations.marketLowPerStack,
-                        description: 'A fast-move floor derived from your best historical sale when no live listings exist.',
+                        description: 'Fast-move floor from sales history.',
                         subtext: `Anchored from your best historical price of ${fmt(suggestion.suggestedPerStack)}g.`
                     });
                 }
@@ -879,26 +1005,67 @@ export function createAddListingIntelligenceController({
                         label: 'Higher Ask',
                         badge: 'Stretch',
                         value: historyOnlyRecommendations.higherAskPerStack,
-                        description: 'A higher ask if you are willing to wait longer without live competition data.',
+                        description: 'Higher ask from sales history.',
                         subtext: `About 10% above your best historical anchor of ${fmt(suggestion.suggestedPerStack)}g.`
                     });
                 }
             }
 
+            const homeScopeSummary = displayMd
+                ? `${displayMd.totalListings !== null ? `${displayMd.totalListings} listing${displayMd.totalListings !== 1 ? 's' : ''}` : 'Estimated'} · Low ${fmt(displayMd.marketLow)}g/unit${hasCount ? ` · ${fmt(displayMd.marketLow * count)}g stack` : ''}`
+                : hist
+                    ? `${hist.saleCount} sale${hist.saleCount !== 1 ? 's' : ''} · no live local listings`
+                    : 'No local market data';
+            const provinceScopeSummary = provinceLoading
+                ? '<i class="fas fa-spinner fa-spin mr-1"></i>Checking province...'
+                : provinceDisplayMd
+                    ? `${provinceDisplayMd.totalListings} listing${provinceDisplayMd.totalListings !== 1 ? 's' : ''} · ${provinceDisplayMd.valleyCount || provinceContext?.loadedValleys?.length || 0} valley${(provinceDisplayMd.valleyCount || provinceContext?.loadedValleys?.length || 0) !== 1 ? 's' : ''} · Low ${fmt(provinceDisplayMd.marketLow)}g/unit${hasCount ? ` · ${fmt(provinceDisplayMd.marketLow * count)}g stack` : ''}`
+                    : provinceContext
+                        ? 'No province-wide market data for this item'
+                        : 'Province data unavailable';
+
             suggestionCard = `
-            <div class="mt-2 p-3 bg-slate-800/70 border border-slate-500/40 rounded-xl">
-                <div class="flex items-center gap-2 mb-1.5">
+            <div class="mt-3">
+                <div class="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                    <div class="flex items-center gap-2">
                     <i class="fas fa-lightbulb text-gray-300 text-sm"></i>
-                    <span class="text-gray-100 font-semibold text-sm uppercase tracking-widest">Suggested Price</span>
+                        <span class="text-gray-100 font-semibold text-sm uppercase tracking-widest">Price Options</span>
+                    </div>
+                    <span class="text-gray-400 text-xs">Grouped by market scope</span>
                 </div>
-                ${suggestionOptions.length > 0
-                    ? `<div class="grid gap-2 md:grid-cols-3">
-                           ${suggestionOptions.map(option => renderSuggestedPriceOption(option, stacks, fmt)).join('')}
+                ${(suggestionOptions.length > 0 || provincePriceOptions.length > 0)
+                    ? `<div class="grid lg:grid-cols-2 gap-3">
+                           <div class="min-w-0 rounded-xl border border-blue-400/25 bg-slate-950/15 p-2.5">
+                               <div class="mb-2 border-b border-blue-400/20 pb-1.5">
+                                   <div class="flex items-center gap-2">
+                                       <span class="text-blue-300 text-xs font-semibold uppercase tracking-widest">Home Valley Prices</span>
+                                       <span class="text-gray-500 text-xs">Local benchmark</span>
+                                   </div>
+                                   <div class="text-gray-400 text-xs mt-0.5">${homeScopeSummary}</div>
+                               </div>
+                               ${suggestionOptions.length > 0
+                                   ? `<div class="space-y-1">${suggestionOptions.map(option => renderSuggestedPriceOptionRow(option, stacks, fmt, 'Home valley')).join('')}</div>`
+                                   : `<div class="rounded-lg border border-slate-600/40 bg-slate-900/35 px-3 py-2 text-gray-500 text-sm italic">No home valley price options yet.</div>`}
+                           </div>
+                           <div class="min-w-0 rounded-xl border border-indigo-400/25 bg-slate-950/15 p-2.5">
+                               <div class="mb-2 border-b border-indigo-400/20 pb-1.5">
+                                   <div class="flex items-center gap-2">
+                                       <span class="text-indigo-300 text-xs font-semibold uppercase tracking-widest">Province-Wide Prices</span>
+                                       <span class="text-gray-500 text-xs">Travel-aware</span>
+                                   </div>
+                                   <div class="text-gray-400 text-xs mt-0.5">${provinceScopeSummary}</div>
+                               </div>
+                               ${provincePriceOptions.length > 0
+                                   ? `<div class="space-y-1">${provincePriceOptions.map(option => renderSuggestedPriceOptionRow(option, stacks, fmt, 'Province-wide')).join('')}</div>`
+                                   : `<div class="rounded-lg border border-slate-600/40 bg-slate-900/35 px-3 py-2 text-gray-500 text-sm italic">${provinceLoading ? 'Loading province-wide price options...' : 'No province-wide price options yet.'}</div>`}
+                           </div>
                        </div>
-                       <div class="flex items-center gap-1.5 mt-2">
+                       <!-- Hidden for now: this repeats rationale already implied by the selected options.
+                       ${suggestion ? `<div class="flex items-center gap-1.5 mt-2">
                            <span class="inline-block w-2 h-2 rounded-full flex-shrink-0 ${bubbleCls}"></span>
                            <span class="${pricingInsightClass} text-sm">${pricingInsight}</span>
-                       </div>`
+                       </div>` : ''}
+                       -->`
                     : `<span class="text-gray-400 text-sm italic">Enter stack count to see suggestion</span>`
                 }
             </div>`;
@@ -943,7 +1110,6 @@ export function createAddListingIntelligenceController({
                 <div class="hidden lg:block w-px bg-slate-500/40 self-stretch flex-shrink-0"></div>
                 ${activeCol}
             </div>
-            ${competitiveCard}
             ${suggestionCard}
             ${impactRow}
             ${highPriceRow}`;
@@ -1015,25 +1181,42 @@ export function createAddListingIntelligenceController({
             state.historyRequestId = requestId;
             state.historyData = null;
             state.activeListings = [];
+            state.provinceContext = null;
             state.historyLoading = true;
             state.activeListingsLoading = true;
+            state.provinceLoading = true;
             renderHint();
-            const [hist, activeListings] = await Promise.all([
+            const [hist, activeListings, provinceContext] = await Promise.all([
                 fetchItemSalesHistoryForListing({ supabase, currentCharacterId, itemId: selectedItem.item_id }),
-                fetchActiveListingsForListing({ supabase, currentCharacterId, itemId: selectedItem.item_id })
+                fetchActiveListingsForListing({ supabase, currentCharacterId, itemId: selectedItem.item_id }),
+                fetchProvinceMarketContext({
+                    supabase,
+                    currentCharacterId,
+                    getCurrentCharacter,
+                    selectedItem,
+                    getItemNameForSlug,
+                    getItemIdByName
+                }).catch((err) => {
+                    console.warn('[Trader] Province-wide market context unavailable:', err?.message || err);
+                    return null;
+                })
             ]);
             if (requestId !== state.historyRequestId || state.selectedItem !== selectedItem) return;
             state.historyData = hist;
             state.activeListings = activeListings;
+            state.provinceContext = provinceContext;
             state.historyLoading = false;
             state.activeListingsLoading = false;
+            state.provinceLoading = false;
             renderHint();
         } else {
             state.historyRequestId += 1;
             state.historyData = null;
             state.activeListings = [];
+            state.provinceContext = null;
             state.historyLoading = false;
             state.activeListingsLoading = false;
+            state.provinceLoading = false;
             renderHint();
         }
     }

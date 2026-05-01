@@ -347,6 +347,7 @@ function initializeAutocomplete(allItems) {
     const addListingIntelligence = createAddListingIntelligenceController({
         supabase,
         getCurrentCharacterId: () => currentCharacterId,
+        getCurrentCharacter,
         getSavedAvatarHash,
         getMarketDataForSlug,
         getMarketDataByItemName,
