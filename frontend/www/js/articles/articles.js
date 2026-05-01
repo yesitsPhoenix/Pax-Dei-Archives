@@ -291,12 +291,42 @@ function normalizeLegacyArticleEntry(article) {
 }
 
 function renderArticlesPage(entries) {
+  renderLatestPublicationHeader();
   renderPublicationSelect();
   renderCategoryBar(getActivePublicationEntries(), activeCategory);
   renderPublicationGrid(entries);
   renderPublicationArchive();
   updateResultsMeta(entries);
   attachReadHandlers();
+}
+
+function renderLatestPublicationHeader() {
+  if (getPublicationPageMode() !== 'latest') return;
+
+  const publication = getActivePublication();
+  const titleEl = document.getElementById('latestPublicationTitle');
+  const metaEl = document.getElementById('latestPublicationMeta');
+  const eyebrowEl = document.getElementById('latestPublicationEyebrow');
+
+  if (!publication) {
+    if (eyebrowEl) eyebrowEl.textContent = 'Latest Publication';
+    if (titleEl) titleEl.textContent = 'Most Recent Issue';
+    if (metaEl) metaEl.textContent = '';
+    return;
+  }
+
+  if (eyebrowEl) eyebrowEl.textContent = 'Latest Publication';
+  if (titleEl) {
+    const issuePrefix = publication.issueNumber ? `Issue ${publication.issueNumber}` : 'Current Issue';
+    titleEl.innerHTML = publication.title
+      ? `<span class="latest-publication-issue">${escapeHtml(issuePrefix)}</span><span class="latest-publication-title-separator">:</span> ${escapeHtml(publication.title)}`
+      : `<span class="latest-publication-issue">${escapeHtml(issuePrefix)}</span>`;
+  }
+
+  if (metaEl) {
+    const dateLabel = publication.displayDate || formatPublicationDate(publication.releaseDate);
+    metaEl.textContent = dateLabel;
+  }
 }
 
 function renderPublicationSelect() {
