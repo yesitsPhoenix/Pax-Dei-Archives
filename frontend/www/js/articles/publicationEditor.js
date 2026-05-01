@@ -24,6 +24,7 @@ let activePublication = null;
 let activeEntries = [];
 let editingEntryId = null;
 let publicationList = [];
+let carryOverEntries = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
   const hasAccess = await requirePublicationEditorAccess();
@@ -44,6 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   elements.clearPublicationButton.addEventListener('click', () => clearLoadedPublication(elements));
   elements.savePublicationButton.addEventListener('click', () => savePublicationDraft(elements));
   elements.publishButton.addEventListener('click', () => publishActivePublication(elements));
+  elements.carryOverEntryButton.addEventListener('click', () => carryOverSelectedEntry(elements));
   elements.form.addEventListener('submit', event => saveEntryToDraft(event, elements));
 
   elements.issueNumberInput.addEventListener('input', () => resetActivePublication(elements, { clearPublicationFields: true }));
@@ -81,6 +83,8 @@ function getElements() {
     markdownPreviewSplit: document.getElementById('entryMarkdownPreviewSplit'),
     entryAuthorInput: document.getElementById('entryAuthor'),
     entrySectionSelect: document.getElementById('entrySection'),
+    carryOverEntrySelect: document.getElementById('carryOverEntrySelect'),
+    carryOverEntryButton: document.getElementById('carryOverEntryButton'),
     messageEl: document.getElementById('publicationEditorMessage'),
     draftTitle: document.getElementById('draftPublicationTitle'),
     draftMeta: document.getElementById('draftPublicationMeta'),
@@ -184,7 +188,7 @@ async function savePublicationDraft(elements) {
 async function loadPublicationList(elements) {
   const { data, error } = await supabase
     .from('publications')
-    .select('id, issue_number, title, release_date, status')
+    .select('id, issue_number, title, release_date, status, publication_entries(*)')
     .order('issue_number', { ascending: false });
 
   if (error) {
@@ -194,6 +198,7 @@ async function loadPublicationList(elements) {
   }
 
   publicationList = data || [];
+  refreshCarryOverOptions(elements);
   if (!publicationList.length) {
     elements.existingPublicationSelect.innerHTML = '<option value="">No publications yet</option>';
     return;
@@ -232,6 +237,7 @@ async function startNewPublication(elements) {
   elements.statusSelect.value = 'draft';
   clearEntryFields(elements);
   renderDraftPanel(elements, null, []);
+  refreshCarryOverOptions(elements);
   showMessage(elements.messageEl, 'New publication ready. Save it before adding entries.', 'info');
 }
 
@@ -272,6 +278,7 @@ async function loadPublicationByIssue(elements, options = {}) {
     editingEntryId = null;
     clearEntryFields(elements);
     renderDraftPanel(elements, activePublication, activeEntries);
+    refreshCarryOverOptions(elements);
 
     if (!options.silent) {
       showMessage(elements.messageEl, `Issue ${issueNumber} loaded.`, 'success');
@@ -471,6 +478,7 @@ function resetActivePublication(elements, options = {}) {
   }
   clearEntryFields(elements);
   renderDraftPanel(elements, null, []);
+  refreshCarryOverOptions(elements);
 }
 
 function renderDraftPanel(elements, publication, entries) {
@@ -544,6 +552,72 @@ function loadEntryForEditing(entryId, elements) {
   submitButton.innerHTML = '<i class="fas fa-save"></i> Update Entry';
   elements.entryTitleInput.focus();
   showMessage(elements.messageEl, `Editing "${entry.title}". Save to update this entry.`, 'info');
+}
+
+function refreshCarryOverOptions(elements) {
+  if (!elements.carryOverEntrySelect || !elements.carryOverEntryButton) return;
+
+  carryOverEntries = publicationList
+    .filter(publication => !activePublication || publication.id !== activePublication.id)
+    .flatMap(publication => (publication.publication_entries || []).map(entry => ({ ...entry, publication })))
+    .sort((a, b) => {
+      const issueSort = (b.publication.issue_number ?? 0) - (a.publication.issue_number ?? 0);
+      return issueSort || sortEntries(a, b);
+    });
+
+  if (!activePublication) {
+    elements.carryOverEntrySelect.innerHTML = '<option value="">Load a publication first</option>';
+    elements.carryOverEntryButton.disabled = true;
+    return;
+  }
+
+  if (!carryOverEntries.length) {
+    elements.carryOverEntrySelect.innerHTML = '<option value="">No previous entries available</option>';
+    elements.carryOverEntryButton.disabled = true;
+    return;
+  }
+
+  elements.carryOverEntrySelect.innerHTML = [
+    '<option value="">Select an entry to carry over</option>',
+    ...carryOverEntries.map(entry => `
+      <option value="${escapeHtml(entry.id)}">
+        Issue ${escapeHtml(entry.publication.issue_number)} - ${escapeHtml(entry.section_key)} - ${escapeHtml(entry.title)}
+      </option>
+    `),
+  ].join('');
+  elements.carryOverEntryButton.disabled = false;
+}
+
+function carryOverSelectedEntry(elements) {
+  if (!activePublication) {
+    showMessage(elements.messageEl, 'Load or create the target publication before carrying over an entry.', 'warning');
+    return;
+  }
+
+  const sourceEntry = carryOverEntries.find(entry => entry.id === elements.carryOverEntrySelect.value);
+  if (!sourceEntry) {
+    showMessage(elements.messageEl, 'Select an entry to carry over.', 'warning');
+    return;
+  }
+
+  editingEntryId = null;
+  elements.entrySectionSelect.value = sourceEntry.section_key || CHRONICLE_SECTIONS[0];
+  elements.entryTitleInput.value = sourceEntry.title || '';
+  elements.entrySlugInput.value = stripIssuePrefix(sourceEntry.slug || slugify(sourceEntry.title || ''), sourceEntry.publication.issue_number);
+  elements.entrySummaryInput.value = sourceEntry.summary || '';
+  elements.entryImageUrlInput.value = sourceEntry.image_url || '';
+  elements.entryContentInput.value = sourceEntry.content || '';
+  elements.entryContentSplitInput.value = sourceEntry.content || '';
+  elements.entryAuthorInput.value = sourceEntry.author || '';
+  switchMarkdownMode(elements, 'edit');
+  updateMarkdownPreview(elements);
+  resetSubmitButton(elements.form.querySelector('button[type="submit"]'));
+
+  showMessage(
+    elements.messageEl,
+    `Carried over "${sourceEntry.title}" from Issue ${sourceEntry.publication.issue_number}. Review it, then save it to Issue ${activePublication.issue_number}.`,
+    'info',
+  );
 }
 
 function readEntryInput(elements) {

@@ -962,6 +962,17 @@
     line-height: 1.5;
 }
 
+.carry-over-entry-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.75rem;
+    align-items: end;
+    padding: 0.85rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 215, 0, 0.16);
+    background: rgba(255, 215, 0, 0.06);
+}
+
 .publication-editor-actions {
     display: flex;
     justify-content: flex-end;
@@ -1189,6 +1200,7 @@
 
     .chronicle-controls,
     .publication-editor-grid,
+    .carry-over-entry-panel,
     .publication-markdown-split {
         grid-template-columns: 1fr;
     }
