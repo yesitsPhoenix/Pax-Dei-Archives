@@ -16,6 +16,20 @@ const HISTORICAL_MEDIAN_TOLERANCE_PCT = 20;
 const HISTORICAL_INFO_MAX_SELLERS = 2;
 const HISTORICAL_MIN_SALES = 3;
 
+async function refreshActiveListingsTableAfterValleyEdit() {
+    const loadListings = window._pdaLoadListings;
+    if (typeof loadListings !== 'function') return;
+
+    const activeTabButton = document.querySelector('.tab-button.bg-blue-500');
+    const activeStallId = activeTabButton?.dataset?.stallId || null;
+
+    try {
+        await loadListings(activeStallId);
+    } catch (err) {
+        console.warn('[ValleyEdit] Active listings table refresh failed:', err);
+    }
+}
+
 function normalizeEnchantmentTier(tier) {
     return Number.isInteger(tier) ? tier : (parseInt(tier, 10) || 0);
 }
@@ -1233,9 +1247,12 @@ async function showValleyItemEditModal(itemName, itemId = null, isMastercrafted 
         }
     };
 
-    const closeAndReopenValley = () => {
+    const closeAndRefreshAfterSave = async () => {
         closeEditModal();
-        openValleyPresenceModal();
+        await Promise.allSettled([
+            openValleyPresenceModal(),
+            refreshActiveListingsTableAfterValleyEdit()
+        ]);
     };
 
     if (closeBtn)  closeBtn.onclick  = closeEditModal;
@@ -1335,8 +1352,8 @@ async function showValleyItemEditModal(itemName, itemId = null, isMastercrafted 
                     }
                 }
 
-                // Re-open valley modal — it now fetches fresh Supabase data directly
-                closeAndReopenValley();
+                // Re-open valley modal and refresh the active listings table only after a successful save.
+                await closeAndRefreshAfterSave();
 
             } catch (e) {
                 console.error('[ValleyEdit] Unexpected error during save:', e);
