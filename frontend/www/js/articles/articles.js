@@ -291,7 +291,7 @@ function normalizeLegacyArticleEntry(article) {
 }
 
 function renderArticlesPage(entries) {
-  renderLatestPublicationHeader();
+  renderPublicationHeader();
   renderPublicationSelect();
   renderCategoryBar(getActivePublicationEntries(), activeCategory);
   renderPublicationGrid(entries);
@@ -300,24 +300,26 @@ function renderArticlesPage(entries) {
   attachReadHandlers();
 }
 
-function renderLatestPublicationHeader() {
-  if (getPublicationPageMode() !== 'latest') return;
-
+function renderPublicationHeader() {
+  const pageMode = getPublicationPageMode();
   const publication = getActivePublication();
   const titleEl = document.getElementById('latestPublicationTitle');
   const metaEl = document.getElementById('latestPublicationMeta');
   const eyebrowEl = document.getElementById('latestPublicationEyebrow');
+  if (!titleEl && !metaEl && !eyebrowEl) return;
 
   if (!publication) {
-    if (eyebrowEl) eyebrowEl.textContent = 'Latest Publication';
-    if (titleEl) titleEl.textContent = 'Most Recent Issue';
+    if (eyebrowEl) eyebrowEl.textContent = pageMode === 'archive' ? 'Publications Archive' : 'Latest Publication';
+    if (titleEl) titleEl.textContent = pageMode === 'archive' ? 'Browse Past Issues' : 'Most Recent Issue';
     if (metaEl) metaEl.textContent = '';
     return;
   }
 
-  if (eyebrowEl) eyebrowEl.textContent = 'Latest Publication';
+  if (eyebrowEl) eyebrowEl.textContent = pageMode === 'archive' ? 'Selected Publication' : 'Latest Publication';
   if (titleEl) {
-    const issuePrefix = publication.issueNumber ? `Issue ${publication.issueNumber}` : 'Current Issue';
+    const issuePrefix = publication.issueNumber
+      ? `Issue ${publication.issueNumber}`
+      : (pageMode === 'archive' ? 'Legacy Archive' : 'Current Issue');
     titleEl.innerHTML = publication.title
       ? `<span class="latest-publication-issue">${escapeHtml(issuePrefix)}</span><span class="latest-publication-title-separator">:</span> ${escapeHtml(publication.title)}`
       : `<span class="latest-publication-issue">${escapeHtml(issuePrefix)}</span>`;
@@ -405,10 +407,10 @@ function renderPublicationCard(entry, modifier = '') {
   const imageMarkup = entry.heroImage
     ? `<img src="${escapeHtml(entry.heroImage)}" alt="${escapeHtml(entry.title)}" loading="lazy">`
     : `<img src="${FALLBACK_IMAGE}" alt="">`;
-  const isLatestIssue = getPublicationPageMode() === 'latest';
+  const isPublicationIssueView = ['latest', 'archive'].includes(getPublicationPageMode());
   const summaryLimit = modifier === 'lead'
-    ? (isLatestIssue ? 1200 : 420)
-    : (isLatestIssue ? 720 : 260);
+    ? (isPublicationIssueView ? 1200 : 420)
+    : (isPublicationIssueView ? 720 : 260);
   const previewText = entry.content || entry.summary || '';
   const excerptHtml = DOMPurify.sanitize(renderMarkdownExcerpt(previewText, summaryLimit));
 

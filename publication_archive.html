@@ -71,16 +71,17 @@
     <script src="https://cdn.jsdelivr.net/npm/emoji-js@3.9.0/lib/emoji.min.js"></script>
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
 </head>
-<body class="text-white">
+<body class="text-white publications-page-body">
 
 <div id="header-placeholder"></div>
 
 <main class="articles-page" data-publication-mode="archive">
     <section class="chronicle-shell">
-        <div class="publication-archive-header">
+        <div class="publication-archive-header publication-current-header">
             <div>
-                <p class="articles-section-label">Publications Archive</p>
-                <h2>Browse Past Issues</h2>
+                <p id="latestPublicationEyebrow" class="articles-section-label">Publications Archive</p>
+                <h2 id="latestPublicationTitle">Browse Past Issues</h2>
+                <p id="latestPublicationMeta" class="latest-publication-meta"></p>
             </div>
             <a href="publications.html" class="publication-editor-link">
                 <i class="fas fa-newspaper"></i>
@@ -88,14 +89,10 @@
             </a>
         </div>
 
-        <div class="chronicle-controls">
+        <div class="chronicle-controls archive-publication-picker">
             <div class="chronicle-control-group">
                 <label for="publicationSelect">Publication</label>
                 <select id="publicationSelect" class="chronicle-select" aria-label="Select publication date"></select>
-            </div>
-            <div class="chronicle-control-group">
-                <label for="articleCategoryBar">Sections</label>
-                <div id="articleCategoryBar" class="article-category-bar"></div>
             </div>
         </div>
 
@@ -111,7 +108,6 @@
                 </div>
                 <div class="articles-results-meta">
                     <span id="resultCountLabel">0 entries</span>
-                    <span id="activeCategoryLabel">All sections</span>
                 </div>
             </div>
             <div id="publicationArchiveList" class="publication-archive-list"></div>
