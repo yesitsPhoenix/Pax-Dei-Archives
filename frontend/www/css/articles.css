@@ -1391,9 +1391,15 @@
 }
 
 @media (max-width: 1100px) {
+    .articles-page[data-publication-mode="latest"] .latest-publication-header h2 {
+        white-space: normal;
+        line-height: 1.05;
+    }
+
     .articles-page[data-publication-mode="latest"] .chronicle-grid {
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
         grid-template-rows: none;
+        align-items: start;
         height: auto;
     }
 
@@ -1402,6 +1408,15 @@
     .articles-page[data-publication-mode="latest"] .chronicle-card-wide {
         grid-column: span 1;
         grid-row: auto;
+        min-height: 0;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-card-lead .chronicle-excerpt {
+        max-height: 5.6rem;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-card-lead .chronicle-image {
+        aspect-ratio: 16 / 6.2;
     }
 
     .chronicle-card,
@@ -1416,6 +1431,7 @@
     .publication-editor-layout {
         display: grid;
         grid-template-columns: 1fr;
+        align-items: start;
     }
 
     .article-modal-header {
@@ -1429,10 +1445,49 @@
     }
 }
 
+@media (max-width: 900px) {
+    .articles-page[data-publication-mode="latest"] .chronicle-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 @media (max-width: 760px) {
+    .articles-page[data-publication-mode="latest"] {
+        min-height: 100vh;
+    }
+
     .chronicle-shell,
     .publication-editor-shell {
         width: min(100% - 1rem, 44rem);
+    }
+
+    .chronicle-shell {
+        padding-top: 1rem;
+    }
+
+    .articles-page[data-publication-mode="latest"] .latest-publication-header {
+        gap: 0.85rem;
+        margin-bottom: 1rem;
+    }
+
+    .articles-page[data-publication-mode="latest"] .latest-publication-header h2 {
+        font-size: clamp(1.55rem, 9vw, 2.25rem);
+    }
+
+    .latest-publication-meta {
+        font-size: 0.95rem;
+        line-height: 1.35;
+    }
+
+    .publication-editor-link {
+        width: 100%;
+        justify-content: center;
+        text-align: center;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-grid {
+        grid-template-columns: 1fr;
+        gap: 0.9rem;
     }
 
     .chronicle-controls,
@@ -1471,15 +1526,79 @@
         grid-column: 1 / -1;
     }
 
+    .articles-page[data-publication-mode="latest"] .chronicle-image,
+    .articles-page[data-publication-mode="latest"] .chronicle-card-lead .chronicle-image {
+        aspect-ratio: 16 / 9;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-card:not(.chronicle-card-lead) .chronicle-title-link {
+        display: block;
+        overflow: visible;
+        -webkit-line-clamp: initial;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-card:not(.chronicle-card-lead) .chronicle-excerpt,
+    .articles-page[data-publication-mode="latest"] .chronicle-card-lead .chronicle-excerpt {
+        max-height: 9rem;
+    }
+
     .articles-results-meta {
         align-items: flex-start;
     }
 
     .article-modal-panel {
+        width: 100%;
+        max-height: calc(100vh - 1rem);
+        border-radius: 16px;
         padding: 1.35rem;
+    }
+
+    .article-modal-close {
+        top: 0.65rem;
+        right: 0.75rem;
+        width: 2.55rem;
+        height: 2.55rem;
+    }
+
+    .article-modal-title {
+        font-size: clamp(1.55rem, 8vw, 2.15rem);
+    }
+
+    .article-modal-content {
+        font-size: 0.98rem;
+        line-height: 1.75;
     }
 
     .article-modal-actions {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 420px) {
+    .chronicle-shell,
+    .publication-editor-shell {
+        width: calc(100% - 0.75rem);
+    }
+
+    .chronicle-card-header {
+        padding: 0.7rem 0.75rem 0.4rem;
+    }
+
+    .chronicle-image {
+        width: calc(100% - 1.5rem);
+        margin: 0 0.75rem;
+    }
+
+    .chronicle-card-body {
+        padding: 0.7rem 0.8rem 0.85rem;
+    }
+
+    .article-modal-panel {
+        padding: 1rem;
+    }
+
+    .article-modal-meta {
+        gap: 0.55rem 0.9rem;
+        font-size: 0.86rem;
     }
 }
