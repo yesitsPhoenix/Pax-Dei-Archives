@@ -358,7 +358,11 @@ async function publishActivePublication(elements) {
     if (error) throw error;
 
     clearPublicationCache();
-    showMessage(elements.messageEl, `Issue ${activePublication.issue_number} published.`, 'success');
+    showMessage(
+      elements.messageEl,
+      `Issue ${activePublication.issue_number} published. Run python3 scripts/generate_publication_pages.py before sharing Discord links.`,
+      'success',
+    );
     await loadPublicationByIssue(elements, { silent: true });
   } catch (error) {
     console.error(error);
