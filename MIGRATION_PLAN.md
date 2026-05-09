@@ -4,19 +4,22 @@
 
 Move Pax Dei Archives from GitHub Pages to a Quart/Jinja application hosted behind the existing Cloudflared tunnel, while continuing to use Supabase for authentication and data.
 
-The first migration target is removing the static GitHub Pages layer so pages can render dynamic metadata server-side. This solves Discord embeds for commonly shared URLs such as `/publications`.
+The primary migration target is removing the static GitHub Pages hosting layer and moving the site as a whole to a backend-rendered app. Server-rendered metadata for share previews is an important benefit, but publications are not the only reason for the migration.
 
 ## Guiding Principles
 
 - Run the GitHub Pages site and the new Quart site in parallel until the Quart site reaches parity.
-- Keep Supabase authentication as-is during the first migration pass.
-- Keep browser-side Supabase reads/writes where they already work unless there is a clear reason to move them server-side.
+- Keep Supabase authentication as-is during and after the migration.
+- Keep Supabase as the primary database and core data layer.
+- Keep browser-side Supabase reads/writes where they already work.
+- Keep admin/editor writes browser-side unless a future security or validation need changes that decision.
 - Prefer clean canonical routes for the new site.
 - Prefer migrating directly to clean canonical routes instead of carrying old `.html` URLs forward.
 - Treat old URL redirects as optional, short-term convenience routes only when they prevent a known problem.
 - Migrate page-by-page instead of doing one large rewrite.
 - Use server-rendered Jinja layout pieces for header, footer, and metadata.
 - Make best-practice route/path updates during migration when they are low-risk.
+- Move toward cleaner backend static paths instead of keeping `frontend/www/` permanently.
 
 ## Proposed Canonical Routes
 
@@ -68,6 +71,14 @@ frontend/www/assets/
 
 Those paths can be normalized later after the backend is stable.
 
+Target asset paths should eventually become:
+
+```text
+/static/css/
+/static/js/
+/static/assets/
+```
+
 ## Environment
 
 Expected runtime:
@@ -93,20 +104,22 @@ QUART_ENV
 
 Supabase dashboard updates needed:
 
-- Add the new tunnel domain to allowed site URLs.
+- Add the new tunnel domain to allowed site URLs. The likely placeholder domain is `archives.yesitsphoenix.dev`, but the final domain is not yet locked.
 - Add the new tunnel domain callback URL for Discord OAuth.
 - Keep GitHub Pages URLs during the parallel run.
 
 ## Migration Phases
 
-### Phase 1: Quart Shell
+### Phase 1: Quart Foundation
 
-Create the backend app without changing the public GitHub Pages site.
+Create the backend app without changing the public GitHub Pages site. This phase is focused on establishing the whole-site foundation, not a publications-only proof of concept.
 
 - [ ] Add Quart project dependencies and startup instructions.
 - [ ] Create `app/main.py`.
 - [ ] Add `/healthz` route.
-- [ ] Mount existing static folders.
+- [ ] Mount existing static folders for transition.
+- [ ] Add the intended `/static/...` structure.
+- [ ] Define how old `frontend/www/...` asset references will migrate to `/static/...`.
 - [ ] Add basic `base.html`.
 - [ ] Add Jinja partials for header, footer, and auth modal.
 - [ ] Serve `/` as the new home route.
@@ -125,9 +138,20 @@ Move shared browser-loaded fragments into server-rendered Jinja includes.
 - [ ] Remove backend-page dependency on `loadFooter.js`.
 - [ ] Confirm mobile nav, dropdowns, and floating auth avatar still work.
 
-### Phase 3: Publications First
+### Phase 3: Core Page Migration
 
-Solve the Discord embed issue early.
+Migrate the core user-facing page shells into Quart/Jinja so the backend represents the site as a whole.
+
+- [ ] Convert `index.html` into `templates/pages/home.html`.
+- [ ] Replace static `index` language with canonical `home` naming internally.
+- [ ] Keep current recent comments/news JavaScript behavior.
+- [ ] Add server-rendered home metadata.
+- [ ] Verify quick links point to canonical backend routes.
+- [ ] Create backend routes and Jinja shells for `publications`, `publication archive`, `lore`, and `quests`.
+- [ ] Confirm the core navigation works across backend-rendered pages.
+- [ ] Confirm existing client-side Supabase rendering still works on migrated pages.
+
+### Phase 4: Publications Metadata
 
 - [ ] Add `app/routes/publications.py`.
 - [ ] Add server-side Supabase publication fetch helper.
@@ -140,16 +164,6 @@ Solve the Discord embed issue early.
 - [ ] Migrate archive links to `/publications/archive`.
 - [ ] Remove generated `publications/issue-XX.html` files after backend issue routes replace them.
 - [ ] Test Discord embeds for `/publications` and `/publications/issue/<issue_number>`.
-
-### Phase 4: Home Page
-
-Migrate the home page and clean up route naming.
-
-- [ ] Convert `index.html` into `templates/pages/home.html`.
-- [ ] Replace static `index` language with canonical `home` naming internally.
-- [ ] Keep current recent comments/news JavaScript behavior.
-- [ ] Add server-rendered home metadata.
-- [ ] Verify quick links point to canonical backend routes.
 
 ### Phase 5: Lore
 
@@ -213,14 +227,16 @@ Keep Supabase auth, but remove GitHub Pages assumptions.
 
 Once the backend site has parity, clean up static-hosting workarounds.
 
-- [ ] Remove publication share-page generator if backend issue routes replace it.
-- [ ] Remove or archive generated `publications/issue-*.html` files.
-- [ ] Remove or archive generated quest HTML files if backend quest routes replace them.
+- [ ] Keep generated publication and quest files until backend routes are validated.
+- [ ] Remove publication share-page generator after backend issue routes are validated.
+- [ ] Remove or archive generated `publications/issue-*.html` files after validation.
+- [ ] Remove or archive generated quest HTML files after validation.
 - [ ] Replace root-relative GitHub Pages URLs with backend canonical URLs.
 - [ ] Add canonical tags to migrated pages.
 - [ ] Add only intentional temporary redirects for known high-value old URLs.
 - [ ] Update Discord/community links to the new domain.
-- [ ] Decide whether GitHub Pages becomes a redirect-only fallback.
+- [ ] Leave GitHub Pages alone during migration.
+- [ ] Replace GitHub Pages with a site-moved page only after all validations are complete.
 
 ## Testing Checklist
 
@@ -243,18 +259,17 @@ Once the backend site has parity, clean up static-hosting workarounds.
 
 ## Initial Implementation Order
 
-1. Build Quart shell and static serving.
-2. Convert header/footer to Jinja partials.
-3. Migrate publications and server-render metadata.
-4. Deploy behind Cloudflared on a test hostname.
-5. Test Discord embeds.
-6. Migrate home route.
+1. Build Quart foundation and static serving.
+2. Establish clean route and asset conventions.
+3. Convert header/footer to Jinja partials.
+4. Migrate the home route and core page shells.
+5. Deploy behind Cloudflared on the temporary/test hostname.
+6. Migrate publication metadata and issue routes.
 7. Continue page-by-page migration.
+8. Validate whole-site parity before cutover.
 
 ## Open Decisions
 
-- [ ] Final tunnel domain name.
-- [ ] Whether GitHub Pages should redirect to the new domain after cutover.
-- [ ] Whether admin/publication writes should eventually move behind backend APIs.
+- [ ] Final tunnel domain name. Current working assumption: `archives.yesitsphoenix.dev`.
 - [ ] Whether any specific old `.html` URLs need temporary redirects after cutover.
-- [ ] Whether frontend assets should remain under `frontend/www/` or move into `app/static/`.
+- [ ] Exact timing for removing generated publication and quest share files after backend validation.
