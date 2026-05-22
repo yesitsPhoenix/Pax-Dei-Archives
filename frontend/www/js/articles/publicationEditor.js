@@ -16,9 +16,12 @@ const CHRONICLE_SECTIONS = [
   'Clan Highlights',
   'Community Events',
   'For Trade',
-  'Classifieds',
   'Thaumaturgy',
   'Crafting & Metallurgy',
+  'Enemy Spotlights',
+  'Combat Spotlights',
+  'Dungeon Spotlights',
+  'Classifieds',
 ];
 
 let activePublication = null;

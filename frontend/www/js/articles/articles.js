@@ -27,9 +27,12 @@ const SECTION_DEFINITIONS = [
   'Clan Highlights',
   'Community Events',
   'For Trade',
-  'Classifieds',
   'Thaumaturgy',
   'Crafting & Metallurgy',
+  'Enemy Spotlights',
+  'Combat Spotlights',
+  'Dungeon Spotlights',
+  'Classifieds',
 ];
 
 const SECTION_ALIASES = new Map([
@@ -46,6 +49,12 @@ const SECTION_ALIASES = new Map([
   ['crafting', 'Crafting & Metallurgy'],
   ['metallurgy', 'Crafting & Metallurgy'],
   ['magic', 'Thaumaturgy'],
+  ['enemy spotlight', 'Enemy Spotlights'],
+  ['enemy spotlights', 'Enemy Spotlights'],
+  ['combat spotlight', 'Combat Spotlights'],
+  ['combat spotlights', 'Combat Spotlights'],
+  ['dungeon spotlight', 'Dungeon Spotlights'],
+  ['dungeon spotlights', 'Dungeon Spotlights'],
 ]);
 
 let allPublications = [];
@@ -426,20 +435,86 @@ function renderPublicationGrid(entries) {
 
 function renderFrontpageFlow(entries) {
   const articleEntries = entries.filter(entry => entry.category !== 'Classifieds');
-  const classifiedEntries = entries.filter(entry => entry.category === 'Classifieds');
-  const articleMarkup = articleEntries.map((entry, index) => renderPublicationCard(
-    entry,
-    getSecondaryCardModifier(entry, index, articleEntries)
-  )).join('');
+  const flowItems = buildFrontpageFlowItems(entries);
+  const columns = distributeFrontpageFlowItems(flowItems);
 
-  if (!classifiedEntries.length) return articleMarkup;
-
-  return `
-    ${articleMarkup}
-    <div class="chronicle-classifieds-stack">
-      ${classifiedEntries.map(entry => renderPublicationCard(entry, 'secondary-classified')).join('')}
+  return columns.map(column => `
+    <div class="chronicle-flow-column">
+      ${column.map(item => renderFrontpageFlowItem(item, articleEntries)).join('')}
     </div>
-  `;
+  `).join('');
+}
+
+function buildFrontpageFlowItems(entries) {
+  const items = [];
+  let classifiedGroup = [];
+
+  entries.forEach(entry => {
+    if (entry.category === 'Classifieds') {
+      classifiedGroup.push(entry);
+      return;
+    }
+
+    if (classifiedGroup.length) {
+      items.push({ type: 'classifieds', entries: classifiedGroup });
+      classifiedGroup = [];
+    }
+
+    items.push({ type: 'entry', entry });
+  });
+
+  if (classifiedGroup.length) {
+    items.push({ type: 'classifieds', entries: classifiedGroup });
+  }
+
+  return items;
+}
+
+function distributeFrontpageFlowItems(items) {
+  const columns = [[], []];
+  const weights = [0, 0];
+
+  items.forEach(item => {
+    const columnIndex = getNextFrontpageColumn(item, columns, weights);
+    columns[columnIndex].push(item);
+    weights[columnIndex] += getFrontpageFlowWeight(item);
+  });
+
+  return columns.filter(column => column.length);
+}
+
+function getNextFrontpageColumn(item, columns, weights) {
+  if (item.type === 'entry' && !columns[0].some(columnItem => columnItem.type === 'entry')) return 0;
+  if (item.type === 'entry' && !columns[1].some(columnItem => columnItem.type === 'entry')) return 1;
+  return weights[0] <= weights[1] ? 0 : 1;
+}
+
+function getFrontpageFlowWeight(item) {
+  if (item.type === 'classifieds') {
+    return Math.max(0.45, item.entries.length * 0.38);
+  }
+
+  const entry = item.entry;
+  const plainTextLength = markdownToPlainText(stripImages(entry.content || entry.summary || '')).length;
+  const hasMedia = Boolean(entry.image_url);
+  const textWeight = Math.min(1.15, plainTextLength / 850);
+  return 0.65 + textWeight + (hasMedia ? 0.55 : 0);
+}
+
+function renderFrontpageFlowItem(item, articleEntries) {
+  if (item.type === 'classifieds') {
+    return `
+      <div class="chronicle-classifieds-stack">
+        ${item.entries.map(entry => renderPublicationCard(entry, 'secondary-classified')).join('')}
+      </div>
+    `;
+  }
+
+  const articleIndex = articleEntries.findIndex(entry => entry === item.entry);
+  return renderPublicationCard(
+    item.entry,
+    getSecondaryCardModifier(item.entry, articleIndex, articleEntries)
+  );
 }
 
 function getSecondaryCardModifier(entry, index, entries) {
