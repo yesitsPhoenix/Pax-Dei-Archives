@@ -27,6 +27,7 @@ const SECTION_DEFINITIONS = [
   'Clan Highlights',
   'Community Events',
   'For Trade',
+  'Classifieds',
   'Thaumaturgy',
   'Crafting & Metallurgy',
 ];
@@ -40,6 +41,8 @@ const SECTION_ALIASES = new Map([
   ['building highlights', 'Building Highlights'],
   ['trading', 'For Trade'],
   ['trade', 'For Trade'],
+  ['classified', 'Classifieds'],
+  ['classified ads', 'Classifieds'],
   ['crafting', 'Crafting & Metallurgy'],
   ['metallurgy', 'Crafting & Metallurgy'],
   ['magic', 'Thaumaturgy'],
@@ -404,6 +407,7 @@ function renderPublicationGrid(entries) {
 }
 
 function renderPublicationCard(entry, modifier = '') {
+  const isClassified = entry.category === 'Classifieds';
   const imageMarkup = entry.heroImage
     ? `<img src="${escapeHtml(entry.heroImage)}" alt="${escapeHtml(entry.title)}" loading="lazy">`
     : `<img src="${FALLBACK_IMAGE}" alt="">`;
@@ -412,30 +416,43 @@ function renderPublicationCard(entry, modifier = '') {
     ? (isPublicationIssueView ? 1200 : 420)
     : (isPublicationIssueView ? 720 : 260);
   const previewText = entry.content || entry.summary || '';
-  const excerptHtml = DOMPurify.sanitize(renderMarkdownExcerpt(previewText, summaryLimit));
+  const excerptHtml = DOMPurify.sanitize(
+    isClassified
+      ? renderMarkdown(stripImages(previewText))
+      : renderMarkdownExcerpt(previewText, summaryLimit)
+  );
 
   return `
-    <article class="chronicle-card ${modifier ? `chronicle-card-${modifier}` : ''}">
+    <article class="chronicle-card ${modifier ? `chronicle-card-${modifier}` : ''} ${isClassified ? 'chronicle-card-classified' : ''}">
       <header class="chronicle-card-header">
         <h2>${escapeHtml(entry.category)}</h2>
       </header>
-      <button class="chronicle-image js-read-article" type="button" data-slug="${escapeHtml(entry.slug)}">
-        ${imageMarkup}
-      </button>
+      ${isClassified ? '' : `
+        <button class="chronicle-image js-read-article" type="button" data-slug="${escapeHtml(entry.slug)}">
+          ${imageMarkup}
+        </button>
+      `}
       <div class="chronicle-card-body">
         <h3>
-          <button class="chronicle-title-link js-read-article" type="button" data-slug="${escapeHtml(entry.slug)}">
-            ${escapeHtml(entry.title)}
-          </button>
+          ${isClassified
+            ? `<span class="chronicle-title-link">${escapeHtml(entry.title)}</span>`
+            : `<button class="chronicle-title-link js-read-article" type="button" data-slug="${escapeHtml(entry.slug)}">
+                ${escapeHtml(entry.title)}
+              </button>`
+          }
         </h3>
-        <div class="article-meta-row">
-          <span><i class="fa fa-user"></i> ${escapeHtml(entry.author)}</span>
-          <span><i class="fa fa-calendar"></i> ${formatPublicationDate(entry.releaseDate)}</span>
-        </div>
+        ${isClassified ? '' : `
+          <div class="article-meta-row">
+            <span><i class="fa fa-user"></i> ${escapeHtml(entry.author)}</span>
+            <span><i class="fa fa-calendar"></i> ${formatPublicationDate(entry.releaseDate)}</span>
+          </div>
+        `}
         <div class="chronicle-excerpt markdown-content">${excerptHtml}</div>
-        <button class="chronicle-read-link js-read-article" type="button" data-slug="${escapeHtml(entry.slug)}">
-          Read entry
-        </button>
+        ${isClassified ? '' : `
+          <button class="chronicle-read-link js-read-article" type="button" data-slug="${escapeHtml(entry.slug)}">
+            Read entry
+          </button>
+        `}
       </div>
     </article>
   `;

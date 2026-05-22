@@ -16,6 +16,7 @@ const CHRONICLE_SECTIONS = [
   'Clan Highlights',
   'Community Events',
   'For Trade',
+  'Classifieds',
   'Thaumaturgy',
   'Crafting & Metallurgy',
 ];
@@ -32,6 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const elements = getElements();
   populateSectionSelect(elements.entrySectionSelect);
+  updateEntryFieldRequirements(elements);
   resetPublicationFields(elements);
   setupMarkdownEditor(elements);
 
@@ -47,6 +49,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   elements.publishButton.addEventListener('click', () => publishActivePublication(elements));
   elements.carryOverEntryButton.addEventListener('click', () => carryOverSelectedEntry(elements));
   elements.form.addEventListener('submit', event => saveEntryToDraft(event, elements));
+  elements.entrySectionSelect.addEventListener('change', () => updateEntryFieldRequirements(elements));
 
   elements.issueNumberInput.addEventListener('input', () => resetActivePublication(elements, { clearPublicationFields: true }));
 
@@ -412,7 +415,7 @@ async function upsertPublicationEntry(entry) {
     summary: entry.summary,
     image_url: entry.imageUrl || null,
     content: entry.content,
-    author: entry.author,
+    author: entry.author || 'Classifieds',
     sort_order: CHRONICLE_SECTIONS.indexOf(entry.sectionKey),
   };
 
@@ -542,6 +545,7 @@ function loadEntryForEditing(entryId, elements) {
 
   editingEntryId = entry.id;
   elements.entrySectionSelect.value = entry.section_key;
+  updateEntryFieldRequirements(elements);
   elements.entryTitleInput.value = entry.title || '';
   elements.entrySlugInput.value = stripIssuePrefix(entry.slug || '', activePublication.issue_number);
   elements.entrySummaryInput.value = entry.summary || '';
@@ -606,6 +610,7 @@ function carryOverSelectedEntry(elements) {
 
   editingEntryId = null;
   elements.entrySectionSelect.value = sourceEntry.section_key || CHRONICLE_SECTIONS[0];
+  updateEntryFieldRequirements(elements);
   elements.entryTitleInput.value = sourceEntry.title || '';
   elements.entrySlugInput.value = stripIssuePrefix(sourceEntry.slug || slugify(sourceEntry.title || ''), sourceEntry.publication.issue_number);
   elements.entrySummaryInput.value = sourceEntry.summary || '';
@@ -626,14 +631,16 @@ function carryOverSelectedEntry(elements) {
 
 function readEntryInput(elements) {
   const title = elements.entryTitleInput.value.trim();
+  const content = elements.entryContentInput.value.trim();
+  const sectionKey = elements.entrySectionSelect.value;
   return {
-    sectionKey: elements.entrySectionSelect.value,
+    sectionKey,
     title,
     slug: elements.entrySlugInput.value.trim() || slugify(title),
-    summary: elements.entrySummaryInput.value.trim(),
+    summary: elements.entrySummaryInput.value.trim() || (isClassifiedSection(sectionKey) ? createPlainExcerpt(content, 180) : ''),
     imageUrl: elements.entryImageUrlInput.value.trim(),
-    content: elements.entryContentInput.value.trim(),
-    author: elements.entryAuthorInput.value.trim(),
+    content,
+    author: elements.entryAuthorInput.value.trim() || (isClassifiedSection(sectionKey) ? 'Classifieds' : ''),
   };
 }
 
@@ -647,7 +654,11 @@ function validateIssueNumber(issueNumber) {
 }
 
 function validateEntryInput(input) {
-  if (!input.sectionKey || !input.title || !input.summary || !input.content || !input.author) {
+  if (!input.sectionKey || !input.title || !input.content) {
+    throw new Error('Please fill in all required entry fields.');
+  }
+
+  if (!isClassifiedSection(input.sectionKey) && (!input.summary || !input.author)) {
     throw new Error('Please fill in all required entry fields.');
   }
 }
@@ -661,6 +672,7 @@ function clearEntryFields(elements) {
   elements.entryContentSplitInput.value = '';
   elements.entryAuthorInput.value = '';
   populateSectionSelect(elements.entrySectionSelect);
+  updateEntryFieldRequirements(elements);
   switchMarkdownMode(elements, 'edit');
   updateMarkdownPreview(elements);
   resetSubmitButton(elements.form.querySelector('button[type="submit"]'));
@@ -688,6 +700,35 @@ function populateSectionSelect(selectElement) {
   selectElement.innerHTML = CHRONICLE_SECTIONS
     .map(section => `<option value="${escapeHtml(section)}">${escapeHtml(section)}</option>`)
     .join('');
+}
+
+function updateEntryFieldRequirements(elements) {
+  const isClassified = isClassifiedSection(elements.entrySectionSelect.value);
+  elements.entrySummaryInput.required = !isClassified;
+  elements.entryAuthorInput.required = !isClassified;
+  elements.entryImageUrlInput.placeholder = isClassified
+    ? 'Optional; classifieds usually do not need images'
+    : 'https://... or frontend/www/assets/...';
+  elements.entrySummaryInput.placeholder = isClassified
+    ? 'Optional; the card uses the classified text directly'
+    : '';
+  elements.entryAuthorInput.placeholder = isClassified ? 'Optional' : '';
+}
+
+function isClassifiedSection(section) {
+  return String(section).toLowerCase() === 'classifieds';
+}
+
+function createPlainExcerpt(content, maxLength) {
+  const plainText = normalizeMarkdownInput(content || '')
+    .replace(/!\[[^\]]*]\([^)]+\)/g, '')
+    .replace(/\[([^\]]+)]\([^)]+\)/g, '$1')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/[*_~`>#-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return plainText.length > maxLength ? `${plainText.slice(0, maxLength).trim()}...` : plainText;
 }
 
 function sortEntries(a, b) {

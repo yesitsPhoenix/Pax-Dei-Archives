@@ -271,6 +271,45 @@
     }
 }
 
+.articles-page[data-publication-mode="latest"] .chronicle-card-classified,
+.articles-page[data-publication-mode="archive"] .chronicle-card-classified {
+    grid-column: span 2;
+    align-self: start;
+    min-height: 0;
+}
+
+.chronicle-card-classified .chronicle-card-header {
+    padding-bottom: 0.25rem;
+}
+
+.chronicle-card-classified .chronicle-card-body {
+    padding-top: 0.45rem;
+}
+
+.chronicle-card-classified .chronicle-title-link {
+    font-size: 0.98rem;
+    line-height: 1.16;
+    cursor: default;
+}
+
+.articles-page[data-publication-mode="latest"] .chronicle-card-classified .chronicle-excerpt,
+.articles-page[data-publication-mode="archive"] .chronicle-card-classified .chronicle-excerpt {
+    max-height: none;
+    overflow: visible;
+}
+
+.chronicle-card-classified .chronicle-excerpt::after {
+    display: none;
+}
+
+.chronicle-card-classified .chronicle-card-body p,
+.chronicle-card-classified .chronicle-excerpt p {
+    display: block;
+    overflow: visible;
+    -webkit-line-clamp: initial;
+    -webkit-box-orient: initial;
+}
+
 .chronicle-card-wide {
     grid-column: span 2;
 }
