@@ -1744,3 +1744,20 @@
         font-size: 0.86rem;
     }
 }
+
+.articles-page[data-publication-mode="latest"] .chronicle-card-classified,
+.articles-page[data-publication-mode="archive"] .chronicle-card-classified {
+    height: auto;
+}
+
+.articles-page[data-publication-mode="latest"] .chronicle-card-classified .chronicle-excerpt,
+.articles-page[data-publication-mode="archive"] .chronicle-card-classified .chronicle-excerpt,
+.articles-page[data-publication-mode="latest"] .chronicle-card:not(.chronicle-card-lead).chronicle-card-classified .chronicle-excerpt,
+.articles-page[data-publication-mode="archive"] .chronicle-card:not(.chronicle-card-lead).chronicle-card-classified .chronicle-excerpt {
+    max-height: none;
+    overflow: visible;
+}
+
+.chronicle-card-classified .chronicle-excerpt::after {
+    display: none;
+}
