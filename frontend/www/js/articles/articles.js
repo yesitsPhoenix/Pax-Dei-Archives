@@ -437,37 +437,38 @@ function renderFrontpageFlow(entries) {
   const articleEntries = entries.filter(entry => entry.category !== 'Classifieds');
   const flowItems = buildFrontpageFlowItems(entries);
   const columns = distributeFrontpageFlowItems(flowItems);
+  const orderedFlowItems = buildOrderedFrontpageFlowItems(entries);
 
-  return columns.map(column => `
-    <div class="chronicle-flow-column">
-      ${column.map(item => renderFrontpageFlowItem(item, articleEntries)).join('')}
+  return `
+    ${columns.map(column => `
+      <div class="chronicle-flow-column">
+        ${column.map(item => renderFrontpageFlowItem(item, articleEntries)).join('')}
+      </div>
+    `).join('')}
+    <div class="chronicle-frontpage-flow-mobile">
+      ${orderedFlowItems.map(item => renderFrontpageFlowItem(item, articleEntries)).join('')}
     </div>
-  `).join('');
+  `;
 }
 
 function buildFrontpageFlowItems(entries) {
-  const items = [];
-  let classifiedGroup = [];
+  const articleItems = entries
+    .filter(entry => entry.category !== 'Classifieds')
+    .map(entry => ({ type: 'entry', entry }));
+  const classifiedEntries = entries.filter(entry => entry.category === 'Classifieds');
 
-  entries.forEach(entry => {
-    if (entry.category === 'Classifieds') {
-      classifiedGroup.push(entry);
-      return;
-    }
+  if (!classifiedEntries.length) return articleItems;
+  return [...articleItems, { type: 'classifieds', entries: classifiedEntries }];
+}
 
-    if (classifiedGroup.length) {
-      items.push({ type: 'classifieds', entries: classifiedGroup });
-      classifiedGroup = [];
-    }
+function buildOrderedFrontpageFlowItems(entries) {
+  const articleItems = entries
+    .filter(entry => entry.category !== 'Classifieds')
+    .map(entry => ({ type: 'entry', entry }));
+  const classifiedEntries = entries.filter(entry => entry.category === 'Classifieds');
 
-    items.push({ type: 'entry', entry });
-  });
-
-  if (classifiedGroup.length) {
-    items.push({ type: 'classifieds', entries: classifiedGroup });
-  }
-
-  return items;
+  if (!classifiedEntries.length) return articleItems;
+  return [...articleItems, { type: 'classifieds', entries: classifiedEntries }];
 }
 
 function distributeFrontpageFlowItems(items) {
