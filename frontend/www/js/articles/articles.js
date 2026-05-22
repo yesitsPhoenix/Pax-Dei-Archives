@@ -401,20 +401,51 @@ function renderPublicationGrid(entries) {
     ? publicationEntries
     : publicationEntries.filter(entry => entry.category === activeCategory);
 
-  grid.innerHTML = activeEntries.length
-    ? activeEntries.map((entry, index) => renderPublicationCard(entry, index === 0 ? 'lead' : '')).join('')
-    : '<div class="empty-articles-state">No entries match this section in the selected publication.</div>';
+  if (!activeEntries.length) {
+    grid.innerHTML = '<div class="empty-articles-state">No entries match this section in the selected publication.</div>';
+    return;
+  }
+
+  if (getPublicationPageMode() === 'latest' && activeEntries.length > 1) {
+    const [leadEntry, ...secondaryEntries] = activeEntries;
+    grid.innerHTML = `
+      ${renderPublicationCard(leadEntry, 'lead')}
+      <div class="chronicle-secondary-grid">
+        ${secondaryEntries.map((entry, index) => renderPublicationCard(
+          entry,
+          getSecondaryCardModifier(entry, index, secondaryEntries)
+        )).join('')}
+      </div>
+    `;
+    return;
+  }
+
+  grid.innerHTML = activeEntries.map((entry, index) => renderPublicationCard(entry, index === 0 ? 'lead' : '')).join('');
+}
+
+function getSecondaryCardModifier(entry, index, entries) {
+  if (entry.category === 'Classifieds') return 'secondary-classified';
+
+  const articleEntries = entries.filter(item => item.category !== 'Classifieds');
+  const articleIndex = articleEntries.findIndex(item => item === entry);
+  const previewLength = markdownToPlainText(stripImages(entry.content || entry.summary || '')).length;
+
+  if (articleEntries.length === 1) return 'secondary-full';
+  if (articleIndex < 2) return 'secondary-major';
+  if (previewLength > 700) return 'secondary-wide';
+  return index % 2 === 0 ? 'secondary-standard' : 'secondary-narrow';
 }
 
 function renderPublicationCard(entry, modifier = '') {
   const isClassified = entry.category === 'Classifieds';
+  const isLead = modifier === 'lead';
   const imageMarkup = entry.heroImage
     ? `<img src="${escapeHtml(entry.heroImage)}" alt="${escapeHtml(entry.title)}" loading="lazy">`
     : `<img src="${FALLBACK_IMAGE}" alt="">`;
   const isPublicationIssueView = ['latest', 'archive'].includes(getPublicationPageMode());
-  const summaryLimit = modifier === 'lead'
+  const summaryLimit = isLead
     ? (isPublicationIssueView ? 1200 : 420)
-    : (isPublicationIssueView ? 720 : 260);
+    : (isPublicationIssueView ? 1200 : 420);
   const previewText = entry.content || entry.summary || '';
   const excerptHtml = DOMPurify.sanitize(
     isClassified
