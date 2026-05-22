@@ -60,6 +60,10 @@
     margin-bottom: 0.8rem;
 }
 
+.publication-current-header .articles-section-label {
+    font-size: clamp(0.9rem, 0.85vw, 1.08rem);
+}
+
 .publication-current-header h2 {
     margin-top: 0.2rem;
     max-width: none;

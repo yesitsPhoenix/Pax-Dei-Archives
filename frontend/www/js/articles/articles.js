@@ -312,13 +312,13 @@ function renderPublicationHeader() {
   if (!titleEl && !metaEl && !eyebrowEl) return;
 
   if (!publication) {
-    if (eyebrowEl) eyebrowEl.textContent = pageMode === 'archive' ? 'Publications Archive' : 'Latest Publication';
+    if (eyebrowEl) eyebrowEl.textContent = pageMode === 'archive' ? 'Pax Dei Chronicle Archive' : 'The Pax Dei Chronicle';
     if (titleEl) titleEl.textContent = pageMode === 'archive' ? 'Browse Past Issues' : 'Most Recent Issue';
     if (metaEl) metaEl.textContent = '';
     return;
   }
 
-  if (eyebrowEl) eyebrowEl.textContent = pageMode === 'archive' ? 'Selected Publication' : 'Latest Publication';
+  if (eyebrowEl) eyebrowEl.textContent = pageMode === 'archive' ? 'Pax Dei Chronicle Archive' : 'The Pax Dei Chronicle';
   if (titleEl) {
     const issuePrefix = publication.issueNumber
       ? `Issue ${publication.issueNumber}`
