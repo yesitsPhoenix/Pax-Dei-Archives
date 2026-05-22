@@ -197,6 +197,33 @@
     gap: 0.75rem;
 }
 
+.chronicle-frontpage {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(18rem, 0.84fr) minmax(28rem, 1.2fr) minmax(18rem, 0.84fr);
+    gap: 0.75rem;
+    align-items: start;
+}
+
+.chronicle-frontpage-rail {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+    align-items: start;
+}
+
+.chronicle-frontpage-center {
+    order: 2;
+}
+
+.chronicle-frontpage-left {
+    order: 1;
+}
+
+.chronicle-frontpage-right {
+    order: 3;
+}
+
 @media (min-width: 2000px) {
     .articles-page[data-publication-mode="latest"] .chronicle-shell {
         width: min(2160px, calc(100% - 6rem));
@@ -303,6 +330,20 @@
         #27292a;
     border-color: rgba(255, 215, 0, 0.32);
     box-shadow: 0 8px 28px rgba(255, 215, 0, 0.16), 0 18px 45px rgba(0, 0, 0, 0.28);
+}
+
+.articles-page[data-publication-mode="latest"] .chronicle-frontpage .chronicle-card-lead {
+    grid-column: auto;
+    grid-row: auto;
+    min-height: 0;
+}
+
+.articles-page[data-publication-mode="latest"] .chronicle-frontpage-side .chronicle-card {
+    grid-column: auto;
+}
+
+.articles-page[data-publication-mode="latest"] .chronicle-frontpage-side .chronicle-image {
+    aspect-ratio: 16 / 6.8;
 }
 
 .articles-page[data-publication-mode="archive"] .chronicle-card-lead {
@@ -1587,6 +1628,22 @@
         grid-template-columns: 1fr;
     }
 
+    .chronicle-frontpage {
+        grid-template-columns: 1fr;
+    }
+
+    .chronicle-frontpage-center {
+        order: 1;
+    }
+
+    .chronicle-frontpage-left {
+        order: 2;
+    }
+
+    .chronicle-frontpage-right {
+        order: 3;
+    }
+
     .articles-page[data-publication-mode="latest"] .chronicle-secondary-grid .chronicle-card,
     .articles-page[data-publication-mode="latest"] .chronicle-secondary-grid .chronicle-card-secondary-full,
     .articles-page[data-publication-mode="latest"] .chronicle-secondary-grid .chronicle-card-secondary-major,
@@ -1652,6 +1709,11 @@
         grid-template-columns: 1fr;
     }
 
+    .chronicle-frontpage,
+    .chronicle-frontpage-rail {
+        grid-template-columns: 1fr;
+    }
+
     .articles-page[data-publication-mode="archive"] .chronicle-grid,
     .publication-archive-list {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1709,6 +1771,11 @@
     .chronicle-secondary-grid {
         grid-column: 1 / -1;
         grid-template-columns: 1fr;
+        gap: 0.9rem;
+    }
+
+    .chronicle-frontpage,
+    .chronicle-frontpage-rail {
         gap: 0.9rem;
     }
 

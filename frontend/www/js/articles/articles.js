@@ -408,19 +408,78 @@ function renderPublicationGrid(entries) {
 
   if (getPublicationPageMode() === 'latest' && activeEntries.length > 1) {
     const [leadEntry, ...secondaryEntries] = activeEntries;
+    const { leftRailEntries, rightRailEntries } = distributeFrontpageEntries(secondaryEntries);
     grid.innerHTML = `
-      ${renderPublicationCard(leadEntry, 'lead')}
-      <div class="chronicle-secondary-grid">
-        ${secondaryEntries.map((entry, index) => renderPublicationCard(
-          entry,
-          getSecondaryCardModifier(entry, index, secondaryEntries)
-        )).join('')}
+      <div class="chronicle-frontpage">
+        <div class="chronicle-frontpage-rail chronicle-frontpage-center">
+          ${renderPublicationCard(leadEntry, 'lead')}
+        </div>
+        <div class="chronicle-frontpage-rail chronicle-frontpage-left">
+          ${leftRailEntries.map((entry, index) => renderPublicationCard(
+              entry,
+              index === 0 ? 'frontpage-side' : getSecondaryCardModifier(entry, index, secondaryEntries)
+          )).join('')}
+        </div>
+        <div class="chronicle-frontpage-rail chronicle-frontpage-right">
+          ${rightRailEntries.map((entry, index) => renderPublicationCard(
+              entry,
+              index === 0 ? 'frontpage-side' : getSecondaryCardModifier(entry, index + leftRailEntries.length, secondaryEntries)
+          )).join('')}
+        </div>
       </div>
     `;
     return;
   }
 
   grid.innerHTML = activeEntries.map((entry, index) => renderPublicationCard(entry, index === 0 ? 'lead' : '')).join('');
+}
+
+function distributeFrontpageEntries(entries) {
+  const leftRailEntries = [];
+  const rightRailEntries = [];
+  let leftWeight = 0;
+  let rightWeight = 0;
+
+  entries.forEach((entry, index) => {
+    if (index === 0) {
+      leftRailEntries.push(entry);
+      leftWeight += estimateFrontpageEntryWeight(entry);
+      return;
+    }
+
+    if (index === 1) {
+      rightRailEntries.push(entry);
+      rightWeight += estimateFrontpageEntryWeight(entry);
+      return;
+    }
+
+    if (entry.category === 'Classifieds') {
+      if (leftWeight < rightWeight) {
+        leftRailEntries.push(entry);
+        leftWeight += estimateFrontpageEntryWeight(entry);
+      } else {
+        rightRailEntries.push(entry);
+        rightWeight += estimateFrontpageEntryWeight(entry);
+      }
+      return;
+    }
+
+    if (leftRailEntries.filter(item => item.category !== 'Classifieds').length <= rightRailEntries.filter(item => item.category !== 'Classifieds').length) {
+      leftRailEntries.push(entry);
+      leftWeight += estimateFrontpageEntryWeight(entry);
+    } else {
+      rightRailEntries.push(entry);
+      rightWeight += estimateFrontpageEntryWeight(entry);
+    }
+  });
+
+  return { leftRailEntries, rightRailEntries };
+}
+
+function estimateFrontpageEntryWeight(entry) {
+  if (entry.category === 'Classifieds') return 0.35;
+  const textLength = markdownToPlainText(stripImages(entry.content || entry.summary || '')).length;
+  return 1 + Math.min(textLength / 1000, 0.8);
 }
 
 function getSecondaryCardModifier(entry, index, entries) {
