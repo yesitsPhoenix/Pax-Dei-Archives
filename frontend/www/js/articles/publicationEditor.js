@@ -707,8 +707,8 @@ function updateEntryFieldRequirements(elements) {
   elements.entrySummaryInput.required = !isClassified;
   elements.entryAuthorInput.required = !isClassified;
   elements.entryImageUrlInput.placeholder = isClassified
-    ? 'Optional; classifieds usually do not need images'
-    : 'https://... or frontend/www/assets/...';
+    ? 'Optional; classifieds usually do not need media'
+    : 'Image, YouTube, or video URL';
   elements.entrySummaryInput.placeholder = isClassified
     ? 'Optional; the card uses the classified text directly'
     : '';

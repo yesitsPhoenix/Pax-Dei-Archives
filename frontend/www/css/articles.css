@@ -488,6 +488,19 @@
     transition: transform 0.24s ease, opacity 0.24s ease;
 }
 
+.chronicle-media {
+    cursor: default;
+}
+
+.chronicle-media iframe,
+.chronicle-media video {
+    width: 100%;
+    height: 100%;
+    display: block;
+    border: 0;
+    object-fit: cover;
+}
+
 .chronicle-image:hover img {
     transform: scale(1.025);
     opacity: 0.9;
@@ -978,6 +991,21 @@
     max-height: 32rem;
     object-fit: contain;
     border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
+}
+
+.article-modal-media-video {
+    aspect-ratio: 16 / 9;
+}
+
+.article-modal-media-video iframe,
+.article-modal-media-video video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    background: #101214;
     box-shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
 }
 

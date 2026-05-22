@@ -458,9 +458,6 @@ function getSecondaryCardModifier(entry, index, entries) {
 function renderPublicationCard(entry, modifier = '') {
   const isClassified = entry.category === 'Classifieds';
   const isLead = modifier === 'lead';
-  const imageMarkup = entry.heroImage
-    ? `<img src="${escapeHtml(entry.heroImage)}" alt="${escapeHtml(entry.title)}" loading="lazy">`
-    : `<img src="${FALLBACK_IMAGE}" alt="">`;
   const isPublicationIssueView = ['latest', 'archive'].includes(getPublicationPageMode());
   const summaryLimit = isLead
     ? (isPublicationIssueView ? 1200 : 420)
@@ -478,9 +475,7 @@ function renderPublicationCard(entry, modifier = '') {
         <h2>${escapeHtml(entry.category)}</h2>
       </header>
       ${isClassified ? '' : `
-        <button class="chronicle-image js-read-article" type="button" data-slug="${escapeHtml(entry.slug)}">
-          ${imageMarkup}
-        </button>
+        ${renderCardMedia(entry)}
       `}
       <div class="chronicle-card-body">
         <h3>
@@ -506,6 +501,115 @@ function renderPublicationCard(entry, modifier = '') {
       </div>
     </article>
   `;
+}
+
+function renderCardMedia(entry) {
+  const media = getMediaInfo(entry.heroImage);
+  if (media.type === 'youtube') {
+    return `
+      <div class="chronicle-image chronicle-media chronicle-media-video">
+        <iframe
+          src="${escapeHtml(media.embedUrl)}"
+          title="${escapeHtml(entry.title)}"
+          loading="lazy"
+          allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen
+        ></iframe>
+      </div>
+    `;
+  }
+
+  if (media.type === 'video') {
+    return `
+      <div class="chronicle-image chronicle-media chronicle-media-video">
+        <video controls preload="metadata">
+          <source src="${escapeHtml(media.url)}" type="${escapeHtml(media.mimeType)}">
+        </video>
+      </div>
+    `;
+  }
+
+  const imageUrl = media.url || FALLBACK_IMAGE;
+  return `
+    <button class="chronicle-image js-read-article" type="button" data-slug="${escapeHtml(entry.slug)}">
+      <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(entry.title)}" loading="lazy">
+    </button>
+  `;
+}
+
+function renderModalMedia(entry) {
+  const media = getMediaInfo(entry.heroImage);
+  if (media.type === 'none') return '';
+
+  if (media.type === 'youtube') {
+    return `
+      <figure class="article-modal-hero-image article-modal-media-video">
+        <iframe
+          src="${escapeHtml(media.embedUrl)}"
+          title="${escapeHtml(entry.title)}"
+          loading="lazy"
+          allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen
+        ></iframe>
+      </figure>
+    `;
+  }
+
+  if (media.type === 'video') {
+    return `
+      <figure class="article-modal-hero-image article-modal-media-video">
+        <video controls preload="metadata">
+          <source src="${escapeHtml(media.url)}" type="${escapeHtml(media.mimeType)}">
+        </video>
+      </figure>
+    `;
+  }
+
+  return `<figure class="article-modal-hero-image"><img src="${escapeHtml(media.url)}" alt="${escapeHtml(entry.title)}"></figure>`;
+}
+
+function getMediaInfo(url) {
+  const mediaUrl = String(url || '').trim();
+  if (!mediaUrl) return { type: 'none' };
+
+  const youtubeId = getYouTubeVideoId(mediaUrl);
+  if (youtubeId) {
+    return {
+      type: 'youtube',
+      embedUrl: `https://www.youtube.com/embed/${youtubeId}`,
+    };
+  }
+
+  const cleanUrl = mediaUrl.split(/[?#]/)[0].toLowerCase();
+  if (cleanUrl.endsWith('.mp4')) return { type: 'video', url: mediaUrl, mimeType: 'video/mp4' };
+  if (cleanUrl.endsWith('.webm')) return { type: 'video', url: mediaUrl, mimeType: 'video/webm' };
+  if (cleanUrl.endsWith('.ogg') || cleanUrl.endsWith('.ogv')) return { type: 'video', url: mediaUrl, mimeType: 'video/ogg' };
+
+  return { type: 'image', url: mediaUrl };
+}
+
+function getYouTubeVideoId(url) {
+  const directMatch = String(url || '').match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?[^#\s]*v=|embed\/|shorts\/))([A-Za-z0-9_-]{6,})/i);
+  if (directMatch?.[1]) return directMatch[1];
+
+  try {
+    const parsedUrl = new URL(url, window.location.href);
+    const host = parsedUrl.hostname.replace(/^www\./, '').toLowerCase();
+
+    if (host === 'youtu.be') {
+      return parsedUrl.pathname.split('/').filter(Boolean)[0] || '';
+    }
+
+    if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'music.youtube.com') {
+      if (parsedUrl.pathname.startsWith('/embed/')) return parsedUrl.pathname.split('/').filter(Boolean)[1] || '';
+      if (parsedUrl.pathname.startsWith('/shorts/')) return parsedUrl.pathname.split('/').filter(Boolean)[1] || '';
+      return parsedUrl.searchParams.get('v') || '';
+    }
+  } catch (error) {
+    return '';
+  }
+
+  return '';
 }
 
 function renderPublicationArchive() {
@@ -598,11 +702,9 @@ export async function displayFullArticle(slug) {
   const readTimeEl = $('#articleModalReadTime');
   readTimeEl.html(`<i class="fa-regular fa-clock text-[#FFD700]"></i> ${entry.readTime} min read`).removeClass('hidden');
 
-  const heroImageHtml = entry.heroImage
-    ? `<figure class="article-modal-hero-image"><img src="${escapeHtml(entry.heroImage)}" alt="${escapeHtml(entry.title)}"></figure>`
-    : '';
+  const heroImageHtml = renderModalMedia(entry);
   const markdownHtml = renderMarkdown(entry.content || '');
-  $('#articleModalContent').html(DOMPurify.sanitize(heroImageHtml + markdownHtml));
+  $('#articleModalContent').html(sanitizeArticleContent(heroImageHtml + markdownHtml));
 
   const sourceLink = $('#articleModalSourceLink');
   if (entry.source?.startsWith('http')) {
@@ -776,6 +878,13 @@ function stripImages(content) {
 function renderMarkdown(content) {
   if (!content) return '';
   return marked.parse(replaceEmojiShortcodes(normalizeMarkdownInput(content)));
+}
+
+function sanitizeArticleContent(html) {
+  return DOMPurify.sanitize(html, {
+    ADD_TAGS: ['iframe'],
+    ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'loading'],
+  });
 }
 
 function normalizeMarkdownInput(content) {
