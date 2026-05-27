@@ -61,7 +61,7 @@
         <h1 class="text-xl font-semibold mt-6 mb-3 text-white text-center">Market Trends Over Time</h1>
         <div class="h-1 w-24 bg-[#FFD700] mx-auto rounded-full"></div><br>
 
-        <div class="mb-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="mb-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div class="col-span-1">
                 <label for="region-filter-select" class="block text-white text-sm font-bold mb-2">Filter by Region:</label>
                 <select id="region-filter-select" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
@@ -77,24 +77,6 @@
                     <option value="">All Characters</option>
                 </select>
             </div>
-            <!-- <div class="col-span-1">
-                <label for="shard-filter-select" class="block text-white text-sm font-bold mb-2">Filter by Shard:</label>
-                <select id="shard-filter-select" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                    <option value="all">All Shards</option>
-                </select>
-            </div>
-            <div class="col-span-1">
-                <label for="province-filter-select" class="block text-white text-sm font-bold mb-2">Filter by Province:</label>
-                <select id="province-filter-select" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                    <option value="all">All Provinces</option>
-                </select>
-            </div>
-            <div class="col-span-1">
-                <label for="home-valley-filter-select" class="block text-white text-sm font-bold mb-2">Filter by Home Valley:</label>
-                <select id="home-valley-filter-select" class="shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                    <option value="all">All Home Valleys</option>
-                </select>
-            </div> -->
             <div class="col-span-1 flex items-end">
                 <button id="clear-filters-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-150 ease-in-out">
                     Clear Filters
@@ -103,19 +85,13 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <section class="mb-4 p-3 bg-gray-800 rounded-md shadow-md">
+            <section class="mb-4 p-3 bg-gray-800 rounded-md shadow-md md:col-span-2">
                 <h2 class="text-lg font-semibold mb-2 text-white">Daily Total Sales (Gold)</h2>
                 <div class="relative h-48">
                     <canvas id="daily-sales-chart"></canvas>
                 </div>
             </section>
 
-            <section class="mb-4 p-3 bg-gray-800 rounded-md shadow-md">
-                <h2 class="text-lg font-semibold mb-2 text-white">Daily Average Sale Price</h2>
-                <div class="relative h-48">
-                    <canvas id="daily-avg-price-chart"></canvas>
-                </div>
-            </section>
             <section class="mb-4 p-3 bg-gray-800 rounded-md shadow-md">
                 <h2 class="text-lg font-semibold mb-2 text-white">Daily Listings Vs Sales</h2>
                 <div class="relative h-48">
@@ -149,7 +125,13 @@
                     </select>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                         <section class="mb-4 p-3 bg-gray-800 rounded-md shadow-md">
-                            <h3 class="text-white text-sm mb-1">Avg Price per Unit</h3>
+                            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2">
+                                <h3 id="specific-item-price-heading" class="text-white text-sm">Avg Price per Unit</h3>
+                                <div class="inline-flex rounded-md overflow-hidden border border-gray-600 self-start sm:self-auto">
+                                    <button id="priceUnitToggle" type="button" class="bg-blue-700 text-white text-xs font-semibold px-3 py-1.5">Unit</button>
+                                    <button id="priceStackToggle" type="button" class="bg-gray-700 hover:bg-gray-600 text-white text-xs font-semibold px-3 py-1.5">Stack</button>
+                                </div>
+                            </div>
                             <div class="relative h-48">
                                 <canvas id="specific-item-price-chart-unit"></canvas>
                             </div>
@@ -161,12 +143,6 @@
                             </div>
                         </section>
                     </div>
-                    <section class="mb-4 p-3 bg-gray-800 rounded-md shadow-md mt-4">
-                        <h3 class="text-white text-lg font-semibold mb-2">Price Range and Sale Price Trend (Per Unit)</h3>
-                        <div class="relative h-96">
-                            <canvas id="specific-item-listing-vs-sale-chart"></canvas>
-                        </div>
-                    </section>
                 </div>
                             
 

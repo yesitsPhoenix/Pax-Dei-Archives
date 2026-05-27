@@ -24,22 +24,94 @@ const salesVolumeByCategoryList = document.getElementById('sales-volume-by-categ
 // ===== CHART INSTANCES =====
 let dailySalesChartInstance = null;
 let dailyMarketActivityChartInstance = null;
-let specificItemPriceChartInstance = null;
-let dailyAvgPriceChartInstance = null;
 let dailyAvgListingTimeChartInstance = null;
 let specificItemPriceChartUnitInstance = null;
 let specificItemPriceChartStackInstance = null;
-let specificItemListingVsSaleChartInstance = null;
 
 // ===== STATE VARIABLES =====
 let currentSelectedItemId = null;
 let currentSelectedRegion = 'all';
 let currentSelectedCharacterId = null;
 let currentTimeframe = 'daily';
+let currentSpecificItemPriceMetric = 'unit';
+
+const DAILY_LOOKBACK_DAYS = 120;
+const MAX_TRENDS_ROWS = 5000;
 
 // ===== FORMATTING UTILITIES =====
 const formatCurrency = (amount) => (amount !== null && amount !== undefined) ? amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : 'N/A';
 const formatDecimal = (amount, decimals = 2) => (amount !== null && amount !== undefined) ? parseFloat(amount).toFixed(decimals) : 'N/A';
+
+function normalizeFilterValue(value) {
+  return value && value !== 'all' ? value : null;
+}
+
+function applyListingFilters(query) {
+  const region = normalizeFilterValue(currentSelectedRegion);
+
+  if (region) query = query.eq('market_stalls.region', region);
+  if (currentSelectedCharacterId) query = query.eq('character_id', currentSelectedCharacterId);
+
+  return query;
+}
+
+function applySalesFilters(query) {
+  const region = normalizeFilterValue(currentSelectedRegion);
+
+  if (region) query = query.eq('market_listings.market_stalls.region', region);
+  if (currentSelectedCharacterId) query = query.eq('market_listings.character_id', currentSelectedCharacterId);
+
+  return query;
+}
+
+function dateKey(value) {
+  return new Date(value).toISOString().split('T')[0];
+}
+
+function applyDailyLookback(rows, dateField) {
+  if (currentTimeframe !== 'daily' || !rows?.length) return rows || [];
+
+  const validRows = rows.filter(row => row[dateField]);
+  const latestTime = Math.max(...validRows.map(row => new Date(row[dateField]).getTime()));
+  if (!Number.isFinite(latestTime)) return validRows;
+
+  return applyDailyLookbackFromTime(validRows, dateField, latestTime);
+}
+
+function applyDailyLookbackFromTime(rows, dateField, latestTime) {
+  if (currentTimeframe !== 'daily' || !rows?.length || !Number.isFinite(latestTime)) return rows || [];
+
+  const cutoff = new Date(latestTime);
+  cutoff.setDate(cutoff.getDate() - (DAILY_LOOKBACK_DAYS - 1));
+  return rows.filter(row => row[dateField] && new Date(row[dateField]) >= cutoff);
+}
+
+function average(values) {
+  const nums = values.map(Number).filter(Number.isFinite);
+  return nums.length ? nums.reduce((sum, value) => sum + value, 0) / nums.length : 0;
+}
+
+function addSelectOption(select, value, label) {
+  const option = document.createElement('option');
+  option.value = value;
+  option.textContent = label;
+  select.appendChild(option);
+}
+
+function getItemNameFromSale(sale) {
+  const item = sale.market_listings?.items;
+  return Array.isArray(item) ? item[0]?.item_name : item?.item_name;
+}
+
+function getCategoryNameFromSale(sale) {
+  const item = Array.isArray(sale.market_listings?.items)
+    ? sale.market_listings.items[0]
+    : sale.market_listings?.items;
+  const category = Array.isArray(item?.item_categories)
+    ? item.item_categories[0]
+    : item?.item_categories;
+  return category?.category_name || 'Uncategorized';
+}
 
 // ===== CHART RENDERING =====
 
@@ -92,7 +164,9 @@ function renderChart(chartId, labels, datasetsConfig, type = 'line') {
       }
       return `${context.dataset.label}: ${formatDecimal(value)} Gold`;
     };
-    yAxisTitleText = chartId === 'specific-item-price-chart-stack' ? 'Average Stack Size' : 'Price (Gold)';
+    yAxisTitleText = chartId === 'specific-item-price-chart-stack'
+      ? 'Average Stack Size'
+      : `Price (Gold per ${currentSpecificItemPriceMetric === 'stack' ? 'Stack' : 'Unit'})`;
   } else if (chartId.includes('sales-chart')) {
     yAxisCallback = function(value) { return formatCurrency(value); };
     tooltipLabelCallback = function(context) {
@@ -100,13 +174,6 @@ function renderChart(chartId, labels, datasetsConfig, type = 'line') {
       return `${context.dataset.label}: ${formatCurrency(value)} Gold`;
     };
     yAxisTitleText = 'Total Gold';
-  } else if (chartId === 'specific-item-listing-vs-sale-chart') {
-    yAxisCallback = function(value) { return formatCurrency(value); };
-    tooltipLabelCallback = function(context) {
-      let value = context.parsed.y;
-      return `${context.dataset.label}: ${formatCurrency(value)} Gold`;
-    };
-    yAxisTitleText = 'Price (Gold per Stack)';
   }
 
   const chartConfig = {
@@ -162,21 +229,15 @@ function renderChart(chartId, labels, datasetsConfig, type = 'line') {
   } else if (chartId === 'daily-market-activity-chart' && dailyMarketActivityChartInstance) {
     dailyMarketActivityChartInstance.destroy();
     dailyMarketActivityChartInstance = null;
-  } else if (chartId === 'specific-item-price-chart-unit' && specificItemPriceChartInstance) {
-    specificItemPriceChartInstance.destroy();
-    specificItemPriceChartInstance = null;
+  } else if (chartId === 'specific-item-price-chart-unit' && specificItemPriceChartUnitInstance) {
+    specificItemPriceChartUnitInstance.destroy();
+    specificItemPriceChartUnitInstance = null;
   } else if (chartId === 'specific-item-price-chart-stack' && specificItemPriceChartStackInstance) {
     specificItemPriceChartStackInstance.destroy();
     specificItemPriceChartStackInstance = null;
-  } else if (chartId === 'daily-avg-price-chart' && dailyAvgPriceChartInstance) {
-    dailyAvgPriceChartInstance.destroy();
-    dailyAvgPriceChartInstance = null;
   } else if (chartId === 'daily-avg-listing-time-chart' && dailyAvgListingTimeChartInstance) {
     dailyAvgListingTimeChartInstance.destroy();
     dailyAvgListingTimeChartInstance = null;
-  } else if (chartId === 'specific-item-listing-vs-sale-chart' && specificItemListingVsSaleChartInstance) {
-    specificItemListingVsSaleChartInstance.destroy();
-    specificItemListingVsSaleChartInstance = null;
   }
 
   const newChart = new Chart(ctx, chartConfig);
@@ -184,11 +245,9 @@ function renderChart(chartId, labels, datasetsConfig, type = 'line') {
   // Store chart instance
   if (chartId === 'daily-sales-chart') dailySalesChartInstance = newChart;
   if (chartId === 'daily-market-activity-chart') dailyMarketActivityChartInstance = newChart;
-  if (chartId === 'specific-item-price-chart-unit') specificItemPriceChartInstance = newChart;
+  if (chartId === 'specific-item-price-chart-unit') specificItemPriceChartUnitInstance = newChart;
   if (chartId === 'specific-item-price-chart-stack') specificItemPriceChartStackInstance = newChart;
-  if (chartId === 'daily-avg-price-chart') dailyAvgPriceChartInstance = newChart;
   if (chartId === 'daily-avg-listing-time-chart') dailyAvgListingTimeChartInstance = newChart;
-  if (chartId === 'specific-item-listing-vs-sale-chart') specificItemListingVsSaleChartInstance = newChart;
   
   return newChart;
 }
@@ -211,21 +270,94 @@ async function loadListTrendsData() {
   salesVolumeByCategoryList.innerHTML = '<p class="text-white">Loading sales volume...</p>';
 
   try {
-    // Use marketState to fetch trends data (this will be cached automatically)
-    const data = await marketState.getMarketStats(currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all');
+    let salesQuery = supabase
+      .from('sales')
+      .select(`
+        quantity_sold,
+        sale_price_per_unit,
+        total_sale_price,
+        market_listings!inner (
+          item_id,
+          character_id,
+          quantity_listed,
+          total_listed_price,
+          items (
+            item_name,
+            item_categories:category_id ( category_name )
+          ),
+          market_stalls!inner ( region )
+        )
+      `)
+      .order('sale_date', { ascending: false })
+      .limit(MAX_TRENDS_ROWS);
 
-    if (!data) {
-      const noDataMessage = '<p class="text-white">No data returned.</p>';
+    salesQuery = applySalesFilters(salesQuery);
+    const { data: salesRows, error } = await salesQuery;
+
+    if (error) throw error;
+
+    const rows = salesRows || [];
+    if (!rows.length) {
+      const noDataMessage = '<p class="text-white">No sales data found for the current filters.</p>';
       highestSalesList.innerHTML = noDataMessage;
       mostSoldQuantityList.innerHTML = noDataMessage;
       topRevenueItemsList.innerHTML = noDataMessage;
       salesVolumeByCategoryList.innerHTML = noDataMessage;
-      console.warn('No data returned from getMarketStats.');
       return;
     }
 
+    const highestSales = rows
+      .map(sale => ({
+        item_name: getItemNameFromSale(sale) || 'Unknown Item',
+        category_name: getCategoryNameFromSale(sale),
+        total_sale_price: Number(sale.total_sale_price) || 0,
+        quantity_sold: Number(sale.quantity_sold) || 0,
+        sale_price_per_unit: Number(sale.sale_price_per_unit) || 0,
+        quantity_listed: Number(sale.market_listings?.quantity_listed) || 0,
+        total_listed_price: Number(sale.market_listings?.total_listed_price) || 0
+      }))
+      .sort((a, b) => b.total_sale_price - a.total_sale_price)
+      .slice(0, 10);
+
+    const itemStats = new Map();
+    const categoryStats = new Map();
+
+    rows.forEach(sale => {
+      const itemId = sale.market_listings?.item_id || getItemNameFromSale(sale) || 'unknown';
+      const itemName = getItemNameFromSale(sale) || 'Unknown Item';
+      const categoryName = getCategoryNameFromSale(sale);
+      const quantitySold = Number(sale.quantity_sold) || 0;
+      const totalSalePrice = Number(sale.total_sale_price) || 0;
+      const pricePerUnit = Number(sale.sale_price_per_unit) || 0;
+      const stackQty = Number(sale.market_listings?.quantity_listed) || quantitySold || 0;
+      const stackPrice = Number(sale.market_listings?.total_listed_price) || totalSalePrice || 0;
+
+      if (!itemStats.has(itemId)) {
+        itemStats.set(itemId, {
+          item_name: itemName,
+          category_name: categoryName,
+          total_quantity_sold: 0,
+          total_revenue: 0,
+          unitPrices: [],
+          stackQuantities: [],
+          stackPrices: []
+        });
+      }
+
+      const item = itemStats.get(itemId);
+      item.total_quantity_sold += quantitySold;
+      item.total_revenue += totalSalePrice;
+      item.unitPrices.push(pricePerUnit);
+      item.stackQuantities.push(stackQty);
+      item.stackPrices.push(stackPrice);
+
+      if (!categoryStats.has(categoryName)) {
+        categoryStats.set(categoryName, { category_name: categoryName, total_quantity_sold: 0 });
+      }
+      categoryStats.get(categoryName).total_quantity_sold += quantitySold;
+    });
+
     // Render highest individual sales
-    const highestSales = data.get_highest_individual_sales || [];
     if (highestSales.length > 0) {
       highestSalesList.innerHTML = highestSales.map((sale, index) => `
         <div class="p-2 bg-gray-700 rounded-sm shadow-sm flex flex-col md:flex-row justify-between items-center gap-1">
@@ -248,7 +380,15 @@ async function loadListTrendsData() {
     }
 
     // Render most sold items by quantity
-    const mostSoldItems = data.get_most_sold_items_by_quantity || [];
+    const mostSoldItems = Array.from(itemStats.values())
+      .map(item => ({
+        ...item,
+        average_price_per_unit: average(item.unitPrices),
+        avg_stack_quantity: average(item.stackQuantities),
+        avg_stack_price: average(item.stackPrices)
+      }))
+      .sort((a, b) => b.total_quantity_sold - a.total_quantity_sold)
+      .slice(0, 10);
     if (mostSoldItems.length > 0) {
       mostSoldQuantityList.innerHTML = mostSoldItems.map((item, index) => `
         <div class="p-2 bg-gray-700 rounded-sm shadow-sm flex flex-col md:flex-row justify-between items-center gap-1">
@@ -271,7 +411,9 @@ async function loadListTrendsData() {
     }
 
     // Render top profitable items
-    const topRevenueItems = data.top_profitable_items || [];
+    const topRevenueItems = Array.from(itemStats.values())
+      .sort((a, b) => b.total_revenue - a.total_revenue)
+      .slice(0, 10);
     if (topRevenueItems.length > 0) {
       topRevenueItemsList.innerHTML = topRevenueItems.map((item, index) => `
         <div class="p-2 bg-gray-700 rounded-sm shadow-sm flex flex-col md:flex-row justify-between items-center gap-1">
@@ -292,7 +434,9 @@ async function loadListTrendsData() {
     }
 
     // Render sales volume by category
-    const salesVolumeByCategory = data.sales_volume_by_category || [];
+    const salesVolumeByCategory = Array.from(categoryStats.values())
+      .sort((a, b) => b.total_quantity_sold - a.total_quantity_sold)
+      .slice(0, 10);
     if (salesVolumeByCategory.length > 0) {
       salesVolumeByCategoryList.innerHTML = salesVolumeByCategory.map((category, index) => `
         <div class="p-2 bg-gray-700 rounded-sm shadow-sm flex flex-col md:flex-row justify-between items-center gap-1">
@@ -324,9 +468,33 @@ async function loadListTrendsData() {
  */
 async function loadDailyTotalSalesChart() {
   try {
-    const data = await marketState.getDailySalesData(
-      currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all',
-      currentSelectedCharacterId
+    let query = supabase
+      .from('sales')
+      .select(`
+        sale_date,
+        total_sale_price,
+        market_listings!inner (
+          character_id,
+          market_stalls!inner ( region )
+        )
+      `)
+      .order('sale_date', { ascending: false })
+      .limit(MAX_TRENDS_ROWS);
+
+    query = applySalesFilters(query);
+    const { data: rawData, error } = await query;
+    if (error) throw error;
+
+    const totalsByDate = new Map();
+    (rawData || []).forEach(row => {
+      const key = dateKey(row.sale_date);
+      totalsByDate.set(key, (totalsByDate.get(key) || 0) + (Number(row.total_sale_price) || 0));
+    });
+
+    const data = applyDailyLookback(
+      Array.from(totalsByDate, ([sale_date, total_gold_sold]) => ({ sale_date, total_gold_sold }))
+        .sort((a, b) => a.sale_date.localeCompare(b.sale_date)),
+      'sale_date'
     );
 
     if (!data || data.length === 0) {
@@ -339,7 +507,7 @@ async function loadDailyTotalSalesChart() {
         ctx.font = '14px Arial';
         ctx.fillText('No data available based on current filters.', ctx.canvas.width / 2, ctx.canvas.height / 2);
       }
-      console.warn('No data from getDailySalesData.');
+      console.warn('No data from sales query.');
       return;
     }
 
@@ -379,10 +547,62 @@ async function loadDailyTotalSalesChart() {
  */
 async function loadDailyMarketActivityChart() {
   try {
-    const data = await marketState.getMarketActivityData(
-      currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all',
-      currentSelectedCharacterId
+    let listingsQuery = supabase
+      .from('market_listings')
+      .select(`
+        listing_date,
+        character_id,
+        market_stalls!inner ( region )
+      `)
+      .order('listing_date', { ascending: false })
+      .limit(MAX_TRENDS_ROWS);
+    listingsQuery = applyListingFilters(listingsQuery);
+
+    let salesQuery = supabase
+      .from('sales')
+      .select(`
+        sale_date,
+        market_listings!inner (
+          character_id,
+          market_stalls!inner ( region )
+        )
+      `)
+      .order('sale_date', { ascending: false })
+      .limit(MAX_TRENDS_ROWS);
+    salesQuery = applySalesFilters(salesQuery);
+
+    const [{ data: listingsRows, error: listingsError }, { data: salesRows, error: salesError }] = await Promise.all([
+      listingsQuery,
+      salesQuery
+    ]);
+
+    if (listingsError) throw listingsError;
+    if (salesError) throw salesError;
+
+    const listingsByDate = new Map();
+    (listingsRows || []).forEach(row => {
+      const key = dateKey(row.listing_date);
+      listingsByDate.set(key, (listingsByDate.get(key) || 0) + 1);
+    });
+
+    const salesByDate = new Map();
+    (salesRows || []).forEach(row => {
+      const key = dateKey(row.sale_date);
+      salesByDate.set(key, (salesByDate.get(key) || 0) + 1);
+    });
+
+    const listingDailyRows = Array.from(listingsByDate, ([date, count]) => ({ date, count }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    const salesDailyRows = Array.from(salesByDate, ([date, count]) => ({ date, count }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    const latestActivityTime = Math.max(
+      ...[...listingDailyRows, ...salesDailyRows].map(row => new Date(row.date).getTime()).filter(Number.isFinite)
     );
+
+    const data = {
+      new_listings: applyDailyLookbackFromTime(listingDailyRows, 'date', latestActivityTime),
+      sales_count: applyDailyLookbackFromTime(salesDailyRows, 'date', latestActivityTime)
+    };
 
     const newListingsData = data.new_listings || [];
     const salesCountData = data.sales_count || [];
@@ -448,75 +668,6 @@ async function loadDailyMarketActivityChart() {
 }
 
 /**
- * Load daily average sale price chart
- * Direct RPC call (not cached in state manager yet)
- */
-async function loadDailyAverageItemPriceChart() {
-  try {
-    const { data, error } = await supabase.rpc('get_daily_average_sale_price', {
-      p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all',
-      p_character_id: currentSelectedCharacterId
-    });
-
-    if (error) {
-      if (dailyAvgPriceChartInstance) dailyAvgPriceChartInstance.destroy();
-      const ctx = document.getElementById('daily-avg-price-chart')?.getContext('2d');
-      if (ctx) {
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#FF6666';
-        ctx.font = '14px Arial';
-        ctx.fillText(`Error: ${error.message}`, ctx.canvas.width / 2, ctx.canvas.height / 2);
-      }
-      console.error('Error in get_daily_average_sale_price:', error);
-      return;
-    }
-
-    if (!data || data.length === 0) {
-      if (dailyAvgPriceChartInstance) dailyAvgPriceChartInstance.destroy();
-      const ctx = document.getElementById('daily-avg-price-chart')?.getContext('2d');
-      if (ctx) {
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#B0B0B0';
-        ctx.font = '14px Arial';
-        ctx.fillText('No data available based on current filters.', ctx.canvas.width / 2, ctx.canvas.height / 2);
-      }
-      console.warn('No data from get_daily_average_sale_price.');
-      return;
-    }
-
-    const labels = data.map(row => row.sale_date);
-    const prices = data.map(row => row.average_price);
-
-    const datasetsConfig = [{
-      label: 'Daily Average Item Sold Price',
-      data: prices,
-      borderColor: 'rgb(255, 99, 132)',
-      backgroundColor: 'rgba(255, 99, 132, 0.2)'
-    }];
-
-    if (dailyAvgPriceChartInstance) dailyAvgPriceChartInstance.destroy();
-    dailyAvgPriceChartInstance = renderChart(
-      'daily-avg-price-chart',
-      labels,
-      datasetsConfig
-    );
-  } catch (err) {
-    if (dailyAvgPriceChartInstance) dailyAvgPriceChartInstance.destroy();
-    const ctx = document.getElementById('daily-avg-price-chart')?.getContext('2d');
-    if (ctx) {
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#FF6666';
-      ctx.font = '14px Arial';
-      ctx.fillText(`An unexpected error occurred: ${err.message}`, ctx.canvas.width / 2, ctx.canvas.height / 2);
-    }
-    console.error('Unexpected error in loadDailyAverageItemPriceChart:', err);
-  }
-}
-
-/**
  * Populate character dropdown
  * Uses state manager's cached character data
  */
@@ -554,10 +705,20 @@ async function populateCharacterDropdown() {
  */
 async function loadDailyAverageListingTimeframeChart() {
   try {
-    const { data, error } = await supabase.rpc('get_average_listing_timeframe', {
-      p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all',
-      p_character_id: currentSelectedCharacterId
-    });
+    let query = supabase
+      .from('sales')
+      .select(`
+        sale_date,
+        market_listings!inner (
+          listing_date,
+          character_id,
+          market_stalls!inner ( region )
+        )
+      `)
+      .order('sale_date', { ascending: false })
+      .limit(MAX_TRENDS_ROWS);
+    query = applySalesFilters(query);
+    const { data: rawData, error } = await query;
     
     if (error) {
       if (dailyAvgListingTimeChartInstance) dailyAvgListingTimeChartInstance.destroy();
@@ -569,9 +730,29 @@ async function loadDailyAverageListingTimeframeChart() {
         ctx.font = '14px Arial';
         ctx.fillText(`Error: ${error.message}`, ctx.canvas.width / 2, ctx.canvas.height / 2);
       }
-      console.error('Error in get_average_listing_timeframe:', error);
+      console.error('Error loading average listing timeframe:', error);
       return;
     }
+
+    const grouped = new Map();
+    (rawData || []).forEach(row => {
+      const saleDate = new Date(row.sale_date);
+      const listingDate = new Date(row.market_listings?.listing_date);
+      if (Number.isNaN(saleDate.getTime()) || Number.isNaN(listingDate.getTime())) return;
+
+      const key = dateKey(row.sale_date);
+      const hours = Math.max((saleDate - listingDate) / (1000 * 60 * 60), 0);
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key).push(hours);
+    });
+
+    const data = applyDailyLookback(
+      Array.from(grouped, ([sale_date, hours]) => ({
+        sale_date,
+        average_time_hours: average(hours)
+      })).sort((a, b) => a.sale_date.localeCompare(b.sale_date)),
+      'sale_date'
+    );
     
     if (!data || data.length === 0) {
       if (dailyAvgListingTimeChartInstance) dailyAvgListingTimeChartInstance.destroy();
@@ -583,7 +764,7 @@ async function loadDailyAverageListingTimeframeChart() {
         ctx.font = '14px Arial';
         ctx.fillText('No data available based on current filters.', ctx.canvas.width / 2, ctx.canvas.height / 2);
       }
-      console.warn('No data from get_average_listing_timeframe.');
+      console.warn('No data for average listing timeframe.');
       return;
     }
     
@@ -647,11 +828,25 @@ async function loadSpecificItemPriceChart(itemId = null) {
   }
 
   try {
-    const { data, error } = await supabase.rpc('get_item_price_history', {
-      p_item_id: itemId,
-      p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all',
-      p_character_id: currentSelectedCharacterId
-    });
+    let query = supabase
+      .from('sales')
+      .select(`
+        sale_date,
+        sale_price_per_unit,
+        total_sale_price,
+        quantity_sold,
+        market_listings!inner (
+          item_id,
+          character_id,
+          items ( item_name ),
+          market_stalls!inner ( region )
+        )
+      `)
+      .eq('market_listings.item_id', itemId)
+      .order('sale_date', { ascending: false })
+      .limit(MAX_TRENDS_ROWS);
+    query = applySalesFilters(query);
+    const { data: rawData, error } = await query;
 
     if (error) {
       ['specific-item-price-chart-unit', 'specific-item-price-chart-stack'].forEach(id => {
@@ -675,7 +870,7 @@ async function loadSpecificItemPriceChart(itemId = null) {
       return;
     }
 
-    if (!data || data.length === 0) {
+    if (!rawData || rawData.length === 0) {
       ['specific-item-price-chart-unit', 'specific-item-price-chart-stack'].forEach(id => {
         const ctx = document.getElementById(id)?.getContext('2d');
         if (ctx) {
@@ -697,10 +892,41 @@ async function loadSpecificItemPriceChart(itemId = null) {
       return;
     }
 
+    const grouped = new Map();
+    rawData.forEach(row => {
+      const key = dateKey(row.sale_date);
+      if (!grouped.has(key)) grouped.set(key, { unitPrices: [], stackPrices: [], stackSizes: [], itemName: getItemNameFromSale(row) });
+      const bucket = grouped.get(key);
+      bucket.unitPrices.push(Number(row.sale_price_per_unit) || 0);
+      bucket.stackPrices.push(Number(row.total_sale_price) || 0);
+      bucket.stackSizes.push(Number(row.quantity_sold) || 0);
+      if (!bucket.itemName) bucket.itemName = getItemNameFromSale(row);
+    });
+
+    const data = applyDailyLookback(
+      Array.from(grouped, ([sale_date, bucket]) => ({
+        sale_date,
+        average_price_per_unit: average(bucket.unitPrices),
+        average_stack_price: average(bucket.stackPrices),
+        average_stack_size: average(bucket.stackSizes),
+        item_name: bucket.itemName
+      })).sort((a, b) => a.sale_date.localeCompare(b.sale_date)),
+      'sale_date'
+    );
+
     const labels = data.map(row => row.sale_date);
-    const pricesPerUnit = data.map(row => parseFloat(row.average_price));
+    const averagePrices = data.map(row => currentSpecificItemPriceMetric === 'stack'
+      ? parseFloat(row.average_stack_price)
+      : parseFloat(row.average_price_per_unit)
+    );
     const averageStackSizes = data.map(row => parseFloat(row.average_stack_size));
     const itemName = data.length > 0 ? data[0].item_name : `Item ID: ${itemId}`;
+    const priceHeading = document.getElementById('specific-item-price-heading');
+    if (priceHeading) {
+      priceHeading.textContent = currentSpecificItemPriceMetric === 'stack'
+        ? 'Avg Price per Stack'
+        : 'Avg Price per Unit';
+    }
 
     if (specificItemPriceChartUnitInstance) {
       specificItemPriceChartUnitInstance.destroy();
@@ -715,8 +941,8 @@ async function loadSpecificItemPriceChart(itemId = null) {
       'specific-item-price-chart-unit',
       labels,
       [{
-        label: `${itemName} - Price per Unit`,
-        data: pricesPerUnit,
+        label: `${itemName} - Price per ${currentSpecificItemPriceMetric === 'stack' ? 'Stack' : 'Unit'}`,
+        data: averagePrices,
         borderColor: 'rgb(54, 162, 235)',
         backgroundColor: 'rgba(54, 162, 235, 0.2)'
       }]
@@ -751,153 +977,6 @@ async function loadSpecificItemPriceChart(itemId = null) {
       specificItemPriceChartStackInstance.destroy();
       specificItemPriceChartStackInstance = null;
     }
-  }
-}
-
-/**
- * Load specific item listing vs sale chart
- * Compares average listing price vs average sale price over time
- */
-async function loadSpecificItemListingVsSaleChart(itemId) {
-  const chartId = 'specific-item-listing-vs-sale-chart';
-  
-  if (!itemId || itemId === 'all') {
-    const ctx = document.getElementById(chartId)?.getContext('2d');
-    if (ctx) {
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = '14px Arial';
-      ctx.fillText('Please select an item to view its price trend.', ctx.canvas.width / 2, ctx.canvas.height / 2);
-    }
-    if (specificItemListingVsSaleChartInstance) {
-      specificItemListingVsSaleChartInstance.destroy();
-      specificItemListingVsSaleChartInstance = null;
-    }
-    return;
-  }
-
-  try {
-    let listingsQuery = supabase
-      .from('market_listings')
-      .select(`
-        listing_date,
-        total_listed_price,
-        market_stalls!inner ( region )
-      `)
-      .eq('item_id', itemId);
-
-    if (currentSelectedRegion && currentSelectedRegion !== 'all') {
-      listingsQuery = listingsQuery.eq('market_stalls.region', currentSelectedRegion);
-    }
-    if (currentSelectedCharacterId) {
-      listingsQuery = listingsQuery.eq('character_id', currentSelectedCharacterId);
-    }
-
-    const { data: listingsData, error: listingsError } = await listingsQuery;
-
-    if (listingsError) throw listingsError;
-
-    let salesQuery = supabase
-      .from('sales')
-      .select(`
-        sale_date,
-        total_sale_price,
-        market_listings!inner (
-          item_id,
-          character_id,
-          market_stalls!inner ( region )
-        )
-      `)
-      .eq('market_listings.item_id', itemId);
-
-    if (currentSelectedRegion && currentSelectedRegion !== 'all') {
-      salesQuery = salesQuery.eq('market_listings.market_stalls.region', currentSelectedRegion);
-    }
-    if (currentSelectedCharacterId) {
-      salesQuery = salesQuery.eq('market_listings.character_id', currentSelectedCharacterId);
-    }
-
-    const { data: salesData, error: salesError } = await salesQuery;
-
-    if (salesError) throw salesError;
-
-    if ((!listingsData || listingsData.length === 0) && (!salesData || salesData.length === 0)) {
-      const ctx = document.getElementById(chartId)?.getContext('2d');
-      if (ctx) {
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#B0B0B0';
-        ctx.font = '14px Arial';
-        ctx.fillText('No listing or sales data available.', ctx.canvas.width / 2, ctx.canvas.height / 2);
-      }
-      if (specificItemListingVsSaleChartInstance) {
-        specificItemListingVsSaleChartInstance.destroy();
-        specificItemListingVsSaleChartInstance = null;
-      }
-      return;
-    }
-
-    const aggregatedData = {};
-
-    listingsData.forEach(item => {
-      const date = new Date(item.listing_date).toISOString().split('T')[0];
-      if (!aggregatedData[date]) aggregatedData[date] = { listingSum: 0, listingCount: 0, saleSum: 0, saleCount: 0 };
-      aggregatedData[date].listingSum += item.total_listed_price;
-      aggregatedData[date].listingCount++;
-    });
-
-    salesData.forEach(item => {
-      const date = new Date(item.sale_date).toISOString().split('T')[0];
-      if (!aggregatedData[date]) aggregatedData[date] = { listingSum: 0, listingCount: 0, saleSum: 0, saleCount: 0 };
-      aggregatedData[date].saleSum += item.total_sale_price;
-      aggregatedData[date].saleCount++;
-    });
-
-    const sortedDates = Object.keys(aggregatedData).sort();
-    const avgListingPrices = sortedDates.map(date => {
-      const d = aggregatedData[date];
-      return d.listingCount > 0 ? d.listingSum / d.listingCount : null;
-    });
-    const avgSalePrices = sortedDates.map(date => {
-      const d = aggregatedData[date];
-      return d.saleCount > 0 ? d.saleSum / d.saleCount : null;
-    });
-
-    const datasets = [
-      {
-        label: 'Avg Listing Price (Stack)',
-        data: avgListingPrices,
-        borderColor: 'rgb(255, 159, 64)',
-        backgroundColor: 'rgba(255, 159, 64, 0.2)',
-        spanGaps: true
-      },
-      {
-        label: 'Avg Sale Price (Stack)',
-        data: avgSalePrices,
-        borderColor: 'rgb(75, 192, 192)',
-        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-        spanGaps: true
-      }
-    ];
-
-    if (specificItemListingVsSaleChartInstance) {
-      specificItemListingVsSaleChartInstance.destroy();
-      specificItemListingVsSaleChartInstance = null;
-    }
-
-    specificItemListingVsSaleChartInstance = renderChart(chartId, sortedDates, datasets);
-
-  } catch (err) {
-    const ctx = document.getElementById(chartId)?.getContext('2d');
-    if (ctx) {
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#FF6666';
-      ctx.font = '14px Arial';
-      ctx.fillText(`Error: ${err.message}`, ctx.canvas.width / 2, ctx.canvas.height / 2);
-    }
-    console.error('Error loading item listing vs sale chart:', err);
   }
 }
 
@@ -944,10 +1023,8 @@ async function loadAllTrendsData() {
   await loadListTrendsData();
   await loadDailyTotalSalesChart();
   await loadDailyMarketActivityChart();
-  await loadDailyAverageItemPriceChart();
   await loadDailyAverageListingTimeframeChart();
   await loadSpecificItemPriceChart(currentSelectedItemId);
-  await loadSpecificItemListingVsSaleChart(currentSelectedItemId);
 }
 
 /**
@@ -959,7 +1036,7 @@ async function clearFilters() {
   const characterFilterSelect = document.getElementById('character-filter-select');
 
   if (itemFilterSelect) {
-    itemFilterSelect.value = '';
+    itemFilterSelect.value = 'all';
   }
   if (regionFilterSelect) {
     regionFilterSelect.value = 'all';
@@ -972,7 +1049,7 @@ async function clearFilters() {
   currentSelectedRegion = 'all';
   currentSelectedCharacterId = null;
 
-  await loadAllTrendsData();
+  await loadAllTrendsDataByTimeframe();
 }
 
 // ===== TIMEFRAME AGGREGATION (Weekly/Monthly) =====
@@ -1025,11 +1102,30 @@ async function loadAllTrendsDataByTimeframe() {
   const unit = currentTimeframe === 'weekly' ? 'week' : 'month';
 
   try {
-    // Use state manager methods for sales and market activity data
-    const salesData = await marketState.getDailySalesData(
-      currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all',
-      currentSelectedCharacterId
-    );
+    let salesQuery = supabase
+      .from('sales')
+      .select(`
+        sale_date,
+        total_sale_price,
+        market_listings!inner (
+          listing_date,
+          character_id,
+          market_stalls!inner ( region )
+        )
+      `)
+      .order('sale_date', { ascending: false })
+      .limit(MAX_TRENDS_ROWS);
+    salesQuery = applySalesFilters(salesQuery);
+    const { data: rawSalesData, error: salesError } = await salesQuery;
+    if (salesError) throw salesError;
+
+    const salesByDate = new Map();
+    (rawSalesData || []).forEach(row => {
+      const key = dateKey(row.sale_date);
+      salesByDate.set(key, (salesByDate.get(key) || 0) + (Number(row.total_sale_price) || 0));
+    });
+    const salesData = Array.from(salesByDate, ([sale_date, total_gold_sold]) => ({ sale_date, total_gold_sold }))
+      .sort((a, b) => a.sale_date.localeCompare(b.sale_date));
 
     if (salesData?.length) {
       const groupedSales = groupByPeriod(salesData, 'sale_date', 'total_gold_sold', period, 'sum');
@@ -1048,34 +1144,35 @@ async function loadAllTrendsDataByTimeframe() {
       updateTimeUnit(dailySalesChartInstance, unit);
     }
 
-    // Average price data (still using direct RPC)
-    const { data: avgPriceData } = await supabase.rpc('get_daily_average_sale_price', {
-      p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all',
-      p_character_id: currentSelectedCharacterId
+    let listingsQuery = supabase
+      .from('market_listings')
+      .select(`
+        listing_date,
+        character_id,
+        market_stalls!inner ( region )
+      `)
+      .order('listing_date', { ascending: false })
+      .limit(MAX_TRENDS_ROWS);
+    listingsQuery = applyListingFilters(listingsQuery);
+    const { data: rawListingsData, error: listingsError } = await listingsQuery;
+    if (listingsError) throw listingsError;
+
+    const listingsByDate = new Map();
+    (rawListingsData || []).forEach(row => {
+      const key = dateKey(row.listing_date);
+      listingsByDate.set(key, (listingsByDate.get(key) || 0) + 1);
     });
 
-    if (avgPriceData?.length) {
-      const groupedPrices = groupByPeriod(avgPriceData, 'sale_date', 'average_price', period, 'average');
-      const labels = groupedPrices.map(d => d.date);
-      const prices = groupedPrices.map(d => d.value);
-      const config = [
-        {
-          label: `${capitalized} Avg Sale Price`,
-          data: prices,
-          borderColor: 'rgb(255, 99, 132)',
-          backgroundColor: 'rgba(255, 99, 132, 0.2)'
-        }
-      ];
-      if (dailyAvgPriceChartInstance) dailyAvgPriceChartInstance.destroy();
-      dailyAvgPriceChartInstance = renderChart('daily-avg-price-chart', labels, config);
-      updateTimeUnit(dailyAvgPriceChartInstance, unit);
-    }
+    const salesCountByDate = new Map();
+    (rawSalesData || []).forEach(row => {
+      const key = dateKey(row.sale_date);
+      salesCountByDate.set(key, (salesCountByDate.get(key) || 0) + 1);
+    });
 
-    // Market activity data (using state manager)
-    const marketData = await marketState.getMarketActivityData(
-      currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all',
-      currentSelectedCharacterId
-    );
+    const marketData = {
+      new_listings: Array.from(listingsByDate, ([date, count]) => ({ date, count })),
+      sales_count: Array.from(salesCountByDate, ([date, count]) => ({ date, count }))
+    };
 
     if (marketData?.new_listings?.length || marketData?.sales_count?.length) {
       const listings = groupByPeriod(marketData.new_listings || [], 'date', 'count', period, 'sum');
@@ -1110,11 +1207,22 @@ async function loadAllTrendsDataByTimeframe() {
       updateTimeUnit(dailyMarketActivityChartInstance, unit);
     }
 
-    // Listing timeframe data (still using direct RPC)
-    const { data: listingData } = await supabase.rpc('get_average_listing_timeframe', {
-      p_region_filter: currentSelectedRegion ? currentSelectedRegion.toLowerCase() : 'all',
-      p_character_id: currentSelectedCharacterId
+    const listingHoursByDate = new Map();
+    (rawSalesData || []).forEach(row => {
+      const saleDate = new Date(row.sale_date);
+      const listingDate = new Date(row.market_listings?.listing_date);
+      if (Number.isNaN(saleDate.getTime()) || Number.isNaN(listingDate.getTime())) return;
+
+      const key = dateKey(row.sale_date);
+      const hours = Math.max((saleDate - listingDate) / (1000 * 60 * 60), 0);
+      if (!listingHoursByDate.has(key)) listingHoursByDate.set(key, []);
+      listingHoursByDate.get(key).push(hours);
     });
+
+    const listingData = Array.from(listingHoursByDate, ([sale_date, hours]) => ({
+      sale_date,
+      average_time_hours: average(hours)
+    }));
 
     if (listingData?.length) {
       const groupedListings = groupByPeriod(listingData, 'sale_date', 'average_time_hours', period, 'average');
@@ -1146,6 +1254,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const itemFilterSelect = document.getElementById('item-filter-select');
   const regionFilterSelect = document.getElementById('region-filter-select');
   const characterFilterSelect = document.getElementById('character-filter-select');
+  const priceUnitToggle = document.getElementById('priceUnitToggle');
+  const priceStackToggle = document.getElementById('priceStackToggle');
   const traderLoginContainer = document.getElementById('traderLoginContainer');
   const traderDiscordLoginButton = document.getElementById('traderDiscordLoginButton');
   const trendsContent = document.getElementById('trendsContent');
@@ -1216,23 +1326,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         itemFilterSelect.addEventListener('change', (event) => {
           currentSelectedItemId = event.target.value === 'all' || event.target.value === '' ? null : parseInt(event.target.value, 10);
           loadSpecificItemPriceChart(currentSelectedItemId);
-          loadSpecificItemListingVsSaleChart(currentSelectedItemId);
         });
       }
 
       if (regionFilterSelect) {
         regionFilterSelect.addEventListener('change', async (event) => {
           currentSelectedRegion = event.target.value;
-          await loadAllTrendsData();
+          await loadAllTrendsDataByTimeframe();
         });
       }
 
       if (characterFilterSelect) {
         characterFilterSelect.addEventListener('change', async (event) => {
           currentSelectedCharacterId = event.target.value || null;
-          await loadAllTrendsData();
+          await loadAllTrendsDataByTimeframe();
         });
       }
+
+      function setPriceMetric(metric) {
+        currentSpecificItemPriceMetric = metric;
+        if (priceUnitToggle && priceStackToggle) {
+          priceUnitToggle.classList.toggle('bg-blue-700', metric === 'unit');
+          priceUnitToggle.classList.toggle('bg-gray-700', metric !== 'unit');
+          priceStackToggle.classList.toggle('bg-blue-700', metric === 'stack');
+          priceStackToggle.classList.toggle('bg-gray-700', metric !== 'stack');
+        }
+        loadSpecificItemPriceChart(currentSelectedItemId);
+      }
+
+      if (priceUnitToggle) priceUnitToggle.addEventListener('click', () => setPriceMetric('unit'));
+      if (priceStackToggle) priceStackToggle.addEventListener('click', () => setPriceMetric('stack'));
 
       if (clearFiltersBtn) {
         clearFiltersBtn.addEventListener('click', clearFilters);
