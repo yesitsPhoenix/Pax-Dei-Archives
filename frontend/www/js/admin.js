@@ -689,6 +689,8 @@ function applyModalGating() {
 
     applySidebarLinkState('sidebarEditQuestLink',        currentUserHasQuestAccess, 'You do not have a quest editor role');
     applySidebarLinkState('sidebarCategorizeItemsLink', currentUserIsAdmin,        'Only admins can categorize items');
+    applySidebarLinkState('sidebarLedgerManagementLink', currentUserIsAdmin,        'Only admins can manage ledger data');
+    applySidebarLinkState('adminLedgerManagementCard',   currentUserIsAdmin,        'Only admins can manage ledger data');
     applySidebarLinkState('sidebarChangelogLink',       currentUserIsAdmin,        'Only admins can edit the changelog');
 
     // Show/hide Edit Lore link in the header nav dropdown

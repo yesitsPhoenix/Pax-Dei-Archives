@@ -116,6 +116,7 @@ export async function handleAdminAccess(user) {
         // categorize_items.html is restricted to is_admin only
         if (isAdmin) {
             allowedPages.add('categorize_items.html');
+            allowedPages.add('ledger_management.html');
         }
 
         // Quest editor: add/edit quests
@@ -199,7 +200,7 @@ export async function handleAdminAccess(user) {
 // ── Auth listener bootstrap ───────────────────────────────────────────────────
 
 // Pages that require specific roles to access. Everything else is freely accessible.
-const protectedPages = ['admin.html', 'publication_editor.html', 'categorize_items.html', 'edit_lore.html', 'edit_quest.html', 'panel.html', 'quest_flow.html', 'features.html'];
+const protectedPages = ['admin.html', 'publication_editor.html', 'categorize_items.html', 'ledger_management.html', 'edit_lore.html', 'edit_quest.html', 'panel.html', 'quest_flow.html', 'features.html'];
 
 export function setupAdminAuthListener() {
     const path        = window.location.pathname;

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pax Dei Archives - Ledger Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="frontend/www/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
+    <style>
+        body { color: #e2e8f0; }
+        .admin-card {
+            background: rgba(15, 23, 42, 0.82);
+            border: 1px solid rgba(139, 92, 246, 0.22);
+            box-shadow: 0 16px 30px rgba(0, 0, 0, 0.24);
+        }
+        .admin-input,
+        .admin-select {
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: #f8fafc;
+            border-radius: 0.5rem;
+            padding: 0.55rem 0.75rem;
+            outline: none;
+            min-height: 2.5rem;
+        }
+        .admin-input:focus,
+        .admin-select:focus { border-color: #8b5cf6; box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.18); }
+        .admin-table th {
+            position: sticky;
+            top: 0;
+            background: #1e293b;
+            color: #c4b5fd;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0;
+            z-index: 1;
+        }
+        .admin-table td,
+        .admin-table th {
+            padding: 0.75rem;
+            border-bottom: 1px solid rgba(51, 65, 85, 0.75);
+            vertical-align: top;
+        }
+        .admin-table tr:hover { background: rgba(139, 92, 246, 0.08); }
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            border-radius: 9999px;
+            padding: 0.2rem 0.55rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .status-active { background: rgba(34, 197, 94, 0.12); color: #86efac; border: 1px solid rgba(34, 197, 94, 0.25); }
+        .status-sold { background: rgba(59, 130, 246, 0.12); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.25); }
+        .status-cancelled { background: rgba(148, 163, 184, 0.12); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.25); }
+        .status-deleted { background: rgba(248, 113, 113, 0.12); color: #fca5a5; border: 1px solid rgba(248, 113, 113, 0.25); }
+        .status-normal { background: rgba(139, 92, 246, 0.12); color: #ddd6fe; border: 1px solid rgba(139, 92, 246, 0.25); }
+        .action-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.7rem;
+            font-size: 0.78rem;
+            font-weight: 700;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .action-danger { background: #dc2626; color: white; }
+        .action-danger:hover { background: #b91c1c; }
+        .action-muted { background: #334155; color: #cbd5e1; }
+        .action-muted:hover { background: #475569; color: white; }
+        .action-disabled { background: #1e293b; color: #64748b; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <div id="header-placeholder"></div>
+
+    <div id="ledgerAdminLoading" class="fixed inset-0 bg-gray-900/85 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div class="admin-card rounded-xl p-8 max-w-sm w-full text-center">
+            <div class="w-14 h-14 border-4 border-violet-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <h2 class="text-lg font-bold text-violet-300">Loading Ledger Management</h2>
+            <p class="text-sm text-gray-400 mt-2">Checking admin access...</p>
+        </div>
+    </div>
+
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <section id="ledgerAccessDenied" class="hidden max-w-xl mx-auto admin-card rounded-xl p-8 text-center mt-10">
+            <i class="fas fa-lock text-red-400 text-4xl mb-4"></i>
+            <h1 class="text-2xl font-bold text-white mb-2">Admin Access Required</h1>
+            <p class="text-gray-400">Ledger Management is restricted to admin users.</p>
+            <a href="admin.html" class="inline-flex mt-6 action-btn action-muted">
+                <i class="fas fa-arrow-left"></i> Admin Panel
+            </a>
+        </section>
+
+        <section id="ledgerManagementContent" class="hidden">
+            <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-6">
+                <div>
+                    <a href="admin.html" class="text-violet-300 hover:text-violet-200 text-sm font-semibold">
+                        <i class="fas fa-arrow-left mr-1"></i> Admin Panel
+                    </a>
+                    <h1 class="text-2xl font-bold text-white mt-3 flex items-center gap-3">
+                        <i class="fas fa-clipboard-list text-violet-400"></i>
+                        Ledger Management
+                    </h1>
+                    <p class="text-gray-400 text-sm mt-2">Clean up unsold ledger data while preserving sold market history.</p>
+                </div>
+                <button id="refreshLedgerManagementBtn" class="action-btn action-muted">
+                    <i class="fas fa-rotate-right"></i> Refresh
+                </button>
+            </div>
+
+            <section class="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
+                <div class="admin-card rounded-xl p-4">
+                    <p class="text-xs uppercase text-emerald-300 font-bold">Active Characters</p>
+                    <p id="statActiveCharacters" class="text-2xl font-black text-white mt-1">--</p>
+                </div>
+                <div class="admin-card rounded-xl p-4">
+                    <p class="text-xs uppercase text-violet-300 font-bold">Deleted Characters</p>
+                    <p id="statDeletedCharacters" class="text-2xl font-black text-white mt-1">--</p>
+                </div>
+                <div class="admin-card rounded-xl p-4">
+                    <p class="text-xs uppercase text-amber-300 font-bold">Market Stalls</p>
+                    <p id="statMarketStalls" class="text-2xl font-black text-white mt-1">--</p>
+                </div>
+                <div class="admin-card rounded-xl p-4">
+                    <p class="text-xs uppercase text-green-300 font-bold">Active Unsold</p>
+                    <p id="statActiveUnsold" class="text-2xl font-black text-white mt-1">--</p>
+                </div>
+                <div class="admin-card rounded-xl p-4">
+                    <p class="text-xs uppercase text-slate-300 font-bold">Cancelled Unsold</p>
+                    <p id="statCancelledUnsold" class="text-2xl font-black text-white mt-1">--</p>
+                </div>
+                <div class="admin-card rounded-xl p-4">
+                    <p class="text-xs uppercase text-blue-300 font-bold">Sold Protected</p>
+                    <p id="statSoldProtected" class="text-2xl font-black text-white mt-1">--</p>
+                </div>
+            </section>
+
+            <section class="admin-card rounded-xl p-5 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
+                    <label class="flex flex-col gap-1 text-sm text-gray-300">
+                        Character State
+                        <select id="characterStateFilter" class="admin-select">
+                            <option value="deleted">Deleted Characters</option>
+                            <option value="active">Active Characters</option>
+                            <option value="all">All Characters</option>
+                        </select>
+                    </label>
+                    <label class="flex flex-col gap-1 text-sm text-gray-300">
+                        Listing Status
+                        <select id="listingStatusFilter" class="admin-select">
+                            <option value="active">Active Unsold</option>
+                            <option value="cancelled">Cancelled Unsold</option>
+                            <option value="sold">Sold</option>
+                            <option value="all">All</option>
+                        </select>
+                    </label>
+                    <label class="flex flex-col gap-1 text-sm text-gray-300 md:col-span-2">
+                        Character
+                        <select id="ledgerCharacterSelect" class="admin-select">
+                            <option value="">Select a character...</option>
+                        </select>
+                    </label>
+                    <label class="flex flex-col gap-1 text-sm text-gray-300">
+                        Search Loaded Listings
+                        <input id="ledgerSearchInput" class="admin-input" placeholder="Item, stall, region...">
+                    </label>
+                    <div class="flex items-end gap-2">
+                        <button id="loadCharacterLedgerBtn" class="action-btn action-muted w-full justify-center">
+                            <i class="fas fa-folder-open"></i> Load
+                        </button>
+                    </div>
+                </div>
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4 pt-4 border-t border-slate-700">
+                    <p id="ledgerManagementMessage" class="text-sm text-gray-400">Select a character to load their ledger details.</p>
+                    <button id="bulkDeleteListingsBtn" class="action-btn action-danger opacity-50 cursor-not-allowed" disabled>
+                        <i class="fas fa-trash"></i> Delete Selected Unsold
+                    </button>
+                </div>
+            </section>
+
+            <section class="admin-card rounded-xl overflow-hidden mb-6">
+                <div class="flex items-center justify-between gap-3 p-4 border-b border-slate-700">
+                    <h2 class="text-lg font-bold text-white">Character Summary</h2>
+                    <span id="deletedCharacterResultCount" class="text-sm text-gray-400">Select a character</span>
+                </div>
+                <div class="overflow-x-auto max-h-[420px]">
+                    <table class="admin-table w-full text-sm">
+                        <thead>
+                            <tr>
+                                <th>Character</th>
+                                <th>Location</th>
+                                <th>Deleted</th>
+                                <th>Listings Loaded</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="deletedCharactersBody">
+                            <tr><td colspan="5" class="text-center text-gray-400 py-8">Select a character to load summary.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="admin-card rounded-xl overflow-hidden">
+                <div class="flex items-center justify-between gap-3 p-4 border-b border-slate-700">
+                    <h2 class="text-lg font-bold text-white">Listings</h2>
+                    <span id="listingResultCount" class="text-sm text-gray-400">--</span>
+                </div>
+                <div class="overflow-x-auto max-h-[620px]">
+                    <table class="admin-table w-full text-sm">
+                        <thead>
+                            <tr>
+                                <th class="w-10"><input id="selectAllListings" type="checkbox"></th>
+                                <th>Listing</th>
+                                <th>Character</th>
+                                <th>Stall / Location</th>
+                                <th>Status</th>
+                                <th>Sales</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ledgerListingsBody">
+                            <tr><td colspan="7" class="text-center text-gray-400 py-8">Select a character to load listings.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </section>
+    </main>
+
+    <div id="footer-placeholder"></div>
+
+    <script type="module">
+        import { setupAdminAuthListener } from './frontend/www/js/admin/adminManager.js';
+        setupAdminAuthListener();
+    </script>
+    <script type="module" src="frontend/www/js/ui/loadHeader.js"></script>
+    <script type="module" src="frontend/www/js/ui/loadFooter.js"></script>
+    <script type="module" src="frontend/www/js/ledger_management.js"></script>
+</body>
+</html>

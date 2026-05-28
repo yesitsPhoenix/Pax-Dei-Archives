@@ -183,6 +183,12 @@
       </a>
     </li>
     <li>
+      <a id="sidebarLedgerManagementLink" href="ledger_management.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900 opacity-40 cursor-not-allowed pointer-events-none" title="Only admins can manage ledger data" aria-disabled="true">
+        <i class="fas fa-clipboard-list w-5 h-5 text-gray-400 transition duration-75"></i>
+        <span class="ml-3">Ledger Management</span>
+      </a>
+    </li>
+    <li>
       <a id="sidebarChangelogLink" href="changelog.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900 opacity-40 cursor-not-allowed pointer-events-none" title="Only admins can edit the changelog" aria-disabled="true">
         <i class="fas fa-scroll w-5 h-5 text-gray-400 transition duration-75"></i>
         <span class="ml-3">Edit Changelog</span>
@@ -330,6 +336,21 @@
                 <p class="text-gray-500 text-md mt-1">logged events</p>
             </div> -->
 
+        </section>
+
+        <section class="mb-8">
+            <a id="adminLedgerManagementCard" href="ledger_management.html" class="stat-card block bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-5 border border-violet-400/20 shadow-lg opacity-40 cursor-not-allowed pointer-events-none" title="Only admins can manage ledger data" aria-disabled="true">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    <div>
+                        <h3 class="text-violet-300 text-md font-semibold uppercase leading-tight flex items-center gap-2">
+                            <i class="fas fa-clipboard-list text-violet-400"></i>
+                            Ledger Management
+                        </h3>
+                        <p class="text-gray-400 text-sm mt-2">Review deleted-character listings, clean up unsold records, and protect sold history.</p>
+                    </div>
+                    <span class="text-sm text-violet-200 font-semibold">Open <i class="fas fa-arrow-right ml-1"></i></span>
+                </div>
+            </a>
         </section>
 
         <!-- ── ROW 3: Recent Activity ── -->
