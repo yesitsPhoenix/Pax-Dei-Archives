@@ -162,7 +162,7 @@ async function loadOverview() {
     ] = await Promise.all([
         supabase
             .from('characters')
-            .select('character_id, character_name, user_id, region, shard, province, home_valley, created_at, deleted_at, anonymized_at')
+            .select('character_id, character_name, archived_character_name, user_id, region, shard, province, home_valley, created_at, deleted_at, anonymized_at')
             .order('created_at', { ascending: false }),
         supabase.from('market_stalls').select('id', { count: 'exact', head: true }),
         supabase.from('market_listings').select('listing_id', { count: 'exact', head: true }).eq('is_fully_sold', false).eq('is_cancelled', false),
@@ -207,7 +207,9 @@ function renderCharacterSelect() {
         .sort((a, b) => {
             const deletedDelta = Number(Boolean(b.deleted_at)) - Number(Boolean(a.deleted_at));
             if (deletedDelta !== 0) return deletedDelta;
-            return String(a.character_name || '').localeCompare(String(b.character_name || ''));
+            const aName = a.archived_character_name || a.character_name || '';
+            const bName = b.archived_character_name || b.character_name || '';
+            return String(aName).localeCompare(String(bName));
         });
 
     const previousValue = els.characterSelect.value;
@@ -215,7 +217,10 @@ function renderCharacterSelect() {
     characters.forEach((character) => {
         const option = document.createElement('option');
         option.value = character.character_id;
-        option.textContent = `${character.character_name || 'Unknown'}${character.deleted_at ? ' (deleted)' : ''}`;
+        const displayName = character.character_name || 'Unknown';
+        option.textContent = character.deleted_at && character.archived_character_name
+            ? `${displayName} (${character.archived_character_name})`
+            : `${displayName}${character.deleted_at ? ' (deleted)' : ''}`;
         els.characterSelect.appendChild(option);
     });
 
@@ -265,7 +270,7 @@ async function loadListings(characterId) {
             is_mastercrafted,
             enchantment_tier,
             items ( item_name ),
-            characters ( character_id, character_name, user_id, deleted_at, anonymized_at, shard, province, home_valley ),
+            characters ( character_id, character_name, archived_character_name, user_id, deleted_at, anonymized_at, shard, province, home_valley ),
             market_stalls ( id, stall_name, region, province, home_valley, anonymized_at, character_name )
         `)
         .eq('character_id', characterId)
@@ -407,7 +412,7 @@ function renderCharacterSummary() {
     els.deletedCharactersBody.innerHTML = `
         <tr>
             <td>
-                <div class="font-bold text-white">${escapeHtml(character.character_name || 'Deleted Character')}</div>
+                <div class="font-bold text-white">${escapeHtml(character.archived_character_name || character.character_name || 'Deleted User')}</div>
                 <div class="text-xs text-gray-500">${escapeHtml(character.character_id)}</div>
                 <div class="mt-1">${character.deleted_at ? '<span class="status-pill status-deleted">Deleted</span>' : '<span class="status-pill status-normal">Active</span>'}</div>
             </td>
@@ -510,7 +515,7 @@ async function deleteSelectedCharacter() {
             .from('market_stalls')
             .update({
                 stall_name: 'Deleted Character Stall',
-                character_name: 'Deleted Character',
+                character_name: 'Deleted User',
                 anonymized_at: nowIso,
                 updated_at: nowIso,
             })
@@ -525,7 +530,8 @@ async function deleteSelectedCharacter() {
     const { error: characterError } = await supabase
         .from('characters')
         .update({
-            character_name: 'Deleted Character',
+            archived_character_name: character.character_name,
+            character_name: 'Deleted User',
             gold: 0,
             archetype: null,
             is_default_character: false,

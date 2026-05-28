@@ -417,12 +417,6 @@ function showDeleteNameConfirmationModal(characterName, activeListingCount) {
     });
 }
 
-async function deleteRows(tableName, filterCallback) {
-    const query = supabase.from(tableName).delete();
-    const { error } = await filterCallback(query);
-    if (error) throw error;
-}
-
 async function updateRows(tableName, values, filterCallback) {
     const query = supabase.from(tableName).update(values);
     const { error } = await filterCallback(query);
@@ -1048,7 +1042,7 @@ async function handleDeleteCharacter() {
                 'market_stalls',
                 {
                     stall_name: 'Deleted Character Stall',
-                    character_name: 'Deleted Character',
+                    character_name: 'Deleted User',
                     anonymized_at: nowIso,
                     updated_at: nowIso
                 },
@@ -1060,7 +1054,7 @@ async function handleDeleteCharacter() {
             'board_quests',
             {
                 status: 'cancelled',
-                author_character_name: 'Deleted Character',
+                author_character_name: 'Deleted User',
                 cancelled_at: nowIso,
                 cancelled_by_user_id: currentUserId,
                 archived_at: nowIso
@@ -1075,7 +1069,7 @@ async function handleDeleteCharacter() {
             'board_quest_acceptances',
             {
                 status: 'withdrawn',
-                character_name: 'Deleted Character',
+                character_name: 'Deleted User',
                 withdrawn_at: nowIso,
                 withdraw_reason: 'Character deleted'
             },
@@ -1087,21 +1081,17 @@ async function handleDeleteCharacter() {
 
         await updateRows(
             'board_quest_acceptances',
-            { character_name: 'Deleted Character' },
+            { character_name: 'Deleted User' },
             (query) => query
                 .eq('character_id', characterIdToDelete)
                 .eq('user_id', currentUserId)
         );
 
-        await deleteRows('purchases', (query) => query.eq('character_id', characterIdToDelete));
-        await deleteRows('pve_transactions', (query) => query.eq('character_id', characterIdToDelete));
-        await deleteRows('user_unlocked_categories', (query) => query.eq('character_id', characterIdToDelete));
-        await deleteRows('user_claims', (query) => query.eq('character_id', characterIdToDelete));
-
         const { error: deleteError } = await supabase
             .from('characters')
             .update({
-                character_name: 'Deleted Character',
+                archived_character_name: character.character_name,
+                character_name: 'Deleted User',
                 gold: 0,
                 archetype: null,
                 is_default_character: false,

@@ -480,14 +480,38 @@ const handleCreateCharacter = async (e) => {
 
 export const handleDeleteCharacter = async (characterIdParam = null) => {
     const characterId = characterIdParam || currentCharacterId;
+    let characterToDelete = null;
+    let marketStalls = [];
 
     if (!characterId) {
         await showCustomModal("Error", "No character selected to delete.", [{ text: 'OK', value: true }]);
         return;
     }
 
+    if (!currentUserId) {
+        const session = await supabase.auth.getSession();
+        currentUserId = session?.data?.session?.user?.id;
+        if (!currentUserId) {
+            await showCustomModal('Error', 'Could not confirm your session. Please re-login.', [{ text: 'OK', value: true }]);
+            return;
+        }
+    }
+
     try {
-        const { data: marketStalls, error: marketStallError } = await supabase
+        const { data: characterData, error: characterError } = await supabase
+            .from('characters')
+            .select('character_id, character_name')
+            .eq('character_id', characterId)
+            .eq('user_id', currentUserId)
+            .is('deleted_at', null)
+            .single();
+
+        if (characterError) {
+            throw characterError;
+        }
+        characterToDelete = characterData;
+
+        const { data: stallData, error: marketStallError } = await supabase
             .from('market_stalls')
             .select('id')
             .eq('character_id', characterId);
@@ -495,6 +519,7 @@ export const handleDeleteCharacter = async (characterIdParam = null) => {
         if (marketStallError) {
             throw marketStallError;
         }
+        marketStalls = stallData || [];
 
         if (marketStalls?.length > 0) {
             const stallIds = marketStalls.map(stall => stall.id);
@@ -524,7 +549,7 @@ export const handleDeleteCharacter = async (characterIdParam = null) => {
 
     const confirmed = await showCustomModal(
         'Confirmation',
-        'Delete this character? This action cannot be undone.',
+        'Delete this character? Their name and history will be archived, and active listings will be cancelled.',
         [
             { text: 'Yes, Delete', value: true, type: 'confirm' },
             { text: 'No', value: false, type: 'cancel' }
@@ -534,15 +559,6 @@ export const handleDeleteCharacter = async (characterIdParam = null) => {
     if (!confirmed) return;
 
     try {
-        if (!currentUserId) {
-            const session = await supabase.auth.getSession();
-            currentUserId = session?.data?.session?.user?.id;
-            if (!currentUserId) {
-                await showCustomModal('Error', 'Could not confirm your session. Please re-login.', [{ text: 'OK', value: true }]);
-                return;
-            }
-        }
-
         const nowIso = new Date().toISOString();
 
         await supabase
@@ -565,37 +581,18 @@ export const handleDeleteCharacter = async (characterIdParam = null) => {
                 .from('market_stalls')
                 .update({
                     stall_name: 'Deleted Character Stall',
-                    character_name: 'Deleted Character',
+                    character_name: 'Deleted User',
                     anonymized_at: nowIso,
                     updated_at: nowIso
                 })
                 .in('id', stallIds);
         }
 
-        await supabase
-            .from('purchases')
-            .delete()
-            .eq('character_id', characterId);
-
-        await supabase
-            .from('pve_transactions')
-            .delete()
-            .eq('character_id', characterId);
-
-        await supabase
-            .from('user_claims')
-            .delete()
-            .eq('character_id', characterId);
-
-        await supabase
-            .from('user_unlocked_categories')
-            .delete()
-            .eq('character_id', characterId);
-
         const { error: deleteError } = await supabase
             .from('characters')
             .update({
-                character_name: 'Deleted Character',
+                archived_character_name: characterToDelete?.character_name || null,
+                character_name: 'Deleted User',
                 gold: 0,
                 archetype: null,
                 is_default_character: false,

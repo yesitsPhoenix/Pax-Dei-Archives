@@ -458,7 +458,8 @@ async loadAllCharactersData() {
     const { error } = await supabase
       .from('characters')
       .update({
-        character_name: 'Deleted Character',
+        archived_character_name: this.cache.characters.find(c => c.character_id === characterId)?.character_name || null,
+        character_name: 'Deleted User',
         gold: 0,
         archetype: null,
         is_default_character: false,
