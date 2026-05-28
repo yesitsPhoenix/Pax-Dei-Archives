@@ -131,7 +131,8 @@ export const openImportModal = async () => {
   const { data: characters, error } = await supabase
     .from('characters')
     .select('character_id, character_name')
-    .eq('user_id', user.id);
+    .eq('user_id', user.id)
+    .is('deleted_at', null);
 
   if (error) return displayTailwindAlert('Error fetching characters: ' + error.message, 'error');
 

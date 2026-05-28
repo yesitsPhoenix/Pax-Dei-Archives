@@ -123,6 +123,7 @@ class QuestStateManager {
             .from('characters')
             .select('character_id, character_name, archetype, is_default_character')
             .eq('user_id', userId)
+            .is('deleted_at', null)
             .order('created_at', { ascending: true });
 
         this.cache.characters = characters || [];
@@ -165,6 +166,7 @@ class QuestStateManager {
                 .from('characters')
                 .select('*')
                 .eq('character_id', characterId)
+                .is('deleted_at', null)
                 .single(),
             
             supabase
@@ -493,6 +495,7 @@ class QuestStateManager {
             .from('characters')
             .select('character_id, character_name, archetype, is_default_character')
             .eq('user_id', this.cache.user.id)
+            .is('deleted_at', null)
             .order('created_at', { ascending: true });
 
         this.cache.characters = data || [];

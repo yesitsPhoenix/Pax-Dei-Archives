@@ -160,7 +160,8 @@ export const loadCharacters = async (onCharacterSelectedCallback) => {
     const { data, error } = await supabase
         .from('characters')
         .select('character_id, character_name, gold')
-        .eq('user_id', currentUserId);
+        .eq('user_id', currentUserId)
+        .is('deleted_at', null);
 
     if (error) {
         console.error('Error fetching characters:', error.message);
@@ -506,14 +507,9 @@ export const handleDeleteCharacter = async (characterIdParam = null) => {
                 throw listingsError;
             }
 
-            const hasActiveListings = listings.some(listing => !listing.is_fully_sold && !listing.is_cancelled);
-            if (hasActiveListings) {
-                await showCustomModal(
-                    'Deletion Failed',
-                    'This character cannot be deleted because they still have active listings in their market stalls. Please cancel or mark all listings as sold first.',
-                    [{ text: 'OK', value: true }]
-                );
-                return;
+            const activeListingCount = listings.filter(listing => !listing.is_fully_sold && !listing.is_cancelled).length;
+            if (activeListingCount > 0) {
+                console.info(`Character deletion will cancel ${activeListingCount} active listing(s) and preserve historical market data.`);
             }
         }
     } catch (e) {
@@ -528,7 +524,7 @@ export const handleDeleteCharacter = async (characterIdParam = null) => {
 
     const confirmed = await showCustomModal(
         'Confirmation',
-        'Are you sure you want to delete this character and all associated data? This action cannot be undone.',
+        'Delete this character? This action cannot be undone.',
         [
             { text: 'Yes, Delete', value: true, type: 'confirm' },
             { text: 'No', value: false, type: 'cancel' }
@@ -547,9 +543,65 @@ export const handleDeleteCharacter = async (characterIdParam = null) => {
             }
         }
 
+        const nowIso = new Date().toISOString();
+
+        await supabase
+            .from('market_listings')
+            .update({ is_cancelled: true })
+            .eq('character_id', characterId)
+            .eq('is_fully_sold', false)
+            .eq('is_cancelled', false);
+
+        const stallIds = marketStalls?.map(stall => stall.id) || [];
+        if (stallIds.length > 0) {
+            await supabase
+                .from('market_listings')
+                .update({ is_cancelled: true })
+                .in('market_stall_id', stallIds)
+                .eq('is_fully_sold', false)
+                .eq('is_cancelled', false);
+
+            await supabase
+                .from('market_stalls')
+                .update({
+                    stall_name: 'Deleted Character Stall',
+                    character_name: 'Deleted Character',
+                    anonymized_at: nowIso,
+                    updated_at: nowIso
+                })
+                .in('id', stallIds);
+        }
+
+        await supabase
+            .from('purchases')
+            .delete()
+            .eq('character_id', characterId);
+
+        await supabase
+            .from('pve_transactions')
+            .delete()
+            .eq('character_id', characterId);
+
+        await supabase
+            .from('user_claims')
+            .delete()
+            .eq('character_id', characterId);
+
+        await supabase
+            .from('user_unlocked_categories')
+            .delete()
+            .eq('character_id', characterId);
+
         const { error: deleteError } = await supabase
             .from('characters')
-            .delete()
+            .update({
+                character_name: 'Deleted Character',
+                gold: 0,
+                archetype: null,
+                is_default_character: false,
+                deleted_at: nowIso,
+                anonymized_at: nowIso
+            })
             .eq('character_id', characterId)
             .eq('user_id', currentUserId);
 
@@ -637,6 +689,7 @@ const updateCharacterGoldByPveTransaction = async (newTotalGold, description = '
     .from('characters')
     .select('gold')
     .eq('character_id', currentCharacterId)
+    .is('deleted_at', null)
     .single();
 
   if (fetchCharError) {
@@ -836,6 +889,7 @@ export const getCurrentCharacter = async (forceRefresh = false) => {
         .from('characters')
         .select('character_id, character_name, gold, shard, province, home_valley')
         .eq('character_id', currentCharacterId)
+        .is('deleted_at', null)
         .maybeSingle();
 
     if (error) {

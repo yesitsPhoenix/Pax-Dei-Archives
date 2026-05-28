@@ -204,6 +204,7 @@ class MarketStateManager {
       .from('characters')
       .select('*')
       .eq('user_id', userId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: true });
     
     if (error) {
@@ -257,6 +258,7 @@ class MarketStateManager {
           .from('characters')
           .select('*')
           .eq('character_id', characterId)
+          .is('deleted_at', null)
           .single(),
         
         // Dashboard stats
@@ -455,8 +457,16 @@ async loadAllCharactersData() {
     
     const { error } = await supabase
       .from('characters')
-      .delete()
-      .eq('character_id', characterId);
+      .update({
+        character_name: 'Deleted Character',
+        gold: 0,
+        archetype: null,
+        is_default_character: false,
+        deleted_at: new Date().toISOString(),
+        anonymized_at: new Date().toISOString()
+      })
+      .eq('character_id', characterId)
+      .eq('user_id', this.cache.user.id);
     
     if (error) throw error;
     

@@ -4,7 +4,7 @@
 const initCustomModal = () => {
     const modalHtml = `
         <div id="customModalContainer" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden" style="z-index: 10000;">
-            <div id="customModalContentWrapper" class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm mx-4 sm:mx-auto font-inter">
+            <div id="customModalContentWrapper" class="bg-white p-6 rounded-lg shadow-xl w-full max-w-xl mx-4 sm:mx-auto font-inter">
             </div>
         </div>
     `;
@@ -54,7 +54,7 @@ export const showCustomModal = (title, message, buttons) => {
         buttons.forEach(btn => {
             const button = document.createElement('button');
             button.textContent = btn.text;
-            button.classList.add('px-4', 'py-2', 'rounded-full', 'font-bold');
+            button.classList.add('px-4', 'py-2', 'rounded-full', 'font-bold', 'whitespace-nowrap');
 
             if (btn.type === 'confirm') {
                 button.classList.add('bg-blue-500', 'hover:bg-blue-700', 'text-white');

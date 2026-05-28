@@ -336,6 +336,127 @@ let currentUserId = null;
 let currentCharacterId = null;
 let cachedRegions = null;
 
+function escapeHtml(value) {
+    const div = document.createElement('div');
+    div.textContent = value ?? '';
+    return div.innerHTML;
+}
+
+function showDeleteNameConfirmationModal(characterName, activeListingCount) {
+    return new Promise((resolve) => {
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 z-[10001] bg-gray-900/80 backdrop-blur-sm flex items-center justify-center px-4';
+
+        const panel = document.createElement('div');
+        panel.className = 'profile-card rounded-xl p-6 max-w-md w-full border border-red-500/30 shadow-2xl';
+
+        const title = document.createElement('h3');
+        title.className = 'text-xl font-bold text-white mb-3 flex items-center gap-2';
+        title.innerHTML = '<i class="fas fa-triangle-exclamation text-red-400"></i><span>Delete Character</span>';
+
+        const message = document.createElement('p');
+        message.className = 'text-gray-300 text-sm leading-relaxed mb-4';
+        message.textContent = activeListingCount > 0
+            ? `This will permanently delete ${characterName} and cancel ${activeListingCount} active market listing${activeListingCount === 1 ? '' : 's'}. Type the character name to continue.`
+            : `This will permanently delete ${characterName}. Type the character name to continue.`;
+
+        const label = document.createElement('label');
+        label.className = 'block text-sm font-medium text-gray-300 mb-2';
+        label.textContent = `Type "${characterName}" to confirm`;
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.autocomplete = 'off';
+        input.className = 'w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-red-500 focus:outline-none';
+
+        const error = document.createElement('p');
+        error.className = 'text-red-300 text-sm mt-2 min-h-[1.25rem]';
+
+        const buttons = document.createElement('div');
+        buttons.className = 'flex justify-end gap-3 mt-6';
+
+        const cancelButton = document.createElement('button');
+        cancelButton.type = 'button';
+        cancelButton.className = 'px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-semibold transition';
+        cancelButton.textContent = 'Cancel';
+
+        const continueButton = document.createElement('button');
+        continueButton.type = 'button';
+        continueButton.className = 'px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-900 disabled:text-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition';
+        continueButton.textContent = 'Continue';
+        continueButton.disabled = true;
+
+        const close = (value) => {
+            modal.remove();
+            resolve(value);
+        };
+
+        input.addEventListener('input', () => {
+            const isMatch = input.value.trim() === characterName;
+            continueButton.disabled = !isMatch;
+            error.textContent = input.value && !isMatch ? 'Character name does not match.' : '';
+        });
+
+        input.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !continueButton.disabled) {
+                close(true);
+            }
+        });
+
+        cancelButton.addEventListener('click', () => close(false));
+        continueButton.addEventListener('click', () => close(true));
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) close(false);
+        });
+
+        buttons.append(cancelButton, continueButton);
+        panel.append(title, message, label, input, error, buttons);
+        modal.appendChild(panel);
+        document.body.appendChild(modal);
+        input.focus();
+    });
+}
+
+async function deleteRows(tableName, filterCallback) {
+    const query = supabase.from(tableName).delete();
+    const { error } = await filterCallback(query);
+    if (error) throw error;
+}
+
+async function updateRows(tableName, values, filterCallback) {
+    const query = supabase.from(tableName).update(values);
+    const { error } = await filterCallback(query);
+    if (error) throw error;
+}
+
+async function getActiveListingCount(characterId, stallIds = []) {
+    const activeListingIds = new Set();
+
+    const { data: directListings, error: directListingsError } = await supabase
+        .from('market_listings')
+        .select('listing_id')
+        .eq('character_id', characterId)
+        .eq('is_fully_sold', false)
+        .eq('is_cancelled', false);
+
+    if (directListingsError) throw directListingsError;
+    (directListings || []).forEach((listing) => activeListingIds.add(listing.listing_id));
+
+    if (stallIds.length > 0) {
+        const { data: stallListings, error: stallListingsError } = await supabase
+            .from('market_listings')
+            .select('listing_id')
+            .in('market_stall_id', stallIds)
+            .eq('is_fully_sold', false)
+            .eq('is_cancelled', false);
+
+        if (stallListingsError) throw stallListingsError;
+        (stallListings || []).forEach((listing) => activeListingIds.add(listing.listing_id));
+    }
+
+    return activeListingIds.size;
+}
+
 /**
  * Initialize profile page
  */
@@ -512,6 +633,7 @@ async function loadCharacterDetails(characterId) {
             .from('characters')
             .select('*')
             .eq('character_id', characterId)
+            .is('deleted_at', null)
             .single();
 
         if (error) throw error;
@@ -854,85 +976,145 @@ async function handleCreateCharacter(e) {
 }
 
 /**
- * Handle character deletion with safety checks
+ * Handle character deletion with typed-name and final confirmations.
  */
 async function handleDeleteCharacter() {
     if (!currentCharacterId) return;
 
     try {
-        // Check for active stalls
+        deleteCharacterBtn.disabled = true;
+
+        const characterIdToDelete = currentCharacterId;
+        const { data: character, error: characterError } = await supabase
+            .from('characters')
+            .select('character_id, character_name')
+            .eq('character_id', characterIdToDelete)
+            .eq('user_id', currentUserId)
+            .is('deleted_at', null)
+            .single();
+
+        if (characterError) throw characterError;
+
         const { data: stalls, error: stallsError } = await supabase
             .from('market_stalls')
             .select('id, stall_name')
-            .eq('character_id', currentCharacterId);
+            .eq('character_id', characterIdToDelete);
 
         if (stallsError) throw stallsError;
 
-        if (stalls && stalls.length > 0) {
-            await showCustomModal(
-                'Cannot Delete Character',
-                'This character has stalls. Please delete all stalls first from the stalls section below.',
-                [{ text: 'OK', value: true }]
-            );
-            return;
-        }
+        const stallIds = (stalls || []).map((stall) => stall.id);
+        const activeListingCount = await getActiveListingCount(characterIdToDelete, stallIds);
 
-        // Confirm deletion
+        const typedConfirmed = await showDeleteNameConfirmationModal(
+            character.character_name,
+            activeListingCount || 0
+        );
+
+        if (!typedConfirmed) return;
+
         const confirmed = await showCustomModal(
-            'Confirm Deletion',
-            `Are you sure you want to delete this character? This action cannot be undone.`,
+            'Final Delete Confirmation',
+            `Delete <strong>${escapeHtml(character.character_name)}</strong>? This action cannot be undone.`,
             [
-                { text: 'Cancel', value: false },
-                { text: 'Delete', value: true }
+                { text: 'Cancel', value: false, type: 'cancel' },
+                { text: 'Yes, delete my character', value: true, type: 'confirm' }
             ]
         );
 
         if (!confirmed) return;
 
-        // Delete related records first to avoid foreign key constraint violations
-        // 1. Delete user_unlocked_categories (chronicles/quests)
-        const { error: unlocksError } = await supabase
-            .from('user_unlocked_categories')
-            .delete()
-            .eq('character_id', currentCharacterId);
+        const nowIso = new Date().toISOString();
 
-        if (unlocksError) {
-            console.warn('Error deleting unlocked categories:', unlocksError);
-            // Continue anyway - this is non-critical
+        await updateRows(
+            'market_listings',
+            { is_cancelled: true },
+            (query) => query
+                .eq('character_id', characterIdToDelete)
+                .eq('is_fully_sold', false)
+                .eq('is_cancelled', false)
+        );
+
+        if (stallIds.length > 0) {
+            await updateRows(
+                'market_listings',
+                { is_cancelled: true },
+                (query) => query
+                    .in('market_stall_id', stallIds)
+                    .eq('is_fully_sold', false)
+                    .eq('is_cancelled', false)
+            );
+
+            await updateRows(
+                'market_stalls',
+                {
+                    stall_name: 'Deleted Character Stall',
+                    character_name: 'Deleted Character',
+                    anonymized_at: nowIso,
+                    updated_at: nowIso
+                },
+                (query) => query.in('id', stallIds)
+            );
         }
 
-        // 2. Delete user_claims (quest claims)
-        const { error: claimsError } = await supabase
-            .from('user_claims')
-            .delete()
-            .eq('character_id', currentCharacterId);
+        await updateRows(
+            'board_quests',
+            {
+                status: 'cancelled',
+                author_character_name: 'Deleted Character',
+                cancelled_at: nowIso,
+                cancelled_by_user_id: currentUserId,
+                archived_at: nowIso
+            },
+            (query) => query
+                .eq('author_character_id', characterIdToDelete)
+                .eq('author_user_id', currentUserId)
+                .in('status', ['posted', 'in_progress'])
+        );
 
-        if (claimsError) {
-            console.warn('Error deleting user claims:', claimsError);
-            // Continue anyway - this is non-critical
-        }
+        await updateRows(
+            'board_quest_acceptances',
+            {
+                status: 'withdrawn',
+                character_name: 'Deleted Character',
+                withdrawn_at: nowIso,
+                withdraw_reason: 'Character deleted'
+            },
+            (query) => query
+                .eq('character_id', characterIdToDelete)
+                .eq('user_id', currentUserId)
+                .in('status', ['accepted', 'in_progress', 'awaiting_confirmation'])
+        );
 
-        // 3. Delete PVE transactions
-        const { error: pveError } = await supabase
-            .from('pve_transactions')
-            .delete()
-            .eq('character_id', currentCharacterId);
+        await updateRows(
+            'board_quest_acceptances',
+            { character_name: 'Deleted Character' },
+            (query) => query
+                .eq('character_id', characterIdToDelete)
+                .eq('user_id', currentUserId)
+        );
 
-        if (pveError) {
-            console.warn('Error deleting PVE transactions:', pveError);
-            // Continue anyway - this is non-critical
-        }
+        await deleteRows('purchases', (query) => query.eq('character_id', characterIdToDelete));
+        await deleteRows('pve_transactions', (query) => query.eq('character_id', characterIdToDelete));
+        await deleteRows('user_unlocked_categories', (query) => query.eq('character_id', characterIdToDelete));
+        await deleteRows('user_claims', (query) => query.eq('character_id', characterIdToDelete));
 
-        // Now delete the character
         const { error: deleteError } = await supabase
             .from('characters')
-            .delete()
-            .eq('character_id', currentCharacterId);
+            .update({
+                character_name: 'Deleted Character',
+                gold: 0,
+                archetype: null,
+                is_default_character: false,
+                deleted_at: nowIso,
+                anonymized_at: nowIso
+            })
+            .eq('character_id', characterIdToDelete)
+            .eq('user_id', currentUserId);
 
         if (deleteError) throw deleteError;
 
         // Store the ID before clearing it
-        const deletedCharacterId = currentCharacterId;
+        const deletedCharacterId = characterIdToDelete;
         
         // Clear the active character from state manager and sessionStorage
         currentCharacterId = null;
@@ -959,6 +1141,8 @@ async function handleDeleteCharacter() {
     } catch (error) {
         console.error('Error deleting character:', error);
         await showCustomModal('Error', `Failed to delete character: ${error.message}`, [{ text: 'OK', value: true }]);
+    } finally {
+        deleteCharacterBtn.disabled = false;
     }
 }
 
@@ -974,6 +1158,7 @@ async function openEditLocation() {
             .select('region, shard, province, home_valley, region_entry_id')
             .eq('character_id', currentCharacterId)
             .eq('user_id', currentUserId)
+            .is('deleted_at', null)
             .single();
 
         if (error) throw error;
@@ -1134,6 +1319,7 @@ async function populateStallDropdowns() {
             .from('characters')
             .select('region, shard')
             .eq('character_id', currentCharacterId)
+            .is('deleted_at', null)
             .single();
 
         if (charError) throw charError;
@@ -1234,6 +1420,7 @@ async function handleCreateStall(e) {
             .from('characters')
             .select('region')
             .eq('character_id', currentCharacterId)
+            .is('deleted_at', null)
             .single();
 
         if (charError) throw charError;

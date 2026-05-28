@@ -440,6 +440,7 @@ async function fetchUserCharacters() {
         .from('characters')
         .select('character_id, character_name, gold')
         .eq('user_id', user.id)
+        .is('deleted_at', null)
         .order('character_name', { ascending: true });
     
     if (error) {
@@ -545,7 +546,8 @@ async function fetchAndPopulateDashboardMetrics(itemIdToNameMap, characterId = '
         let charactersQuery = supabase
             .from('characters')
             .select('gold')
-            .eq('user_id', user.id);
+            .eq('user_id', user.id)
+            .is('deleted_at', null);
 
         if (characterId !== '') {
             charactersQuery = charactersQuery.eq('character_id', characterId);
