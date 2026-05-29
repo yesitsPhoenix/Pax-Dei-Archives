@@ -170,6 +170,7 @@ const ledgerMostProfitableItemEl = document.getElementById('ledger-most-profitab
 const ledgerMostProfitableValueEl = document.getElementById('ledger-most-profitable-value');
 const ledgerMostSoldItemEl = document.getElementById('ledger-most-sold-item');
 const ledgerMostSoldCountEl = document.getElementById('ledger-most-sold-count');
+const ledgerTotalItemsSoldEl = document.getElementById('ledger-total-items-sold');
 const ledgerAlertsCountEl = document.getElementById('ledger-alerts-count');
 const ledgerAvgTimeOnMarketEl = document.getElementById('ledger-avg-time-on-market');
 const ledgerTimeOnMarketUnitEl = document.getElementById('ledger-time-on-market-unit');
@@ -255,20 +256,24 @@ function calculateAndRenderMostProfitableAndSold(allActivityData, formatCurrency
         if (ledgerMostProfitableValueEl) ledgerMostProfitableValueEl.textContent = '-';
         if (ledgerMostSoldItemEl) ledgerMostSoldItemEl.textContent = 'No sales yet';
         if (ledgerMostSoldCountEl) ledgerMostSoldCountEl.textContent = '-';
+        if (ledgerTotalItemsSoldEl) ledgerTotalItemsSoldEl.textContent = '0';
         return;
     }
 
     const itemStats = {};
+    let totalItemsSold = 0;
     
     salesData.forEach(sale => {
         const itemName = sale.item_name || 'Unknown Item';
+        const quantitySold = sale.quantity || 0;
         
         if (!itemStats[itemName]) {
             itemStats[itemName] = { profit: 0, quantity: 0 };
         }
         
         itemStats[itemName].profit += sale.total_amount || 0;
-        itemStats[itemName].quantity += sale.quantity || 0;
+        itemStats[itemName].quantity += quantitySold;
+        totalItemsSold += quantitySold;
     });
     
     let mostProfitable = { name: 'N/A', value: 0 };
@@ -294,6 +299,9 @@ function calculateAndRenderMostProfitableAndSold(allActivityData, formatCurrency
     }
     if (ledgerMostSoldCountEl) {
         ledgerMostSoldCountEl.textContent = `${formatCurrency(mostSold.count)} units sold`;
+    }
+    if (ledgerTotalItemsSoldEl) {
+        ledgerTotalItemsSoldEl.textContent = formatCurrency(totalItemsSold);
     }
 }
 
