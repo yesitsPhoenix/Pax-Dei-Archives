@@ -23,7 +23,7 @@ const CHRONICLE_SECTIONS = [
   'Dungeon Spotlights',
   'Classifieds',
 ];
-const ENTRY_PREVIEW_DEBOUNCE_MS = 250;
+const ENTRY_PREVIEW_DEBOUNCE_MS = 750;
 
 let activePublication = null;
 let activeEntries = [];
