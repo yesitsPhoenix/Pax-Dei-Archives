@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupMarkdownEditor(elements);
 
   elements.entryTitleInput.addEventListener('input', () => {
-    elements.entrySlugInput.value = slugify(elements.entryTitleInput.value);
+    setEntrySlug(elements, slugify(elements.entryTitleInput.value));
   });
 
   elements.loadPublicationButton.addEventListener('click', () => loadPublicationByIssue(elements));
@@ -77,16 +77,11 @@ function getElements() {
     savePublicationButton: document.getElementById('savePublicationButton'),
     entryTitleInput: document.getElementById('entryTitle'),
     entrySlugInput: document.getElementById('entrySlug'),
+    entrySlugPreview: document.getElementById('entrySlugPreview'),
     entrySummaryInput: document.getElementById('entrySummary'),
     entryImageUrlInput: document.getElementById('entryImageUrl'),
     entryContentInput: document.getElementById('entryContent'),
-    entryContentSplitInput: document.getElementById('entryContentSplit'),
-    markdownTabs: document.querySelectorAll('[data-markdown-mode]'),
-    markdownEditMode: document.getElementById('entryMarkdownEditMode'),
-    markdownPreviewMode: document.getElementById('entryMarkdownPreviewMode'),
-    markdownSplitMode: document.getElementById('entryMarkdownSplitMode'),
-    markdownPreview: document.getElementById('entryMarkdownPreview'),
-    markdownPreviewSplit: document.getElementById('entryMarkdownPreviewSplit'),
+    entryFullPreview: document.getElementById('entryFullPreview'),
     entryAuthorInput: document.getElementById('entryAuthor'),
     entrySectionSelect: document.getElementById('entrySection'),
     carryOverEntrySelect: document.getElementById('carryOverEntrySelect'),
@@ -108,56 +103,67 @@ function setupMarkdownEditor(elements) {
     });
   }
 
-  elements.markdownTabs.forEach(button => {
-    button.addEventListener('click', event => {
-      event.preventDefault();
-      switchMarkdownMode(elements, button.dataset.markdownMode || 'edit');
-    });
+  [
+    elements.entryTitleInput,
+    elements.entrySummaryInput,
+    elements.entryImageUrlInput,
+    elements.entryContentInput,
+    elements.entryAuthorInput,
+    elements.entrySectionSelect,
+  ].forEach(input => {
+    input.addEventListener('input', () => updateEntryPreview(elements));
+    input.addEventListener('change', () => updateEntryPreview(elements));
   });
 
-  elements.entryContentInput.addEventListener('input', () => {
-    if (!elements.markdownSplitMode.hidden) {
-      elements.entryContentSplitInput.value = elements.entryContentInput.value;
-    }
-    updateMarkdownPreview(elements);
-  });
-
-  elements.entryContentSplitInput.addEventListener('input', () => {
-    elements.entryContentInput.value = elements.entryContentSplitInput.value;
-    updateMarkdownPreview(elements);
-  });
-
-  updateMarkdownPreview(elements);
-}
-
-function switchMarkdownMode(elements, mode) {
-  elements.markdownTabs.forEach(button => {
-    button.classList.toggle('active', button.dataset.markdownMode === mode);
-    button.setAttribute('aria-selected', String(button.dataset.markdownMode === mode));
-  });
-
-  setMarkdownPanelVisible(elements.markdownEditMode, mode === 'edit');
-  setMarkdownPanelVisible(elements.markdownPreviewMode, mode === 'preview');
-  setMarkdownPanelVisible(elements.markdownSplitMode, mode === 'split');
-
-  if (mode === 'split') {
-    elements.entryContentSplitInput.value = elements.entryContentInput.value;
-  } else if (mode === 'edit') {
-    elements.entryContentInput.focus();
-  }
-
-  updateMarkdownPreview(elements);
-}
-
-function setMarkdownPanelVisible(panel, isVisible) {
-  panel.hidden = !isVisible;
-  panel.classList.toggle('hidden', !isVisible);
+  updateEntryPreview(elements);
 }
 
 function updateMarkdownPreview(elements) {
-  const html = renderMarkdownPreview(elements.entryContentInput.value);
-  elements.markdownPreview.innerHTML = html;
-  elements.markdownPreviewSplit.innerHTML = html;
+  updateEntryPreview(elements);
+}
+
+function setEntrySlug(elements, slug) {
+  const normalizedSlug = slug || '';
+  elements.entrySlugInput.value = normalizedSlug;
+
+  if (elements.entrySlugPreview) {
+    elements.entrySlugPreview.textContent = normalizedSlug
+      ? `Slug: ${normalizedSlug}`
+      : 'Slug will generate from the title.';
+  }
+}
+
+function updateEntryPreview(elements) {
+  if (!elements.entryFullPreview) return;
+
+  const title = elements.entryTitleInput.value.trim();
+  const section = elements.entrySectionSelect.value || CHRONICLE_SECTIONS[0];
+  const author = elements.entryAuthorInput.value.trim();
+  const summary = elements.entrySummaryInput.value.trim();
+  const mediaUrl = elements.entryImageUrlInput.value.trim();
+  const content = elements.entryContentInput.value;
+  const bodyHtml = renderMarkdownPreview(content);
+  const hasAnyContent = title || summary || mediaUrl || content.trim();
+
+  if (!hasAnyContent) {
+    elements.entryFullPreview.innerHTML = '<p class="publication-preview-empty">Entry preview will appear here.</p>';
+    return;
+  }
+
+  elements.entryFullPreview.innerHTML = `
+    <article class="publication-preview-article">
+      ${renderEntryPreviewMedia(mediaUrl, title || 'Publication entry')}
+      <div class="publication-preview-article-body">
+        <div class="publication-preview-article-meta">
+          <span>${escapeHtml(section)}</span>
+          ${author ? `<span>${escapeHtml(author)}</span>` : ''}
+        </div>
+        <h3>${escapeHtml(title || 'Untitled Entry')}</h3>
+        ${summary ? `<p class="publication-preview-summary">${escapeHtml(summary)}</p>` : ''}
+        <div class="publication-preview-content markdown-content">${bodyHtml}</div>
+      </div>
+    </article>
+  `;
 }
 
 function renderMarkdownPreview(content) {
@@ -168,6 +174,85 @@ function renderMarkdownPreview(content) {
 
   const parsed = window.marked ? marked.parse(source) : escapeHtml(source).replace(/\n/g, '<br>');
   return DOMPurify.sanitize(parsed);
+}
+
+function renderEntryPreviewMedia(url, title) {
+  const media = getMediaInfo(url);
+  if (media.type === 'none') return '';
+
+  if (media.type === 'youtube') {
+    return `
+      <figure class="publication-preview-media publication-preview-media-video">
+        <iframe
+          src="${escapeHtml(media.embedUrl)}"
+          title="${escapeHtml(title)}"
+          loading="lazy"
+          allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen
+        ></iframe>
+      </figure>
+    `;
+  }
+
+  if (media.type === 'video') {
+    return `
+      <figure class="publication-preview-media publication-preview-media-video">
+        <video controls preload="metadata">
+          <source src="${escapeHtml(media.url)}" type="${escapeHtml(media.mimeType)}">
+        </video>
+      </figure>
+    `;
+  }
+
+  return `
+    <figure class="publication-preview-media">
+      <img src="${escapeHtml(media.url)}" alt="${escapeHtml(title)}" loading="lazy">
+    </figure>
+  `;
+}
+
+function getMediaInfo(url) {
+  const mediaUrl = String(url || '').trim();
+  if (!mediaUrl) return { type: 'none' };
+
+  const youtubeId = getYouTubeVideoId(mediaUrl);
+  if (youtubeId) {
+    return {
+      type: 'youtube',
+      embedUrl: `https://www.youtube.com/embed/${youtubeId}`,
+    };
+  }
+
+  const cleanUrl = mediaUrl.split(/[?#]/)[0].toLowerCase();
+  if (cleanUrl.endsWith('.mp4')) return { type: 'video', url: mediaUrl, mimeType: 'video/mp4' };
+  if (cleanUrl.endsWith('.webm')) return { type: 'video', url: mediaUrl, mimeType: 'video/webm' };
+  if (cleanUrl.endsWith('.ogg') || cleanUrl.endsWith('.ogv')) return { type: 'video', url: mediaUrl, mimeType: 'video/ogg' };
+
+  return { type: 'image', url: mediaUrl };
+}
+
+function getYouTubeVideoId(url) {
+  const directMatch = String(url || '').match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?[^#\s]*v=|embed\/|shorts\/))([A-Za-z0-9_-]{6,})/i);
+  if (directMatch?.[1]) return directMatch[1];
+
+  try {
+    const parsedUrl = new URL(url, window.location.href);
+    const host = parsedUrl.hostname.replace(/^www\./, '').toLowerCase();
+
+    if (host === 'youtu.be') {
+      return parsedUrl.pathname.split('/').filter(Boolean)[0] || '';
+    }
+
+    if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'music.youtube.com') {
+      if (parsedUrl.pathname.startsWith('/embed/')) return parsedUrl.pathname.split('/').filter(Boolean)[1] || '';
+      if (parsedUrl.pathname.startsWith('/shorts/')) return parsedUrl.pathname.split('/').filter(Boolean)[1] || '';
+      return parsedUrl.searchParams.get('v') || '';
+    }
+  } catch (error) {
+    return '';
+  }
+
+  return '';
 }
 
 async function savePublicationDraft(elements) {
@@ -513,13 +598,16 @@ function renderDraftPanel(elements, publication, entries) {
   elements.draftStatus.className = `publication-status-pill ${status}`;
 
   if (!entries.length) {
+    elements.draftEntryList.className = 'draft-entry-list is-empty';
     elements.draftEntryList.innerHTML = '<div class="empty-draft-state">Saved entries for the selected issue will appear here.</div>';
   } else {
-    elements.draftEntryList.innerHTML = entries.map(entry => `
-      <article class="draft-entry-item">
-        <div>
+    elements.draftEntryList.className = `draft-entry-list draft-entry-count-${Math.min(entries.length, 6)}`;
+    elements.draftEntryList.innerHTML = entries.map((entry, index) => `
+      <article class="draft-entry-item ${index === 0 ? 'draft-entry-item-lead' : ''}">
+        <div class="draft-entry-card-content">
           <span>${escapeHtml(entry.section_key)}</span>
           <strong>${escapeHtml(entry.title)}</strong>
+          ${entry.summary ? `<p>${escapeHtml(entry.summary)}</p>` : ''}
           <small>${escapeHtml(entry.author || 'Unknown')}</small>
         </div>
         ${canEditEntries ? `
@@ -550,14 +638,12 @@ function loadEntryForEditing(entryId, elements) {
   elements.entrySectionSelect.value = entry.section_key;
   updateEntryFieldRequirements(elements);
   elements.entryTitleInput.value = entry.title || '';
-  elements.entrySlugInput.value = stripIssuePrefix(entry.slug || '', activePublication.issue_number);
+  setEntrySlug(elements, stripIssuePrefix(entry.slug || '', activePublication.issue_number));
   elements.entrySummaryInput.value = entry.summary || '';
   elements.entryImageUrlInput.value = entry.image_url || '';
   elements.entryContentInput.value = entry.content || '';
-  elements.entryContentSplitInput.value = entry.content || '';
-  elements.entryAuthorInput.value = entry.author || '';
-  switchMarkdownMode(elements, 'edit');
-  updateMarkdownPreview(elements);
+  elements.entryAuthorInput.value = entry.author || 'Phoenix';
+  updateEntryPreview(elements);
 
   const submitButton = elements.form.querySelector('button[type="submit"]');
   submitButton.innerHTML = '<i class="fas fa-save"></i> Update Entry';
@@ -615,14 +701,12 @@ function carryOverSelectedEntry(elements) {
   elements.entrySectionSelect.value = sourceEntry.section_key || CHRONICLE_SECTIONS[0];
   updateEntryFieldRequirements(elements);
   elements.entryTitleInput.value = sourceEntry.title || '';
-  elements.entrySlugInput.value = stripIssuePrefix(sourceEntry.slug || slugify(sourceEntry.title || ''), sourceEntry.publication.issue_number);
+  setEntrySlug(elements, stripIssuePrefix(sourceEntry.slug || slugify(sourceEntry.title || ''), sourceEntry.publication.issue_number));
   elements.entrySummaryInput.value = sourceEntry.summary || '';
   elements.entryImageUrlInput.value = sourceEntry.image_url || '';
   elements.entryContentInput.value = sourceEntry.content || '';
-  elements.entryContentSplitInput.value = sourceEntry.content || '';
-  elements.entryAuthorInput.value = sourceEntry.author || '';
-  switchMarkdownMode(elements, 'edit');
-  updateMarkdownPreview(elements);
+  elements.entryAuthorInput.value = sourceEntry.author || 'Phoenix';
+  updateEntryPreview(elements);
   resetSubmitButton(elements.form.querySelector('button[type="submit"]'));
 
   showMessage(
@@ -668,16 +752,14 @@ function validateEntryInput(input) {
 
 function clearEntryFields(elements) {
   elements.entryTitleInput.value = '';
-  elements.entrySlugInput.value = '';
+  setEntrySlug(elements, '');
   elements.entrySummaryInput.value = '';
   elements.entryImageUrlInput.value = '';
   elements.entryContentInput.value = '';
-  elements.entryContentSplitInput.value = '';
-  elements.entryAuthorInput.value = '';
+  elements.entryAuthorInput.value = 'Phoenix';
   populateSectionSelect(elements.entrySectionSelect);
   updateEntryFieldRequirements(elements);
-  switchMarkdownMode(elements, 'edit');
-  updateMarkdownPreview(elements);
+  updateEntryPreview(elements);
   resetSubmitButton(elements.form.querySelector('button[type="submit"]'));
 }
 
@@ -715,7 +797,6 @@ function updateEntryFieldRequirements(elements) {
   elements.entrySummaryInput.placeholder = isClassified
     ? 'Optional; the card uses the classified text directly'
     : '';
-  elements.entryAuthorInput.placeholder = isClassified ? 'Optional' : '';
 }
 
 function isClassifiedSection(section) {

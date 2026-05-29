@@ -135,25 +135,25 @@
                             <input type="text" id="entryTitle" required>
                         </label>
                         <label>
-                            Slug
-                            <input type="text" id="entrySlug" readonly>
+                            Card Media URL
+                            <input type="url" id="entryImageUrl" placeholder="Image, YouTube, or video URL">
                         </label>
                     </div>
 
-                    <label>
-                        Summary
-                        <textarea id="entrySummary" rows="3" required></textarea>
-                    </label>
+                    <input type="hidden" id="entrySlug">
+                    <p id="entrySlugPreview" class="publication-slug-preview">Slug will generate from the title.</p>
 
                     <label>
-                        Card Media URL
-                        <input type="url" id="entryImageUrl" placeholder="Image, YouTube, or video URL">
+                        Summary
+                        <textarea id="entrySummary" rows="2" required></textarea>
                     </label>
 
                     <div class="publication-editor-grid">
                         <label>
                             Author
-                            <input type="text" id="entryAuthor" required>
+                            <select id="entryAuthor" required>
+                                <option value="Phoenix">Phoenix</option>
+                            </select>
                         </label>
                         <label>
                             Section
@@ -162,30 +162,17 @@
                     </div>
 
                     <div class="publication-markdown-editor">
-                        <label for="entryContent">Content (Markdown)</label>
-                        <div class="publication-preview-tabs" role="tablist" aria-label="Entry content editor mode">
-                            <button type="button" class="publication-preview-tab active" data-markdown-mode="edit">
-                                <i class="fa-solid fa-code"></i>
-                                Edit
-                            </button>
-                            <button type="button" class="publication-preview-tab" data-markdown-mode="preview">
-                                <i class="fa-solid fa-eye"></i>
-                                Preview
-                            </button>
-                            <button type="button" class="publication-preview-tab" data-markdown-mode="split">
-                                <i class="fa-solid fa-columns"></i>
-                                Split
-                            </button>
-                        </div>
-                        <div id="entryMarkdownEditMode">
-                            <textarea id="entryContent" rows="12" required></textarea>
-                        </div>
-                        <div id="entryMarkdownPreviewMode" class="hidden">
-                            <div id="entryMarkdownPreview" class="publication-preview-content markdown-content"></div>
-                        </div>
-                        <div id="entryMarkdownSplitMode" class="publication-markdown-split hidden">
-                            <textarea id="entryContentSplit" rows="12"></textarea>
-                            <div id="entryMarkdownPreviewSplit" class="publication-preview-content markdown-content"></div>
+                        <div class="publication-entry-preview-layout">
+                            <div class="publication-entry-content-editor">
+                                <label for="entryContent">Content (Markdown)</label>
+                                <textarea id="entryContent" rows="18" required></textarea>
+                            </div>
+                            <aside class="publication-entry-live-preview" aria-live="polite">
+                                <p class="articles-section-label">Live Entry Preview</p>
+                                <div id="entryFullPreview" class="publication-entry-preview-card">
+                                    <p class="publication-preview-empty">Entry preview will appear here.</p>
+                                </div>
+                            </aside>
                         </div>
                     </div>
 
@@ -207,7 +194,7 @@
             <aside class="publication-draft-panel">
                 <div class="publication-draft-panel-header">
                     <div>
-                        <p class="articles-section-label">Draft Queue</p>
+                        <p class="articles-section-label">Draft Layout Preview</p>
                         <h2 id="draftPublicationTitle">No Publication Loaded</h2>
                         <p id="draftPublicationMeta">Create or load an issue to begin.</p>
                     </div>

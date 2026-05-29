@@ -1096,7 +1096,7 @@
     border-radius: 20px;
     padding: 1.5rem;
     border: 1px solid rgba(255, 255, 255, 0.06);
-    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.18);
+    box-shadow: none;
 }
 
 .publication-entry-shell {
@@ -1200,7 +1200,7 @@
 
 .publication-editor-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1.8fr) minmax(18rem, 0.6fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 1.25rem;
     align-items: start;
 }
@@ -1213,7 +1213,7 @@
 .publication-editor-form fieldset,
 .entry-editor-fields {
     display: grid;
-    gap: 1rem;
+    gap: 0.85rem;
     min-width: 0;
     border: 0;
     padding: 0;
@@ -1242,10 +1242,10 @@
 .publication-manager-panel select {
     width: 100%;
     border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 10px;
+    border-radius: 8px;
     background: #1f2124;
     color: #fff;
-    padding: 0.75rem 0.8rem;
+    padding: 0.62rem 0.72rem;
     outline: none;
 }
 
@@ -1262,9 +1262,8 @@
     resize: vertical;
 }
 
-#entryContent,
-#entryContentSplit {
-    min-height: 34rem;
+#entryContent {
+    min-height: 36rem;
 }
 
 .publication-markdown-editor {
@@ -1276,62 +1275,33 @@
     margin: 0;
 }
 
-.publication-preview-tabs {
-    display: flex;
-    gap: 0.35rem;
-    flex-wrap: wrap;
-    margin-top: 0.15rem;
-}
-
-.publication-preview-tab {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    min-height: 2.2rem;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 10px 10px 0 0;
-    padding: 0.45rem 0.75rem;
-    background: #17191b;
-    color: rgba(255, 255, 255, 0.58);
-    font-size: 0.78rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-}
-
-.publication-preview-tab.active,
-.publication-preview-tab:hover {
-    color: var(--gold-color, #ffd700);
-    border-color: rgba(255, 215, 0, 0.35);
-    background: #1f2124;
-}
-
-.publication-markdown-split {
+.publication-entry-preview-layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 1rem;
     align-items: stretch;
 }
 
-.publication-markdown-split.hidden {
-    display: none;
+.publication-entry-content-editor textarea {
+    height: 100%;
 }
 
-#entryMarkdownEditMode[hidden],
-#entryMarkdownPreviewMode[hidden],
-#entryMarkdownSplitMode[hidden] {
-    display: none !important;
+.publication-entry-content-editor {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 0.6rem;
+    min-width: 0;
+}
+
+.publication-entry-live-preview {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 0.6rem;
+    min-width: 0;
 }
 
 .publication-preview-content {
-    min-height: 34rem;
-    max-height: 42rem;
-    overflow-y: auto;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 0 10px 10px 10px;
-    background: #17191b;
     color: rgba(255, 255, 255, 0.82);
-    padding: 1rem;
     font-size: 0.95rem;
     line-height: 1.75;
 }
@@ -1440,6 +1410,90 @@
     color: rgba(255, 255, 255, 0.48);
 }
 
+.publication-entry-preview-card {
+    min-height: 36rem;
+    max-height: 48rem;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    background: #11151b;
+    color: rgba(255, 255, 255, 0.82);
+    padding: 1rem;
+}
+
+.publication-slug-preview {
+    margin: -0.25rem 0 0.1rem;
+    color: rgba(255, 255, 255, 0.48);
+    font-size: 0.78rem;
+    line-height: 1.35;
+}
+
+.publication-preview-article {
+    overflow: hidden;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #17191b;
+}
+
+.publication-preview-media {
+    margin: 0;
+    aspect-ratio: 16 / 9;
+    background: #080a0d;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.publication-preview-media img,
+.publication-preview-media iframe,
+.publication-preview-media video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    object-fit: cover;
+}
+
+.publication-preview-media-video iframe,
+.publication-preview-media-video video {
+    object-fit: contain;
+}
+
+.publication-preview-article-body {
+    padding: 1.1rem;
+}
+
+.publication-preview-article-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-bottom: 0.65rem;
+    color: rgba(255, 215, 0, 0.76);
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.publication-preview-article-meta span + span::before {
+    content: '/';
+    margin-right: 0.45rem;
+    color: rgba(255, 255, 255, 0.26);
+}
+
+.publication-preview-article h3 {
+    margin: 0 0 0.75rem;
+    color: #fff;
+    font-size: 1.55rem;
+    font-weight: 900;
+    line-height: 1.12;
+}
+
+.publication-preview-summary {
+    margin: 0 0 1rem;
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 0.95rem;
+    line-height: 1.55;
+}
+
 .publication-editor-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1505,10 +1559,10 @@
 }
 
 .publication-draft-panel {
-    position: sticky;
-    top: 7rem;
     display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 1rem;
+    align-items: start;
     border-radius: 16px;
     background: #1f2124;
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1516,10 +1570,13 @@
 }
 
 .publication-draft-panel-header {
+    grid-column: 1 / -1;
     display: flex;
     justify-content: space-between;
     gap: 1rem;
     align-items: flex-start;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .publication-draft-panel h2 {
@@ -1562,7 +1619,21 @@
 
 .draft-entry-list {
     display: grid;
-    gap: 0.65rem;
+    grid-template-columns: minmax(18rem, 0.9fr) repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.draft-entry-list.is-empty {
+    grid-template-columns: 1fr;
+}
+
+.draft-entry-list.draft-entry-count-1 {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.draft-entry-list.draft-entry-count-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .draft-entry-item,
@@ -1574,10 +1645,34 @@
 }
 
 .draft-entry-item {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     justify-content: space-between;
     gap: 0.75rem;
-    align-items: center;
+    align-items: start;
+    min-width: 0;
+    min-height: 8.5rem;
+}
+
+.draft-entry-item-lead {
+    grid-row: span 2;
+    min-height: 18rem;
+    background:
+        linear-gradient(145deg, rgba(255, 215, 0, 0.07), rgba(255, 255, 255, 0.025)),
+        rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 215, 0, 0.2);
+}
+
+.draft-entry-list.draft-entry-count-1 .draft-entry-item-lead,
+.draft-entry-list.draft-entry-count-2 .draft-entry-item-lead {
+    grid-row: auto;
+    min-height: 8.5rem;
+}
+
+.draft-entry-card-content {
+    display: grid;
+    gap: 0.45rem;
+    min-width: 0;
 }
 
 .draft-entry-item span {
@@ -1590,7 +1685,23 @@
 
 .draft-entry-item strong {
     color: #fff;
-    font-size: 0.98rem;
+    font-size: 1rem;
+    line-height: 1.18;
+}
+
+.draft-entry-item p {
+    display: -webkit-box;
+    margin: 0;
+    overflow: hidden;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.82rem;
+    line-height: 1.45;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+}
+
+.draft-entry-item-lead p {
+    -webkit-line-clamp: 7;
 }
 
 .draft-entry-item small,
@@ -1621,7 +1732,9 @@
 }
 
 .publish-publication-button {
-    width: 100%;
+    align-self: end;
+    min-width: 13.5rem;
+    width: auto;
 }
 
 .publish-publication-button:disabled,
@@ -1860,7 +1973,7 @@
     .chronicle-controls,
     .publication-editor-grid,
     .carry-over-entry-panel,
-    .publication-markdown-split {
+    .publication-entry-preview-layout {
         grid-template-columns: 1fr;
     }
 
@@ -1877,7 +1990,22 @@
     }
 
     .publication-draft-panel {
-        position: static;
+        grid-template-columns: 1fr;
+    }
+
+    .draft-entry-list {
+        display: grid;
+        overflow-x: visible;
+        padding-bottom: 0;
+    }
+
+    .draft-entry-item {
+        min-width: 0;
+    }
+
+    .publish-publication-button {
+        width: 100%;
+        min-width: 0;
     }
 
     .chronicle-card,
