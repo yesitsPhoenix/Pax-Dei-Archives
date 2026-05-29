@@ -398,6 +398,10 @@
     grid-column: 1 / -1;
 }
 
+.articles-page[data-publication-mode="latest"] .chronicle-frontpage-lead .chronicle-classifieds-stack .chronicle-card-classified {
+    grid-column: 1 / -1;
+}
+
 .chronicle-card-classified .chronicle-card-header {
     padding-bottom: 0.25rem;
 }

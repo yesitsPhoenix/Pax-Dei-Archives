@@ -417,13 +417,21 @@ function renderPublicationGrid(entries) {
 
   if (getPublicationPageMode() === 'latest' && activeEntries.length > 1) {
     const [leadEntry, ...secondaryEntries] = activeEntries;
+    const leadColumnEntries = activeCategory === 'All'
+      ? secondaryEntries.filter(entry => entry.category === 'Classifieds')
+      : [];
+    const flowEntries = activeCategory === 'All'
+      ? secondaryEntries.filter(entry => entry.category !== 'Classifieds')
+      : secondaryEntries;
+
     grid.innerHTML = `
       <div class="chronicle-frontpage">
         <div class="chronicle-frontpage-lead">
           ${renderPublicationCard(leadEntry, 'lead')}
+          ${renderLeadColumnClassifieds(leadColumnEntries)}
         </div>
         <div class="chronicle-frontpage-flow">
-          ${renderFrontpageFlow(secondaryEntries)}
+          ${renderFrontpageFlow(flowEntries)}
         </div>
       </div>
     `;
@@ -431,6 +439,16 @@ function renderPublicationGrid(entries) {
   }
 
   grid.innerHTML = activeEntries.map((entry, index) => renderPublicationCard(entry, index === 0 ? 'lead' : '')).join('');
+}
+
+function renderLeadColumnClassifieds(entries) {
+  if (!entries.length) return '';
+
+  return `
+    <div class="chronicle-classifieds-stack chronicle-lead-classifieds-stack">
+      ${entries.map(entry => renderPublicationCard(entry, 'secondary-classified')).join('')}
+    </div>
+  `;
 }
 
 function renderFrontpageFlow(entries) {

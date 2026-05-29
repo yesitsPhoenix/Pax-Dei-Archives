@@ -646,14 +646,28 @@ function renderDraftPublicationPreview(entries, canEditEntries, releaseDate) {
   }
 
   const [leadEntry, ...secondaryEntries] = entries;
+  const leadColumnEntries = secondaryEntries.filter(entry => isClassifiedSection(entry.section_key));
+  const flowEntries = secondaryEntries.filter(entry => !isClassifiedSection(entry.section_key));
+
   return `
     <div class="chronicle-frontpage draft-chronicle-frontpage">
       <div class="chronicle-frontpage-lead">
         ${renderDraftPublicationCard(leadEntry, 'lead', canEditEntries, releaseDate)}
+        ${renderDraftLeadColumnClassifieds(leadColumnEntries, canEditEntries, releaseDate)}
       </div>
       <div class="chronicle-frontpage-flow">
-        ${renderDraftFrontpageFlow(secondaryEntries, canEditEntries, releaseDate)}
+        ${renderDraftFrontpageFlow(flowEntries, canEditEntries, releaseDate)}
       </div>
+    </div>
+  `;
+}
+
+function renderDraftLeadColumnClassifieds(entries, canEditEntries, releaseDate) {
+  if (!entries.length) return '';
+
+  return `
+    <div class="chronicle-classifieds-stack chronicle-lead-classifieds-stack">
+      ${entries.map(entry => renderDraftPublicationCard(entry, 'secondary-classified', canEditEntries, releaseDate)).join('')}
     </div>
   `;
 }
