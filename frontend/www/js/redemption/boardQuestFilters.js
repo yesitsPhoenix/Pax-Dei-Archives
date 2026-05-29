@@ -1,4 +1,5 @@
 const DEFAULT_POST_STATUS = 'active';
+const TERMINAL_BOARD_QUEST_STATUSES = new Set(['cancelled', 'archived', 'expired', 'fulfilled']);
 
 function normalizeString(value) {
     return typeof value === 'string' ? value.trim() : '';
@@ -72,7 +73,7 @@ function matchesStatus(post, filters, now = new Date()) {
             return status === 'archived';
         case 'active':
         default:
-            return status === 'posted' && !expired;
+            return !expired && !TERMINAL_BOARD_QUEST_STATUSES.has(status);
     }
 }
 
@@ -86,7 +87,13 @@ export function applyBoardQuestFilters(posts = [], filters = {}, activeCharacter
         if (normalized.category && normalizeString(post.player_contract_category) !== normalized.category) return false;
         if (normalized.postType && normalizeString(post.post_type) !== normalized.postType) return false;
         if (normalized.proofMode && normalizeString(post.proof_mode) !== normalized.proofMode) return false;
-        if (!normalized.includeRemote && post.remote_delivery_allowed === true && normalized.status === 'active') return false;
+        if (
+            !normalized.includeRemote
+            && post.remote_delivery_allowed === true
+            && normalized.status === 'active'
+            && post.author_character_id !== activeCharacter?.character_id
+            && !post.currentCharacterAcceptance
+        ) return false;
         if (normalized.mineOnly && post.author_character_id !== activeCharacter?.character_id) return false;
         if (normalized.acceptedOnly && !post.currentCharacterAcceptance) return false;
         return true;
