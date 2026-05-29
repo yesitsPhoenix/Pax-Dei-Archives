@@ -647,7 +647,6 @@ function loadEntryForEditing(entryId, elements) {
 
   const submitButton = elements.form.querySelector('button[type="submit"]');
   submitButton.innerHTML = '<i class="fas fa-save"></i> Update Entry';
-  elements.entryTitleInput.focus();
   showMessage(elements.messageEl, `Editing "${entry.title}". Save to update this entry.`, 'info');
 }
 
