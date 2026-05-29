@@ -11,7 +11,8 @@ const PROOF_MODE_HELP = {
 };
 
 const PARTICIPATION_HELP = {
-    single: 'The contract closes to new acceptances after one character accepts it.',
+    one_time: 'One character can accept and complete this contract once. After completion, it should not reopen.',
+    repeatable_single: 'One character can accept it at a time, and the contract can be accepted again after completion.',
     open: 'Multiple characters can accept this contract independently. Best for events, gatherings, and open invitations.',
 };
 
@@ -383,6 +384,7 @@ function buildPayload() {
     if (!goals.length) {
         throw new Error('Add at least one goal.');
     }
+    const participation = getParticipationPayload();
 
     return {
         title: getValue('contract-title'),
@@ -392,8 +394,8 @@ function buildPayload() {
         player_contract_category: el.category.value,
         post_type: 'contract',
         proof_mode: el.proofMode.value,
-        participation_mode: el.participationMode.value,
-        capacity: 1,
+        participation_mode: participation.participationMode,
+        capacity: participation.capacity,
         expires_at: buildExpiresAt(),
         visibility_scope: 'public',
         posting_region: getValue('contract-posting-region') || getCharacterRegion(character) || null,
@@ -407,9 +409,38 @@ function buildPayload() {
         travel_required: el.travelRequired.checked,
         remote_delivery_allowed: el.remoteDelivery.checked,
         contact_note: getValue('contract-contact') || null,
-        is_renewable: true,
+        is_renewable: participation.isRenewable,
         goals,
     };
+}
+
+function getParticipationPayload() {
+    switch (el.participationMode.value) {
+        case 'open':
+            return {
+                participationMode: 'open',
+                capacity: 1,
+                isRenewable: true,
+            };
+        case 'repeatable_single':
+            return {
+                participationMode: 'single',
+                capacity: 1,
+                isRenewable: true,
+            };
+        case 'one_time':
+        default:
+            return {
+                participationMode: 'single',
+                capacity: 1,
+                isRenewable: false,
+            };
+    }
+}
+
+function getParticipationFormValue(post = {}) {
+    if (post.participation_mode === 'open') return 'open';
+    return post.is_renewable === true ? 'repeatable_single' : 'one_time';
 }
 
 function setFieldValue(id, value = '') {
@@ -421,7 +452,7 @@ function fillFormFromPost(post) {
     setFieldValue('contract-title', post.title);
     setFieldValue('contract-category', post.player_contract_category);
     setFieldValue('contract-proof-mode', post.proof_mode === 'external_proof_note' ? 'submit_for_confirmation' : post.proof_mode);
-    setFieldValue('contract-participation-mode', post.participation_mode || 'single');
+    setFieldValue('contract-participation-mode', getParticipationFormValue(post));
     setFieldValue('contract-expires-days', getExpiresDaysValue(post.expires_at));
     setFieldValue('contract-summary', post.summary);
     setFieldValue('contract-body', post.body_markdown);

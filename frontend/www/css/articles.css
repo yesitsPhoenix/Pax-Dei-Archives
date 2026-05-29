@@ -205,6 +205,10 @@
     align-items: start;
 }
 
+.chronicle-frontpage-balanced {
+    grid-template-columns: minmax(23rem, 0.98fr) repeat(2, minmax(0, 1.08fr));
+}
+
 .chronicle-frontpage-lead,
 .chronicle-frontpage-flow {
     display: grid;
@@ -232,6 +236,10 @@
 
     .chronicle-frontpage {
         grid-template-columns: minmax(28rem, 0.88fr) minmax(0, 2.05fr);
+    }
+
+    .chronicle-frontpage-balanced {
+        grid-template-columns: minmax(29rem, 0.98fr) repeat(2, minmax(0, 1.08fr));
     }
 }
 
@@ -383,6 +391,15 @@
 .articles-page[data-publication-mode="latest"] .chronicle-frontpage-flow .chronicle-card-secondary-wide,
 .articles-page[data-publication-mode="latest"] .chronicle-frontpage-flow .chronicle-card-secondary-classified,
 .articles-page[data-publication-mode="latest"] .chronicle-frontpage-flow .chronicle-card-secondary-narrow {
+    grid-column: 1 / -1;
+}
+
+.articles-page[data-publication-mode="latest"] .chronicle-frontpage-balanced .chronicle-card,
+.articles-page[data-publication-mode="latest"] .chronicle-frontpage-balanced .chronicle-card-secondary-full,
+.articles-page[data-publication-mode="latest"] .chronicle-frontpage-balanced .chronicle-card-secondary-major,
+.articles-page[data-publication-mode="latest"] .chronicle-frontpage-balanced .chronicle-card-secondary-wide,
+.articles-page[data-publication-mode="latest"] .chronicle-frontpage-balanced .chronicle-card-secondary-classified,
+.articles-page[data-publication-mode="latest"] .chronicle-frontpage-balanced .chronicle-card-secondary-narrow {
     grid-column: 1 / -1;
 }
 
@@ -1660,7 +1677,7 @@
 }
 
 .draft-publication-preview .chronicle-frontpage {
-    grid-template-columns: minmax(24rem, 0.92fr) minmax(0, 1.9fr);
+    grid-template-columns: minmax(23rem, 0.98fr) repeat(2, minmax(0, 1.08fr));
 }
 
 .draft-publication-preview .chronicle-frontpage-flow {

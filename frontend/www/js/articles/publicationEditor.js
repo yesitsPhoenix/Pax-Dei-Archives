@@ -655,17 +655,20 @@ function renderDraftPublicationPreview(entries, canEditEntries, releaseDate) {
   }
 
   const [leadEntry, ...secondaryEntries] = entries;
-  const leadColumnEntries = secondaryEntries.filter(entry => isClassifiedSection(entry.section_key));
-  const flowEntries = secondaryEntries.filter(entry => !isClassifiedSection(entry.section_key));
+  const articleEntries = secondaryEntries.filter(entry => !isClassifiedSection(entry.section_key));
+  const columns = distributeDraftBalancedFrontpageColumns(leadEntry, secondaryEntries);
+  const orderedFlowItems = buildOrderedDraftFrontpageFlowItems(secondaryEntries);
 
   return `
-    <div class="chronicle-frontpage draft-chronicle-frontpage">
-      <div class="chronicle-frontpage-lead">
+    <div class="chronicle-frontpage chronicle-frontpage-balanced draft-chronicle-frontpage">
+      ${columns.map((column, columnIndex) => `
+        <div class="${columnIndex === 0 ? 'chronicle-frontpage-lead' : 'chronicle-flow-column'}">
+          ${column.map(item => renderDraftBalancedFrontpageItem(item, articleEntries, canEditEntries, releaseDate)).join('')}
+        </div>
+      `).join('')}
+      <div class="chronicle-frontpage-flow-mobile">
         ${renderDraftPublicationCard(leadEntry, 'lead', canEditEntries, releaseDate)}
-        ${renderDraftLeadColumnClassifieds(leadColumnEntries, canEditEntries, releaseDate)}
-      </div>
-      <div class="chronicle-frontpage-flow">
-        ${renderDraftFrontpageFlow(flowEntries, canEditEntries, releaseDate)}
+        ${orderedFlowItems.map(item => renderDraftFrontpageFlowItem(item, articleEntries, canEditEntries, releaseDate)).join('')}
       </div>
     </div>
   `;
@@ -678,32 +681,24 @@ function updateThumbnailFieldVisibility(elements) {
   elements.entryThumbnailUrlField.classList.toggle('hidden', media.type !== 'video');
 }
 
-function renderDraftLeadColumnClassifieds(entries, canEditEntries, releaseDate) {
-  if (!entries.length) return '';
+function distributeDraftBalancedFrontpageColumns(leadEntry, entries) {
+  const columns = [[{ type: 'entry', entry: leadEntry, modifier: 'lead' }], [], []];
+  const weights = [getDraftFrontpageEntryWeight(leadEntry, true), 0, 0];
+  const flowItems = buildDraftFrontpageFlowItems(entries);
 
-  return `
-    <div class="chronicle-classifieds-stack chronicle-lead-classifieds-stack">
-      ${entries.map(entry => renderDraftPublicationCard(entry, 'secondary-classified', canEditEntries, releaseDate)).join('')}
-    </div>
-  `;
+  flowItems.forEach(item => {
+    const columnIndex = getDraftBalancedFrontpageColumn(weights);
+    columns[columnIndex].push(item);
+    weights[columnIndex] += getDraftFrontpageFlowWeight(item);
+  });
+
+  return columns;
 }
 
-function renderDraftFrontpageFlow(entries, canEditEntries, releaseDate) {
-  const articleEntries = entries.filter(entry => !isClassifiedSection(entry.section_key));
-  const flowItems = buildDraftFrontpageFlowItems(entries);
-  const columns = distributeDraftFrontpageFlowItems(flowItems);
-  const orderedFlowItems = buildOrderedDraftFrontpageFlowItems(entries);
-
-  return `
-    ${columns.map(column => `
-      <div class="chronicle-flow-column">
-        ${column.map(item => renderDraftFrontpageFlowItem(item, articleEntries, canEditEntries, releaseDate)).join('')}
-      </div>
-    `).join('')}
-    <div class="chronicle-frontpage-flow-mobile">
-      ${orderedFlowItems.map(item => renderDraftFrontpageFlowItem(item, articleEntries, canEditEntries, releaseDate)).join('')}
-    </div>
-  `;
+function getDraftBalancedFrontpageColumn(weights) {
+  return weights.reduce((bestIndex, weight, index) => (
+    weight < weights[bestIndex] ? index : bestIndex
+  ), 0);
 }
 
 function buildDraftFrontpageFlowItems(entries) {
@@ -726,35 +721,28 @@ function buildOrderedDraftFrontpageFlowItems(entries) {
   return [...articleItems, { type: 'classifieds', entries: classifiedEntries }];
 }
 
-function distributeDraftFrontpageFlowItems(items) {
-  const columns = [[], []];
-  const weights = [0, 0];
-
-  items.forEach(item => {
-    const columnIndex = getNextDraftFrontpageColumn(item, columns, weights);
-    columns[columnIndex].push(item);
-    weights[columnIndex] += getDraftFrontpageFlowWeight(item);
-  });
-
-  return columns.filter(column => column.length);
-}
-
-function getNextDraftFrontpageColumn(item, columns, weights) {
-  if (item.type === 'entry' && !columns[0].some(columnItem => columnItem.type === 'entry')) return 0;
-  if (item.type === 'entry' && !columns[1].some(columnItem => columnItem.type === 'entry')) return 1;
-  return weights[0] <= weights[1] ? 0 : 1;
-}
-
 function getDraftFrontpageFlowWeight(item) {
   if (item.type === 'classifieds') {
     return Math.max(0.45, item.entries.length * 0.38);
   }
 
-  const entry = item.entry;
+  return getDraftFrontpageEntryWeight(item.entry);
+}
+
+function getDraftFrontpageEntryWeight(entry, isLead = false) {
   const plainTextLength = createPlainExcerpt(stripImages(entry.content || entry.summary || ''), 2000).length;
   const hasMedia = Boolean(entry.image_url);
-  const textWeight = Math.min(1.15, plainTextLength / 850);
-  return 0.65 + textWeight + (hasMedia ? 0.55 : 0);
+  const textWeight = Math.min(isLead ? 1.35 : 1.15, plainTextLength / (isLead ? 950 : 850));
+  const mediaWeight = hasMedia ? (isLead ? 0.6 : 0.55) : 0;
+  return (isLead ? 1.15 : 0.65) + textWeight + mediaWeight;
+}
+
+function renderDraftBalancedFrontpageItem(item, articleEntries, canEditEntries, releaseDate) {
+  if (item.modifier === 'lead') {
+    return renderDraftPublicationCard(item.entry, 'lead', canEditEntries, releaseDate);
+  }
+
+  return renderDraftFrontpageFlowItem(item, articleEntries, canEditEntries, releaseDate);
 }
 
 function renderDraftFrontpageFlowItem(item, articleEntries, canEditEntries, releaseDate) {
