@@ -601,7 +601,9 @@ function renderDraftPanel(elements, publication, entries) {
       ? 'This issue is archived. Change it back to draft or published before editing entries.'
       : 'Create or load a draft publication before adding entries.';
 
-  elements.draftTitle.textContent = publication ? `Issue ${publication.issue_number}: ${title}` : 'No Publication Loaded';
+  elements.draftTitle.innerHTML = publication
+    ? `<span class="latest-publication-issue">Issue ${escapeHtml(publication.issue_number)}</span><span class="latest-publication-title-separator">:</span> ${escapeHtml(title)}`
+    : 'No Publication Loaded';
   elements.draftMeta.textContent = publication
     ? `${formatDate(releaseDate)} - ${entries.length} ${entries.length === 1 ? 'entry' : 'entries'} queued`
     : 'Create or load an issue to begin.';
@@ -612,23 +614,8 @@ function renderDraftPanel(elements, publication, entries) {
     elements.draftEntryList.className = 'draft-entry-list is-empty';
     elements.draftEntryList.innerHTML = '<div class="empty-draft-state">Saved entries for the selected issue will appear here.</div>';
   } else {
-    elements.draftEntryList.className = `draft-entry-list draft-entry-count-${Math.min(entries.length, 6)}`;
-    elements.draftEntryList.innerHTML = entries.map((entry, index) => `
-      <article class="draft-entry-item ${index === 0 ? 'draft-entry-item-lead' : ''}">
-        <div class="draft-entry-card-content">
-          <span>${escapeHtml(entry.section_key)}</span>
-          <strong>${escapeHtml(entry.title)}</strong>
-          ${entry.summary ? `<p>${escapeHtml(entry.summary)}</p>` : ''}
-          <small>${escapeHtml(entry.author || 'Unknown')}</small>
-        </div>
-        ${canEditEntries ? `
-          <button type="button" class="draft-entry-edit" data-entry-id="${escapeHtml(entry.id)}">
-            <i class="fas fa-pen"></i>
-            Edit
-          </button>
-        ` : ''}
-      </article>
-    `).join('');
+    elements.draftEntryList.className = 'draft-entry-list draft-publication-preview';
+    elements.draftEntryList.innerHTML = renderDraftPublicationPreview(entries, canEditEntries, releaseDate);
 
     elements.draftEntryList.querySelectorAll('.draft-entry-edit').forEach(button => {
       button.addEventListener('click', () => loadEntryForEditing(button.dataset.entryId, elements));
@@ -639,6 +626,156 @@ function renderDraftPanel(elements, publication, entries) {
   elements.savePublicationButton.innerHTML = publication
     ? '<i class="fas fa-save"></i> Save Publication'
     : '<i class="fas fa-save"></i> Save Publication Draft';
+}
+
+function renderDraftPublicationPreview(entries, canEditEntries, releaseDate) {
+  if (entries.length === 1) {
+    return renderDraftPublicationCard(entries[0], 'lead', canEditEntries, releaseDate);
+  }
+
+  const [leadEntry, ...secondaryEntries] = entries;
+  return `
+    <div class="chronicle-frontpage draft-chronicle-frontpage">
+      <div class="chronicle-frontpage-lead">
+        ${renderDraftPublicationCard(leadEntry, 'lead', canEditEntries, releaseDate)}
+      </div>
+      <div class="chronicle-frontpage-flow">
+        ${renderDraftFrontpageFlow(secondaryEntries, canEditEntries, releaseDate)}
+      </div>
+    </div>
+  `;
+}
+
+function renderDraftFrontpageFlow(entries, canEditEntries, releaseDate) {
+  const articleEntries = entries.filter(entry => !isClassifiedSection(entry.section_key));
+  const flowItems = buildDraftFrontpageFlowItems(entries);
+  const columns = distributeDraftFrontpageFlowItems(flowItems);
+  const orderedFlowItems = buildOrderedDraftFrontpageFlowItems(entries);
+
+  return `
+    ${columns.map(column => `
+      <div class="chronicle-flow-column">
+        ${column.map(item => renderDraftFrontpageFlowItem(item, articleEntries, canEditEntries, releaseDate)).join('')}
+      </div>
+    `).join('')}
+    <div class="chronicle-frontpage-flow-mobile">
+      ${orderedFlowItems.map(item => renderDraftFrontpageFlowItem(item, articleEntries, canEditEntries, releaseDate)).join('')}
+    </div>
+  `;
+}
+
+function buildDraftFrontpageFlowItems(entries) {
+  const articleItems = entries
+    .filter(entry => !isClassifiedSection(entry.section_key))
+    .map(entry => ({ type: 'entry', entry }));
+  const classifiedEntries = entries.filter(entry => isClassifiedSection(entry.section_key));
+
+  if (!classifiedEntries.length) return articleItems;
+  return [...articleItems, { type: 'classifieds', entries: classifiedEntries }];
+}
+
+function buildOrderedDraftFrontpageFlowItems(entries) {
+  const articleItems = entries
+    .filter(entry => !isClassifiedSection(entry.section_key))
+    .map(entry => ({ type: 'entry', entry }));
+  const classifiedEntries = entries.filter(entry => isClassifiedSection(entry.section_key));
+
+  if (!classifiedEntries.length) return articleItems;
+  return [...articleItems, { type: 'classifieds', entries: classifiedEntries }];
+}
+
+function distributeDraftFrontpageFlowItems(items) {
+  const columns = [[], []];
+  const weights = [0, 0];
+
+  items.forEach(item => {
+    const columnIndex = getNextDraftFrontpageColumn(item, columns, weights);
+    columns[columnIndex].push(item);
+    weights[columnIndex] += getDraftFrontpageFlowWeight(item);
+  });
+
+  return columns.filter(column => column.length);
+}
+
+function getNextDraftFrontpageColumn(item, columns, weights) {
+  if (item.type === 'entry' && !columns[0].some(columnItem => columnItem.type === 'entry')) return 0;
+  if (item.type === 'entry' && !columns[1].some(columnItem => columnItem.type === 'entry')) return 1;
+  return weights[0] <= weights[1] ? 0 : 1;
+}
+
+function getDraftFrontpageFlowWeight(item) {
+  if (item.type === 'classifieds') {
+    return Math.max(0.45, item.entries.length * 0.38);
+  }
+
+  const entry = item.entry;
+  const plainTextLength = createPlainExcerpt(stripImages(entry.content || entry.summary || ''), 2000).length;
+  const hasMedia = Boolean(entry.image_url);
+  const textWeight = Math.min(1.15, plainTextLength / 850);
+  return 0.65 + textWeight + (hasMedia ? 0.55 : 0);
+}
+
+function renderDraftFrontpageFlowItem(item, articleEntries, canEditEntries, releaseDate) {
+  if (item.type === 'classifieds') {
+    return `
+      <div class="chronicle-classifieds-stack">
+        ${item.entries.map(entry => renderDraftPublicationCard(entry, 'secondary-classified', canEditEntries, releaseDate)).join('')}
+      </div>
+    `;
+  }
+
+  const articleIndex = articleEntries.findIndex(entry => entry === item.entry);
+  return renderDraftPublicationCard(
+    item.entry,
+    getDraftSecondaryCardModifier(item.entry, articleIndex, articleEntries),
+    canEditEntries,
+    releaseDate,
+  );
+}
+
+function getDraftSecondaryCardModifier(entry, index, entries) {
+  if (isClassifiedSection(entry.section_key)) return 'secondary-classified';
+
+  const articleEntries = entries.filter(item => !isClassifiedSection(item.section_key));
+  const articleIndex = articleEntries.findIndex(item => item === entry);
+  const previewLength = createPlainExcerpt(stripImages(entry.content || entry.summary || ''), 2000).length;
+
+  if (articleEntries.length === 1) return 'secondary-full';
+  if (articleIndex < 2) return 'secondary-major';
+  if (previewLength > 700) return 'secondary-wide';
+  return index % 2 === 0 ? 'secondary-standard' : 'secondary-narrow';
+}
+
+function renderDraftPublicationCard(entry, modifier, canEditEntries, releaseDate) {
+  const isClassified = isClassifiedSection(entry.section_key);
+  const previewText = entry.content || entry.summary || '';
+  const excerptHtml = DOMPurify.sanitize(renderMarkdownPreview(stripImages(previewText)));
+
+  return `
+    <article class="chronicle-card ${modifier ? `chronicle-card-${modifier}` : ''} ${isClassified ? 'chronicle-card-classified' : ''}">
+      <header class="chronicle-card-header">
+        <h2>${escapeHtml(entry.section_key)}</h2>
+      </header>
+      <div class="chronicle-card-body">
+        <h3>
+          <span class="chronicle-title-link">${escapeHtml(entry.title)}</span>
+        </h3>
+        ${isClassified ? '' : `
+          <div class="article-meta-row">
+            <span><i class="fa fa-user"></i> ${escapeHtml(entry.author || 'Unknown')}</span>
+            <span><i class="fa fa-calendar"></i> ${formatDate(releaseDate)}</span>
+          </div>
+        `}
+        <div class="chronicle-excerpt markdown-content">${excerptHtml}</div>
+      </div>
+      ${canEditEntries ? `
+        <button type="button" class="draft-entry-edit" data-entry-id="${escapeHtml(entry.id)}">
+          <i class="fas fa-pen"></i>
+          Edit
+        </button>
+      ` : ''}
+    </article>
+  `;
 }
 
 function loadEntryForEditing(entryId, elements) {
@@ -777,6 +914,10 @@ function normalizeMarkdownInput(content) {
   return content
     .replace(/\]\(\((https?:\/\/[^)\s]+)\)\)/g, ']($1)')
     .replace(/\]\(\s+(https?:\/\/[^)\s]+)\s+\)/g, ']($1)');
+}
+
+function stripImages(content) {
+  return String(content || '').replace(/!\[[^\]]*]\([^)]+\)/g, '').replace(/<img[^>]*>/gi, '');
 }
 
 function resetPublicationFields(elements) {
