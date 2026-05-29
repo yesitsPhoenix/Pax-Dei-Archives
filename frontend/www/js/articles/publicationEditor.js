@@ -23,12 +23,14 @@ const CHRONICLE_SECTIONS = [
   'Dungeon Spotlights',
   'Classifieds',
 ];
+const ENTRY_PREVIEW_DEBOUNCE_MS = 250;
 
 let activePublication = null;
 let activeEntries = [];
 let editingEntryId = null;
 let publicationList = [];
 let carryOverEntries = [];
+let entryPreviewDebounceTimer = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   const hasAccess = await requirePublicationEditorAccess();
@@ -103,6 +105,8 @@ function setupMarkdownEditor(elements) {
     });
   }
 
+  const schedulePreviewUpdate = () => scheduleEntryPreviewUpdate(elements);
+
   [
     elements.entryTitleInput,
     elements.entrySummaryInput,
@@ -111,7 +115,7 @@ function setupMarkdownEditor(elements) {
     elements.entryAuthorInput,
     elements.entrySectionSelect,
   ].forEach(input => {
-    input.addEventListener('input', () => updateEntryPreview(elements));
+    input.addEventListener('input', schedulePreviewUpdate);
     input.addEventListener('change', () => updateEntryPreview(elements));
   });
 
@@ -120,6 +124,13 @@ function setupMarkdownEditor(elements) {
 
 function updateMarkdownPreview(elements) {
   updateEntryPreview(elements);
+}
+
+function scheduleEntryPreviewUpdate(elements) {
+  window.clearTimeout(entryPreviewDebounceTimer);
+  entryPreviewDebounceTimer = window.setTimeout(() => {
+    updateEntryPreview(elements);
+  }, ENTRY_PREVIEW_DEBOUNCE_MS);
 }
 
 function setEntrySlug(elements, slug) {
