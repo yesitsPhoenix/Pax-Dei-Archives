@@ -58,8 +58,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   elements.issueNumberInput.addEventListener('input', () => resetActivePublication(elements, { clearPublicationFields: true }));
 
-  elements.issueNumberInput.value = await getNextIssueNumber();
   await loadPublicationList(elements);
+  await loadMostRecentPublication(elements);
 });
 
 function getElements() {
@@ -314,6 +314,18 @@ async function loadPublicationList(elements) {
       </option>
     `),
   ].join('');
+}
+
+async function loadMostRecentPublication(elements) {
+  const mostRecentPublication = publicationList[0];
+
+  if (!mostRecentPublication) {
+    elements.issueNumberInput.value = await getNextIssueNumber();
+    return;
+  }
+
+  elements.issueNumberInput.value = mostRecentPublication.issue_number;
+  await loadPublicationByIssue(elements, { silent: true });
 }
 
 async function loadSelectedPublication(elements) {
