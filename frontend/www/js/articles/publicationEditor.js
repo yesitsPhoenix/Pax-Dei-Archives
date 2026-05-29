@@ -82,6 +82,7 @@ function getElements() {
     entrySlugPreview: document.getElementById('entrySlugPreview'),
     entrySummaryInput: document.getElementById('entrySummary'),
     entryImageUrlInput: document.getElementById('entryImageUrl'),
+    entryThumbnailUrlField: document.getElementById('entryThumbnailUrlField'),
     entryThumbnailUrlInput: document.getElementById('entryThumbnailUrl'),
     entryContentInput: document.getElementById('entryContent'),
     entryFullPreview: document.getElementById('entryFullPreview'),
@@ -121,6 +122,9 @@ function setupMarkdownEditor(elements) {
     input.addEventListener('change', () => updateEntryPreview(elements));
   });
 
+  elements.entryImageUrlInput.addEventListener('input', () => updateThumbnailFieldVisibility(elements));
+  elements.entryImageUrlInput.addEventListener('change', () => updateThumbnailFieldVisibility(elements));
+  updateThumbnailFieldVisibility(elements);
   updateEntryPreview(elements);
 }
 
@@ -667,6 +671,13 @@ function renderDraftPublicationPreview(entries, canEditEntries, releaseDate) {
   `;
 }
 
+function updateThumbnailFieldVisibility(elements) {
+  if (!elements.entryThumbnailUrlField) return;
+
+  const media = getMediaInfo(elements.entryImageUrlInput.value);
+  elements.entryThumbnailUrlField.classList.toggle('hidden', media.type !== 'video');
+}
+
 function renderDraftLeadColumnClassifieds(entries, canEditEntries, releaseDate) {
   if (!entries.length) return '';
 
@@ -821,6 +832,7 @@ function loadEntryForEditing(entryId, elements) {
   elements.entrySummaryInput.value = entry.summary || '';
   elements.entryImageUrlInput.value = entry.image_url || '';
   elements.entryThumbnailUrlInput.value = entry.thumbnail_url || '';
+  updateThumbnailFieldVisibility(elements);
   elements.entryContentInput.value = entry.content || '';
   elements.entryAuthorInput.value = entry.author || 'Phoenix';
   updateEntryPreview(elements);
@@ -884,6 +896,7 @@ function carryOverSelectedEntry(elements) {
   elements.entrySummaryInput.value = sourceEntry.summary || '';
   elements.entryImageUrlInput.value = sourceEntry.image_url || '';
   elements.entryThumbnailUrlInput.value = sourceEntry.thumbnail_url || '';
+  updateThumbnailFieldVisibility(elements);
   elements.entryContentInput.value = sourceEntry.content || '';
   elements.entryAuthorInput.value = sourceEntry.author || 'Phoenix';
   updateEntryPreview(elements);
@@ -937,6 +950,7 @@ function clearEntryFields(elements) {
   elements.entrySummaryInput.value = '';
   elements.entryImageUrlInput.value = '';
   elements.entryThumbnailUrlInput.value = '';
+  updateThumbnailFieldVisibility(elements);
   elements.entryContentInput.value = '';
   elements.entryAuthorInput.value = 'Phoenix';
   populateSectionSelect(elements.entrySectionSelect);
