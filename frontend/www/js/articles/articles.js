@@ -257,6 +257,7 @@ function normalizeEntry(entry, publication) {
   const slug = entry.slug || slugify(`${publication.issueNumber || publication.releaseDate || 'publication'}-${section}-${entry.title || entry.id}`);
   const releaseDate = publication.releaseDate || publication.release_date || entry.releaseDate || entry.publication_date || getPublicationKey(entry.created_at);
   const heroImage = entry.image_url || entry.heroImage || entry.image || extractFirstImage(content) || '';
+  const thumbnailUrl = entry.thumbnail_url || entry.thumbnailUrl || entry.poster_url || entry.posterUrl || '';
 
   return {
     id: entry.id,
@@ -273,6 +274,7 @@ function normalizeEntry(entry, publication) {
     publicationTitle: publication.title || null,
     sortOrder: entry.sort_order ?? entry.sortOrder ?? sectionSortIndex(section),
     heroImage,
+    thumbnailUrl,
     source: entry.source || '',
     readTime: entry.readTime || estimateReadTime(content),
   };
@@ -298,6 +300,7 @@ function normalizeLegacyArticleEntry(article) {
     publicationTitle: 'Legacy Article Archive',
     sortOrder: sectionSortIndex(category),
     heroImage: article.image_url || article.image || extractFirstImage(content) || '',
+    thumbnailUrl: article.thumbnail_url || article.thumbnailUrl || article.poster_url || article.posterUrl || '',
     readTime: estimateReadTime(content),
   };
 }
@@ -614,9 +617,10 @@ function renderCardMedia(entry) {
   }
 
   if (media.type === 'video') {
+    const posterAttr = entry.thumbnailUrl ? ` poster="${escapeHtml(entry.thumbnailUrl)}"` : '';
     return `
       <div class="chronicle-image chronicle-media chronicle-media-video">
-        <video controls preload="metadata">
+        <video controls preload="metadata"${posterAttr}>
           <source src="${escapeHtml(media.url)}" type="${escapeHtml(media.mimeType)}">
         </video>
       </div>
@@ -650,9 +654,10 @@ function renderModalMedia(entry) {
   }
 
   if (media.type === 'video') {
+    const posterAttr = entry.thumbnailUrl ? ` poster="${escapeHtml(entry.thumbnailUrl)}"` : '';
     return `
       <figure class="article-modal-hero-image article-modal-media-video">
-        <video controls preload="metadata">
+        <video controls preload="metadata"${posterAttr}>
           <source src="${escapeHtml(media.url)}" type="${escapeHtml(media.mimeType)}">
         </video>
       </figure>

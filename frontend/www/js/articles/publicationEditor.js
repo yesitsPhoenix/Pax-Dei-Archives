@@ -82,6 +82,7 @@ function getElements() {
     entrySlugPreview: document.getElementById('entrySlugPreview'),
     entrySummaryInput: document.getElementById('entrySummary'),
     entryImageUrlInput: document.getElementById('entryImageUrl'),
+    entryThumbnailUrlInput: document.getElementById('entryThumbnailUrl'),
     entryContentInput: document.getElementById('entryContent'),
     entryFullPreview: document.getElementById('entryFullPreview'),
     entryAuthorInput: document.getElementById('entryAuthor'),
@@ -111,6 +112,7 @@ function setupMarkdownEditor(elements) {
     elements.entryTitleInput,
     elements.entrySummaryInput,
     elements.entryImageUrlInput,
+    elements.entryThumbnailUrlInput,
     elements.entryContentInput,
     elements.entryAuthorInput,
     elements.entrySectionSelect,
@@ -152,9 +154,10 @@ function updateEntryPreview(elements) {
   const author = elements.entryAuthorInput.value.trim();
   const summary = elements.entrySummaryInput.value.trim();
   const mediaUrl = elements.entryImageUrlInput.value.trim();
+  const thumbnailUrl = elements.entryThumbnailUrlInput.value.trim();
   const content = elements.entryContentInput.value;
   const bodyHtml = renderMarkdownPreview(content);
-  const hasAnyContent = title || summary || mediaUrl || content.trim();
+  const hasAnyContent = title || summary || mediaUrl || thumbnailUrl || content.trim();
 
   if (!hasAnyContent) {
     elements.entryFullPreview.innerHTML = '<p class="publication-preview-empty">Entry preview will appear here.</p>';
@@ -163,7 +166,7 @@ function updateEntryPreview(elements) {
 
   elements.entryFullPreview.innerHTML = `
     <article class="publication-preview-article">
-      ${renderEntryPreviewMedia(mediaUrl, title || 'Publication entry')}
+      ${renderEntryPreviewMedia(mediaUrl, title || 'Publication entry', thumbnailUrl)}
       <div class="publication-preview-article-body">
         <div class="publication-preview-article-meta">
           <span>${escapeHtml(section)}</span>
@@ -187,7 +190,7 @@ function renderMarkdownPreview(content) {
   return DOMPurify.sanitize(parsed);
 }
 
-function renderEntryPreviewMedia(url, title) {
+function renderEntryPreviewMedia(url, title, thumbnailUrl = '') {
   const media = getMediaInfo(url);
   if (media.type === 'none') return '';
 
@@ -206,9 +209,10 @@ function renderEntryPreviewMedia(url, title) {
   }
 
   if (media.type === 'video') {
+    const posterAttr = thumbnailUrl ? ` poster="${escapeHtml(thumbnailUrl)}"` : '';
     return `
       <figure class="publication-preview-media publication-preview-media-video">
-        <video controls preload="metadata">
+        <video controls preload="metadata"${posterAttr}>
           <source src="${escapeHtml(media.url)}" type="${escapeHtml(media.mimeType)}">
         </video>
       </figure>
@@ -525,6 +529,7 @@ async function upsertPublicationEntry(entry) {
     slug: `${entry.issueNumber}-${entry.slug}`,
     summary: entry.summary,
     image_url: entry.imageUrl || null,
+    thumbnail_url: entry.thumbnailUrl || null,
     content: entry.content,
     author: entry.author || 'Classifieds',
     sort_order: CHRONICLE_SECTIONS.indexOf(entry.sectionKey),
@@ -815,6 +820,7 @@ function loadEntryForEditing(entryId, elements) {
   setEntrySlug(elements, stripIssuePrefix(entry.slug || '', activePublication.issue_number));
   elements.entrySummaryInput.value = entry.summary || '';
   elements.entryImageUrlInput.value = entry.image_url || '';
+  elements.entryThumbnailUrlInput.value = entry.thumbnail_url || '';
   elements.entryContentInput.value = entry.content || '';
   elements.entryAuthorInput.value = entry.author || 'Phoenix';
   updateEntryPreview(elements);
@@ -877,6 +883,7 @@ function carryOverSelectedEntry(elements) {
   setEntrySlug(elements, stripIssuePrefix(sourceEntry.slug || slugify(sourceEntry.title || ''), sourceEntry.publication.issue_number));
   elements.entrySummaryInput.value = sourceEntry.summary || '';
   elements.entryImageUrlInput.value = sourceEntry.image_url || '';
+  elements.entryThumbnailUrlInput.value = sourceEntry.thumbnail_url || '';
   elements.entryContentInput.value = sourceEntry.content || '';
   elements.entryAuthorInput.value = sourceEntry.author || 'Phoenix';
   updateEntryPreview(elements);
@@ -899,6 +906,7 @@ function readEntryInput(elements) {
     slug: elements.entrySlugInput.value.trim() || slugify(title),
     summary: elements.entrySummaryInput.value.trim() || (isClassifiedSection(sectionKey) ? createPlainExcerpt(content, 180) : ''),
     imageUrl: elements.entryImageUrlInput.value.trim(),
+    thumbnailUrl: elements.entryThumbnailUrlInput.value.trim(),
     content,
     author: elements.entryAuthorInput.value.trim() || (isClassifiedSection(sectionKey) ? 'Classifieds' : ''),
   };
@@ -928,6 +936,7 @@ function clearEntryFields(elements) {
   setEntrySlug(elements, '');
   elements.entrySummaryInput.value = '';
   elements.entryImageUrlInput.value = '';
+  elements.entryThumbnailUrlInput.value = '';
   elements.entryContentInput.value = '';
   elements.entryAuthorInput.value = 'Phoenix';
   populateSectionSelect(elements.entrySectionSelect);
