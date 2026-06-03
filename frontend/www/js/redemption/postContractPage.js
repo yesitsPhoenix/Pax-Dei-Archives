@@ -12,8 +12,8 @@ const PROOF_MODE_HELP = {
 
 const PARTICIPATION_HELP = {
     one_time: 'One character can accept and complete this contract once. After completion, it should not reopen.',
-    repeatable_single: 'One character can accept it at a time, and the contract can be accepted again after completion.',
-    open: 'Multiple characters can accept this contract independently. Best for events, gatherings, and open invitations.',
+    repeatable_single: 'A limited number of characters can claim this contract. It leaves the active board after the claim limit or expiry is reached.',
+    open: 'Multiple characters can accept this contract independently. Best for events, gatherings, and open invitations driven by an event date.',
 };
 
 function escapeHtml(value = '') {
@@ -259,16 +259,34 @@ function updateParticipationHelp() {
     el.participationHelp.textContent = PARTICIPATION_HELP[el.participationMode.value] || '';
 }
 
+function updateParticipationControls() {
+    if (!el.participationMode || !el.capacityField || !el.capacity) return;
+    const isRepeatable = el.participationMode.value === 'repeatable_single';
+    el.capacityField.classList.toggle('hidden', !isRepeatable);
+    el.capacity.disabled = !isRepeatable;
+    el.capacity.required = isRepeatable;
+    if (!isRepeatable) {
+        el.capacity.value = '1';
+    } else if (!Number(el.capacity.value)) {
+        el.capacity.value = '2';
+    }
+    updateParticipationHelp();
+}
+
 function syncParticipationDefault() {
     if (!el.participationMode || editingPost) return;
     if (String(el.category.value || '').toLowerCase().includes('event')) {
         el.participationMode.value = 'open';
     }
-    updateParticipationHelp();
+    updateParticipationControls();
 }
 
 function getEditPostId() {
     return new URL(window.location.href).searchParams.get('edit');
+}
+
+function getDuplicatePostId() {
+    return new URL(window.location.href).searchParams.get('duplicate');
 }
 
 function buildGoalRow(goal = {}) {
@@ -385,6 +403,9 @@ function buildPayload() {
         throw new Error('Add at least one goal.');
     }
     const participation = getParticipationPayload();
+    if (participation.isRenewable && participation.participationMode !== 'open' && participation.capacity < 2) {
+        throw new Error('Repeatable contracts need at least 2 total claims.');
+    }
 
     return {
         title: getValue('contract-title'),
@@ -415,6 +436,7 @@ function buildPayload() {
 }
 
 function getParticipationPayload() {
+    const capacity = Math.max(1, Math.floor(Number(el.capacity?.value || 1)));
     switch (el.participationMode.value) {
         case 'open':
             return {
@@ -425,7 +447,7 @@ function getParticipationPayload() {
         case 'repeatable_single':
             return {
                 participationMode: 'single',
-                capacity: 1,
+                capacity,
                 isRenewable: true,
             };
         case 'one_time':
@@ -453,6 +475,7 @@ function fillFormFromPost(post) {
     setFieldValue('contract-category', post.player_contract_category);
     setFieldValue('contract-proof-mode', post.proof_mode === 'external_proof_note' ? 'submit_for_confirmation' : post.proof_mode);
     setFieldValue('contract-participation-mode', getParticipationFormValue(post));
+    setFieldValue('contract-capacity', post.capacity || 1);
     setFieldValue('contract-expires-days', getExpiresDaysValue(post.expires_at));
     setFieldValue('contract-summary', post.summary);
     setFieldValue('contract-body', post.body_markdown);
@@ -476,7 +499,7 @@ function fillFormFromPost(post) {
     el.remoteDelivery.checked = post.remote_delivery_allowed === true;
     resetGoals(post.board_quest_goals || post.tracking_goals || []);
     updateProofModeHelp();
-    updateParticipationHelp();
+    updateParticipationControls();
 }
 
 async function loadEditPostIfNeeded() {
@@ -499,6 +522,16 @@ async function loadEditPostIfNeeded() {
     document.querySelector('#post-contract-main-content h1').textContent = 'Edit Contract';
     el.submit.innerHTML = '<i class="fa-solid fa-floppy-disk"></i>Save Contract';
     fillFormFromPost(editingPost);
+}
+
+async function loadDuplicatePostIfNeeded() {
+    const duplicatePostId = getDuplicatePostId();
+    if (!duplicatePostId || editingPost) return;
+
+    const sourcePost = await getBoardQuestById(duplicatePostId);
+    document.querySelector('#post-contract-main-content h1').textContent = 'Duplicate Contract';
+    el.submit.innerHTML = '<i class="fa-solid fa-thumbtack"></i>Post Contract';
+    fillFormFromPost(sourcePost);
 }
 
 async function handleSubmit(event) {
@@ -532,6 +565,8 @@ function cacheElements() {
     el.proofModeHelp = document.getElementById('contract-proof-mode-help');
     el.participationMode = document.getElementById('contract-participation-mode');
     el.participationHelp = document.getElementById('contract-participation-help');
+    el.capacityField = document.getElementById('contract-capacity-field');
+    el.capacity = document.getElementById('contract-capacity');
     el.expiresDays = document.getElementById('contract-expires-days');
     el.postingRegion = document.getElementById('contract-posting-region');
     el.postingShard = document.getElementById('contract-posting-shard');
@@ -562,10 +597,12 @@ async function init() {
     bindLocationControls('posting');
     bindLocationControls('destination');
     updateProofModeHelp();
+    updateParticipationControls();
     syncParticipationDefault();
     await loadEditPostIfNeeded();
+    await loadDuplicatePostIfNeeded();
     el.proofMode.addEventListener('change', updateProofModeHelp);
-    el.participationMode.addEventListener('change', updateParticipationHelp);
+    el.participationMode.addEventListener('change', updateParticipationControls);
     el.category.addEventListener('change', syncParticipationDefault);
     el.form.addEventListener('submit', handleSubmit);
 }

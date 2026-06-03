@@ -153,10 +153,15 @@
                             <label class="board-label" for="contract-participation-mode">Participation</label>
                             <select id="contract-participation-mode" class="board-select" required>
                                 <option value="one_time">One-time contract</option>
-                                <option value="repeatable_single">Repeatable, one character at a time</option>
+                                <option value="repeatable_single">Repeatable by claim count</option>
                                 <option value="open">Open to multiple characters</option>
                             </select>
                             <p id="contract-participation-help" class="post-contract-help"></p>
+                        </div>
+                        <div class="board-field post-contract-capacity-field hidden" id="contract-capacity-field">
+                            <label class="board-label" for="contract-capacity">Total Claims</label>
+                            <input id="contract-capacity" class="board-input" type="number" min="1" max="999" step="1" value="1">
+                            <p class="post-contract-help">Repeatable contracts stay posted until this many claims have been accepted or completed.</p>
                         </div>
                         <div class="board-field">
                             <label class="board-label" for="contract-expires-days">Expires In</label>
@@ -267,6 +272,6 @@
     <script type="module" src="frontend/www/js/popoutAuth.js"></script>
     <script type="module" src="frontend/www/js/redemption/auth.js"></script>
     <script type="module" src="frontend/www/js/main.js"></script>
-    <script type="module" src="frontend/www/js/redemption/postContractPage.js?v=20260413-participation-mode"></script>
+    <script type="module" src="frontend/www/js/redemption/postContractPage.js?v=20260603-contract-duplicate"></script>
 </body>
 </html>

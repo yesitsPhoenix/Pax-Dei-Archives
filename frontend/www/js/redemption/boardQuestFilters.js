@@ -11,6 +11,34 @@ export function isBoardQuestExpired(post, now = new Date()) {
     return !Number.isNaN(expiresAt.getTime()) && expiresAt <= now;
 }
 
+export function getBoardQuestCapacity(post = {}) {
+    const capacity = Number(post.capacity);
+    return Number.isFinite(capacity) && capacity > 0 ? Math.floor(capacity) : 1;
+}
+
+export function getBoardQuestClaimedCount(post = {}) {
+    const activeCount = Number(post.activeAcceptanceCount || 0);
+    const completedCount = Number(post.completedAcceptanceCount || 0);
+    return Math.max(0, activeCount) + Math.max(0, completedCount);
+}
+
+export function isOpenBoardQuest(post = {}) {
+    return post?.participation_mode === 'open';
+}
+
+export function isBoardQuestFulfilled(post = {}) {
+    if (!post || isOpenBoardQuest(post)) return false;
+    return getBoardQuestClaimedCount(post) >= getBoardQuestCapacity(post);
+}
+
+export function isBoardQuestAcceptable(post, now = new Date()) {
+    if (!post) return false;
+    const status = normalizeString(post.status);
+    return !isBoardQuestExpired(post, now)
+        && !TERMINAL_BOARD_QUEST_STATUSES.has(status)
+        && !isBoardQuestFulfilled(post);
+}
+
 export function parseBoardQuestShareLink(url = window.location.href) {
     const parsed = new URL(url, window.location.origin);
     const postId = parsed.searchParams.get('post');
@@ -58,6 +86,7 @@ function matchesGeography(post, filters) {
 
 function matchesStatus(post, filters, now = new Date()) {
     const expired = isBoardQuestExpired(post, now);
+    const fulfilled = isBoardQuestFulfilled(post);
     const status = normalizeString(post.status);
 
     switch (filters.status) {
@@ -66,14 +95,17 @@ function matchesStatus(post, filters, now = new Date()) {
         case 'expired':
             return expired || status === 'expired';
         case 'fulfilled':
-            return status === 'fulfilled';
+            return fulfilled || status === 'fulfilled';
         case 'cancelled':
             return status === 'cancelled';
         case 'archived':
             return status === 'archived';
         case 'active':
         default:
-            return !expired && !TERMINAL_BOARD_QUEST_STATUSES.has(status);
+            if (post.currentCharacterAcceptance) {
+                return !expired && !TERMINAL_BOARD_QUEST_STATUSES.has(status);
+            }
+            return !expired && !fulfilled && !TERMINAL_BOARD_QUEST_STATUSES.has(status);
     }
 }
 

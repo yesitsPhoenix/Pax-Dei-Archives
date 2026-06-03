@@ -1,7 +1,7 @@
 import { supabase } from '../supabaseClient.js';
 import { authSession } from '../authSessionManager.js';
 import { questState } from './questStateManager.js';
-import { applyBoardQuestFilters, buildBoardQuestFilters } from './boardQuestFilters.js';
+import { applyBoardQuestFilters, buildBoardQuestFilters, isBoardQuestAcceptable } from './boardQuestFilters.js';
 
 const BOARD_POST_SELECT = `
     id,
@@ -112,19 +112,31 @@ function normalizeBoardQuestRecord(record) {
 
 function mapAcceptanceSummary(rows = [], activeCharacterId = null) {
     const byQuest = new Map();
+    const countedStatuses = new Set(['accepted', 'in_progress', 'awaiting_confirmation', 'completed']);
+    const activeStatuses = new Set(['accepted', 'in_progress', 'awaiting_confirmation']);
 
     rows.forEach((row) => {
         const entry = byQuest.get(row.board_quest_id) || {
             activeAcceptanceCount: 0,
+            completedAcceptanceCount: 0,
+            claimedAcceptanceCount: 0,
             currentCharacterAcceptance: null,
             pendingConfirmationCount: 0,
         };
 
-        entry.activeAcceptanceCount += 1;
+        if (activeStatuses.has(row.status)) {
+            entry.activeAcceptanceCount += 1;
+        }
+        if (row.status === 'completed') {
+            entry.completedAcceptanceCount += 1;
+        }
+        if (countedStatuses.has(row.status)) {
+            entry.claimedAcceptanceCount += 1;
+        }
         if (row.status === 'awaiting_confirmation') {
             entry.pendingConfirmationCount += 1;
         }
-        if (activeCharacterId && row.character_id === activeCharacterId) {
+        if (activeCharacterId && row.character_id === activeCharacterId && activeStatuses.has(row.status)) {
             entry.currentCharacterAcceptance = row;
         }
         byQuest.set(row.board_quest_id, entry);
@@ -140,7 +152,7 @@ async function fetchAcceptanceSummaries(boardQuestIds = [], activeCharacterId = 
         .from('board_quest_acceptances')
         .select('id, board_quest_id, character_id, status, accepted_at, submitted_at, completed_at, completion_rejected_at, completion_rejection_reason')
         .in('board_quest_id', boardQuestIds)
-        .in('status', ['accepted', 'in_progress', 'awaiting_confirmation']);
+        .in('status', ['accepted', 'in_progress', 'awaiting_confirmation', 'completed']);
 
     if (error) throw error;
     return mapAcceptanceSummary(data || [], activeCharacterId);
@@ -223,10 +235,12 @@ export async function listBoardQuests(options = {}) {
     const summaries = await fetchAcceptanceSummaries(posts.map((post) => post.id), activeCharacter?.character_id || null);
 
     const enriched = posts.map((post) => {
-        const summary = summaries.get(post.id) || { activeAcceptanceCount: 0, currentCharacterAcceptance: null, pendingConfirmationCount: 0 };
+        const summary = summaries.get(post.id) || { activeAcceptanceCount: 0, completedAcceptanceCount: 0, claimedAcceptanceCount: 0, currentCharacterAcceptance: null, pendingConfirmationCount: 0 };
         return {
             ...post,
             activeAcceptanceCount: summary.activeAcceptanceCount,
+            completedAcceptanceCount: summary.completedAcceptanceCount,
+            claimedAcceptanceCount: summary.claimedAcceptanceCount,
             currentCharacterAcceptance: summary.currentCharacterAcceptance,
             pendingConfirmationCount: post.author_character_id === activeCharacter?.character_id
                 ? summary.pendingConfirmationCount
@@ -252,7 +266,7 @@ export async function getBoardQuestById(boardQuestId, options = {}) {
     const post = normalizeBoardQuestRecord(data);
     const activeCharacterId = options.characterId || questState.getActiveCharacterId();
     const summaries = await fetchAcceptanceSummaries([boardQuestId], activeCharacterId);
-    const summary = summaries.get(boardQuestId) || { activeAcceptanceCount: 0, currentCharacterAcceptance: null, pendingConfirmationCount: 0 };
+    const summary = summaries.get(boardQuestId) || { activeAcceptanceCount: 0, completedAcceptanceCount: 0, claimedAcceptanceCount: 0, currentCharacterAcceptance: null, pendingConfirmationCount: 0 };
     const pendingConfirmations = post.author_character_id === activeCharacterId
         ? await fetchPendingConfirmationSummaries(boardQuestId, post.author_character_id)
         : [];
@@ -260,6 +274,8 @@ export async function getBoardQuestById(boardQuestId, options = {}) {
     return {
         ...post,
         activeAcceptanceCount: summary.activeAcceptanceCount,
+        completedAcceptanceCount: summary.completedAcceptanceCount,
+        claimedAcceptanceCount: summary.claimedAcceptanceCount,
         currentCharacterAcceptance: summary.currentCharacterAcceptance,
         pendingConfirmationCount: post.author_character_id === activeCharacterId ? summary.pendingConfirmationCount : 0,
         pendingConfirmations,
@@ -355,6 +371,9 @@ export async function acceptBoardQuest(boardQuestId, options = {}) {
     }
 
     const post = await getBoardQuestById(boardQuestId, { characterId: character.character_id });
+    if (!isBoardQuestAcceptable(post) && !post.currentCharacterAcceptance) {
+        throw new Error('Unable to accept this quest (fulfilled).');
+    }
     const confirmationRequired = post.proof_mode !== 'self_complete';
 
     const { data, error } = await supabase
@@ -518,14 +537,81 @@ export async function getCompletedBoardContractsForCharacter(characterId = null)
     const targetCharacterId = characterId || questState.getActiveCharacterId();
     if (!targetCharacterId) return [];
 
-    const { data, error } = await supabase
+    const { data: acceptedCompletions, error } = await supabase
         .from('completed_player_contracts_v')
         .select('*')
         .eq('character_id', targetCharacterId)
         .order('completed_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+
+    const { data: postedContracts, error: postedError } = await supabase
+        .from('board_quests')
+        .select('id, title, player_contract_category, reward_note, author_character_id, author_character_name')
+        .eq('author_character_id', targetCharacterId);
+
+    if (postedError) throw postedError;
+
+    const postedContractIds = (postedContracts || []).map((post) => post.id);
+    if (!postedContractIds.length) {
+        return (acceptedCompletions || []).map((contract) => ({
+            ...contract,
+            completion_relationship: 'accepted',
+        }));
+    }
+
+    const { data: postedAcceptances, error: acceptanceError } = await supabase
+        .from('board_quest_acceptances')
+        .select('id, board_quest_id, character_id, character_name, status, completion_note, proof_note, proof_url, submitted_at, confirmed_at, completed_at')
+        .in('board_quest_id', postedContractIds)
+        .eq('status', 'completed')
+        .order('completed_at', { ascending: false });
+
+    if (acceptanceError) throw acceptanceError;
+
+    const postsById = new Map((postedContracts || []).map((post) => [post.id, post]));
+    const posterCompletions = (postedAcceptances || []).map((acceptance) => {
+        const post = postsById.get(acceptance.board_quest_id) || {};
+        return {
+            ...acceptance,
+            board_quest_id: acceptance.board_quest_id,
+            quest_name: post.title || 'Untitled Contract',
+            title: post.title || 'Untitled Contract',
+            category: post.player_contract_category || 'Player Contract',
+            player_contract_category: post.player_contract_category || 'Player Contract',
+            reward_note: post.reward_note || null,
+            author_character_id: post.author_character_id || targetCharacterId,
+            author_character_name: post.author_character_name || 'Unknown',
+            completed_by_character_id: acceptance.character_id,
+            completed_by_character_name: acceptance.character_name,
+            completion_relationship: 'posted',
+        };
+    });
+
+    const combined = [
+        ...(acceptedCompletions || []).map((contract) => ({
+            ...contract,
+            completion_relationship: contract.author_character_id === targetCharacterId ? 'posted' : 'accepted',
+        })),
+        ...posterCompletions,
+    ];
+
+    const deduped = new Map();
+    combined.forEach((contract) => {
+        const key = contract.id
+            ? `acceptance:${contract.id}`
+            : `${contract.board_quest_id || contract.title}:${contract.character_id || contract.completed_by_character_id || ''}:${contract.completed_at || contract.confirmed_at || ''}`;
+        const existing = deduped.get(key);
+        if (!existing || existing.completion_relationship !== 'posted') {
+            deduped.set(key, contract);
+        }
+    });
+
+    return [...deduped.values()].sort((a, b) => {
+        const aTime = new Date(a.completed_at || a.confirmed_at || 0).getTime() || 0;
+        const bTime = new Date(b.completed_at || b.confirmed_at || 0).getTime() || 0;
+        return bTime - aTime;
+    });
 }
 
 export async function reportBoardQuest(boardQuestId, reason, details = null) {

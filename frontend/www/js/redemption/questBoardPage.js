@@ -11,7 +11,12 @@ import {
     validateBoardQuestAcceptance,
     withdrawBoardQuestAcceptance,
 } from './boardQuestService.js';
-import { isBoardQuestExpired } from './boardQuestFilters.js';
+import {
+    getBoardQuestCapacity,
+    getBoardQuestClaimedCount,
+    isBoardQuestAcceptable,
+    isBoardQuestExpired,
+} from './boardQuestFilters.js';
 
 const el = {};
 const PAGE_SIZE = 12;
@@ -61,8 +66,7 @@ function formatStatusLabel(status = '') {
 }
 
 function isBoardQuestFilled(post) {
-    if (post?.participation_mode === 'open') return false;
-    return !post?.currentCharacterAcceptance && Number(post?.activeAcceptanceCount || 0) > 0;
+    return !isBoardQuestAcceptable(post);
 }
 
 function isOpenParticipation(post) {
@@ -74,11 +78,18 @@ function getParticipationLabel(post) {
     if (isOpenParticipation(post)) {
         return count === 1 ? '1 participating' : `${count} participating`;
     }
-    return count === 1 ? '1 accepted' : 'Single participant';
+    const claimed = getBoardQuestClaimedCount(post);
+    const capacity = getBoardQuestCapacity(post);
+    if (post?.is_renewable === true || capacity > 1) {
+        return `${claimed}/${capacity} claimed`;
+    }
+    return claimed > 0 ? 'Claimed' : 'One-time';
 }
 
 function getBoardQuestDisplayStatus(post) {
+    if (isCompletedHistoryPost(post)) return 'completed';
     if (isBoardQuestExpired(post)) return 'expired';
+    if (['cancelled', 'archived', 'fulfilled'].includes(post?.status)) return post.status;
     if (post?.currentCharacterAcceptance?.status) return post.currentCharacterAcceptance.status;
     if (isBoardQuestFilled(post)) return 'filled';
     return post?.status || 'posted';
@@ -148,7 +159,7 @@ function getPostsForTab(tab, posts = boardQuestState.getSnapshot().boardPosts) {
         default:
             return posts.filter((post) => {
                 const isOwnPost = activeCharacter?.character_id && post.author_character_id === activeCharacter.character_id;
-                return !post.currentCharacterAcceptance && !isOwnPost;
+                return !post.currentCharacterAcceptance && !isOwnPost && isBoardQuestAcceptable(post);
             });
     }
 }
@@ -248,6 +259,28 @@ function getContractCardCategory(contract = {}) {
 
 function getContractCardPostId(contract = {}) {
     return contract.board_quest_id || null;
+}
+
+function getContractCompletionId(contract = {}) {
+    return contract.id || contract.acceptance_id || '';
+}
+
+function getCompletedByName(contract = {}) {
+    if (contract.completed_by_character_name || contract.character_name || contract.accepting_character_name) {
+        return contract.completed_by_character_name || contract.character_name || contract.accepting_character_name;
+    }
+    if (getCompletionRelationship(contract) === 'accepted') {
+        return getActiveCharacter()?.character_name || 'This character';
+    }
+    return 'Unknown';
+}
+
+function getCompletionRelationship(contract = {}) {
+    return contract.completion_relationship === 'posted' ? 'posted' : 'accepted';
+}
+
+function isCompletedHistoryPost(post = {}) {
+    return Boolean(post?.completionHistoryEntry);
 }
 
 function getContractFamilyVisual(category = '') {
@@ -376,7 +409,7 @@ function renderFeed(posts = []) {
     const visiblePosts = getVisiblePosts(posts);
     const isCompletedTab = currentBoardTab === 'completed';
     el.feedCount.textContent = `${visiblePosts.length} ${getTabLabel()}`;
-    el.heroOpenCount.textContent = String(getPostsForTab('available', posts).filter((post) => !isBoardQuestFilled(post)).length);
+    el.heroOpenCount.textContent = String(getPostsForTab('available', posts).length);
     syncBoardTabs();
     renderBanner();
 
@@ -387,7 +420,7 @@ function renderFeed(posts = []) {
 
     if (!visiblePosts.length) {
         const emptyLabel = currentBoardTab === 'completed'
-            ? 'No completed contracts in this character history yet.'
+            ? 'No completed contracts for this character yet.'
             : currentBoardTab === 'accepted'
                 ? 'No accepted contracts match the current filters.'
                 : currentBoardTab === 'posted'
@@ -408,16 +441,22 @@ function renderFeed(posts = []) {
     if (isCompletedTab) {
         el.feedGrid.innerHTML = pagePosts.map((contract) => {
             const postId = getContractCardPostId(contract);
+            const completionId = getContractCompletionId(contract);
             const title = getContractCardTitle(contract);
             const category = getContractCardCategory(contract);
             const completedAt = contract.completed_at || contract.confirmed_at;
             const status = contract.status || 'completed';
             const subtitle = contract.completion_note || contract.reward_note || 'Completed contract history for this character.';
+            const relationship = getCompletionRelationship(contract);
+            const footerLabel = relationship === 'posted' ? 'Completed By' : 'Posted By';
+            const footerName = relationship === 'posted'
+                ? getCompletedByName(contract)
+                : (contract.author_character_name || contract.poster_character_name || 'Unknown');
             return `
-                <button type="button" class="notice-card completed-history-card ${postId === activePostId ? 'is-active' : ''}" ${postId ? `data-completed-post-id="${escapeHtml(postId)}"` : 'aria-disabled="true"'}>
+                <button type="button" class="notice-card completed-history-card ${postId === activePostId ? 'is-active' : ''}" ${postId ? `data-completed-post-id="${escapeHtml(postId)}" data-completed-acceptance-id="${escapeHtml(completionId)}"` : 'aria-disabled="true"'}>
                     ${renderContractFamilyVisual(category)}
                     <div class="notice-card-head">
-                        <div class="notice-card-kicker">Completed</div>
+                        <div class="notice-card-kicker">${relationship === 'posted' ? 'Your Posted Contract' : 'Completed'}</div>
                         <h3 class="notice-card-title">${escapeHtml(title)}</h3>
                         <p class="notice-card-subtitle">${escapeHtml(subtitle.slice(0, 160))}</p>
                     </div>
@@ -427,8 +466,8 @@ function renderFeed(posts = []) {
                     </div>
                     <div class="notice-card-footer">
                         <div>
-                            <div class="notice-card-kicker">Posted By</div>
-                            <div class="notice-master">${escapeHtml(contract.author_character_name || contract.poster_character_name || 'Unknown')}</div>
+                            <div class="notice-card-kicker">${escapeHtml(footerLabel)}</div>
+                            <div class="notice-master">${escapeHtml(footerName)}</div>
                         </div>
                         <div class="notice-card-status">
                             <span class="board-status-pill board-status-${escapeHtml(status)}">${escapeHtml(formatStatusLabel(status))}</span>
@@ -440,7 +479,10 @@ function renderFeed(posts = []) {
 
         el.feedGrid.querySelectorAll('[data-completed-post-id]').forEach((button) => {
             button.addEventListener('click', async () => {
-                await selectCompletedPost(button.getAttribute('data-completed-post-id'));
+                await selectCompletedPost(
+                    button.getAttribute('data-completed-post-id'),
+                    button.getAttribute('data-completed-acceptance-id')
+                );
             });
         });
         renderPagination(visiblePosts.length);
@@ -563,6 +605,23 @@ function renderAcceptanceReviewNotice(post) {
     `;
 }
 
+function renderCompletionHistoryNotice(post) {
+    const completion = post?.completionHistoryEntry;
+    if (!completion) return '';
+
+    const proofUrl = toSafeExternalUrl(completion.proof_url);
+    return `
+        <div class="board-review-notice">
+            <div class="board-section-title"><i class="fa-solid fa-circle-check"></i>Completion Record</div>
+            <p><strong>${escapeHtml(getCompletedByName(completion))}</strong> completed this contract.</p>
+            ${completion.completion_note ? `<p>${escapeHtml(completion.completion_note)}</p>` : ''}
+            ${completion.proof_note ? `<p class="board-muted-copy">${escapeHtml(completion.proof_note)}</p>` : ''}
+            ${proofUrl ? `<a class="board-confirmation-link" href="${escapeHtml(proofUrl)}" target="_blank" rel="noopener noreferrer">View proof link</a>` : ''}
+            <div class="board-muted-copy">Completed ${escapeHtml(formatDateTime(completion.completed_at || completion.confirmed_at))}.</div>
+        </div>
+    `;
+}
+
 function renderMarkdown(markdown = '') {
     if (!markdown) return '<p class="board-muted-copy">No additional details were posted on this notice.</p>';
     const parsed = window.marked ? window.marked.parse(markdown) : escapeHtml(markdown).replace(/\n/g, '<br>');
@@ -574,11 +633,22 @@ function renderActionButtons(post) {
     const signedIn = isSignedIn();
     const expired = isBoardQuestExpired(post);
     const filled = isBoardQuestFilled(post);
+    const completedHistory = isCompletedHistoryPost(post);
+    const completedRelationship = getCompletionRelationship(post.completionHistoryEntry || {});
     const isOwnPost = getActiveCharacter()?.character_id && getActiveCharacter().character_id === post.author_character_id;
-    const canManagePost = signedIn && isOwnPost && post.status === 'posted';
+    const frozenRecord = completedHistory || (isOwnPost && (filled || expired));
+    const canDuplicateFrozenRecord = signedIn && (
+        (completedHistory && completedRelationship === 'posted')
+        || (!completedHistory && isOwnPost && (filled || expired))
+    );
+    const canManagePost = signedIn && isOwnPost && post.status === 'posted' && !expired && !filled && !completedHistory;
     const buttons = [];
 
-    if (acceptance) {
+    if (frozenRecord) {
+        if (canDuplicateFrozenRecord) {
+            buttons.push(`<button class="board-btn board-btn-primary" data-board-action="duplicate" data-post-id="${escapeHtml(post.id)}"><i class="fa-solid fa-copy"></i>Duplicate Contract</button>`);
+        }
+    } else if (acceptance) {
         if (acceptance.status === 'accepted' || acceptance.status === 'in_progress') {
             buttons.push(`<button class="board-btn board-btn-primary" data-board-action="submit" data-acceptance-id="${escapeHtml(acceptance.id)}"><i class="fa-solid fa-flag-checkered"></i>Submit Completion</button>`);
             buttons.push(`<button class="board-btn board-btn-danger" data-board-action="withdraw" data-acceptance-id="${escapeHtml(acceptance.id)}"><i class="fa-solid fa-arrow-rotate-left"></i>Withdraw</button>`);
@@ -592,8 +662,10 @@ function renderActionButtons(post) {
         buttons.push(`<button class="board-btn board-btn-primary" data-board-action="accept" data-post-id="${escapeHtml(post.id)}" ${acceptDisabled ? 'disabled' : ''}><i class="fa-solid fa-handshake-angle"></i>${escapeHtml(acceptLabel)}</button>`);
     }
 
-    buttons.push(`<button class="board-btn" data-board-action="share" data-post-id="${escapeHtml(post.id)}"><i class="fa-solid fa-link"></i>Copy Link</button>`);
-    if (!isOwnPost) {
+    if (!frozenRecord) {
+        buttons.push(`<button class="board-btn" data-board-action="share" data-post-id="${escapeHtml(post.id)}"><i class="fa-solid fa-link"></i>Copy Link</button>`);
+    }
+    if (!isOwnPost && !frozenRecord) {
         buttons.push(`<button class="board-btn" data-board-action="report" data-post-id="${escapeHtml(post.id)}" ${signedIn ? '' : 'disabled'}><i class="fa-solid fa-flag"></i>Report</button>`);
     }
     return `<div class="board-action-row">${buttons.join('')}</div>`;
@@ -657,6 +729,9 @@ function attachDetailActions(post) {
                     showToast('Contract accepted.');
                 } else if (action === 'edit') {
                     window.location.href = `post_contract.html?edit=${encodeURIComponent(postId)}`;
+                    return;
+                } else if (action === 'duplicate') {
+                    window.location.href = `post_contract.html?duplicate=${encodeURIComponent(postId)}`;
                     return;
                 } else if (action === 'cancel-post') {
                     const values = await openActionModal({
@@ -773,6 +848,7 @@ function buildDetailHtml(post) {
     const acceptance = post.currentCharacterAcceptance;
     const displayStatus = getBoardQuestDisplayStatus(post);
     const bodyHtml = renderMarkdown(post.body_markdown || post.summary || '');
+    const completedHistory = isCompletedHistoryPost(post);
 
     return `
         <div class="board-detail-scroll">
@@ -780,26 +856,28 @@ function buildDetailHtml(post) {
                 <div class="board-chip-row">
                     <span class="board-status-pill board-status-${escapeHtml(displayStatus)}">${escapeHtml(formatStatusLabel(displayStatus))}</span>
                     <span class="board-chip">${escapeHtml(post.player_contract_category || 'Player Contract')}</span>
-                    <span class="board-chip">${escapeHtml(post.post_type.replace(/_/g, ' '))}</span>
                 </div>
                 <h2 class="board-detail-title" id="board-contract-modal-title">${escapeHtml(post.title)}</h2>
                 <p class="board-char-meta" style="margin-top:0.65rem;">Posted by ${escapeHtml(post.author_character_name || 'Unknown')}</p>
                 <div class="board-modal-action-line">
                     ${renderActionButtons(post)}
-                    <div class="board-modal-expires">
-                        <span>Participation</span>
-                        <strong>${escapeHtml(getParticipationLabel(post))}</strong>
-                    </div>
-                    <div class="board-modal-expires">
-                        <span>Expires</span>
-                        <strong>${escapeHtml(formatDateTime(post.expires_at))}</strong>
-                    </div>
+                    ${completedHistory ? '' : `
+                        <div class="board-modal-expires">
+                            <span>Participation</span>
+                            <strong>${escapeHtml(getParticipationLabel(post))}</strong>
+                        </div>
+                        <div class="board-modal-expires">
+                            <span>Expires</span>
+                            <strong>${escapeHtml(formatDateTime(post.expires_at))}</strong>
+                        </div>
+                    `}
                 </div>
             </div>
             <div class="board-modal-content">
                 <div class="board-modal-summary-grid">
                     <div>
                         ${renderAcceptanceReviewNotice(post)}
+                        ${renderCompletionHistoryNotice(post)}
                         <div class="board-section-title"><i class="fa-solid fa-feather-pointed"></i>Notice</div>
                         <div class="board-detail-body">${bodyHtml}</div>
                         <div class="board-modal-section">
@@ -854,12 +932,20 @@ async function selectPost(postId = null) {
     renderDetail(selectedVisiblePost);
 }
 
-async function selectCompletedPost(postId = null) {
+async function selectCompletedPost(postId = null, completionId = '') {
     if (!postId) return;
     const post = await boardQuestState.loadPost(postId);
+    const completedContracts = boardQuestState.getSnapshot().completedContracts || [];
+    const completionHistoryEntry = completedContracts.find((contract) => (
+        getContractCardPostId(contract) === postId
+        && (!completionId || String(getContractCompletionId(contract)) === String(completionId))
+    )) || completedContracts.find((contract) => getContractCardPostId(contract) === postId) || null;
+    const detailPost = completionHistoryEntry
+        ? { ...post, completionHistoryEntry }
+        : post;
     updateUrlForPost(postId);
     renderFeed(boardQuestState.getSnapshot().boardPosts);
-    renderDetail(post);
+    renderDetail(detailPost);
 }
 
 function syncFilterControls() {
