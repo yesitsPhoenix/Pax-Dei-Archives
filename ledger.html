@@ -1532,14 +1532,21 @@
             listContainer.innerHTML = window.renderListingAlertsModalHtml(listingAlertsResult, listingAlertsFilters);
         }
 
-        document.getElementById('alertsListContainer')?.addEventListener('click', (event) => {
+        document.getElementById('alertsListContainer')?.addEventListener('click', async (event) => {
             const bandButton = event.target.closest('[data-alert-band-filter]');
+            const positionButton = event.target.closest('[data-alert-position-filter]');
             const stallButton = event.target.closest('[data-alert-stall-filter]');
             const clearButton = event.target.closest('[data-alert-clear-filters]');
+            const editButton = event.target.closest('[data-alert-edit-listing-id]');
+            const cancelButton = event.target.closest('[data-alert-cancel-listing-id]');
 
             if (bandButton) {
                 listingAlertsFilters.band = bandButton.getAttribute('data-alert-band-filter') || '';
                 if (!listingAlertsFilters.band) delete listingAlertsFilters.band;
+                renderListingAlerts();
+            } else if (positionButton) {
+                listingAlertsFilters.position = positionButton.getAttribute('data-alert-position-filter') || '';
+                if (!listingAlertsFilters.position) delete listingAlertsFilters.position;
                 renderListingAlerts();
             } else if (stallButton) {
                 listingAlertsFilters.stallName = stallButton.getAttribute('data-alert-stall-filter') || '';
@@ -1548,6 +1555,16 @@
             } else if (clearButton) {
                 listingAlertsFilters = {};
                 renderListingAlerts();
+            } else if (editButton) {
+                const listingId = editButton.getAttribute('data-alert-edit-listing-id');
+                const { showEditListingModal } = await import('./frontend/www/js/modules/actions.js');
+                await showEditListingModal(listingId);
+            } else if (cancelButton) {
+                const listingId = cancelButton.getAttribute('data-alert-cancel-listing-id');
+                const { handleCancelListing } = await import('./frontend/www/js/modules/actions.js');
+                await handleCancelListing(listingId);
+                alertsLoaded = false;
+                await loadListingAlerts();
             }
         });
         

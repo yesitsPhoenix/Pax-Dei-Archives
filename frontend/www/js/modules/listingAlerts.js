@@ -110,6 +110,7 @@ function getMarketPosition(alert) {
     const marketLow = alert.marketSummary.marketLow;
     if (marketLow === null) {
         return {
+            key: 'none',
             label: 'No active listings',
             icon: 'fa-circle-question',
             className: 'bg-slate-700/50 border-slate-500/50 text-gray-200',
@@ -121,6 +122,7 @@ function getMarketPosition(alert) {
     const gap = alert.unitPrice - marketLow;
     if (gap < -tolerance) {
         return {
+            key: 'below',
             label: 'Below Market',
             icon: 'fa-arrow-trend-down',
             className: 'bg-blue-900/40 border-blue-500/40 text-blue-200',
@@ -129,6 +131,7 @@ function getMarketPosition(alert) {
     }
     if (gap > tolerance) {
         return {
+            key: 'above',
             label: 'Above Market',
             icon: 'fa-arrow-trend-up',
             className: 'bg-rose-900/40 border-rose-500/40 text-rose-200',
@@ -136,6 +139,7 @@ function getMarketPosition(alert) {
         };
     }
     return {
+        key: 'competitive',
         label: 'Competitive',
         icon: 'fa-handshake',
         className: 'bg-emerald-900/40 border-emerald-500/40 text-emerald-100',
@@ -268,12 +272,18 @@ export function renderListingAlertsModalHtml(result, filters = {}) {
     ].filter(Boolean).join(' / ') || 'Home valley unavailable';
 
     const stallOptions = [...new Map(alerts.map((alert) => [alert.stallName, alert])).keys()].sort();
+    const positionSummary = alerts.reduce((counts, alert) => {
+        const position = getMarketPosition(alert);
+        counts[position.key] = (counts[position.key] || 0) + 1;
+        return counts;
+    }, { below: 0, competitive: 0, above: 0, none: 0 });
     const filteredAlerts = alerts.filter((alert) => {
         if (filters.band && getBandKey(alert.band) !== filters.band) return false;
         if (filters.stallName && alert.stallName !== filters.stallName) return false;
+        if (filters.position && getMarketPosition(alert).key !== filters.position) return false;
         return true;
     });
-    const hasActiveFilter = Boolean(filters.band || filters.stallName);
+    const hasActiveFilter = Boolean(filters.band || filters.stallName || filters.position);
 
     const chip = (label, count, className, icon, attributes = '') => `
         <button type="button" ${attributes} class="inline-flex items-center gap-1.5 border rounded-full px-3 py-1 text-sm transition-colors hover:border-amber-300/70 hover:bg-slate-700/70 ${className}">
@@ -322,12 +332,25 @@ export function renderListingAlertsModalHtml(result, filters = {}) {
                         <div class="text-gray-500 text-xs">${position.note}</div>
                     </div>
                 </td>
+                <td class="py-3 px-3 align-top text-right">
+                    <div class="flex justify-end gap-2">
+                        <button type="button" data-alert-edit-listing-id="${alert.listingId}" class="inline-flex items-center justify-center gap-1.5 rounded-full bg-blue-600 hover:bg-blue-500 border border-blue-400/50 px-3 py-1.5 text-xs font-semibold text-white transition-colors" title="Edit listing">
+                            <i class="fas fa-pen text-[11px]"></i>
+                            <span>Edit</span>
+                        </button>
+                        <button type="button" data-alert-cancel-listing-id="${alert.listingId}" class="inline-flex items-center justify-center gap-1.5 rounded-full bg-slate-800/80 hover:bg-rose-900/70 border border-rose-400/40 px-3 py-1.5 text-xs font-semibold text-rose-100 transition-colors" title="Cancel listing">
+                            <i class="fas fa-ban text-[11px]"></i>
+                            <span>Cancel</span>
+                        </button>
+                    </div>
+                </td>
             </tr>
         `;
     }).join('');
 
     const stallFilterHtml = stallOptions.length > 1 ? `
-        <div class="flex flex-wrap gap-2 mb-4">
+        <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs font-bold uppercase tracking-wide text-gray-400 mr-1">Stall</span>
             ${stallOptions.map((stallName) => {
                 const count = alerts.filter((alert) => alert.stallName === stallName).length;
                 const active = filters.stallName === stallName
@@ -345,24 +368,43 @@ export function renderListingAlertsModalHtml(result, filters = {}) {
     ` : '';
 
     return `
-        <div class="flex flex-wrap gap-2 mb-4">
-            ${chip(`${minDays}+ day listings`, summary.total, `bg-slate-700/40 border-slate-500/40 text-slate-200 ${!filters.band ? 'ring-1 ring-slate-300/40' : ''}`, 'fa-list', 'data-alert-band-filter=""')}
-            ${chip('Aging 30+', summary.aging, `${LISTING_ALERT_BANDS.aging.badgeClass} ${filters.band === 'aging' ? 'ring-1 ring-emerald-200/70' : ''}`, LISTING_ALERT_BANDS.aging.icon, 'data-alert-band-filter="aging"')}
-            ${chip('Warning 60+', summary.warning, `${LISTING_ALERT_BANDS.warning.badgeClass} ${filters.band === 'warning' ? 'ring-1 ring-amber-200/70' : ''}`, LISTING_ALERT_BANDS.warning.icon, 'data-alert-band-filter="warning"')}
-            ${chip('Critical 90+', summary.critical, `${LISTING_ALERT_BANDS.critical.badgeClass} ${filters.band === 'critical' ? 'ring-1 ring-rose-200/70' : ''}`, LISTING_ALERT_BANDS.critical.icon, 'data-alert-band-filter="critical"')}
-            <span class="inline-flex items-center gap-1.5 bg-blue-900/40 border border-blue-500/40 rounded-full px-3 py-1 text-sm text-blue-100">
-                <i class="fas fa-map-location-dot text-xs"></i>
-                <span>${escapeHtml(location)}</span>
-            </span>
-            ${hasActiveFilter ? `
-                <button type="button" data-alert-clear-filters class="inline-flex items-center gap-1.5 bg-slate-700/50 hover:bg-slate-600/70 border border-slate-500/50 rounded-full px-3 py-1 text-sm text-gray-200 transition-colors">
-                    <i class="fas fa-filter-circle-xmark text-xs"></i>
-                    <span>Clear filter</span>
-                </button>
-            ` : ''}
+        <div class="mb-5 rounded-lg border border-slate-700/70 bg-slate-950/35 p-3">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                <h4 class="flex items-center gap-2 text-amber-300 text-sm font-bold uppercase tracking-wide">
+                    <i class="fas fa-filter text-amber-400"></i> Filters
+                </h4>
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="inline-flex items-center gap-1.5 bg-blue-900/40 border border-blue-500/40 rounded-full px-3 py-1 text-sm text-blue-100">
+                        <i class="fas fa-map-location-dot text-xs"></i>
+                        <span>${escapeHtml(location)}</span>
+                    </span>
+                    ${hasActiveFilter ? `
+                        <button type="button" data-alert-clear-filters class="inline-flex items-center gap-1.5 bg-slate-700/50 hover:bg-slate-600/70 border border-slate-500/50 rounded-full px-3 py-1 text-sm text-gray-200 transition-colors">
+                            <i class="fas fa-filter-circle-xmark text-xs"></i>
+                            <span>Clear filters</span>
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+            <div class="space-y-3">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-xs font-bold uppercase tracking-wide text-gray-400 mr-1">Age</span>
+                    ${chip(`${minDays}+ day listings`, summary.total, `bg-slate-700/40 border-slate-500/40 text-slate-200 ${!filters.band ? 'ring-1 ring-slate-300/40' : ''}`, 'fa-list', 'data-alert-band-filter=""')}
+                    ${chip('Aging 30+', summary.aging, `${LISTING_ALERT_BANDS.aging.badgeClass} ${filters.band === 'aging' ? 'ring-1 ring-emerald-200/70' : ''}`, LISTING_ALERT_BANDS.aging.icon, 'data-alert-band-filter="aging"')}
+                    ${chip('Warning 60+', summary.warning, `${LISTING_ALERT_BANDS.warning.badgeClass} ${filters.band === 'warning' ? 'ring-1 ring-amber-200/70' : ''}`, LISTING_ALERT_BANDS.warning.icon, 'data-alert-band-filter="warning"')}
+                    ${chip('Critical 90+', summary.critical, `${LISTING_ALERT_BANDS.critical.badgeClass} ${filters.band === 'critical' ? 'ring-1 ring-rose-200/70' : ''}`, LISTING_ALERT_BANDS.critical.icon, 'data-alert-band-filter="critical"')}
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-xs font-bold uppercase tracking-wide text-gray-400 mr-1">Market</span>
+                    ${chip('All positions', alerts.length, `bg-slate-700/40 border-slate-500/40 text-slate-200 ${!filters.position ? 'ring-1 ring-slate-300/40' : ''}`, 'fa-chart-simple', 'data-alert-position-filter=""')}
+                    ${chip('Below Market', positionSummary.below, `bg-blue-900/40 border-blue-500/40 text-blue-200 ${filters.position === 'below' ? 'ring-1 ring-blue-200/70' : ''}`, 'fa-arrow-trend-down', 'data-alert-position-filter="below"')}
+                    ${chip('Competitive', positionSummary.competitive, `bg-emerald-900/40 border-emerald-500/40 text-emerald-100 ${filters.position === 'competitive' ? 'ring-1 ring-emerald-200/70' : ''}`, 'fa-handshake', 'data-alert-position-filter="competitive"')}
+                    ${chip('Above Market', positionSummary.above, `bg-rose-900/40 border-rose-500/40 text-rose-200 ${filters.position === 'above' ? 'ring-1 ring-rose-200/70' : ''}`, 'fa-arrow-trend-up', 'data-alert-position-filter="above"')}
+                    ${chip('No active listings', positionSummary.none, `bg-slate-700/50 border-slate-500/50 text-gray-200 ${filters.position === 'none' ? 'ring-1 ring-slate-300/60' : ''}`, 'fa-circle-question', 'data-alert-position-filter="none"')}
+                </div>
+                ${stallFilterHtml}
+            </div>
         </div>
-
-        ${stallFilterHtml}
 
         ${filteredAlerts.length ? `
             <h4 class="flex items-center gap-2 text-amber-300 text-sm font-bold uppercase tracking-wide mb-3">
@@ -376,6 +418,7 @@ export function renderListingAlertsModalHtml(result, filters = {}) {
                             <th class="py-2 px-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide">Age</th>
                             <th class="py-2 px-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide">Your Amount</th>
                             <th class="py-2 px-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Market Position</th>
+                            <th class="py-2 px-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide">Actions</th>
                         </tr>
                     </thead>
                     <tbody>${rows}</tbody>
