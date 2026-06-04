@@ -300,48 +300,42 @@ export function renderListingAlertsModalHtml(result, filters = {}) {
             : `${formatGold(alert.marketSummary.marketLow)}/ea`;
 
         return `
-            <tr class="border-b border-slate-700/60 hover:bg-slate-700/30 ${alert.band.rowClass}">
-                <td class="py-3 px-3 align-top">
-                    <div class="flex items-start gap-2">
-                        <i class="fas ${alert.band.icon} ${alert.band.textClass} mt-1"></i>
+            <tr class="hover:bg-slate-700/40">
+                <td class="py-3 px-6 text-left align-middle">
+                    <div class="flex items-center gap-2">
+                        <i class="fas ${alert.band.icon} ${alert.band.textClass}"></i>
                         <div>
-                            <div class="text-white text-sm font-semibold">${escapeHtml(alert.itemName)}</div>
-                            ${alert.qualityLabel ? `<div class="text-xs text-amber-200">${escapeHtml(alert.qualityLabel)}</div>` : ''}
-                            ${stallOptions.length > 1 ? `<div class="text-xs text-gray-400">${escapeHtml(alert.stallName)}</div>` : ''}
+                            <div class="text-white text-base font-semibold">${escapeHtml(alert.itemName)}</div>
+                            ${alert.qualityLabel ? `<div class="text-sm text-amber-200">${escapeHtml(alert.qualityLabel)}</div>` : ''}
+                            ${stallOptions.length > 1 ? `<div class="text-sm text-gray-400">${escapeHtml(alert.stallName)}</div>` : ''}
                         </div>
                     </div>
                 </td>
-                <td class="py-3 px-3 align-top text-right">
-                    <div class="${alert.band.textClass} text-sm font-bold">${alert.daysOld} days</div>
-                    <div class="text-gray-500 text-xs">${alert.band.label}</div>
+                <td class="py-3 px-6 text-left align-middle">
+                    <span class="${alert.band.textClass} text-base font-bold">${alert.daysOld} days</span>
                 </td>
-                <td class="py-3 px-3 align-top text-right">
-                    <div class="text-white text-sm font-semibold">${alert.quantity.toLocaleString()} @ ${formatGold(alert.totalPrice)}</div>
-                    <div class="text-gray-400 text-xs">${formatGold(alert.unitPrice)}/ea</div>
+                <td class="py-3 px-6 text-left align-middle">
+                    <span class="text-white text-base font-semibold">${alert.quantity.toLocaleString()}</span>
                 </td>
-                <td class="py-3 px-3 align-top">
-                    <div class="flex flex-col gap-1.5">
-                        <span class="inline-flex w-fit items-center gap-1.5 border rounded-full px-2.5 py-1 text-xs font-semibold ${position.className}">
+                <td class="py-3 px-6 text-left align-middle">
+                    <span class="text-white text-base font-semibold">${formatGold(alert.totalPrice)}</span>
+                </td>
+                <td class="py-3 px-6 text-left align-middle">
+                    <span class="text-white text-base font-semibold">${formatGold(alert.unitPrice)}</span>
+                </td>
+                <td class="py-3 px-6 text-left align-middle">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="inline-flex w-fit items-center gap-1.5 border rounded-full px-2.5 py-1 text-sm font-semibold ${position.className}">
                             <i class="fas ${position.icon} text-xs"></i>
                             ${position.label}
                         </span>
-                        <div class="text-gray-300 text-xs">
-                            Market low: <span class="text-white font-semibold">${marketLow}</span>
-                            <span class="text-gray-500">(${alert.marketSummary.totalListings} active)</span>
-                        </div>
-                        <div class="text-gray-500 text-xs">${position.note}</div>
+                        <span class="text-white text-sm">Market low: <span class="font-semibold">${marketLow}</span></span>
                     </div>
                 </td>
-                <td class="py-3 px-3 align-top text-right">
-                    <div class="flex justify-end gap-2">
-                        <button type="button" data-alert-edit-listing-id="${alert.listingId}" class="inline-flex items-center justify-center gap-1.5 rounded-full bg-blue-600 hover:bg-blue-500 border border-blue-400/50 px-3 py-1.5 text-xs font-semibold text-white transition-colors" title="Edit listing">
-                            <i class="fas fa-pen text-[11px]"></i>
-                            <span>Edit</span>
-                        </button>
-                        <button type="button" data-alert-cancel-listing-id="${alert.listingId}" class="inline-flex items-center justify-center gap-1.5 rounded-full bg-slate-800/80 hover:bg-rose-900/70 border border-rose-400/40 px-3 py-1.5 text-xs font-semibold text-rose-100 transition-colors" title="Cancel listing">
-                            <i class="fas fa-ban text-[11px]"></i>
-                            <span>Cancel</span>
-                        </button>
+                <td class="py-3 px-6 text-left align-middle">
+                    <div class="flex gap-2 whitespace-nowrap">
+                        <button type="button" data-alert-edit-listing-id="${alert.listingId}" class="edit-btn bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-full" title="Edit listing">Edit</button>
+                        <button type="button" data-alert-cancel-listing-id="${alert.listingId}" class="cancel-btn bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-3 rounded-full" title="Cancel listing">Cancel</button>
                     </div>
                 </td>
             </tr>
@@ -396,32 +390,33 @@ export function renderListingAlertsModalHtml(result, filters = {}) {
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
                     <span class="text-xs font-bold uppercase tracking-wide text-gray-400 mr-1">Market</span>
-                    ${chip('All positions', alerts.length, `bg-slate-700/40 border-slate-500/40 text-slate-200 ${!filters.position ? 'ring-1 ring-slate-300/40' : ''}`, 'fa-chart-simple', 'data-alert-position-filter=""')}
+                    ${chip('All alert listings', alerts.length, `bg-slate-700/40 border-slate-500/40 text-slate-200 ${!filters.position ? 'ring-1 ring-slate-300/40' : ''}`, 'fa-list', 'data-alert-position-filter=""')}
                     ${chip('Below Market', positionSummary.below, `bg-blue-900/40 border-blue-500/40 text-blue-200 ${filters.position === 'below' ? 'ring-1 ring-blue-200/70' : ''}`, 'fa-arrow-trend-down', 'data-alert-position-filter="below"')}
                     ${chip('Competitive', positionSummary.competitive, `bg-emerald-900/40 border-emerald-500/40 text-emerald-100 ${filters.position === 'competitive' ? 'ring-1 ring-emerald-200/70' : ''}`, 'fa-handshake', 'data-alert-position-filter="competitive"')}
                     ${chip('Above Market', positionSummary.above, `bg-rose-900/40 border-rose-500/40 text-rose-200 ${filters.position === 'above' ? 'ring-1 ring-rose-200/70' : ''}`, 'fa-arrow-trend-up', 'data-alert-position-filter="above"')}
-                    ${chip('No active listings', positionSummary.none, `bg-slate-700/50 border-slate-500/50 text-gray-200 ${filters.position === 'none' ? 'ring-1 ring-slate-300/60' : ''}`, 'fa-circle-question', 'data-alert-position-filter="none"')}
                 </div>
                 ${stallFilterHtml}
             </div>
         </div>
 
         ${filteredAlerts.length ? `
-            <h4 class="flex items-center gap-2 text-amber-300 text-sm font-bold uppercase tracking-wide mb-3">
+            <h4 class="flex items-center gap-2 text-amber-300 text-base font-bold uppercase tracking-wide mb-3">
                 <i class="fas fa-bell text-amber-400"></i> Listing Age Alerts
             </h4>
             <div class="overflow-x-auto rounded-lg border border-slate-700/60">
                 <table class="w-full text-left">
                     <thead>
                         <tr class="border-b border-slate-600 bg-slate-900/60">
-                            <th class="py-2 px-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Listing</th>
-                            <th class="py-2 px-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide">Age</th>
-                            <th class="py-2 px-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide">Your Amount</th>
-                            <th class="py-2 px-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Market Position</th>
-                            <th class="py-2 px-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide">Actions</th>
+                            <th class="py-3 px-6 text-left text-sm font-semibold text-gray-400 uppercase tracking-wide">Listing</th>
+                            <th class="py-3 px-6 text-left text-sm font-semibold text-gray-400 uppercase tracking-wide">Age</th>
+                            <th class="py-3 px-6 text-left text-sm font-semibold text-gray-400 uppercase tracking-wide">Units</th>
+                            <th class="py-3 px-6 text-left text-sm font-semibold text-gray-400 uppercase tracking-wide">Stack Price</th>
+                            <th class="py-3 px-6 text-left text-sm font-semibold text-gray-400 uppercase tracking-wide">Unit Price</th>
+                            <th class="py-3 px-6 text-left text-sm font-semibold text-gray-400 uppercase tracking-wide">Market Position</th>
+                            <th class="py-3 px-6 text-left text-sm font-semibold text-gray-400 uppercase tracking-wide">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>${rows}</tbody>
+                    <tbody class="bg-slate-800/50 divide-y divide-slate-700">${rows}</tbody>
                 </table>
             </div>
         ` : `
