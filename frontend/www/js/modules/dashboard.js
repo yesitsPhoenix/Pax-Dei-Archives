@@ -148,10 +148,10 @@ function getValleyBucketRank(bucket) {
 
 function buildCompetitiveChip(competitiveCount) {
     if (competitiveCount <= 0) return '';
-    return `<span class="inline-flex items-center gap-1.5 bg-amber-900/40 border border-amber-500/40 rounded-full px-3 py-1 text-sm">
-                <i class="fas fa-handshake text-amber-400 text-xs"></i>
+    return `<span class="inline-flex items-center gap-1.5 bg-emerald-900/40 border border-emerald-500/40 rounded-full px-3 py-1 text-sm">
+                <i class="fas fa-handshake text-emerald-400 text-xs"></i>
                 <span class="text-white font-semibold">Competitive</span>
-                <span class="text-amber-300 font-bold">${competitiveCount}</span>
+                <span class="text-emerald-300 font-bold">${competitiveCount}</span>
                 <span class="text-white">${competitiveCount === 1 ? 'item' : 'items'}</span>
             </span>`;
 }
@@ -444,36 +444,16 @@ function calculateAndRenderPVEBreakdown(allActivityData, formatCurrency) {
 
 async function populateListingAlertsCount() {
     try {
-        const { supabase } = await import('../supabaseClient.js');
         const { currentCharacterId } = await import('./characters.js');
+        const { getListingAlertCount } = await import('./listingAlerts.js');
         
         if (!currentCharacterId) {
             if (ledgerAlertsCountEl) ledgerAlertsCountEl.textContent = '0';
             updateSidebarAlertBadge(0);
             return;
         }
-        
-        const now = new Date();
-        const DAYS_AGING = 15;
-        const MS_PER_DAY = 24 * 60 * 60 * 1000;
-        const agingDaysAgo = new Date(now.getTime() - DAYS_AGING * MS_PER_DAY).toISOString();
-        
-        const { data: oldListings, error } = await supabase
-            .from('market_listings')
-            .select('listing_id')
-            .eq('character_id', currentCharacterId)
-            .is('is_fully_sold', false)
-            .is('is_cancelled', false)
-            .lt('listing_date', agingDaysAgo);
-        
-        if (error) {
-            console.error('[Dashboard] Error fetching listing alerts:', error);
-            if (ledgerAlertsCountEl) ledgerAlertsCountEl.textContent = 'Error';
-            updateSidebarAlertBadge(0);
-            return;
-        }
-        
-        const count = oldListings?.length || 0;
+
+        const count = await getListingAlertCount();
         
         if (ledgerAlertsCountEl) {
             ledgerAlertsCountEl.textContent = count;
@@ -668,10 +648,10 @@ export function renderMarketPulse(zoneSummary, ownSummary, character, loading = 
         const { leading, competitive, undercut, valleySharePct, valleyShareAvailable } = analysis;
 
         const leadingChip = leading.length > 0
-            ? `<span class="inline-flex items-center gap-1.5 bg-emerald-900/40 border border-emerald-500/40 rounded-full px-3 py-1 text-sm">
-                   <i class="fas fa-trophy text-emerald-400 text-xs"></i>
-                   <span class="text-white font-semibold">Leading on</span>
-                   <span class="text-emerald-300 font-bold">${leading.length}</span>
+            ? `<span class="inline-flex items-center gap-1.5 bg-blue-900/40 border border-blue-500/40 rounded-full px-3 py-1 text-sm">
+                   <i class="fas fa-arrow-trend-down text-blue-400 text-xs"></i>
+                   <span class="text-white font-semibold">Below Market</span>
+                   <span class="text-blue-300 font-bold">${leading.length}</span>
                    <span class="text-white">${leading.length === 1 ? 'item' : 'items'}</span>
                </span>`
             : '';
@@ -680,14 +660,14 @@ export function renderMarketPulse(zoneSummary, ownSummary, character, loading = 
 
         const undercutChip = undercut.length > 0
             ? `<span class="inline-flex items-center gap-1.5 bg-rose-900/40 border border-rose-500/40 rounded-full px-3 py-1 text-sm">
-                   <i class="fas fa-triangle-exclamation text-rose-400 text-xs"></i>
-                   <span class="text-white font-semibold">Above range on</span>
+                   <i class="fas fa-arrow-trend-up text-rose-400 text-xs"></i>
+                   <span class="text-white font-semibold">Above Market</span>
                    <span class="text-rose-300 font-bold">${undercut.length}</span>
                    <span class="text-white">${undercut.length === 1 ? 'item' : 'items'}</span>
                </span>`
             : `<span class="inline-flex items-center gap-1.5 bg-slate-700/40 border border-slate-500/40 rounded-full px-3 py-1 text-sm">
                    <i class="fas fa-check text-gray-400 text-xs"></i>
-                   <span class="text-white">No above-range listings</span>
+                   <span class="text-white">No above-market listings</span>
                </span>`;
 
         const shareChip = valleyShareAvailable
@@ -1009,9 +989,9 @@ export async function openValleyPresenceModal() {
             <td class="py-2.5 px-3 text-white text-sm">
                 ${renderValleyItemLabel(item)}
             </td>
-            <td class="py-2.5 px-3 text-amber-200 text-sm text-right font-semibold">${fmtG(item.yourLow)}</td>
+            <td class="py-2.5 px-3 text-emerald-200 text-sm text-right font-semibold">${fmtG(item.yourLow)}</td>
             <td class="py-2.5 px-3 text-emerald-300 text-sm text-right">${fmtG(item.marketLow)}</td>
-            <td class="py-2.5 px-3 text-amber-300 text-sm text-right whitespace-nowrap">${item.gap <= 0.001 ? '<span class="text-amber-200 font-semibold">Matches market low</span>' : `+${fmtG(item.gap)} <span class="text-gray-400 text-xs">(+${item.gapPct}%)</span>`}</td>
+            <td class="py-2.5 px-3 text-emerald-300 text-sm text-right whitespace-nowrap">${item.gap <= 0.001 ? '<span class="text-emerald-200 font-semibold">Matches market low</span>' : `+${fmtG(item.gap)} <span class="text-gray-400 text-xs">(+${item.gapPct}%)</span>`}</td>
             <td class="py-2.5 px-3 text-gray-300 text-sm text-right">${item.yourCount} / ${item.totalCount}</td>
             <td class="py-2.5 px-3 text-right">
                 <button class="valley-edit-btn inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white rounded-full border border-blue-400/40 transition-colors"
@@ -1029,9 +1009,9 @@ export async function openValleyPresenceModal() {
             <td class="py-2.5 px-3 text-white text-sm">
                 ${renderValleyItemLabel(item)}
             </td>
-            <td class="py-2.5 px-3 text-emerald-300 text-sm text-right font-semibold">${fmtG(item.yourLow)}</td>
+            <td class="py-2.5 px-3 text-blue-300 text-sm text-right font-semibold">${fmtG(item.yourLow)}</td>
             <td class="py-2.5 px-3 text-emerald-300 text-sm text-right">${fmtG(item.marketLow)}</td>
-            <td class="py-2.5 px-3 text-emerald-400 text-sm text-right font-semibold">Lowest price</td>
+            <td class="py-2.5 px-3 text-blue-300 text-sm text-right font-semibold">Below market low</td>
             <td class="py-2.5 px-3 text-gray-300 text-sm text-right">${item.yourCount} / ${item.totalCount}</td>
         </tr>`).join('');
 
@@ -1062,22 +1042,22 @@ export async function openValleyPresenceModal() {
         <!-- Summary chips -->
         <div class="flex flex-wrap gap-2 mb-5">
             ${shareChip}
-            <span class="inline-flex items-center gap-1.5 bg-emerald-900/40 border border-emerald-500/40 rounded-full px-3 py-1 text-sm">
-                <i class="fas fa-trophy text-emerald-400 text-xs"></i>
-                <span class="text-white">Leading on <span class="font-bold text-emerald-300">${leading.length}</span> item${leading.length !== 1 ? 's' : ''}</span>
+            <span class="inline-flex items-center gap-1.5 bg-blue-900/40 border border-blue-500/40 rounded-full px-3 py-1 text-sm">
+                <i class="fas fa-arrow-trend-down text-blue-400 text-xs"></i>
+                <span class="text-white">Below Market <span class="font-bold text-blue-300">${leading.length}</span> item${leading.length !== 1 ? 's' : ''}</span>
             </span>
             ${buildCompetitiveChip(competitive.length)}
             <span class="inline-flex items-center gap-1.5 bg-rose-900/40 border border-rose-500/40 rounded-full px-3 py-1 text-sm">
-                <i class="fas fa-triangle-exclamation text-rose-400 text-xs"></i>
-                <span class="text-white">Above range on <span class="font-bold text-rose-300">${undercut.length}</span> item${undercut.length !== 1 ? 's' : ''}</span>
+                <i class="fas fa-arrow-trend-up text-rose-400 text-xs"></i>
+                <span class="text-white">Above Market <span class="font-bold text-rose-300">${undercut.length}</span> item${undercut.length !== 1 ? 's' : ''}</span>
             </span>
         </div>
 
         ${undercut.length > 0 ? `
-        <!-- Above range section -->
+        <!-- Above market section -->
         <div class="mb-5">
             <h4 class="flex items-center gap-2 text-rose-300 text-sm font-bold uppercase tracking-wide mb-2">
-                <i class="fas fa-triangle-exclamation text-rose-400"></i> Above Competitive Range
+                <i class="fas fa-arrow-trend-up text-rose-400"></i> Above Market
                 <span class="text-gray-400 text-xs font-normal normal-case ml-1">— sorted by largest gap first</span>
             </h4>
             <div class="overflow-x-auto rounded-lg border border-slate-700/60">
@@ -1088,8 +1068,8 @@ export async function openValleyPresenceModal() {
         ${competitive.length > 0 ? `
         <!-- Competitive section -->
         <div class="mb-5">
-            <h4 class="flex items-center gap-2 text-amber-300 text-sm font-bold uppercase tracking-wide mb-2">
-                <i class="fas fa-handshake text-amber-400"></i> Competitive Pricing
+            <h4 class="flex items-center gap-2 text-emerald-300 text-sm font-bold uppercase tracking-wide mb-2">
+                <i class="fas fa-handshake text-emerald-400"></i> Competitive Pricing
             </h4>
             <div class="overflow-x-auto rounded-lg border border-slate-700/60">
                 <table class="w-full text-left">${tableHeader}<tbody>${competitiveRows}</tbody></table>
@@ -1097,10 +1077,10 @@ export async function openValleyPresenceModal() {
         </div>` : ''}
 
         ${leading.length > 0 ? `
-        <!-- Leading section -->
+        <!-- Below market section -->
         <div>
-            <h4 class="flex items-center gap-2 text-emerald-300 text-sm font-bold uppercase tracking-wide mb-2">
-                <i class="fas fa-trophy text-emerald-400"></i> Leading the Market
+            <h4 class="flex items-center gap-2 text-blue-300 text-sm font-bold uppercase tracking-wide mb-2">
+                <i class="fas fa-arrow-trend-down text-blue-400"></i> Below Market
             </h4>
             <div class="overflow-x-auto rounded-lg border border-slate-700/60">
                 <table class="w-full text-left">${leadingTableHeader}<tbody>${leadingRows}</tbody></table>
@@ -1127,16 +1107,16 @@ export async function openValleyPresenceModal() {
             </div>
             <div class="grid gap-3 md:grid-cols-3 mt-3">
                 <div class="rounded-lg border border-rose-500/20 bg-rose-900/10 p-3">
-                    <p class="text-rose-300 text-xs font-bold uppercase tracking-wide mb-1">Above-Range Example</p>
-                    <p class="text-gray-300 text-xs leading-relaxed">A 12g stack against a 5g market low falls in the 5g-19g band, where only 5g and 30% are allowed. Its 7g gap and 140% delta push it above the competitive range even if it sold higher in the past.</p>
+                    <p class="text-rose-300 text-xs font-bold uppercase tracking-wide mb-1">Above Market Example</p>
+                    <p class="text-gray-300 text-xs leading-relaxed">A 12g stack against a 5g market low falls in the 5g-19g band, where only 5g and 30% are allowed. Its 7g gap and 140% delta push it above the competitive band even if it sold higher in the past.</p>
                 </div>
-                <div class="rounded-lg border border-amber-500/20 bg-amber-900/10 p-3">
-                    <p class="text-amber-300 text-xs font-bold uppercase tracking-wide mb-1">Competitive Example</p>
+                <div class="rounded-lg border border-blue-500/20 bg-blue-900/10 p-3">
+                    <p class="text-emerald-300 text-xs font-bold uppercase tracking-wide mb-1">Competitive Example</p>
                     <p class="text-gray-300 text-xs leading-relaxed">A 30g stack against a 30g market low is competitive because it matches the current floor. In that same 20g-74g band, a 37g stack also stays competitive because the 7g gap and 23% delta are still inside the band cap.</p>
                 </div>
                 <div class="rounded-lg border border-emerald-500/20 bg-emerald-900/10 p-3">
-                    <p class="text-emerald-300 text-xs font-bold uppercase tracking-wide mb-1">Leading Example</p>
-                    <p class="text-gray-300 text-xs leading-relaxed">If your stack is below the current Home Valley low, it shows as leading. Matching the low is treated as competitive, not leading, which matches the add-listing modal.</p>
+                    <p class="text-blue-300 text-xs font-bold uppercase tracking-wide mb-1">Below Market Example</p>
+                    <p class="text-gray-300 text-xs leading-relaxed">If your stack is below the current Home Valley low, it shows as below market. Matching the low is treated as competitive, which matches the add-listing modal.</p>
                 </div>
             </div>
         <p class="text-gray-500 text-xs mt-3 italic">Data reflects gaming.tools' last hourly sync, while your Archives listings and sales history update immediately.</p>

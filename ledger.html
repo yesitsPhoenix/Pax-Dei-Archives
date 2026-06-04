@@ -613,7 +613,7 @@
             <!-- Quick Guide Modal -->
             <!-- Valley Presence Modal -->
             <div id="valleyPresenceModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center hidden" style="z-index:10000">
-                <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-emerald-500/30 rounded-2xl shadow-2xl w-full max-w-5xl mx-4 p-6 max-h-[85vh] flex flex-col">
+                <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-emerald-500/30 rounded-2xl shadow-2xl w-full max-w-6xl mx-4 p-6 max-h-[85vh] flex flex-col">
                     <div class="flex items-start justify-between mb-4 flex-shrink-0">
                         <div class="flex items-center gap-2">
                             <i class="fas fa-store text-emerald-400 text-xl"></i>
@@ -1336,16 +1336,14 @@
     </div>
 
     <!-- Listing Alerts Modal -->
-    <div id="listingAlertsModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 modal-backdrop">
-        <div class="bg-slate-800 p-8 rounded-2xl shadow-2xl w-full max-w-3xl border border-amber-400/30">
-            <div class="flex items-center justify-between mb-6">
+    <div id="listingAlertsModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-start justify-center pt-24" style="z-index:10000">
+        <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-amber-500/30 rounded-2xl shadow-2xl w-full max-w-6xl mx-4 p-6 max-h-[85vh] flex flex-col">
+            <div class="flex items-start justify-between mb-5 flex-shrink-0">
                 <h2 class="text-xl font-bold text-white flex items-center gap-3">
                     <i class="fas fa-bell text-red-400"></i>
-                    Listing Alert Details
+                    Listing Alerts
                 </h2>
-                <button id="closeAlertsModalBtn" class="text-gray-400 hover:text-white transition-colors">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
+                <button id="closeAlertsModalBtn" class="text-gray-400 hover:text-white transition-colors text-xl leading-none">&times;</button>
             </div>
             
             <div id="alertsLoadingIndicator" class="text-center py-12">
@@ -1353,14 +1351,17 @@
                 <p class="text-gray-400 mt-4 text-md">Loading alerts...</p>
             </div>
             
-            <div id="alertsListContainer" class="hidden space-y-3 max-h-96 overflow-y-auto pr-2">
+            <div id="alertsListContainer" class="hidden overflow-y-auto flex-1 pr-1">
                 <!-- Alerts will be populated here -->
             </div>
             
             <div id="alertsEmptyState" class="hidden text-center py-12">
                 <i class="fas fa-check-circle text-green-400 text-5xl mb-4"></i>
-                <p class="text-gray-300 text-lg font-semibold mb-2">No aging listings found!</p>
-                <p class="text-gray-400 text-md">All your listings are fresh and active.</p>
+                <p class="text-gray-300 text-lg font-semibold mb-2">No aging listings found.</p>
+                <p class="text-gray-400 text-md">No active listings are currently at or above 30 days.</p>
+            </div>
+            <div class="mt-5 flex justify-end flex-shrink-0">
+                <button id="closeAlertsModalBtn2" class="bg-slate-600 hover:bg-slate-500 text-gray-300 px-5 py-2 rounded-lg text-sm transition-all duration-200">Close</button>
             </div>
         </div>
     </div>
@@ -1470,7 +1471,10 @@
         const openAlertsModalBtn = document.getElementById('openAlertsModalBtn');
         const sidebarListingAlertsBtn = document.getElementById('sidebarListingAlertsBtn');
         const closeAlertsModalBtn = document.getElementById('closeAlertsModalBtn');
+        const closeAlertsModalBtn2 = document.getElementById('closeAlertsModalBtn2');
         let alertsLoaded = false;
+        let listingAlertsResult = null;
+        let listingAlertsFilters = {};
         
         // Reset alertsLoaded flag and clear modal content when character changes
         document.addEventListener('characterChanged', () => {
@@ -1511,11 +1515,39 @@
         closeAlertsModalBtn?.addEventListener('click', () => {
             alertsModal?.classList.add('hidden');
         });
+        closeAlertsModalBtn2?.addEventListener('click', () => {
+            alertsModal?.classList.add('hidden');
+        });
         
         // Close modal when clicking outside
         alertsModal?.addEventListener('click', (event) => {
             if (event.target === alertsModal) {
                 alertsModal.classList.add('hidden');
+            }
+        });
+
+        function renderListingAlerts() {
+            const listContainer = document.getElementById('alertsListContainer');
+            if (!listContainer || !listingAlertsResult || !window.renderListingAlertsModalHtml) return;
+            listContainer.innerHTML = window.renderListingAlertsModalHtml(listingAlertsResult, listingAlertsFilters);
+        }
+
+        document.getElementById('alertsListContainer')?.addEventListener('click', (event) => {
+            const bandButton = event.target.closest('[data-alert-band-filter]');
+            const stallButton = event.target.closest('[data-alert-stall-filter]');
+            const clearButton = event.target.closest('[data-alert-clear-filters]');
+
+            if (bandButton) {
+                listingAlertsFilters.band = bandButton.getAttribute('data-alert-band-filter') || '';
+                if (!listingAlertsFilters.band) delete listingAlertsFilters.band;
+                renderListingAlerts();
+            } else if (stallButton) {
+                listingAlertsFilters.stallName = stallButton.getAttribute('data-alert-stall-filter') || '';
+                if (!listingAlertsFilters.stallName) delete listingAlertsFilters.stallName;
+                renderListingAlerts();
+            } else if (clearButton) {
+                listingAlertsFilters = {};
+                renderListingAlerts();
             }
         });
         
@@ -1525,13 +1557,16 @@
             const emptyState = document.getElementById('alertsEmptyState');
             
             try {
-                // Show loading
                 loadingIndicator.classList.remove('hidden');
                 listContainer.classList.add('hidden');
                 emptyState.classList.add('hidden');
                 
-                const { supabase } = await import('./frontend/www/js/supabaseClient.js');
                 const { currentCharacterId } = await import('./frontend/www/js/modules/characters.js');
+                const {
+                    buildListingAlerts,
+                    renderListingAlertsModalHtml,
+                } = await import('./frontend/www/js/modules/listingAlerts.js');
+                window.renderListingAlertsModalHtml = renderListingAlertsModalHtml;
                 
                 if (!currentCharacterId) {
                     listContainer.innerHTML = '<p class="text-gray-400 text-center py-4">Please select a character to view alerts.</p>';
@@ -1539,77 +1574,11 @@
                     listContainer.classList.remove('hidden');
                     return;
                 }
-                
-                const now = new Date();
-                const DAYS_AGING = 15;
-                const DAYS_WARNING = 30;
-                const DAYS_CRITICAL = 45;
-                const MS_PER_DAY = 24 * 60 * 60 * 1000;
-                
-                const agingDaysAgo = new Date(now.getTime() - DAYS_AGING * MS_PER_DAY).toISOString();
-                const warningDaysAgo = new Date(now.getTime() - DAYS_WARNING * MS_PER_DAY).toISOString();
-                const criticalDaysAgo = new Date(now.getTime() - DAYS_CRITICAL * MS_PER_DAY).toISOString();
-                
-                const { data: oldListings, error } = await supabase
-                    .from('market_listings')
-                    .select('item_id, listing_date, items(item_name)')
-                    .eq('character_id', currentCharacterId)
-                    .is('is_fully_sold', false)
-                    .is('is_cancelled', false)
-                    .lt('listing_date', agingDaysAgo)
-                    .order('listing_date', { ascending: true });
-                
-                if (error) throw error;
-                
+
+                listingAlertsResult = await buildListingAlerts();
+                listingAlertsFilters = {};
+                listContainer.innerHTML = renderListingAlertsModalHtml(listingAlertsResult, listingAlertsFilters);
                 loadingIndicator.classList.add('hidden');
-                
-                if (!oldListings || oldListings.length === 0) {
-                    emptyState.classList.remove('hidden');
-                    return;
-                }
-                
-                // Categorize and display alerts
-                const alerts = [];
-                
-                oldListings.forEach(listing => {
-                    const itemName = listing.items?.item_name || `Item #${listing.item_id}`;
-                    const daysOld = Math.floor((now - new Date(listing.listing_date)) / MS_PER_DAY);
-                    
-                    let className, icon, text, severity;
-                    
-                    if (listing.listing_date < criticalDaysAgo) {
-                        className = "text-md text-red-400 p-3 border border-red-500 rounded-lg bg-red-900/20";
-                        icon = "fa-exclamation-triangle";
-                        text = `<strong class=\"text-red-300\">CRITICAL:</strong> <strong>${itemName}</strong> has been listed for <strong>${daysOld} days</strong> (${DAYS_CRITICAL}+ days)`;
-                        severity = 3;
-                    } else if (listing.listing_date < warningDaysAgo) {
-                        className = "text-md text-amber-400 p-3 border border-amber-500 rounded-lg bg-amber-900/20";
-                        icon = "fa-clock";
-                        text = `<strong class=\"text-amber-300\">WARNING:</strong> <strong>${itemName}</strong> has been listed for <strong>${daysOld} days</strong> (${DAYS_WARNING}+ days)`;
-                        severity = 2;
-                    } else {
-                        className = "text-md text-green-400 p-3 border border-green-500 rounded-lg bg-green-900/20";
-                        icon = "fa-info-circle";
-                        text = `<strong class=\"text-green-300\">NOTICE:</strong> <strong>${itemName}</strong> has been listed for <strong>${daysOld} days</strong> (${DAYS_AGING}+ days)`;
-                        severity = 1;
-                    }
-                    
-                    alerts.push({ className, icon, text, severity, date: listing.listing_date });
-                });
-                
-                // Sort by severity (critical first) then by date (oldest first)
-                alerts.sort((a, b) => {
-                    if (a.severity !== b.severity) return b.severity - a.severity;
-                    return new Date(a.date) - new Date(b.date);
-                });
-                
-                // Render alerts
-                listContainer.innerHTML = alerts.map(alert => `
-                    <div class="${alert.className}">
-                        <i class="fas ${alert.icon} mr-2"></i>${alert.text}
-                    </div>
-                `).join('');
-                
                 listContainer.classList.remove('hidden');
                 
             } catch (error) {
