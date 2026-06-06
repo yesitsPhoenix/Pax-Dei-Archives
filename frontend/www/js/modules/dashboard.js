@@ -118,9 +118,15 @@ function getListingUnitPrice(listing) {
     return price / quantity;
 }
 
+function normalizeStackGoldAmount(amount) {
+    if (amount === null || amount === undefined) return null;
+    const numericAmount = Number(amount);
+    return Number.isFinite(numericAmount) ? Math.round(numericAmount) : null;
+}
+
 function getStackAwareMarketLow({ exactStackListings, marketVariantListings, mktData, stackSize, stackPrice, avatarHash }) {
     if (exactStackListings.length > 0) {
-        return Math.min(...exactStackListings.map(marketListing => Number(marketListing.price) || 0));
+        return normalizeStackGoldAmount(Math.min(...exactStackListings.map(marketListing => Number(marketListing.price) || 0)));
     }
 
     const externalListings = avatarHash
@@ -128,15 +134,15 @@ function getStackAwareMarketLow({ exactStackListings, marketVariantListings, mkt
         : marketVariantListings;
 
     if (externalListings.length > 0) {
-        return Math.min(...externalListings.map(getListingUnitPrice)) * stackSize;
+        return normalizeStackGoldAmount(Math.min(...externalListings.map(getListingUnitPrice)) * stackSize);
     }
 
     if (marketVariantListings.length > 0) {
-        return stackPrice;
+        return normalizeStackGoldAmount(stackPrice);
     }
 
     return (mktData?.marketLow ?? null) !== null
-        ? (mktData.marketLow * stackSize)
+        ? normalizeStackGoldAmount(mktData.marketLow * stackSize)
         : null;
 }
 
