@@ -705,10 +705,11 @@ function buildDraftFrontpageFlowItems(entries) {
   const articleItems = entries
     .filter(entry => !isClassifiedSection(entry.section_key))
     .map(entry => ({ type: 'entry', entry }));
-  const classifiedEntries = entries.filter(entry => isClassifiedSection(entry.section_key));
+  const classifiedItems = entries
+    .filter(entry => isClassifiedSection(entry.section_key))
+    .map(entry => ({ type: 'entry', entry }));
 
-  if (!classifiedEntries.length) return articleItems;
-  return [...articleItems, { type: 'classifieds', entries: classifiedEntries }];
+  return [...articleItems, ...classifiedItems];
 }
 
 function buildOrderedDraftFrontpageFlowItems(entries) {

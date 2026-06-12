@@ -471,10 +471,11 @@ function buildFrontpageFlowItems(entries) {
   const articleItems = entries
     .filter(entry => entry.category !== 'Classifieds')
     .map(entry => ({ type: 'entry', entry }));
-  const classifiedEntries = entries.filter(entry => entry.category === 'Classifieds');
+  const classifiedItems = entries
+    .filter(entry => entry.category === 'Classifieds')
+    .map(entry => ({ type: 'entry', entry }));
 
-  if (!classifiedEntries.length) return articleItems;
-  return [...articleItems, { type: 'classifieds', entries: classifiedEntries }];
+  return [...articleItems, ...classifiedItems];
 }
 
 function buildOrderedFrontpageFlowItems(entries) {
