@@ -651,6 +651,15 @@
 .chronicle-excerpt ul,
 .chronicle-excerpt ol {
     padding-left: 1.05rem;
+    list-style-position: outside;
+}
+
+.chronicle-excerpt ul {
+    list-style-type: disc;
+}
+
+.chronicle-excerpt ol {
+    list-style-type: decimal;
 }
 
 .chronicle-excerpt li {
@@ -987,6 +996,15 @@
 .article-modal-content ul,
 .article-modal-content ol {
     padding-left: 1.35rem;
+    list-style-position: outside;
+}
+
+.article-modal-content ul {
+    list-style-type: disc;
+}
+
+.article-modal-content ol {
+    list-style-type: decimal;
 }
 
 .article-modal-content li {
@@ -1361,6 +1379,15 @@
 .publication-preview-content ul,
 .publication-preview-content ol {
     padding-left: 1.35rem;
+    list-style-position: outside;
+}
+
+.publication-preview-content ul {
+    list-style-type: disc;
+}
+
+.publication-preview-content ol {
+    list-style-type: decimal;
 }
 
 .publication-preview-content a {
