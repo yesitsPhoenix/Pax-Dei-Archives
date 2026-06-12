@@ -1854,6 +1854,7 @@
         grid-template-columns: 1fr;
     }
 
+    .chronicle-frontpage-balanced > .chronicle-frontpage-lead,
     .chronicle-flow-column {
         display: none;
     }
