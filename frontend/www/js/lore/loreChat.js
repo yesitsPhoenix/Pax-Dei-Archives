@@ -342,6 +342,20 @@ function buildSourcesBlockFromRegistry(registry) {
     return lines.length > 0 ? `\n\n[[Sources]]\n${lines.join('\n')}\n[[/Sources]]` : '';
 }
 
+function buildSourcesBlockFromText(text, registry) {
+    const sourceText = (text.match(/\[\[Sources\]\]([\s\S]*)$/i) || [])[1] || '';
+    const normalizedSourceText = sourceText.toLowerCase();
+    const lines = [];
+
+    for (const meta of registry.values()) {
+        if (normalizedSourceText.includes(meta.title.toLowerCase())) {
+            lines.push(`[[${meta.category}:${meta.slug}|${meta.title}]]`);
+        }
+    }
+
+    return lines.length > 0 ? `\n\n[[Sources]]\n${lines.join('\n')}\n[[/Sources]]` : '';
+}
+
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
@@ -526,12 +540,17 @@ function finalizeStreamingMessage(content, allowedCitationMap = null) {
     let validated = stripInvalidCitations(content, registry);
     validated = stripInvalidSources(validated, registry);
 
+    let synthesizedSources = '';
+
     if (!hasCompleteSourcesBlock(validated) && /\[\[Sources\]\]/i.test(validated)) {
+        if (canSynthesizeSources) {
+            synthesizedSources = buildSourcesBlockFromText(validated, allowedCitationMap);
+        }
         validated = removeIncompleteSourcesBlock(validated);
     }
 
     if (canSynthesizeSources && !hasCompleteSourcesBlock(validated) && !hasBodyCitations(validated)) {
-        validated += buildSourcesBlockFromRegistry(allowedCitationMap);
+        validated += synthesizedSources || buildSourcesBlockFromRegistry(allowedCitationMap);
     }
 
     // Final render WITH full citation parsing and source cards
