@@ -324,6 +324,24 @@ function stripInvalidSources(text, registry = validCitationMap) {
     });
 }
 
+function hasCompleteSourcesBlock(text) {
+    return /\[\[Sources\]\][\s\S]*?\[\[\/Sources\]\]/i.test(text);
+}
+
+function hasBodyCitations(text) {
+    const bodyOnly = text.replace(/\[\[Sources\]\][\s\S]*$/i, '');
+    return /\[\[[^:\]]+:[^\]|]+\|[^\]]+\]\]/.test(bodyOnly);
+}
+
+function removeIncompleteSourcesBlock(text) {
+    return text.replace(/\s*\[\[Sources\]\][\s\S]*$/i, '').trim();
+}
+
+function buildSourcesBlockFromRegistry(registry) {
+    const lines = Array.from(registry.values()).map(meta => `[[${meta.category}:${meta.slug}|${meta.title}]]`);
+    return lines.length > 0 ? `\n\n[[Sources]]\n${lines.join('\n')}\n[[/Sources]]` : '';
+}
+
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
@@ -504,8 +522,17 @@ function finalizeStreamingMessage(content, allowedCitationMap = null) {
 
     // Validate citations — strip any the model invented
     const registry = allowedCitationMap && allowedCitationMap.size > 0 ? allowedCitationMap : validCitationMap;
+    const canSynthesizeSources = allowedCitationMap && allowedCitationMap.size > 0;
     let validated = stripInvalidCitations(content, registry);
     validated = stripInvalidSources(validated, registry);
+
+    if (!hasCompleteSourcesBlock(validated) && /\[\[Sources\]\]/i.test(validated)) {
+        validated = removeIncompleteSourcesBlock(validated);
+    }
+
+    if (canSynthesizeSources && !hasCompleteSourcesBlock(validated) && !hasBodyCitations(validated)) {
+        validated += buildSourcesBlockFromRegistry(allowedCitationMap);
+    }
 
     // Final render WITH full citation parsing and source cards
     streamingText.innerHTML = renderMarkdownSafe(validated, true);

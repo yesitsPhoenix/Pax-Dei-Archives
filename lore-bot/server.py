@@ -37,6 +37,7 @@ from pydantic import BaseModel
 # Ollama connection
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:14b")
+GENERATION_NUM_PREDICT = int(os.getenv("LORE_BOT_NUM_PREDICT", "800"))
 HTTP_CONNECT_TIMEOUT_S = float(os.getenv("LORE_BOT_CONNECT_TIMEOUT_S", "5"))
 HTTP_READ_TIMEOUT_S = float(os.getenv("LORE_BOT_READ_TIMEOUT_S", "120"))
 
@@ -447,6 +448,7 @@ CITATION RULES — MANDATORY
   [[Sources]]
   [[Category:slug|Exact Title]]
   [[/Sources]]
+- The Sources block may contain only citation keys, one per line. Do not use numbered lists, labels, or plain names there.
 - If no provided entry supports the answer, reply exactly "The Archives hold no record of this." and end with an empty Sources block:
   [[Sources]]
   [[/Sources]]
@@ -994,7 +996,7 @@ async def chat(request: Request, chat_req: ChatRequest):
         "options": {
             "temperature": 0.3,
             "top_p": 0.85,
-            "num_predict": 400,
+            "num_predict": GENERATION_NUM_PREDICT,
             "num_ctx": ctx_size,
             "num_keep": -1,
         }
