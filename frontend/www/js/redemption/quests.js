@@ -204,11 +204,15 @@ function populateFilters(regions) {
                     b.classList.remove('active', 'bg-[#FFD700]', 'text-black');
                     const icon = b.querySelector('i');
                     if (icon) icon.classList.remove('text-black');
+                    if (icon) icon.classList.add('text-white');
                 });
 
                 btn.classList.add('active', 'bg-[#FFD700]', 'text-black');
                 const activeIcon = btn.querySelector('i');
-                if (activeIcon) activeIcon.classList.add('text-black');
+                if (activeIcon) {
+                    activeIcon.classList.remove('text-white');
+                    activeIcon.classList.add('text-black');
+                }
 
                 const statusValue = btn.getAttribute('data-filter-status');
                 statusInput.value = statusValue;
@@ -1060,7 +1064,7 @@ async function renderQuestsList() {
 
         const catIconContainer = document.createElement("div");
         catIconContainer.className = "flex items-center gap-3";
-        catIconContainer.innerHTML = `<i class="fa-solid fa-chevron-down text-gray-500"></i>`;
+        catIconContainer.innerHTML = `<i class="fa-solid fa-chevron-down text-white"></i>`;
         categoryHeader.appendChild(catIconContainer);
 
         const contentWrapper = document.createElement("div");
@@ -1081,11 +1085,11 @@ async function renderQuestsList() {
             if (isNowCollapsed) {
                 collapsedCategories.add(category);
                 contentWrapper.classList.add('collapsed');
-                catIconContainer.innerHTML = `<i class="fa-solid fa-chevron-right text-gray-500"></i>`;
+                catIconContainer.innerHTML = `<i class="fa-solid fa-chevron-right text-white"></i>`;
             } else {
                 collapsedCategories.delete(category);
                 contentWrapper.classList.remove('collapsed');
-                catIconContainer.innerHTML = `<i class="fa-solid fa-chevron-down text-gray-500"></i>`;
+                catIconContainer.innerHTML = `<i class="fa-solid fa-chevron-down text-white"></i>`;
             }
 
             setTimeout(() => {

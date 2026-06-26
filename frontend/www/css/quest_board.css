@@ -8,12 +8,12 @@ body.quest-board-page.board-modal-open {
 
 .quest-board-page #sidebar a.active,
 .quest-board-page #sidebar a.active:hover {
-    background-color: #ffd700;
-    color: #000;
+    background-color: #ffd700 !important;
+    color: #000 !important;
 }
 
 .quest-board-page #sidebar a.active i {
-    color: #000;
+    color: #000 !important;
 }
 
 .board-summary-banner {

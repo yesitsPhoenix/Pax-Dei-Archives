@@ -17,10 +17,11 @@
         }
         #sidebar a.active,
         #sidebar a.active:hover {
-            background-color: #7c3aed;
-            color: white;
+            background-color: #7c3aed !important;
+            color: white !important;
         }
-        #sidebar a.active i { color: white; }
+        #sidebar li a:hover:not(.active) { background-color: #4c1d95 !important; }
+        #sidebar a.active i { color: white !important; }
 
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #1a1a1a; }

@@ -26,10 +26,11 @@
         }
         #sidebar a.active,
         #sidebar a.active:hover {
-            background-color: #7c3aed;
-            color: white;
+            background-color: #7c3aed !important;
+            color: white !important;
         }
-        #sidebar a.active i { color: white; }
+        #sidebar li a:hover:not(.active) { background-color: #4c1d95 !important; }
+        #sidebar a.active i { color: white !important; }
 
         /* ── Stat card hover ── */
         .stat-card { transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
@@ -150,47 +151,47 @@
 <!-- 
      SIDEBAR
  -->
-<aside id="sidebar" class="w-64 bg-[#1c1c1c] border-r-4 border-violet-500 shadow-lg transition-all duration-300 hover:bg-slate-700 px-3 py-4 cursor-pointer fixed h-auto z-50 top-[220px] collapsed">
+<aside id="sidebar" class="w-64 bg-[#1c1c1c] border-r-4 border-violet-500 shadow-lg transition-all duration-300 px-3 py-4 cursor-pointer fixed h-auto z-50 top-[220px] collapsed">
   <ul class="space-y-2 font-medium">
     <li>
-      <a href="#" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900" id="openDevCommentModalBtn">
-        <i class="fas fa-comment-medical w-5 h-5 text-gray-400 transition duration-75"></i>
+      <a href="#" class="flex items-center p-2 text-white rounded-lg hover:bg-[#4c1d95]" id="openDevCommentModalBtn">
+        <i class="fas fa-comment-medical w-5 h-5 text-white transition duration-75"></i>
         <span class="ml-3">Add Dev Comment</span>
       </a>
     </li>
     <li>
-      <a id="sidebarPublicationEditorLink" href="publication_editor.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
-        <i class="fas fa-pen-to-square w-5 h-5 text-gray-400 transition duration-75"></i>
+      <a id="sidebarPublicationEditorLink" href="publication_editor.html" class="flex items-center p-2 text-white rounded-lg hover:bg-[#4c1d95]">
+        <i class="fas fa-pen-to-square w-5 h-5 text-white transition duration-75"></i>
         <span class="ml-3">Publication Editor</span>
       </a>
     </li>
     <li id="sidebarEditLoreLink" class="hidden">
-      <a href="edit_lore.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
-        <i class="fas fa-book-open w-5 h-5 text-gray-400 transition duration-75"></i>
+      <a href="edit_lore.html" class="flex items-center p-2 text-white rounded-lg hover:bg-[#4c1d95]">
+        <i class="fas fa-book-open w-5 h-5 text-white transition duration-75"></i>
         <span class="ml-3">Edit Lore</span>
       </a>
     </li>
     <li id="sidebarEditQuestLink">
-      <a href="edit_quest.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900">
-        <i class="fas fa-scroll w-5 h-5 text-gray-400 transition duration-75"></i>
+      <a href="edit_quest.html" class="flex items-center p-2 text-white rounded-lg hover:bg-[#4c1d95]">
+        <i class="fas fa-scroll w-5 h-5 text-white transition duration-75"></i>
         <span class="ml-3">Edit Quests</span>
       </a>
     </li>
     <li>
-      <a id="sidebarCategorizeItemsLink" href="categorize_items.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900 opacity-40 cursor-not-allowed pointer-events-none" title="Only admins can categorize items" aria-disabled="true">
-        <i class="fas fa-tags w-5 h-5 text-gray-400 transition duration-75"></i>
+      <a id="sidebarCategorizeItemsLink" href="categorize_items.html" class="flex items-center p-2 text-white rounded-lg hover:bg-[#4c1d95] opacity-40 cursor-not-allowed pointer-events-none" title="Only admins can categorize items" aria-disabled="true">
+        <i class="fas fa-tags w-5 h-5 text-white transition duration-75"></i>
         <span class="ml-3">Categorize Items</span>
       </a>
     </li>
     <li>
-      <a id="sidebarLedgerManagementLink" href="ledger_management.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900 opacity-40 cursor-not-allowed pointer-events-none" title="Only admins can manage ledger data" aria-disabled="true">
-        <i class="fas fa-clipboard-list w-5 h-5 text-gray-400 transition duration-75"></i>
+      <a id="sidebarLedgerManagementLink" href="ledger_management.html" class="flex items-center p-2 text-white rounded-lg hover:bg-[#4c1d95] opacity-40 cursor-not-allowed pointer-events-none" title="Only admins can manage ledger data" aria-disabled="true">
+        <i class="fas fa-clipboard-list w-5 h-5 text-white transition duration-75"></i>
         <span class="ml-3">Ledger Management</span>
       </a>
     </li>
     <li>
-      <a id="sidebarChangelogLink" href="changelog.html" class="flex items-center p-2 text-white rounded-lg hover:bg-gray-900 opacity-40 cursor-not-allowed pointer-events-none" title="Only admins can edit the changelog" aria-disabled="true">
-        <i class="fas fa-scroll w-5 h-5 text-gray-400 transition duration-75"></i>
+      <a id="sidebarChangelogLink" href="changelog.html" class="flex items-center p-2 text-white rounded-lg hover:bg-[#4c1d95] opacity-40 cursor-not-allowed pointer-events-none" title="Only admins can edit the changelog" aria-disabled="true">
+        <i class="fas fa-scroll w-5 h-5 text-white transition duration-75"></i>
         <span class="ml-3">Edit Changelog</span>
       </a>
     </li>
