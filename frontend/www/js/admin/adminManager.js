@@ -5,43 +5,47 @@ import { authSession } from '../authSessionManager.js';
 const _roleCache = {
     questRole: null,
     loreRole: null,
+    campaignRole: null,
     canPostArticles: false,
     resolved: false
 };
 
 export async function getAdminRoles() {
     if (_roleCache.resolved) {
-        return { questRole: _roleCache.questRole, loreRole: _roleCache.loreRole, canPostArticles: _roleCache.canPostArticles };
+        return { questRole: _roleCache.questRole, loreRole: _roleCache.loreRole, campaignRole: _roleCache.campaignRole, canPostArticles: _roleCache.canPostArticles };
     }
 
     const user = await authSession.getUser();
     if (!user) {
         _roleCache.questRole = null;
         _roleCache.loreRole  = null;
+        _roleCache.campaignRole = null;
         _roleCache.canPostArticles = false;
         _roleCache.resolved  = true;
-        return { questRole: null, loreRole: null, canPostArticles: false };
+        return { questRole: null, loreRole: null, campaignRole: null, canPostArticles: false };
     }
 
     try {
         const { data, error } = await supabase
             .from('admin_users')
-            .select('quest_role, lore_role, is_admin, can_post_articles')
+            .select('quest_role, lore_role, campaign_role, is_admin, can_post_articles')
             .eq('user_id', user.id);
 
         const record = (!error && data && data.length > 0) ? data[0] : null;
         _roleCache.questRole = record ? record.quest_role : null;
         _roleCache.loreRole  = record ? record.lore_role  : null;
+        _roleCache.campaignRole = record ? record.campaign_role : null;
         _roleCache.canPostArticles = record ? (record.is_admin === true || record.can_post_articles === true) : false;
         _roleCache.resolved  = true;
     } catch (err) {
         _roleCache.questRole = null;
         _roleCache.loreRole  = null;
+        _roleCache.campaignRole = null;
         _roleCache.canPostArticles = false;
         _roleCache.resolved  = true;
     }
 
-    return { questRole: _roleCache.questRole, loreRole: _roleCache.loreRole, canPostArticles: _roleCache.canPostArticles };
+    return { questRole: _roleCache.questRole, loreRole: _roleCache.loreRole, campaignRole: _roleCache.campaignRole, canPostArticles: _roleCache.canPostArticles };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -78,7 +82,7 @@ export async function handleAdminAccess(user) {
     try {
         const { data, error } = await supabase
             .from('admin_users')
-            .select('is_admin, is_editor, can_post_articles, quest_role, lore_role')
+            .select('is_admin, is_editor, can_post_articles, quest_role, lore_role, campaign_role')
             .eq('user_id', user.id);
 
         const record = (!error && data && data.length > 0) ? data[0] : null;
@@ -88,6 +92,7 @@ export async function handleAdminAccess(user) {
         const canPostArticles = isAdmin || record?.can_post_articles === true;
         const questRole     = record?.quest_role ?? null;
         const loreRole      = record?.lore_role  ?? null;
+        const campaignRole  = record?.campaign_role ?? null;
 
         const isQuestAdmin  = questRole === 'quest_admin';  // full quest access incl. flow/features
         const isQuestEditor = questRole === 'quest_editor'; // add/edit quests only
@@ -96,6 +101,7 @@ export async function handleAdminAccess(user) {
         // Populate shared cache so getAdminRoles() is free for the rest of this session
         _roleCache.questRole = questRole;
         _roleCache.loreRole  = loreRole;
+        _roleCache.campaignRole = campaignRole;
         _roleCache.canPostArticles = canPostArticles;
         _roleCache.resolved  = true;
 

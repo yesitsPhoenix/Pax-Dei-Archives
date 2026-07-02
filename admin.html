@@ -68,6 +68,7 @@
         .role-badge.quest   { background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
         .role-badge.lore    { background: rgba(52,211,153,0.15); color: #34d399; border: 1px solid rgba(52,211,153,0.3); }
         .role-badge.article    { background: rgba(52, 129, 211, 0.15); color: #3469d3; border: 1px solid rgba(52, 129, 211, 0.3); }
+        .role-badge.campaign { background: rgba(244,114,182,0.15); color: #f472b6; border: 1px solid rgba(244,114,182,0.3); }
         .role-badge.none    { background: rgba(107,114,128,0.15); color: #6b7280; border: 1px solid rgba(107,114,128,0.3); }
 
         /* ── Dev comment form ── */
@@ -429,6 +430,7 @@
                                 <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Quest Role</th>
                                 <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Publication Poster</th>
                                 <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Lore Editor</th>
+                                <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Campaign Editor</th>
                                 <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">General Access</th>
                                 <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Actions</th>
                             </tr>
@@ -604,6 +606,11 @@
                 <label class="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg cursor-pointer hover:bg-slate-700 transition-all">
                     <input type="checkbox" id="roleCheck_lore_editor" class="rounded text-violet-600 focus:ring-violet-500 w-4 h-4">
                     <span class="text-white text-sm"><span class="role-badge lore mr-2"><i class="fas fa-book"></i> lore_editor</span> Can add and edit lore items</span>
+                </label>
+
+                <label class="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg cursor-pointer hover:bg-slate-700 transition-all">
+                    <input type="checkbox" id="roleCheck_campaign_editor" class="rounded text-violet-600 focus:ring-violet-500 w-4 h-4">
+                    <span class="text-white text-sm"><span class="role-badge campaign mr-2"><i class="fas fa-route"></i> campaign_editor</span> Can manage Campaigns</span>
                 </label>
             </div>
 

@@ -252,7 +252,7 @@ async function fetchAndRenderUserRoles() {
 
     const { data, error } = await supabase
         .from('admin_users')
-        .select('user_id, role, quest_role, lore_role, is_admin, is_editor, can_post_articles')
+        .select('user_id, role, quest_role, lore_role, campaign_role, is_admin, is_editor, can_post_articles')
         .order('user_id', { ascending: true });
 
     if (loadingEl) loadingEl.classList.add('hidden');
@@ -293,6 +293,7 @@ async function fetchAndRenderUserRoles() {
         const isCommenter     = u.role === 'comment_adder';
         const questRole       = u.quest_role || null;
         const isLoreEditor    = u.lore_role === 'lore_editor';
+        const isCampaignEditor = u.campaign_role === 'campaign_editor';
         const isAdmin         = u.is_admin === true;
         const hasAccess       = u.is_editor === true;
         const canPostArticles = u.can_post_articles === true;
@@ -341,6 +342,12 @@ async function fetchAndRenderUserRoles() {
                 : '<span class="role-badge none">\u2014</span>')
             + '</td>';
 
+        const campaignCell = '<td class="px-4 py-3">'
+            + (isCampaignEditor
+                ? '<span class="role-badge campaign"><i class="fas fa-route"></i> campaign_editor</span>'
+                : '<span class="role-badge none">\u2014</span>')
+            + '</td>';
+
         const accessCell = '<td class="px-4 py-3">'
             + (hasAccess
                 ? '<span class="role-badge none"><i class="fas fa-user-edit"></i> editor</span>'
@@ -358,6 +365,7 @@ async function fetchAndRenderUserRoles() {
                 + ' data-is-commenter="' + isCommenter + '"'
                 + ' data-quest-role="' + (questRole || '') + '"'
                 + ' data-is-lore-editor="' + isLoreEditor + '"'
+                + ' data-is-campaign-editor="' + isCampaignEditor + '"'
                 + '>'
                 + '<i class="fas fa-pen mr-1"></i>Edit Roles'
                 + '</button>'
@@ -372,7 +380,7 @@ async function fetchAndRenderUserRoles() {
         const actionsCell = '<td class="px-4 py-3"><div class="flex gap-2 flex-wrap">' + actionsContent + '</div></td>';
 
         const tr = document.createElement('tr');
-        tr.innerHTML = userCell + adminCell + commenterCell + questCell + canPostArticlesCell + loreCell + accessCell + actionsCell;
+        tr.innerHTML = userCell + adminCell + commenterCell + questCell + canPostArticlesCell + loreCell + campaignCell + accessCell + actionsCell;
         tbody.appendChild(tr);
     });
 
@@ -431,7 +439,8 @@ async function fetchAndRenderUserRoles() {
                 canPostArticles: btn.dataset.canPostArticles === 'true',
                 isCommenter: btn.dataset.isCommenter === 'true',
                 questRole: btn.dataset.questRole || '',
-                isLoreEditor: btn.dataset.isLoreEditor === 'true'
+                isLoreEditor: btn.dataset.isLoreEditor === 'true',
+                isCampaignEditor: btn.dataset.isCampaignEditor === 'true'
             });
         });
     });
@@ -451,6 +460,7 @@ function openManageUserRoleModal(opts) {
     const ckCommenter      = document.getElementById('roleCheck_comment_adder');
     const questRoleSelect  = document.getElementById('roleSelect_quest_role');
     const ckLore           = document.getElementById('roleCheck_lore_editor');
+    const ckCampaign       = document.getElementById('roleCheck_campaign_editor');
     const msgEl         = document.getElementById('addUserRoleMessage');
 
     if (msgEl) { msgEl.classList.add('hidden'); msgEl.textContent = ''; }
@@ -464,6 +474,7 @@ function openManageUserRoleModal(opts) {
         if (ckCommenter)     ckCommenter.checked    = opts.isCommenter    || false;
         if (questRoleSelect) questRoleSelect.value  = opts.questRole      || '';
         if (ckLore)          ckLore.checked         = opts.isLoreEditor   || false;
+        if (ckCampaign)      ckCampaign.checked     = opts.isCampaignEditor || false;
     } else {
         // Grant mode — reset form
         if (userSelect)      userSelect.value      = '';
@@ -473,6 +484,7 @@ function openManageUserRoleModal(opts) {
         if (ckCommenter)     ckCommenter.checked    = false;
         if (questRoleSelect) questRoleSelect.value  = '';
         if (ckLore)          ckLore.checked         = false;
+        if (ckCampaign)      ckCampaign.checked     = false;
     }
 
     modal.classList.remove('hidden');
@@ -488,7 +500,8 @@ async function saveUserRoles(userId, roles) {
         can_post_articles: roles.canPostArticles,
         role:             roles.isCommenter ? 'comment_adder' : '',
         quest_role:       roles.questRole || null,
-        lore_role:        roles.isLoreEditor ? 'lore_editor'  : null
+        lore_role:        roles.isLoreEditor ? 'lore_editor'  : null,
+        campaign_role:    roles.isCampaignEditor ? 'campaign_editor' : null
     };
 
     const { error } = await supabase
@@ -982,7 +995,8 @@ function setupModalHandlers() {
                 canPostArticles: document.getElementById('roleCheck_can_post_articles') ? document.getElementById('roleCheck_can_post_articles').checked : false,
                 isCommenter:     document.getElementById('roleCheck_comment_adder')     ? document.getElementById('roleCheck_comment_adder').checked     : false,
                 questRole:       document.getElementById('roleSelect_quest_role')       ? document.getElementById('roleSelect_quest_role').value         : '',
-                isLoreEditor:    document.getElementById('roleCheck_lore_editor')       ? document.getElementById('roleCheck_lore_editor').checked       : false
+                isLoreEditor:    document.getElementById('roleCheck_lore_editor')       ? document.getElementById('roleCheck_lore_editor').checked       : false,
+                isCampaignEditor: document.getElementById('roleCheck_campaign_editor')  ? document.getElementById('roleCheck_campaign_editor').checked   : false
             };
 
             if (roleMsg) { roleMsg.className = 'form-message info'; roleMsg.textContent = 'Saving\u2026'; roleMsg.classList.remove('hidden'); }
