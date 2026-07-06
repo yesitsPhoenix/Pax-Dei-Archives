@@ -1,4 +1,5 @@
 ﻿import { updateAlertBadgePosition } from '../sidebar.js';
+import { getPveSourceBucket, isPveGoldTransaction } from './pveTransactions.js';
 import {
     getItemData,
     getZoneDataAge,
@@ -186,6 +187,7 @@ const ledgerHighestPerformingMarketStallValueEl = document.getElementById('ledge
 // PVE Dashboard Elements
 const pveDungeonRunsEl = document.getElementById('dashboard-dungeon-runs');
 const pvePoiClearsEl = document.getElementById('dashboard-poi-mob-encounters');
+const pveAchievementRewardsEl = document.getElementById('dashboard-achievement-rewards');
 const pveGracePurchasesEl = document.getElementById('dashboard-grace-purchases');
 const pveOtherEl = document.getElementById('dashboard-pve-other');
 
@@ -405,32 +407,32 @@ function calculateAndRenderBestMarketStall(allActivityData, formatCurrency) {
 }
 
 function calculateAndRenderPVEBreakdown(allActivityData, formatCurrency) {
-    const pveData = allActivityData.filter(activity => activity.type === 'PVE Gold');
+    const pveData = allActivityData.filter(activity => isPveGoldTransaction(activity.type || ''));
     
     let dungeonRuns = 0;
     let poiClears = 0;
+    let achievementRewards = 0;
     let gracePurchases = 0;
     let other = 0;
     
     pveData.forEach(transaction => {
-        const description = (transaction.item_name || '').toLowerCase().trim();
         const amount = transaction.total_amount || 0;
         
-        if (description.includes('dungeon')) {
-            dungeonRuns += amount;
-        } else if (description.includes('poi')) {
-            poiClears += amount;
-        } else if (description.includes('world_encounter') || description.includes('world encounter')) {
-            poiClears += amount;
-        } else if (description.includes('grace')) {
-            gracePurchases += amount;
-        } else {
-            // Everything else goes to "Other" including:
-            // - chest_withdrawal / chest withdrawal
-            // - chest_deposit / chest deposit
-            // - other
-            // - any unrecognized transaction types
-            other += amount;
+        switch (getPveSourceBucket(transaction.item_name || transaction.description || '')) {
+            case 'dungeon':
+                dungeonRuns += amount;
+                break;
+            case 'poi':
+                poiClears += amount;
+                break;
+            case 'achievement':
+                achievementRewards += amount;
+                break;
+            case 'grace':
+                gracePurchases += amount;
+                break;
+            default:
+                other += amount;
         }
     });
     
@@ -439,6 +441,9 @@ function calculateAndRenderPVEBreakdown(allActivityData, formatCurrency) {
     }
     if (pvePoiClearsEl) {
         pvePoiClearsEl.innerHTML = `${formatCurrency(poiClears)} <i class="fas fa-map-location-dot"></i>`;
+    }
+    if (pveAchievementRewardsEl) {
+        pveAchievementRewardsEl.innerHTML = `${formatCurrency(achievementRewards)} <i class="fas fa-trophy"></i>`;
     }
     if (pveGracePurchasesEl) {
         pveGracePurchasesEl.innerHTML = `${formatCurrency(gracePurchases)} <i class="fas fa-cart-shopping"></i>`;

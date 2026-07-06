@@ -791,7 +791,7 @@
                 <button id="openAlertsModalBtn" class="hidden"></button>
 
                 <!-- Insights + PVE Row -->
-                <section class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-4">
+                <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
                     <!-- Most Profitable Item -->
                     <div class="stat-card bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-amber-400/20 shadow-lg">
                         <div class="flex items-center justify-between mb-2">
@@ -832,29 +832,43 @@
                         <p id="ledger-time-on-market-unit" class="text-gray-400 text-sm">-</p>
                     </div>
 
-                    <!-- PVE Summary (2 cols wide) -->
-                    <div class="stat-card md:col-span-2 bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-amber-400/20 shadow-lg">
+                    <!-- PVE Summary -->
+                    <div class="stat-card bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 border border-amber-400/20 shadow-lg">
                         <div class="flex items-center justify-between mb-2">
                             <h3 class="text-purple-300 text-sm font-semibold uppercase">PVE Gold Earned</h3>
                             <i class="fas fa-coins text-purple-400 text-lg"></i>
                         </div>
-                        <p id="dashboard-earned-pve-gold" class="text-white text-xl font-bold mb-2">0</p>
-                        <div class="flex items-center gap-4">
-                            <div class="flex items-center gap-1.5">
-                                <i class="fas fa-dungeon text-red-400 text-xs flex-shrink-0"></i>
-                                <p class="text-gray-400 text-xs">Dungeons <span id="dashboard-dungeon-runs" class="text-white font-semibold">0</span></p>
-                            </div>
-                            <div class="flex items-center gap-1.5">
-                                <i class="fas fa-map-location-dot text-emerald-400 text-xs flex-shrink-0"></i>
-                                <p class="text-gray-400 text-xs">POI <span id="dashboard-poi-mob-encounters" class="text-white font-semibold">0</span></p>
-                            </div>
-                            <div class="flex items-center gap-1.5">
-                                <i class="fas fa-cart-shopping text-blue-400 text-xs flex-shrink-0"></i>
-                                <p class="text-gray-400 text-xs">Grace <span id="dashboard-grace-purchases" class="text-white font-semibold">0</span></p>
-                            </div>
-                            <div class="flex items-center gap-1.5">
-                                <i class="fas fa-dice text-indigo-400 text-xs flex-shrink-0"></i>
-                                <p class="text-gray-400 text-xs">Other <span id="dashboard-pve-other" class="text-white font-semibold">0</span></p>
+                        <div class="flex items-end justify-between gap-3">
+                            <p id="dashboard-earned-pve-gold" class="text-white text-xl font-bold">0</p>
+                            <div class="relative group">
+                                <button type="button" class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-purple-400/30 bg-purple-500/10 text-purple-200 hover:bg-purple-500/20 focus:outline-none focus:ring-2 focus:ring-purple-400" aria-label="Show PVE gold breakdown">
+                                    <i class="fas fa-circle-info text-sm"></i>
+                                </button>
+                                <div class="pointer-events-none absolute right-0 top-9 z-30 hidden w-72 rounded-lg border border-purple-400/30 bg-slate-950/95 p-4 text-sm shadow-2xl group-hover:block group-focus-within:block">
+                                    <div class="mb-3 text-purple-200 text-xs font-semibold uppercase tracking-wide">PVE Breakdown</div>
+                                    <div class="space-y-2.5">
+                                        <div class="flex items-center justify-between gap-3">
+                                            <span class="flex items-center gap-2 text-gray-300"><i class="fas fa-dungeon text-red-400"></i>Dungeons</span>
+                                            <span id="dashboard-dungeon-runs" class="text-white font-semibold">0</span>
+                                        </div>
+                                        <div class="flex items-center justify-between gap-3">
+                                            <span class="flex items-center gap-2 text-gray-300"><i class="fas fa-map-location-dot text-emerald-400"></i>POI</span>
+                                            <span id="dashboard-poi-mob-encounters" class="text-white font-semibold">0</span>
+                                        </div>
+                                        <div class="flex items-center justify-between gap-3">
+                                            <span class="flex items-center gap-2 text-gray-300"><i class="fas fa-trophy text-amber-400"></i>Achievements</span>
+                                            <span id="dashboard-achievement-rewards" class="text-white font-semibold">0</span>
+                                        </div>
+                                        <div class="flex items-center justify-between gap-3">
+                                            <span class="flex items-center gap-2 text-gray-300"><i class="fas fa-cart-shopping text-blue-400"></i>Grace</span>
+                                            <span id="dashboard-grace-purchases" class="text-white font-semibold">0</span>
+                                        </div>
+                                        <div class="flex items-center justify-between gap-3">
+                                            <span class="flex items-center gap-2 text-gray-300"><i class="fas fa-dice text-indigo-400"></i>Other</span>
+                                            <span id="dashboard-pve-other" class="text-white font-semibold">0</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1305,6 +1319,7 @@
                         <option value="">Select a type</option>
                         <option value="Dungeon">Dungeon Run</option>
                         <option value="POI">POI Clear</option>
+                        <option value="Achievement">Achievement Reward</option>
                         <option value="Chest_withdrawal">Chest Withdrawal (positive amt)</option>
                         <option value="Chest_deposit">Chest Deposit (negative amt)</option>
                         <option value="Grace">Grace Purchase</option>

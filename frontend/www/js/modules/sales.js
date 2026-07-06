@@ -2,6 +2,7 @@ import { supabase } from '../supabaseClient.js';
 import { showCustomModal } from '../trader.js';
 import { currentCharacterId } from './characters.js';
 import { updateUtcClock } from '../main.js';
+import { isPveGoldTransaction, PVE_LEDGER_TRANSACTION_TYPE } from './pveTransactions.js';
 
 const salesLoader = document.getElementById('sales-loader');
 const salesBody = document.getElementById('sales-body');
@@ -86,7 +87,7 @@ const handleDeleteTransaction = async (id, type) => {
             tableName = 'purchases';
             idColumn = 'purchase_id';
             break;
-        case 'PVE Gold':
+        case PVE_LEDGER_TRANSACTION_TYPE:
             tableName = 'pve_transactions';
             idColumn = 'transaction_id';
             break;
@@ -128,7 +129,7 @@ const handleDeleteTransaction = async (id, type) => {
                 case 'Purchase':
                     goldChange = amount;
                     break;
-                case 'PVE Gold':
+                case PVE_LEDGER_TRANSACTION_TYPE:
                     goldChange = -amount;
                     break;
                 case 'Sale':
@@ -401,8 +402,8 @@ const renderTransactionTable = (transactions) => {
     transactions.forEach(transaction => {
         const row = document.createElement('tr');
         row.className = 'border-b border-gray-200 hover:bg-gray-100';
-        const itemNameDisplay = transaction.type === 'PVE Gold' ? transaction.item_name : (transaction.item_name || 'N/A');
-        const quantityDisplay = transaction.type === 'PVE Gold' ? 'N/A' : (transaction.quantity?.toLocaleString() || 'N/A');
+        const itemNameDisplay = isPveGoldTransaction(transaction.type || '') ? transaction.item_name : (transaction.item_name || 'N/A');
+        const quantityDisplay = isPveGoldTransaction(transaction.type || '') ? 'N/A' : (transaction.quantity?.toLocaleString() || 'N/A');
         const pricePerUnitDisplay = (parseFloat(transaction.price_per_unit) || 0).toFixed(2);
         const totalAmountDisplay = (parseFloat(transaction.total_amount) || 0).toFixed(2);
         const utcDateOnlyDisplay = transaction.date ? new Date(transaction.date).toISOString().substring(0, 10) : 'N/A';
@@ -524,7 +525,7 @@ const handleDownloadCsv = async () => {
             const itemName = (transaction.item_name || '').replace(/"/g, '""');
             const category = (transaction.category_name || '').replace(/"/g, '""');
             const marketStall = (transaction.market_stall_name || '').replace(/"/g, '""');
-            const quantity = transaction.type === 'PVE Gold' ? '' : (transaction.quantity?.toLocaleString() || '');
+            const quantity = isPveGoldTransaction(transaction.type || '') ? '' : (transaction.quantity?.toLocaleString() || '');
             const pricePerUnit = (parseFloat(transaction.price_per_unit) || 0).toFixed(2);
             const totalAmount = (parseFloat(transaction.total_amount) || 0).toFixed(2);
             const fee = (parseFloat(transaction.fee) || 0).toFixed(2);

@@ -4,6 +4,7 @@ import { showCustomModal, loadTraderPageData } from '../trader.js';
 import { loadTransactionHistory, } from './sales.js';
 import { renderSalesChart } from './salesChart.js';
 import { createDefaultMarketStall } from './actions.js';
+import { PVE_TRANSACTION_SOURCES } from './pveTransactions.js';
 
 const characterSelect = document.getElementById('character-select');
 let createCharacterModal = null;
@@ -31,6 +32,18 @@ export let currentCharacterGold = 0;
 let cachedUserCharacters = [];
 let _currentCharacter = null;
 export let cachedRegions = null;
+
+const populatePveTransactionTypeOptions = () => {
+    if (!pveTransactionTypeSelect) return;
+
+    pveTransactionTypeSelect.innerHTML = '<option value="">Select a type</option>';
+    PVE_TRANSACTION_SOURCES.forEach(({ value, label }) => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = label;
+        pveTransactionTypeSelect.appendChild(option);
+    });
+};
 
 export const setCurrentCharacterGold = (gold) => {
     currentCharacterGold = gold;
@@ -124,6 +137,7 @@ export const insertCharacterModalHtml = () => {
 
 export const initializeCharacters = async (userId = null, onCharacterSelectedCallback) => {
     document.body.addEventListener('statsNeedRefresh', loadCurrentCharacterData);
+    populatePveTransactionTypeOptions();
     if (!userId) {
         const session = await supabase.auth.getSession();
         userId = session?.data?.session?.user?.id;
