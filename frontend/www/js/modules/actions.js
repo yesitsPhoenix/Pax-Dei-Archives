@@ -811,6 +811,13 @@ export const showManageMarketStallsModal = async () => {
     manageMarketStallsModal.classList.remove('hidden');
 };
 
+export const closeManageMarketStallsModal = () => {
+    if (manageMarketStallsModal) {
+        manageMarketStallsModal.classList.add('hidden');
+    }
+    document.body.classList.remove('overflow-hidden');
+};
+
 
 export const handleEditMarketStallName = async (stallId, newStallName, editInput, saveButton, cancelButton, stallNameSpan, editButton, deleteButton) => {
     //console.log('handleEditMarketStallName called for stall ID:', stallId, 'New name:', newStallName);

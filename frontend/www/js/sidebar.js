@@ -1,4 +1,4 @@
-import { showManageMarketStallsModal } from './modules/actions.js';
+import { closeManageMarketStallsModal, showManageMarketStallsModal } from './modules/actions.js';
 
 const sidebar = document.getElementById('sidebar');
 
@@ -51,8 +51,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebarTransactionHistoryLink = document.getElementById('sidebarTransactionHistoryLink');
 
     if (manageListingsBtn && manageMarketStallsModal) {
-        manageListingsBtn.addEventListener('click', () => {
-            manageMarketStallsModal.classList.remove('hidden');
+        manageListingsBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            showManageMarketStallsModal();
         });
     }
 
@@ -64,9 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (closeManageMarketStallsModalBtn && manageMarketStallsModal) {
-        closeManageMarketStallsModalBtn.addEventListener('click', () => {
-            manageMarketStallsModal.classList.add('hidden');
-        });
+        closeManageMarketStallsModalBtn.addEventListener('click', closeManageMarketStallsModal);
     }
 
     sidebarDashboardLink?.addEventListener('click', (e) => {

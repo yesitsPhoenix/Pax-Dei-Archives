@@ -56,6 +56,7 @@ import {
     updateEditFeeInfo,
     handleAddMarketStall,
     showManageMarketStallsModal,
+    closeManageMarketStallsModal,
     handleDeleteMarketStall
 } from './actions.js';
 import {
@@ -224,11 +225,7 @@ const addListingsEventListeners = () => {
         createMarketStallForm.addEventListener('submit', handleAddMarketStall);
     }
     if (closeManageMarketStallsModalBtn) {
-        closeManageMarketStallsModalBtn.addEventListener('click', () => {
-            if (manageMarketStallsModal) {
-                manageMarketStallsModal.classList.add('hidden');
-            }
-        });
+        closeManageMarketStallsModalBtn.addEventListener('click', closeManageMarketStallsModal);
     }
     if (manageMarketStallsModal) {
         manageMarketStallsModal.addEventListener('click', (e) => {

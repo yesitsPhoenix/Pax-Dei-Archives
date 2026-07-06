@@ -22,11 +22,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (clockDisplay) {
                 const updateClock = () => {
                     const now = new Date();
-                    const utcString = now.toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+                    const utcString = now.toISOString().replace('T', ' ').substring(0, 16) + ' UTC';
                     clockDisplay.textContent = utcString;
                 };
                 updateClock();
-                setInterval(updateClock, 1000);
+                setInterval(updateClock, 60000);
             }
         })
         .catch(e => {
