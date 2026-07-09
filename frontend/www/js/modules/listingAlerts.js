@@ -1,9 +1,11 @@
 import { supabase } from '../supabaseClient.js';
 import { currentCharacterId, getCurrentCharacter } from './characters.js';
 import {
+    getSavedAvatarHash,
     getZoneListingsForItemByQuality,
     loadZoneDataForCharacter,
 } from '../services/gamingToolsService.js';
+import { classifyCompetitiveGap, getStackAwareMarketLow } from './pricingBands.js';
 
 export const LISTING_ALERT_BANDS = {
     aging: {
@@ -106,9 +108,29 @@ function summarizeMarketListings(listings = []) {
     };
 }
 
+function getAlertMarketContext(alert) {
+    const exactStackListings = alert.marketListings.filter((marketListing) =>
+        Math.max(Number(marketListing.quantity) || 1, 1) === alert.quantity
+    );
+    const marketLowStack = getStackAwareMarketLow({
+        exactStackListings,
+        marketVariantListings: alert.marketListings,
+        mktData: alert.marketSummary,
+        stackSize: alert.quantity,
+        stackPrice: alert.totalPrice,
+        avatarHash: getSavedAvatarHash(),
+    });
+
+    return {
+        exactStackListings,
+        marketLowStack,
+        isExactStackMatch: exactStackListings.length > 0,
+    };
+}
+
 function getMarketPosition(alert) {
-    const marketLow = alert.marketSummary.marketLow;
-    if (marketLow === null) {
+    const { marketLowStack, isExactStackMatch } = getAlertMarketContext(alert);
+    if (marketLowStack === null) {
         return {
             key: 'none',
             label: 'No active listings',
@@ -118,24 +140,31 @@ function getMarketPosition(alert) {
         };
     }
 
-    const tolerance = Math.max(0.01, marketLow * 0.01);
-    const gap = alert.unitPrice - marketLow;
-    if (gap < -tolerance) {
+    const gap = alert.totalPrice - marketLowStack;
+    const gapPct = marketLowStack > 0 ? Math.round((gap / marketLowStack) * 100) : 0;
+    const { status } = classifyCompetitiveGap(gap, gapPct, marketLowStack, 'below');
+    const basis = isExactStackMatch ? 'stack low' : 'estimated stack low';
+
+    if (status === 'below') {
         return {
             key: 'below',
             label: 'Below Market',
             icon: 'fa-arrow-trend-down',
             className: 'bg-blue-900/40 border-blue-500/40 text-blue-200',
-            note: `${formatGold(Math.abs(gap))}/ea below the current low.`,
+            note: `${formatGold(Math.abs(gap))} below the current ${basis}.`,
+            marketLowStack,
+            isExactStackMatch,
         };
     }
-    if (gap > tolerance) {
+    if (status === 'undercut') {
         return {
             key: 'above',
             label: 'Above Market',
             icon: 'fa-arrow-trend-up',
             className: 'bg-rose-900/40 border-rose-500/40 text-rose-200',
-            note: `${formatGold(gap)}/ea above the current low.`,
+            note: `${formatGold(gap)} above the current ${basis}.`,
+            marketLowStack,
+            isExactStackMatch,
         };
     }
     return {
@@ -143,7 +172,9 @@ function getMarketPosition(alert) {
         label: 'Competitive',
         icon: 'fa-handshake',
         className: 'bg-emerald-900/40 border-emerald-500/40 text-emerald-100',
-        note: 'Matches the current low.',
+        note: gap <= 0.001 ? `Matches the current ${basis}.` : `Within the competitive band for the current ${basis}.`,
+        marketLowStack,
+        isExactStackMatch,
     };
 }
 
@@ -244,6 +275,7 @@ export async function buildListingAlerts({ minDays = DEFAULT_MIN_DAYS } = {}) {
                 stallId: listing.market_stall_id || null,
                 stallName: stallNameMap.get(listing.market_stall_id) || 'Unknown Stall',
                 marketSummary,
+                marketListings,
             };
         })
         .filter(Boolean);
@@ -295,9 +327,9 @@ export function renderListingAlertsModalHtml(result, filters = {}) {
 
     const rows = filteredAlerts.map((alert) => {
         const position = getMarketPosition(alert);
-        const marketLow = alert.marketSummary.marketLow === null
+        const marketLow = position.marketLowStack === null || position.marketLowStack === undefined
             ? 'No active listings'
-            : `${formatGold(alert.marketSummary.marketLow)}/ea`;
+            : `${formatGold(position.marketLowStack)}${position.isExactStackMatch ? '' : ' est.'}`;
 
         return `
             <tr class="hover:bg-slate-700/40">
@@ -329,7 +361,7 @@ export function renderListingAlertsModalHtml(result, filters = {}) {
                             <i class="fas ${position.icon} text-xs"></i>
                             ${position.label}
                         </span>
-                        <span class="text-white text-sm">Market low: <span class="font-semibold">${marketLow}</span></span>
+                        <span class="text-white text-sm">Stack low: <span class="font-semibold">${marketLow}</span></span>
                     </div>
                 </td>
                 <td class="py-3 px-6 text-left align-middle">

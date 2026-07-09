@@ -26,6 +26,40 @@ export function classifyCompetitiveGap(gap, gapPct, marketLowStack, leadingLabel
     return { status, thresholds };
 }
 
+function getListingUnitPrice(listing) {
+    const price = Number(listing?.price) || 0;
+    const quantity = Math.max(Number(listing?.quantity) || 1, 1);
+    return price / quantity;
+}
+
+export function normalizeStackGoldAmount(amount) {
+    if (amount === null || amount === undefined) return null;
+    const numericAmount = Number(amount);
+    return Number.isFinite(numericAmount) ? Math.round(numericAmount) : null;
+}
+
+export function getStackAwareMarketLow({ exactStackListings = [], marketVariantListings = [], mktData = null, stackSize, stackPrice, avatarHash = null }) {
+    if (exactStackListings.length > 0) {
+        return normalizeStackGoldAmount(Math.min(...exactStackListings.map(marketListing => Number(marketListing.price) || 0)));
+    }
+
+    const externalListings = avatarHash
+        ? marketVariantListings.filter(marketListing => marketListing.avatar_hash !== avatarHash)
+        : marketVariantListings;
+
+    if (externalListings.length > 0) {
+        return normalizeStackGoldAmount(Math.min(...externalListings.map(getListingUnitPrice)) * stackSize);
+    }
+
+    if (marketVariantListings.length > 0) {
+        return normalizeStackGoldAmount(stackPrice);
+    }
+
+    return (mktData?.marketLow ?? null) !== null
+        ? normalizeStackGoldAmount(mktData.marketLow * stackSize)
+        : null;
+}
+
 export function getCompetitiveBandDisplayRows() {
     return [
         'Under 5g: up to 2g and 35%',

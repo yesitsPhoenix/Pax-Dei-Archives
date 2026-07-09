@@ -9,7 +9,7 @@ import {
     getMarketDataByItemNameAndQuality,
     getZoneListingsForItemByQuality
 } from '../services/gamingToolsService.js';
-import { getCompetitiveThresholds, classifyCompetitiveGap, getCompetitiveBandDisplayRows } from './pricingBands.js';
+import { getCompetitiveThresholds, classifyCompetitiveGap, getCompetitiveBandDisplayRows, getStackAwareMarketLow } from './pricingBands.js';
 
 /** Cached result of the last analyzeOwnListings() call — used to populate the modal. */
 let _lastValleyAnalysis = null;
@@ -111,40 +111,6 @@ function buildHistoricalPricingNote({ stackPrice, sellerCount, historicalStats }
     }
 
     return `History context: ${historicalStats.count} sales, median ${historicalStats.median.toLocaleString(undefined, { maximumFractionDigits: 2 })}g, range ${historicalStats.min.toLocaleString(undefined, { maximumFractionDigits: 2 })}g-${historicalStats.max.toLocaleString(undefined, { maximumFractionDigits: 2 })}g`;
-}
-
-function getListingUnitPrice(listing) {
-    const price = Number(listing?.price) || 0;
-    const quantity = Math.max(Number(listing?.quantity) || 1, 1);
-    return price / quantity;
-}
-
-function normalizeStackGoldAmount(amount) {
-    if (amount === null || amount === undefined) return null;
-    const numericAmount = Number(amount);
-    return Number.isFinite(numericAmount) ? Math.round(numericAmount) : null;
-}
-
-function getStackAwareMarketLow({ exactStackListings, marketVariantListings, mktData, stackSize, stackPrice, avatarHash }) {
-    if (exactStackListings.length > 0) {
-        return normalizeStackGoldAmount(Math.min(...exactStackListings.map(marketListing => Number(marketListing.price) || 0)));
-    }
-
-    const externalListings = avatarHash
-        ? marketVariantListings.filter(marketListing => marketListing.avatar_hash !== avatarHash)
-        : marketVariantListings;
-
-    if (externalListings.length > 0) {
-        return normalizeStackGoldAmount(Math.min(...externalListings.map(getListingUnitPrice)) * stackSize);
-    }
-
-    if (marketVariantListings.length > 0) {
-        return normalizeStackGoldAmount(stackPrice);
-    }
-
-    return (mktData?.marketLow ?? null) !== null
-        ? normalizeStackGoldAmount(mktData.marketLow * stackSize)
-        : null;
 }
 
 function getValleyBucketRank(bucket) {
