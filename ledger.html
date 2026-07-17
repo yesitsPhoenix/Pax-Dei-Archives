@@ -2001,8 +2001,23 @@
 
     <script>
         // Checkbox persistence across pagination
-        window.selectedListingIds = new Set();
+        window.selectedListingIds = window.selectedListingIds instanceof Set ? window.selectedListingIds : new Set();
         
+        function syncSelectAllListingsCheckbox() {
+            const selectAll = document.getElementById('selectAllListingsCheckbox');
+            if (!selectAll) return;
+
+            const checkboxes = Array.from(document.querySelectorAll('#listings-body input[type="checkbox"]'));
+            const selectedVisibleCount = checkboxes.filter(cb => {
+                const row = cb.closest('tr');
+                const listingId = row?.dataset?.listingId;
+                return listingId && window.selectedListingIds.has(listingId);
+            }).length;
+
+            selectAll.checked = checkboxes.length > 0 && selectedVisibleCount === checkboxes.length;
+            selectAll.indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < checkboxes.length;
+        }
+
         // Store checkbox state
         document.addEventListener('change', function(e) {
             if (e.target.matches('#listings-body input[type="checkbox"]')) {
@@ -2029,6 +2044,7 @@
                             bulkBtn.classList.add('hidden');
                         }
                     }
+                    syncSelectAllListingsCheckbox();
                 }
             }
         });
@@ -2042,10 +2058,9 @@
                     checkboxes.forEach(cb => {
                         const row = cb.closest('tr');
                         const listingId = row?.dataset?.listingId;
-                        if (listingId && window.selectedListingIds.has(listingId)) {
-                            cb.checked = true;
-                        }
+                        cb.checked = !!(listingId && window.selectedListingIds.has(listingId));
                     });
+                    syncSelectAllListingsCheckbox();
                 }
             });
         });

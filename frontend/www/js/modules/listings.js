@@ -55,7 +55,8 @@ export {
     setupMarketStallTabs
 };
 
-let selectedListingIdsState = new Set(); 
+let selectedListingIdsState = window.selectedListingIds instanceof Set ? window.selectedListingIds : new Set();
+window.selectedListingIds = selectedListingIdsState;
 
 const bulkEditBtn = document.getElementById('bulkEditListingsBtn');
 const selectAllCheckbox = document.getElementById('selectAllListingsCheckbox');
@@ -66,17 +67,38 @@ export const getSelectedListingIds = () => {
 };
 
 export const restoreListingSelection = () => {
-    document.querySelectorAll('.listing-select-checkbox').forEach(cb => {
-        const listingId = cb.dataset.listingId;
-        cb.checked = selectedListingIdsState.has(listingId);
-    });
+    syncVisibleListingSelection();
     updateBulkEditButton();
 };
+
+function getVisibleListingCheckboxes() {
+    return Array.from(document.querySelectorAll('#listings-body .listing-select-checkbox'));
+}
+
+function syncVisibleListingSelection() {
+    getVisibleListingCheckboxes().forEach(cb => {
+        const listingId = cb.dataset.listingId;
+        cb.checked = listingId ? selectedListingIdsState.has(listingId) : false;
+    });
+}
+
+function syncSelectAllCheckbox() {
+    if (!selectAllCheckbox) return;
+
+    const visibleCheckboxes = getVisibleListingCheckboxes();
+    const selectedVisibleCount = visibleCheckboxes.filter(cb => {
+        const listingId = cb.dataset.listingId;
+        return listingId && selectedListingIdsState.has(listingId);
+    }).length;
+
+    selectAllCheckbox.checked = visibleCheckboxes.length > 0 && selectedVisibleCount === visibleCheckboxes.length;
+    selectAllCheckbox.indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < visibleCheckboxes.length;
+}
 
 function updateBulkEditButton() {
     const count = selectedListingIdsState.size;
 
-    selectedCountSpan.textContent = count;
+    if (selectedCountSpan) selectedCountSpan.textContent = count;
 
     if (bulkEditBtn) {
         bulkEditBtn.style.display = 'inline-flex'; 
@@ -103,12 +125,7 @@ function updateBulkEditButton() {
             'Bulk Edit';
     }
     
-    const allCheckboxes = document.querySelectorAll('.listing-select-checkbox');
-    const checkedCheckboxes = document.querySelectorAll('.listing-select-checkbox:checked');
-    if (selectAllCheckbox) {
-        selectAllCheckbox.checked = (allCheckboxes.length > 0 && allCheckboxes.length === checkedCheckboxes.length);
-        selectAllCheckbox.indeterminate = (checkedCheckboxes.length > 0 && checkedCheckboxes.length < allCheckboxes.length);
-    }
+    syncSelectAllCheckbox();
 }
 
 function openBulkEditModal(listingIds) {
@@ -295,17 +312,19 @@ function handleCheckboxChange(event) {
 
 function handleSelectAllChange() {
     const isChecked = selectAllCheckbox.checked;
-    const checkboxes = document.querySelectorAll('.listing-select-checkbox');
+    const checkboxes = getVisibleListingCheckboxes();
     
     checkboxes.forEach(cb => {
         cb.checked = isChecked;
         const listingId = cb.dataset.listingId;
+        if (!listingId) return;
         if (isChecked) {
             selectedListingIdsState.add(listingId);
         } else {
             selectedListingIdsState.delete(listingId);
         }
     });
+    selectAllCheckbox.indeterminate = false;
     updateBulkEditButton();
 }
 
@@ -317,6 +336,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 handleCheckboxChange(e);
             }
         });
+
+        const listingsSelectionObserver = new MutationObserver(() => {
+            restoreListingSelection();
+        });
+        listingsSelectionObserver.observe(listingsBody, { childList: true });
     }
 
     if (selectAllCheckbox) {
