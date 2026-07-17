@@ -344,6 +344,562 @@
             box-shadow: 0 4px 16px rgba(0,0,0,0.6);
             pointer-events: none;
         }
+
+        body.listing-focus-mode #header-placeholder,
+        body.listing-focus-mode .header-area,
+        body.listing-focus-mode #footer-placeholder,
+        body.listing-focus-mode footer,
+        body.listing-focus-mode #sidebar,
+        body.listing-focus-mode #floating-avatar-container,
+        body.listing-focus-mode .utc-clock-container,
+        body.listing-focus-mode .clock-container,
+        body.listing-focus-mode [class*="clock"] {
+            display: none !important;
+        }
+
+        body.listing-focus-mode {
+            overflow: hidden;
+        }
+
+        body.listing-focus-mode #addListingModal {
+            z-index: 20000 !important;
+            padding-top: 1rem !important;
+        }
+
+        .listing-workbench {
+            border-radius: 18px;
+            height: calc(100vh - 2rem);
+        }
+
+        .listing-workbench-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+            background: rgba(15, 23, 42, 0.48);
+        }
+
+        .listing-workbench-body {
+            display: grid;
+            grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
+            height: calc(100% - 116px);
+            min-height: 0;
+        }
+
+        .listing-workbench-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            padding: 1.25rem;
+            border-right: 1px solid rgba(148, 163, 184, 0.22);
+            background: rgba(15, 23, 42, 0.18);
+            overflow: hidden;
+        }
+
+        .listing-workbench-main {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .listing-workbench-tabs {
+            display: flex;
+            gap: 0.5rem;
+            padding: 1rem 1.25rem 0;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+            background: rgba(15, 23, 42, 0.16);
+            overflow-x: auto;
+        }
+
+        .listing-workbench-tab {
+            color: #94a3b8;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            border-bottom: 0;
+            background: rgba(15, 23, 42, 0.36);
+            border-radius: 9px 9px 0 0;
+            padding: 0.7rem 0.9rem;
+            font-size: 0.78rem;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .listing-workbench-tab.active {
+            color: #f8fafc;
+            border-color: rgba(52, 211, 153, 0.42);
+            background: #1f2937;
+        }
+
+        .listing-workbench-panel {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.25rem;
+            min-height: 0;
+            scrollbar-color: #34d399 rgba(15, 23, 42, 0.35);
+            scrollbar-width: thin;
+        }
+
+        .listing-workbench [data-workbench-panel="pricing"] {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .listing-workbench [data-workbench-panel="pricing"].hidden {
+            display: none;
+        }
+
+        .listing-workbench-panel::-webkit-scrollbar,
+        .listing-workbench-form::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .listing-workbench-panel::-webkit-scrollbar-track,
+        .listing-workbench-form::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.35);
+            border-radius: 999px;
+        }
+
+        .listing-workbench-panel::-webkit-scrollbar-thumb,
+        .listing-workbench-form::-webkit-scrollbar-thumb {
+            background: #34d399;
+            border-radius: 999px;
+        }
+
+        .listing-workbench [data-workbench-panel="pricing"] #modal-market-price-hint > .flex:first-of-type {
+            display: none;
+        }
+
+        .listing-workbench [data-workbench-panel="pricing"] #modal-market-price-hint > div[class*="bg-cyan-900"][class*="p-3"] {
+            display: none;
+        }
+
+        .listing-workbench [data-workbench-panel="pricing"] #modal-market-price-hint {
+            max-width: 980px;
+            margin-top: 1.35rem;
+        }
+
+        .listing-workbench [data-workbench-panel="pricing"] #modal-market-price-hint p:has(+ .rounded-xl),
+        .listing-workbench [data-workbench-panel="pricing"] #modal-market-price-hint p.text-xs {
+            margin-top: 0.35rem;
+            padding-top: 0.35rem;
+        }
+
+        .listing-workbench-preview {
+            min-width: 150px;
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.35);
+            padding: 0.65rem 0.8rem;
+        }
+
+        .listing-workbench-preview span,
+        .listing-workbench-preview small,
+        .listing-workbench-metric span,
+        .listing-workbench-metric small {
+            display: block;
+            color: #94a3b8;
+            font-size: 0.72rem;
+        }
+
+        .listing-workbench-preview strong {
+            display: block;
+            margin-top: 0.2rem;
+            color: #34d399;
+            font-size: 1.1rem;
+            line-height: 1.1;
+        }
+
+        .listing-workbench-section-label {
+            margin: 0 0 0.65rem;
+            color: #94a3b8;
+            font-size: 0.7rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .listing-workbench-summary {
+            display: none;
+        }
+
+        .listing-workbench-form > button[type="submit"] {
+            margin-top: auto;
+            flex-shrink: 0;
+        }
+
+        .listing-workbench-quality-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .listing-workbench-enchant-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+            margin-top: 0.55rem;
+        }
+
+        .listing-workbench-metric {
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.28);
+            padding: 0.85rem;
+        }
+
+        .listing-workbench-metric strong {
+            display: block;
+            margin: 0.35rem 0 0.25rem;
+            color: #f8fafc;
+            font-size: 1.2rem;
+            line-height: 1.1;
+        }
+
+        .listing-workbench-empty,
+        .listing-workbench-note {
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.22);
+            color: #94a3b8;
+            padding: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .listing-workbench-history-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.8rem;
+        }
+
+        .listing-workbench-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.84rem;
+        }
+
+        .listing-workbench-table th,
+        .listing-workbench-table td {
+            border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+            padding: 0.72rem 0.8rem;
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        .listing-workbench-table th {
+            color: #94a3b8;
+            background: rgba(15, 23, 42, 0.26);
+            font-size: 0.68rem;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .listing-feed-pill {
+            display: inline-flex;
+            align-items: center;
+            border: 1px solid rgba(52, 211, 153, 0.35);
+            border-radius: 999px;
+            background: rgba(6, 78, 59, 0.24);
+            color: #86efac;
+            font-size: 0.65rem;
+            font-weight: 800;
+            line-height: 1;
+            padding: 0.18rem 0.4rem;
+            margin-left: 0.45rem;
+            text-transform: uppercase;
+        }
+
+        .listing-workbench-tab-content {
+            overflow-x: auto;
+        }
+
+        .listing-pricing-visuals {
+            display: grid;
+            grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+            gap: 1rem;
+            margin-top: 1.7rem;
+            max-width: 1180px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .listing-pricing-card {
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.22);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .listing-pricing-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+            background: rgba(15, 23, 42, 0.26);
+        }
+
+        .listing-pricing-card-header h4 {
+            margin: 0;
+            color: #f8fafc;
+            font-size: 0.9rem;
+            font-weight: 800;
+        }
+
+        .listing-pricing-card-header span {
+            color: #94a3b8;
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
+
+        .listing-strategy-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.65rem;
+            margin-top: 1rem;
+            max-width: 1180px;
+        }
+
+        .listing-strategy-tile {
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(6, 78, 59, 0.22), rgba(15, 23, 42, 0.24));
+            padding: 0.85rem;
+        }
+
+        .listing-strategy-tile span {
+            display: block;
+            color: #94a3b8;
+            font-size: 0.68rem;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .listing-strategy-tile strong {
+            display: block;
+            color: #f8fafc;
+            font-size: 1.35rem;
+            line-height: 1.1;
+            margin-top: 0.45rem;
+        }
+
+        .listing-strategy-tile small {
+            display: block;
+            color: #94a3b8;
+            font-size: 0.72rem;
+            margin-top: 0.35rem;
+        }
+
+        .listing-depth-list,
+        .listing-sales-context {
+            padding: 1rem;
+        }
+
+        .listing-depth-list {
+            flex: 1;
+            min-height: 300px;
+            overflow-y: auto;
+            scrollbar-color: #34d399 rgba(15, 23, 42, 0.35);
+            scrollbar-width: thin;
+        }
+
+        .listing-sales-context {
+            flex: 1;
+            min-height: 300px;
+            overflow-y: auto;
+            scrollbar-color: #34d399 rgba(15, 23, 42, 0.35);
+            scrollbar-width: thin;
+        }
+
+        .listing-depth-row {
+            display: grid;
+            grid-template-columns: 74px minmax(0, 1fr) 44px;
+            gap: 0.75rem;
+            align-items: center;
+            margin-bottom: 0.8rem;
+            color: #cbd5e1;
+            font-size: 0.82rem;
+        }
+
+        .listing-depth-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .listing-depth-bar {
+            height: 0.62rem;
+            border-radius: 999px;
+            background: rgba(148, 163, 184, 0.16);
+            overflow: hidden;
+        }
+
+        .listing-depth-bar span {
+            display: block;
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #34d399, #38bdf8);
+        }
+
+        .listing-sales-context-row {
+            display: grid;
+            grid-template-columns: 72px 1fr 74px;
+            gap: 0.75rem;
+            align-items: center;
+            padding: 0.62rem 0;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+            color: #cbd5e1;
+            font-size: 0.82rem;
+        }
+
+        .listing-sales-context-row:last-child {
+            border-bottom: 0;
+        }
+
+        .listing-sales-context-row strong {
+            color: #34d399;
+        }
+
+        .competitive-layout {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1rem;
+            max-width: 1180px;
+        }
+
+        .competitive-explainer {
+            max-width: 1180px;
+            border: 1px solid rgba(56, 189, 248, 0.26);
+            border-radius: 12px;
+            background: rgba(8, 47, 73, 0.16);
+            color: #cbd5e1;
+            line-height: 1.55;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .competitive-explainer strong {
+            color: #67e8f9;
+        }
+
+        .competitive-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.65rem;
+            padding: 1rem;
+        }
+
+        .competitive-read {
+            padding: 1rem;
+            color: #cbd5e1;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .competitive-price-options {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.75rem;
+            max-width: 1180px;
+            margin: 1rem 0;
+        }
+
+        .competitive-option-card {
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.24);
+            padding: 0.9rem;
+            min-height: 150px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .competitive-option-card span {
+            color: #94a3b8;
+            font-size: 0.7rem;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .competitive-option-card strong {
+            color: #f8fafc;
+            font-size: 1.55rem;
+            line-height: 1;
+            margin-top: auto;
+        }
+
+        .competitive-option-card small {
+            color: #94a3b8;
+            margin-top: 0.35rem;
+            line-height: 1.35;
+        }
+
+        .competitive-option-card button {
+            align-self: flex-end;
+            border: 1px solid rgba(52, 211, 153, 0.42);
+            border-radius: 8px;
+            background: rgba(6, 78, 59, 0.28);
+            color: #86efac;
+            font-size: 0.75rem;
+            font-weight: 800;
+            padding: 0.35rem 0.65rem;
+            margin-top: 0.75rem;
+        }
+
+        .competitive-read p {
+            margin: 0 0 0.75rem;
+        }
+
+        .competitive-read p:last-child {
+            margin-bottom: 0;
+        }
+
+        @media (max-width: 1180px) {
+            .listing-pricing-visuals,
+            .listing-strategy-grid,
+            .competitive-layout,
+            .competitive-grid,
+            .competitive-price-options {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 1180px) {
+            .listing-workbench-body {
+                grid-template-columns: 1fr;
+                height: auto;
+                overflow-y: auto;
+            }
+
+            .listing-workbench-form {
+                border-right: 0;
+                border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+                overflow-y: visible;
+            }
+
+            .listing-workbench-history-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .listing-workbench-header {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .listing-workbench {
+                border-radius: 12px;
+            }
+        }
     </style>
 </head>
 
@@ -1189,81 +1745,126 @@
         </div>
     </div>
 
-    <div id="addListingModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-start justify-center z-50 modal-backdrop px-4 pt-32 pb-8 overflow-y-auto">
-        <div class="bg-slate-800 p-8 rounded-2xl shadow-2xl w-full max-w-[1400px] max-h-[calc(100vh-10rem)] overflow-y-auto border border-emerald-400/30">
-            <h3 class="text-xl font-bold text-white mb-5 text-center">Add New Listing</h3>
-            <div class="flex flex-col xl:flex-row gap-8">
-                <!-- Left column: form fields -->
-                <form id="add-listing-form-modal" class="flex flex-col gap-4 w-full xl:w-[380px] flex-shrink-0">
-                    <div class="form-group">
-                        <label for="modal-item-name" class="block text-sm font-medium text-gray-300">Item Name</label>
-                        <div class="autocomplete-wrapper">
-                            <input type="text" id="modal-item-name" name="item-name" placeholder="e.g., Iron Ingot" required
+    <div id="addListingModal" class="hidden fixed inset-0 bg-gray-950/80 flex items-start justify-center z-50 modal-backdrop px-3 pt-8 pb-6 overflow-y-auto">
+        <div id="guidedListingWorkbench" class="listing-workbench bg-slate-800 shadow-2xl w-full max-w-[1680px] overflow-hidden border border-emerald-400/30">
+            <div class="listing-workbench-header">
+                <div>
+                    <p class="text-xs uppercase tracking-[0.18em] text-emerald-300 font-bold mb-1">Market Listing Workbench</p>
+                    <h3 class="text-xl font-bold text-white">Create a Listing</h3>
+                    <p class="text-sm text-slate-400 mt-1">Use live market data, your Ledger history, and active listings before committing a price.</p>
+                </div>
+                <div class="flex flex-wrap items-center justify-end gap-3">
+                    <div id="workbench-rank-preview" class="listing-workbench-preview">
+                        <span>Market position</span>
+                        <strong>--</strong>
+                    </div>
+                    <div id="workbench-final-preview" class="listing-workbench-preview">
+                        <span>Expected gross</span>
+                        <strong>--</strong>
+                    </div>
+                    <button type="button" id="closeAddListingModalBtn" class="bg-slate-600 hover:bg-slate-700 text-white py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 transition-all duration-300">
+                        Close
+                    </button>
+                </div>
+            </div>
+
+            <div class="listing-workbench-body">
+                <form id="add-listing-form-modal" class="listing-workbench-form">
+                    <div>
+                        <p class="listing-workbench-section-label">Listing Setup</p>
+                        <div class="form-group">
+                            <label for="modal-item-name" class="block text-sm font-medium text-gray-300">Item Name</label>
+                            <div class="autocomplete-wrapper">
+                                <input type="text" id="modal-item-name" name="item-name" placeholder="e.g., Iron Ingot" required
+                                       class="mt-1 block w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400">
+                                <div id="modal-item-name-suggestions" class="autocomplete-suggestions"></div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="form-group">
+                                <label for="modal-item-stacks" class="block text-sm font-medium text-gray-300">Stacks</label>
+                                <input type="number" id="modal-item-stacks" name="item-stacks" value="1" required
+                                       class="mt-1 block w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400">
+                            </div>
+                            <div class="form-group">
+                                <label for="modal-item-count-per-stack" class="block text-sm font-medium text-gray-300">Count</label>
+                                <input type="number" id="modal-item-count-per-stack" name="item-count-per-stack" placeholder="e.g., 100" required
+                                       class="mt-1 block w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="modal-item-price-per-stack" class="block text-sm font-medium text-gray-300">Price <span class="text-gray-500 font-normal">(per stack)</span></label>
+                            <input type="number" id="modal-item-price-per-stack" name="item-price-per-stack" placeholder="e.g., 500" required
                                    class="mt-1 block w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400">
-                            <div id="modal-item-name-suggestions" class="autocomplete-suggestions"></div>
+                        </div>
+                        <div class="form-group">
+                            <label for="modal-market-stall-location" class="block text-sm font-medium text-gray-300">Market Stall</label>
+                            <select id="modal-market-stall-location" name="market-stall-location" required
+                                    class="mt-1 w-full p-2 bg-slate-700 text-white border border-slate-600 rounded-lg focus:ring-2 focus:ring-amber-400">
+                                <option value="">Select a Market Stall</option>
+                            </select>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label for="modal-item-stacks" class="block text-sm font-medium text-gray-300">Stacks <span class="text-gray-500 font-normal">(individual listings)</span></label>
-                        <input type="number" id="modal-item-stacks" name="item-stacks" value="1" required
-                               class="mt-1 block w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400">
-                    </div>
-                    <div class="form-group">
-                        <label for="modal-item-count-per-stack" class="block text-sm font-medium text-gray-300">Count <span class="text-gray-500 font-normal">(per stack)</span></label>
-                        <input type="number" id="modal-item-count-per-stack" name="item-count-per-stack" placeholder="e.g., 100" required
-                               class="mt-1 block w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400">
-                    </div>
-                    <div class="form-group">
-                        <label for="modal-item-price-per-stack" class="block text-sm font-medium text-gray-300">Price <span class="text-gray-500 font-normal">(per stack)</span></label>
-                        <input type="number" id="modal-item-price-per-stack" name="item-price-per-stack" placeholder="e.g., 500" required
-                               class="mt-1 block w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400">
-                    </div>
-                    <div class="form-group">
-                        <label for="modal-market-stall-location" class="block text-sm font-medium text-gray-300">Market Stall</label>
-                        <select id="modal-market-stall-location" name="market-stall-location" required
-                                    class="mt-1 w-full p-2 bg-slate-700 text-white border border-slate-600 rounded-lg focus:ring-2 focus:ring-amber-400">
-                            <option value="">Select a Market Stall</option>
-                        </select>
-                    </div>
-                    <!-- Quality attributes (weapons, armor, tools) -->
-                    <div class="form-group pt-3 border-t border-slate-600/50">
-                        <label class="block text-sm font-medium text-gray-300 mb-2">Quality <span class="text-gray-500 text-xs font-normal">(weapons, armor &amp; tools)</span></label>
-                        <div class="flex flex-wrap gap-2 items-center">
+
+                    <div class="pt-4 border-t border-slate-600/50">
+                        <p class="listing-workbench-section-label">Quality</p>
+                        <div class="listing-workbench-quality-row">
                             <button type="button" id="modal-mastercrafted-btn" class="quality-toggle-btn" aria-pressed="false">
                                 <i class="fas fa-crown" style="font-size:0.85em"></i> Mastercrafted
                             </button>
-                            <div class="flex items-center gap-1">
-                                <span class="text-gray-400 text-xs mr-1">Enchant:</span>
-                                <button type="button" class="modal-enchant-btn enchant-tier-btn" data-tier="0">None</button>
-                                <button type="button" class="modal-enchant-btn enchant-tier-btn" data-tier="1">I</button>
-                                <button type="button" class="modal-enchant-btn enchant-tier-btn" data-tier="2">II</button>
-                                <button type="button" class="modal-enchant-btn enchant-tier-btn" data-tier="3">III</button>
-                            </div>
+                        </div>
+                        <div class="listing-workbench-enchant-row">
+                            <span class="text-gray-400 text-xs">Enchant:</span>
+                            <button type="button" class="modal-enchant-btn enchant-tier-btn" data-tier="0">None</button>
+                            <button type="button" class="modal-enchant-btn enchant-tier-btn" data-tier="1">I</button>
+                            <button type="button" class="modal-enchant-btn enchant-tier-btn" data-tier="2">II</button>
+                            <button type="button" class="modal-enchant-btn enchant-tier-btn" data-tier="3">III</button>
                         </div>
                         <input type="hidden" id="modal-is-mastercrafted" name="is-mastercrafted" value="false">
                         <input type="hidden" id="modal-enchantment-tier" name="enchantment-tier" value="0">
                     </div>
-                    <div class="flex justify-end gap-3 pt-1">
-                        <button type="submit" class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300">
-                            Add Listing
-                        </button>
-                        <button type="button" id="closeAddListingModalBtn" class="bg-slate-600 hover:bg-slate-700 text-white py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-300">
-                            Close
-                        </button>
+
+                    <div id="workbench-pricing-summary" class="listing-workbench-summary">
+                        <div class="listing-workbench-empty">Select an item to populate the decision summary.</div>
                     </div>
+
+                    <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300">
+                        Add Listing
+                    </button>
                 </form>
-                <!-- Divider -->
-                <div class="hidden xl:block w-px bg-slate-600/50 self-stretch flex-shrink-0"></div>
-                <!-- Right column: market data + suggested price -->
-                <div class="flex-1 min-w-0 flex flex-col xl:pr-1">
-                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4">Market Intelligence</p>
-                    <!-- Placeholder shown before item is selected -->
-                    <div id="modal-market-hint-placeholder" class="flex-1 flex flex-col items-center justify-center text-center py-10">
-                        <i class="fas fa-search text-slate-600 text-3xl mb-3"></i>
-                        <p class="text-gray-500 text-sm">Select an item to see live market data, your sales history, and a suggested price.</p>
+
+                <div class="listing-workbench-main">
+                    <div class="listing-workbench-tabs">
+                        <button type="button" class="listing-workbench-tab active" data-workbench-tab="pricing">Overview</button>
+                        <button type="button" class="listing-workbench-tab" data-workbench-tab="competitive">Competitive Pricing</button>
+                        <button type="button" class="listing-workbench-tab" data-workbench-tab="active">Active Listings</button>
+                        <button type="button" class="listing-workbench-tab" data-workbench-tab="sales">Sales History</button>
                     </div>
-                    <!-- Hint panel (populated by JS after item selected) -->
-                    <div id="modal-market-price-hint" class="hidden flex-1 overflow-y-auto text-gray-200"></div>
+
+                    <div class="listing-workbench-panel" data-workbench-panel="pricing">
+                        <div id="workbench-overview-summary"></div>
+                        <div id="modal-market-hint-placeholder" class="flex flex-col items-center justify-center text-center py-16">
+                            <i class="fas fa-search text-slate-600 text-3xl mb-3"></i>
+                            <p class="text-gray-500 text-sm">Select an item to see live market data, your sales history, and price options.</p>
+                        </div>
+                        <div id="modal-market-price-hint" class="hidden text-gray-200"></div>
+                        <div id="workbench-pricing-visuals"></div>
+                    </div>
+                    <div class="listing-workbench-panel hidden" data-workbench-panel="competitive">
+                        <div id="workbench-competitive-pricing" class="listing-workbench-tab-content">
+                            <div class="listing-workbench-empty">Select an item to inspect competitive pricing.</div>
+                        </div>
+                    </div>
+                    <div class="listing-workbench-panel hidden" data-workbench-panel="active">
+                        <div id="workbench-active-listings" class="listing-workbench-tab-content">
+                            <div class="listing-workbench-empty">Select an item to compare active listings.</div>
+                        </div>
+                    </div>
+                    <div class="listing-workbench-panel hidden" data-workbench-panel="sales">
+                        <div id="workbench-sales-history" class="listing-workbench-tab-content">
+                            <div class="listing-workbench-empty">Select an item to view sales history.</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1390,6 +1991,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="module" src="frontend/www/js/main.js"></script>
     <script type="module" src="frontend/www/js/trader.js"></script>
+    <script type="module" src="frontend/www/js/modules/guidedListingWorkbench.js"></script>
     <script type="module" src="frontend/www/js/modules/dom.js"></script>
     <script type="module" src="frontend/www/js/modules/init.js"></script>
     <script type="module" src="frontend/www/js/modules/listings.js"></script>

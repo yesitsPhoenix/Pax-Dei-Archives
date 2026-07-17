@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Listing Workbench Mockups</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #0d1522;
+      color: #f8fafc;
+      font-family: Poppins, Arial, sans-serif;
+    }
+    .topbar {
+      height: 68px;
+      background: #1c1c1c;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 36px;
+      font-weight: 700;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-transform: uppercase;
+      font-size: 20px;
+    }
+    .brand img { width: 38px; height: 38px; }
+    .nav {
+      display: flex;
+      gap: 22px;
+      font-size: 13px;
+    }
+    main {
+      width: min(1660px, calc(100% - 40px));
+      margin: 28px auto 56px;
+    }
+    h1 { margin: 0 0 6px; font-size: 28px; }
+    .intro { color: #94a3b8; margin: 0 0 30px; max-width: 940px; line-height: 1.6; }
+    .label {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin: 32px 0 12px;
+    }
+    .label h2 { margin: 0; font-size: 18px; }
+    .label p { margin: 0; color: #94a3b8; font-size: 13px; max-width: 760px; text-align: right; }
+    .modal {
+      border: 1px solid rgba(52, 211, 153, 0.38);
+      border-radius: 18px;
+      background: #1f2d43;
+      box-shadow: 0 28px 90px rgba(0,0,0,.42);
+      min-height: 760px;
+      overflow: hidden;
+    }
+    .head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 22px;
+      border-bottom: 1px solid rgba(148,163,184,.24);
+      background: rgba(15,23,42,.46);
+    }
+    .head h3 { margin: 0; font-size: 20px; }
+    .head small { color: #94a3b8; display: block; margin-top: 4px; }
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 11px 15px;
+      background: #2563eb;
+      color: #fff;
+      font: inherit;
+      font-weight: 800;
+    }
+    .secondary { background: #475569; }
+    .grid-a { display: grid; grid-template-columns: 330px minmax(0, 1fr) 340px; min-height: 692px; }
+    .grid-b { display: grid; grid-template-columns: 380px minmax(0, 1fr); min-height: 692px; }
+    aside, .pane { padding: 20px; }
+    aside { border-right: 1px solid rgba(148,163,184,.24); background: rgba(15,23,42,.15); }
+    .right { border-left: 1px solid rgba(148,163,184,.24); border-right: 0; }
+    .section { color: #94a3b8; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 12px; }
+    label { display:block; font-size:12px; color:#d1d5db; font-weight:700; margin-bottom:6px; }
+    .input, .select {
+      height: 40px;
+      border-radius: 8px;
+      border: 1px solid rgba(148,163,184,.28);
+      background: #33445c;
+      color: #fff;
+      padding: 0 12px;
+      display:flex;
+      align-items:center;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 13px;
+    }
+    .split { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px; }
+    .chip {
+      border: 1px solid rgba(148,163,184,.28);
+      border-radius: 8px;
+      padding: 8px 10px;
+      color: #cbd5e1;
+      background: #26364d;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .on { border-color: #60a5fa; color: #bfdbfe; background: rgba(37,99,235,.22); }
+    .summary {
+      border: 1px solid rgba(52,211,153,.32);
+      border-radius: 10px;
+      background: rgba(6,78,59,.18);
+      padding: 14px;
+      margin-top: auto;
+    }
+    .summary strong { display:block; color:#34d399; font-size:28px; line-height:1; margin-bottom:4px; }
+    .summary span { color:#94a3b8; font-size:12px; }
+    .kpis, .cards, .steps, .strip { display:grid; gap:10px; }
+    .kpis { grid-template-columns: repeat(4, 1fr); margin-bottom: 16px; }
+    .cards { grid-template-columns: repeat(4, 1fr); margin-bottom: 16px; }
+    .steps { grid-template-columns: repeat(4, 1fr); margin-bottom: 16px; }
+    .strip { grid-template-columns: repeat(4, 1fr); margin-top: 14px; }
+    .tile, .card, .panel, .step {
+      border: 1px solid rgba(148,163,184,.24);
+      border-radius: 10px;
+      background: rgba(15,23,42,.24);
+      padding: 13px;
+    }
+    .tile span, .card p, .step p { color:#94a3b8; font-size: 12px; line-height:1.45; }
+    .tile strong, .card strong { display:block; margin-top:8px; font-size:22px; }
+    .green { color:#34d399; }
+    .orange { color:#fb923c; }
+    .violet { color:#c084fc; }
+    .cyan { color:#38bdf8; }
+    .card { min-height: 155px; display:flex; flex-direction:column; }
+    .card h4 { margin:0; font-size:13px; }
+    .card strong { margin-top:auto; font-size:27px; line-height:1; }
+    .two { display:grid; grid-template-columns: 1.1fr .9fr; gap: 14px; }
+    .panel { padding:0; overflow:hidden; }
+    .panel h4 { margin:0; padding:13px 14px; border-bottom:1px solid rgba(148,163,184,.18); }
+    table { width:100%; border-collapse:collapse; font-size:12px; }
+    th, td { padding:10px 12px; border-bottom:1px solid rgba(148,163,184,.14); text-align:left; white-space:nowrap; }
+    th { color:#94a3b8; text-transform:uppercase; font-size:10px; }
+    .tabs { display:flex; gap:8px; padding:14px 20px 0; border-bottom:1px solid rgba(148,163,184,.24); }
+    .tab { padding:10px 13px; border:1px solid rgba(148,163,184,.24); border-bottom:0; border-radius:9px 9px 0 0; color:#94a3b8; font-size:12px; font-weight:800; }
+    .active { color:#fff; border-color:rgba(52,211,153,.42); background:#1f2937; }
+    .scenario { display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin-bottom:14px; }
+    @media (max-width: 1200px) {
+      .grid-a, .grid-b, .kpis, .cards, .steps, .strip, .two, .scenario { grid-template-columns: 1fr; }
+      .nav { display:none; }
+      .label { display:block; }
+      .label p { text-align:left; margin-top:6px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><img src="../frontend/www/assets/logo.png" alt=""> Pax Dei Archives</div>
+    <nav class="nav"><span>Home</span><span>Publications</span><span>Calculators</span><span>Markets</span><span>Lore</span><span>Quests</span><span>Resources</span></nav>
+  </header>
+  <main>
+    <h1>Add Listing Modal Expansion</h1>
+    <p class="intro">Static comparison mockups for the expanded Add Listing experience. These are intentionally non-functional reference layouts for comparing against the live Ledger workbench.</p>
+
+    <section class="label">
+      <h2>Mockup 1: Market Desk</h2>
+      <p>Fast price confidence: form left, market decision surface center, supporting sales/province context right.</p>
+    </section>
+    <section class="modal">
+      <div class="head"><div><h3>Add New Listing</h3><small>Antler - Hyrfeld Market Stall - Province view enabled</small></div><div><button class="secondary">Close</button> <button>Add 3 Listings</button></div></div>
+      <div class="grid-a">
+        <aside style="display:flex; flex-direction:column;">
+          <div class="section">Listing Details</div>
+          <label>Item Name</label><div class="input">Antler</div>
+          <div class="split"><div><label>Stacks</label><div class="input">3</div></div><div><label>Count</label><div class="input">100</div></div></div>
+          <label>Price Per Stack</label><div class="input" style="border-color:#facc15;">565</div>
+          <label>Market Stall</label><div class="select">All Market Stalls</div>
+          <div class="section" style="margin-top:18px;">Quality</div>
+          <div class="chips"><span class="chip">Mastercrafted</span><span class="chip on">None</span><span class="chip">I</span><span class="chip">II</span><span class="chip">III</span></div>
+          <div class="summary"><strong>1,695g</strong><span>3 stacks at 565g - 16.95g/unit</span></div>
+        </aside>
+        <div class="pane">
+          <div class="kpis">
+            <div class="tile"><span>Live floor</span><strong class="green">560g</strong></div>
+            <div class="tile"><span>Your avg sale</span><strong>539g</strong></div>
+            <div class="tile"><span>Supply impact</span><strong class="orange">+15%</strong></div>
+            <div class="tile"><span>Sell-through</span><strong>1.8d</strong></div>
+          </div>
+          <div class="section">Price Options</div>
+          <div class="cards">
+            <div class="card"><h4>Market Low</h4><p>Slip under the current floor.</p><strong class="orange">555g</strong></div>
+            <div class="card"><h4>Match Existing</h4><p>Match your active per-unit floor.</p><strong class="green">560g</strong></div>
+            <div class="card"><h4>Suggested Price</h4><p>Balanced market and sales signal.</p><strong class="violet">565g</strong></div>
+            <div class="card"><h4>Higher Ask</h4><p>Top edge of the competitive band.</p><strong class="cyan">622g</strong></div>
+          </div>
+          <div class="two">
+            <div class="panel"><h4>Active Listings For Antler</h4><table><tr><th>Stack</th><th>Price</th><th>Seller</th><th>Rank</th></tr><tr><td>100</td><td class="green">560g</td><td>You</td><td>#1</td></tr><tr><td>100</td><td class="green">575g</td><td>Other</td><td>#3</td></tr><tr><td>80</td><td class="green">475g</td><td>Other</td><td>#4</td></tr></table></div>
+            <div class="panel"><h4>Market Depth</h4><div style="padding:14px; color:#94a3b8; font-size:13px;">565g lands above your current floor and below the first outside seller, keeping your listings visible without undercutting yourself too hard.</div></div>
+          </div>
+        </div>
+        <aside class="right">
+          <div class="tile"><span>Your Sales History</span><strong>62 sales</strong><span>Best stack 622g</span></div><br>
+          <div class="tile"><span>Province Snapshot</span><strong>245g low</strong><span>11 listings across 2 valleys</span></div><br>
+          <div class="tile"><span>Listing Notes</span><strong class="orange">Local premium</strong><span>Province floor is lower, but local history supports the higher valley price.</span></div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="label">
+      <h2>Mockup 2: Guided Auction Lister</h2>
+      <p>The basis for the current live workbench: setup left, tabbed market intelligence right, final action anchored in the form column.</p>
+    </section>
+    <section class="modal">
+      <div class="head"><div><h3>Create a Listing</h3><small>Guided flow - Antler - Count 100 - 3 stacks</small></div><div><button class="secondary">Close</button> <button>Confirm Listing</button></div></div>
+      <div class="grid-b">
+        <aside style="display:flex; flex-direction:column;">
+          <div class="section">Listing Setup</div>
+          <label>Item Name</label><div class="input">Antler</div>
+          <div class="split"><div><label>Stacks</label><div class="input">3</div></div><div><label>Count</label><div class="input">100</div></div></div>
+          <label>Market Stall</label><div class="select">Hyrfeld - Home Valley</div>
+          <label>Selected Price</label><div class="input" style="border-color:#34d399;">565g per stack</div>
+          <div class="section" style="margin-top:18px;">Quality</div>
+          <div class="chips"><span class="chip">Mastercrafted</span><span class="chip on">None</span><span class="chip">I</span><span class="chip">II</span><span class="chip">III</span></div>
+          <button style="margin-top:auto;">Add Listing</button>
+        </aside>
+        <div>
+          <div class="tabs"><div class="tab active">Overview</div><div class="tab">Competitive Pricing</div><div class="tab">Active Listings</div><div class="tab">Sales History</div></div>
+          <div class="pane">
+            <div class="steps"><div class="step"><strong>1</strong><h4>Find item</h4><p>Autofill market scope and quality filters.</p></div><div class="step"><strong>2</strong><h4>Read market</h4><p>Compare floor, supply, and sale velocity.</p></div><div class="step"><strong>3</strong><h4>Choose strategy</h4><p>Fast, stable, recommended, or stretch.</p></div><div class="step"><strong>4</strong><h4>Confirm</h4><p>Review rank, fees, and total gold.</p></div></div>
+            <div class="scenario"><div class="card"><h4>Fast Sale</h4><p>Highest chance to sell first.</p><strong class="orange">555g</strong></div><div class="card"><h4>Recommended</h4><p>Below first outside seller.</p><strong class="green">565g</strong></div><div class="card"><h4>Stretch</h4><p>Matches your best historical sale.</p><strong class="cyan">622g</strong></div></div>
+            <div class="two">
+              <div class="panel"><h4>Recent Sales</h4><table><tr><th>Date</th><th>Stack</th><th>Price</th><th>Days</th></tr><tr><td>Jul 16</td><td>100</td><td class="green">540g</td><td>1.1</td></tr><tr><td>Jul 15</td><td>100</td><td class="green">565g</td><td>1.7</td></tr><tr><td>Jul 14</td><td>100</td><td class="green">620g</td><td>3.4</td></tr></table></div>
+              <div class="panel"><h4>Sale Velocity By Price</h4><div style="padding:18px; height:160px; display:flex; align-items:end; gap:10px;"><span style="height:82%;background:#34d399;width:12%;"></span><span style="height:94%;background:#34d399;width:12%;"></span><span style="height:88%;background:#38bdf8;width:12%;"></span><span style="height:64%;background:#38bdf8;width:12%;"></span><span style="height:38%;background:#c084fc;width:12%;"></span></div></div>
+            </div>
+            <div class="strip"><div class="tile"><span>Current floor</span><strong>560g</strong></div><div class="tile"><span>Your new rank</span><strong>#3-#5</strong></div><div class="tile"><span>Sale window</span><strong>1-2 days</strong></div><div class="tile"><span>Supply after</span><strong>23 stacks</strong></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

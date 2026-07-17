@@ -61,6 +61,12 @@ export function setupLockedItemSelect({
         if (catSelect) catSelect.value = String(item.category_id);
         dropdown.style.display = 'none';
         if (onSelect) onSelect(item);
+        document.dispatchEvent(new CustomEvent('pda:item-selected', {
+            detail: {
+                inputId,
+                item
+            }
+        }));
     };
 
     const clearSelection = () => {
