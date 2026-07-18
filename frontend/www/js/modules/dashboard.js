@@ -9,7 +9,7 @@ import {
     getMarketDataByItemNameAndQuality,
     getZoneListingsForItemByQuality
 } from '../services/gamingToolsService.js';
-import { getCompetitiveThresholds, classifyCompetitiveGap, getCompetitiveBandDisplayRows, getStackAwareMarketLow } from './pricingBands.js';
+import { getCompetitiveThresholds, classifyCompetitiveGap, getCompetitiveBandDisplayRows, getStackAwareMarketLow, normalizeStackGoldAmount } from './pricingBands.js';
 
 /** Cached result of the last analyzeOwnListings() call — used to populate the modal. */
 let _lastValleyAnalysis = null;
@@ -126,6 +126,69 @@ function buildCompetitiveChip(competitiveCount) {
                 <span class="text-white font-semibold">Competitive</span>
                 <span class="text-emerald-300 font-bold">${competitiveCount}</span>
                 <span class="text-white">${competitiveCount === 1 ? 'item' : 'items'}</span>
+            </span>`;
+}
+
+function reconcileValleyBuckets(analysis) {
+    if (!analysis) return analysis;
+
+    const leading = [];
+    const competitive = [...analysis.competitive];
+    const undercut = [...analysis.undercut];
+
+    for (const item of analysis.leading) {
+        const yourLow = normalizeStackGoldAmount(item.yourLow);
+        const marketLow = normalizeStackGoldAmount(item.marketLow);
+        if (yourLow !== null && marketLow !== null && yourLow >= marketLow) {
+            competitive.push({
+                ...item,
+                yourLow,
+                marketLow,
+                gap: yourLow - marketLow,
+                gapPct: marketLow > 0 ? Math.round(((yourLow - marketLow) / marketLow) * 100) : 0
+            });
+        } else {
+            leading.push(item);
+        }
+    }
+
+    return { ...analysis, leading, competitive, undercut };
+}
+
+function buildValleyShareChip({ valleyShareAvailable, valleySharePct, totalOwnListings, totalValleyListings, shareStatus = 'unavailable', compact = false }) {
+    if (valleyShareAvailable) {
+        return compact
+            ? `<span class="inline-flex items-center gap-1.5 bg-blue-900/40 border border-blue-500/40 rounded-full px-3 py-1 text-sm">
+                   <i class="fas fa-chart-pie text-blue-400 text-xs"></i>
+                   <span class="text-white font-semibold">Valley share:</span>
+                   <span class="text-blue-300 font-bold">${valleySharePct}%</span>
+               </span>`
+            : `<span class="inline-flex items-center gap-1.5 bg-blue-900/40 border border-blue-500/40 rounded-full px-3 py-1 text-sm">
+                    <i class="fas fa-chart-pie text-blue-400 text-xs"></i>
+                    <span class="text-white">Valley share:</span>
+                    <span class="text-blue-300 font-bold">${valleySharePct}%</span>
+                    <span class="text-gray-400 text-xs">(${totalOwnListings} of ${totalValleyListings})</span>
+                </span>`;
+    }
+
+    if (shareStatus === 'awaiting_feed') {
+        return compact
+            ? `<span class="inline-flex items-center gap-1.5 bg-amber-900/30 border border-amber-500/40 rounded-full px-3 py-1 text-sm">
+                   <i class="fas fa-clock text-amber-300 text-xs"></i>
+                   <span class="text-white font-semibold">Feed pickup pending</span>
+               </span>`
+            : `<span class="inline-flex items-center gap-1.5 bg-amber-900/30 border border-amber-500/40 rounded-full px-3 py-1 text-sm">
+                    <i class="fas fa-clock text-amber-300 text-xs"></i>
+                    <span class="text-white">Feed pickup pending</span>
+                    <span class="text-gray-400 text-xs">(${totalOwnListings} Archives listings not matched in gaming.tools yet)</span>
+                </span>`;
+    }
+
+    if (compact) return '';
+
+    return `<span class="inline-flex items-center gap-1.5 bg-slate-700/40 border border-slate-500/40 rounded-full px-3 py-1 text-sm">
+                <i class="fas fa-list-check text-gray-400 text-xs"></i>
+                <span class="text-white">${totalOwnListings} Archives listings analyzed</span>
             </span>`;
 }
 
@@ -621,8 +684,8 @@ export function renderMarketPulse(zoneSummary, ownSummary, character, loading = 
             }
             return;
         }
-        _lastValleyAnalysis = analysis;
-        const { leading, competitive, undercut, valleySharePct, valleyShareAvailable } = analysis;
+        _lastValleyAnalysis = reconcileValleyBuckets(analysis);
+        const { leading, competitive, undercut, valleySharePct, valleyShareAvailable, totalOwnListings, totalValleyListings, shareStatus } = _lastValleyAnalysis;
 
         const leadingChip = leading.length > 0
             ? `<span class="inline-flex items-center gap-1.5 bg-blue-900/40 border border-blue-500/40 rounded-full px-3 py-1 text-sm">
@@ -647,16 +710,14 @@ export function renderMarketPulse(zoneSummary, ownSummary, character, loading = 
                    <span class="text-white">No above-market listings</span>
                </span>`;
 
-        const shareChip = valleyShareAvailable
-            ? `<span class="inline-flex items-center gap-1.5 bg-blue-900/40 border border-blue-500/40 rounded-full px-3 py-1 text-sm">
-                   <i class="fas fa-chart-pie text-blue-400 text-xs"></i>
-                   <span class="text-white font-semibold">Valley share:</span>
-                   <span class="text-blue-300 font-bold">${valleySharePct}%</span>
-               </span>`
-            : `<span class="inline-flex items-center gap-1.5 bg-slate-700/40 border border-slate-500/40 rounded-full px-3 py-1 text-sm">
-                   <i class="fas fa-circle-question text-gray-400 text-xs"></i>
-                   <span class="text-white">Valley share unavailable</span>
-               </span>`;
+        const shareChip = buildValleyShareChip({
+            valleyShareAvailable,
+            valleySharePct,
+            totalOwnListings,
+            totalValleyListings,
+            shareStatus,
+            compact: true
+        });
 
         // Only update if panel is still showing (character hasn't changed)
         if (ownPanel.isConnected) {
@@ -755,7 +816,7 @@ async function buildValleyAnalysisFromSupabase() {
             ownByVariant[variantKey].count++;
             ownByVariant[variantKey].listings.push({
                 stackSize: Math.max(Number(listing.quantity_listed) || 1, 1),
-                stackPrice: Number(listing.total_listed_price) || 0,
+                stackPrice: normalizeStackGoldAmount(listing.total_listed_price) ?? 0,
                 unitPrice: Number(listing.listed_price_per_unit) || 0
             });
         }
@@ -804,6 +865,8 @@ async function buildValleyAnalysisFromSupabase() {
                     stackPrice: listing.stackPrice,
                     avatarHash
                 });
+                const displayYourLow = normalizeStackGoldAmount(listing.stackPrice) ?? 0;
+                const displayMarketLow = normalizeStackGoldAmount(marketLowStack);
                 const historicalStats = summarizeHistoricalSales(
                     salesByHistoryKey[buildHistoryKey(own.itemId, own.isMastercrafted, own.enchantmentTier, listing.stackSize)] || []
                 );
@@ -818,35 +881,35 @@ async function buildValleyAnalysisFromSupabase() {
                     isMastercrafted: own.isMastercrafted,
                     enchantmentTier: own.enchantmentTier,
                     qualityLabel: own.qualityLabel,
-                    yourLow: listing.stackPrice,
+                    yourLow: displayYourLow,
                     yourCount: yourCountForSize,
                     totalCount,
                     sellerCount,
                     stackSize: listing.stackSize,
                     stackLabel: `Stack of ${listing.stackSize.toLocaleString()}`,
-                    marketLow: marketLowStack,
+                    marketLow: displayMarketLow,
                     isExactStackMatch: exactStackListings.length > 0,
                     historicalStats
                 };
 
-                if (marketLowStack === null) {
-                    bestListingSummary = { bucket: 'leading', sortGap: 0, row: { ...summaryRow, marketLow: listing.stackPrice, noGtData: true } };
+                if (displayMarketLow === null) {
+                    bestListingSummary = { bucket: 'leading', sortGap: 0, row: { ...summaryRow, marketLow: displayYourLow, noGtData: true } };
                     break;
                 }
 
-                if (listing.stackPrice < marketLowStack - 0.001) {
+                if (displayYourLow < displayMarketLow) {
                     const candidate = { bucket: 'leading', sortGap: 0, row: summaryRow };
-                    if (!bestListingSummary || bestListingSummary.bucket !== 'leading' || listing.stackPrice < bestListingSummary.row.yourLow) {
+                    if (!bestListingSummary || bestListingSummary.bucket !== 'leading' || displayYourLow < bestListingSummary.row.yourLow) {
                         bestListingSummary = candidate;
                     }
                     continue;
                 }
 
-                const gap = listing.stackPrice - marketLowStack;
-                const gapPct = Math.round((gap / marketLowStack) * 100);
-                const { status: bucket, thresholds } = classifyCompetitiveGap(gap, gapPct, marketLowStack);
+                const gap = displayYourLow - displayMarketLow;
+                const gapPct = Math.round((gap / displayMarketLow) * 100);
+                const { status: bucket, thresholds } = classifyCompetitiveGap(gap, gapPct, displayMarketLow);
                 const historyNote = buildHistoricalPricingNote({
-                    stackPrice: listing.stackPrice,
+                    stackPrice: displayYourLow,
                     sellerCount,
                     historicalStats
                 });
@@ -897,8 +960,11 @@ async function buildValleyAnalysisFromSupabase() {
         const valleySharePct = gtAnalysis?.valleySharePct ?? null;
         const totalValleyListings = gtAnalysis?.totalValleyListings ?? null;
         const valleyShareAvailable = !!gtAnalysis;
+        const shareStatus = valleyShareAvailable
+            ? 'available'
+            : (avatarHash && totalOwnListings > 0 ? 'awaiting_feed' : 'unavailable');
 
-        return { leading, competitive, undercut, valleySharePct, totalOwnListings, totalValleyListings, valleyShareAvailable };
+        return { leading, competitive, undercut, valleySharePct, totalOwnListings, totalValleyListings, valleyShareAvailable, shareStatus };
     } catch (err) {
         console.error('[ValleyPresence] buildValleyAnalysisFromSupabase error:', err);
         return null;
@@ -923,23 +989,18 @@ export async function openValleyPresenceModal() {
         body.innerHTML = '<p class="text-gray-400 text-sm">No active listings found for this character.</p>';
         return;
     }
-    _lastValleyAnalysis = analysis;
+    _lastValleyAnalysis = reconcileValleyBuckets(analysis);
 
-    const { leading, competitive, undercut, valleySharePct, totalOwnListings, totalValleyListings, valleyShareAvailable } = _lastValleyAnalysis;
+    const { leading, competitive, undercut, valleySharePct, totalOwnListings, totalValleyListings, valleyShareAvailable, shareStatus } = _lastValleyAnalysis;
     const fmt  = (n) => typeof n === 'number' ? n.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—';
     const fmtG = (n) => `${fmt(n)}g`;
-    const shareChip = valleyShareAvailable
-        ? `<span class="inline-flex items-center gap-1.5 bg-blue-900/40 border border-blue-500/40 rounded-full px-3 py-1 text-sm">
-                <i class="fas fa-chart-pie text-blue-400 text-xs"></i>
-                <span class="text-white">Valley share:</span>
-                <span class="text-blue-300 font-bold">${valleySharePct}%</span>
-                <span class="text-gray-400 text-xs">(${totalOwnListings} of ${totalValleyListings})</span>
-            </span>`
-        : `<span class="inline-flex items-center gap-1.5 bg-slate-700/40 border border-slate-500/40 rounded-full px-3 py-1 text-sm">
-                <i class="fas fa-circle-question text-gray-400 text-xs"></i>
-                <span class="text-white">Valley share unavailable</span>
-                <span class="text-gray-400 text-xs">(${totalOwnListings} live listings found)</span>
-            </span>`;
+    const shareChip = buildValleyShareChip({
+        valleyShareAvailable,
+        valleySharePct,
+        totalOwnListings,
+        totalValleyListings,
+        shareStatus
+    });
 
     const undercutRows = undercut.map(item => `
         <tr class="border-b border-slate-700/60 hover:bg-slate-700/30">

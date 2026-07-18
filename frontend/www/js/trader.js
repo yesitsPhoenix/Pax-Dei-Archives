@@ -5,7 +5,6 @@ import { initializeCharacters, insertCharacterModalHtml, currentCharacterId, get
 import { initializeSales, loadTransactionHistory } from './modules/sales.js';
 import { renderDashboard, renderMarketPulse } from './modules/dashboard.js';
 import { renderPVEChart, renderSalesChart } from './modules/salesChart.js';
-import { createAddListingIntelligenceController } from './modules/addListingIntelligence.js';
 import { setupLockedItemSelect } from './modules/lockedItemSelect.js';
 import { initializeTraderModals } from './modules/traderModals.js';
 import { createTraderSessionController } from './modules/traderSession.js';
@@ -13,13 +12,6 @@ import { createTraderPageController } from './modules/traderPage.js';
 import {
     loadZoneDataForCharacter,
     clearZoneData,
-    getMarketDataForSlug,
-    getMarketDataByItemName,
-    getMarketDataForSlugByQuality,
-    getMarketDataByItemNameAndQuality,
-    getItemNameForSlug,
-    getOwnListingCountForSlug,
-    getItemIdByName,
     findOwnListings,
     summarizeOwnListings,
     getSavedAvatarHash,
@@ -344,29 +336,11 @@ export function setupCustomAutocomplete(inputElement, suggestionsContainerElemen
 }
 
 function initializeAutocomplete(allItems) {
-    const addListingIntelligence = createAddListingIntelligenceController({
-        supabase,
-        getCurrentCharacterId: () => currentCharacterId,
-        getCurrentCharacter,
-        getSavedAvatarHash,
-        getMarketDataForSlug,
-        getMarketDataByItemName,
-        getMarketDataForSlugByQuality,
-        getMarketDataByItemNameAndQuality,
-        getItemNameForSlug,
-        getOwnListingCountForSlug,
-        getItemIdByName
-    });
-    addListingIntelligence.attachInputListeners();
-
     setupLockedItemSelect({
         allItems,
         inputId: 'modal-item-name',
         suggestionsId: 'modal-item-name-suggestions',
-        categorySelectId: 'modal-item-category',
-        onSelect: (selectedItem) => {
-            addListingIntelligence.handleItemSelected(selectedItem);
-        }
+        categorySelectId: 'modal-item-category'
     });
 
     setupLockedItemSelect({

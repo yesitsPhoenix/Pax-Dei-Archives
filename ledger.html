@@ -366,6 +366,10 @@
             padding-top: 1rem !important;
         }
 
+        body.listing-focus-mode #customModalContainer {
+            z-index: 30000 !important;
+        }
+
         .listing-workbench {
             border-radius: 18px;
             height: calc(100vh - 2rem);
@@ -396,6 +400,23 @@
             border-right: 1px solid rgba(148, 163, 184, 0.22);
             background: rgba(15, 23, 42, 0.18);
             overflow: hidden;
+        }
+
+        .listing-workbench-form > div:first-child > .form-group {
+            margin-top: 0.78rem;
+        }
+
+        .listing-workbench-form > div:first-child > .form-group:first-of-type {
+            margin-top: 0;
+        }
+
+        .listing-workbench-form .grid {
+            margin-top: 0.78rem;
+            align-items: start;
+        }
+
+        .listing-workbench-form label {
+            margin-bottom: 0.22rem;
         }
 
         .listing-workbench-main {
@@ -465,25 +486,6 @@
         .listing-workbench-form::-webkit-scrollbar-thumb {
             background: #34d399;
             border-radius: 999px;
-        }
-
-        .listing-workbench [data-workbench-panel="pricing"] #modal-market-price-hint > .flex:first-of-type {
-            display: none;
-        }
-
-        .listing-workbench [data-workbench-panel="pricing"] #modal-market-price-hint > div[class*="bg-cyan-900"][class*="p-3"] {
-            display: none;
-        }
-
-        .listing-workbench [data-workbench-panel="pricing"] #modal-market-price-hint {
-            max-width: 980px;
-            margin-top: 1.35rem;
-        }
-
-        .listing-workbench [data-workbench-panel="pricing"] #modal-market-price-hint p:has(+ .rounded-xl),
-        .listing-workbench [data-workbench-panel="pricing"] #modal-market-price-hint p.text-xs {
-            margin-top: 0.35rem;
-            padding-top: 0.35rem;
         }
 
         .listing-workbench-preview {
@@ -862,12 +864,155 @@
             margin-bottom: 0;
         }
 
+        .workbench-config-shell {
+            max-width: 1180px;
+            display: grid;
+            gap: 1rem;
+        }
+
+        .workbench-config-copy {
+            border: 1px solid rgba(52, 211, 153, 0.24);
+            border-radius: 12px;
+            background: rgba(6, 78, 59, 0.14);
+            padding: 1rem;
+        }
+
+        .workbench-config-copy span,
+        .workbench-config-read span {
+            display: block;
+            color: #94a3b8;
+            font-size: 0.7rem;
+            font-weight: 800;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+        }
+
+        .workbench-config-copy h4 {
+            margin: 0.25rem 0 0.45rem;
+            color: #f8fafc;
+            font-size: 1.05rem;
+            font-weight: 800;
+        }
+
+        .workbench-config-copy p {
+            margin: 0;
+            max-width: 860px;
+            color: #cbd5e1;
+            font-size: 0.9rem;
+            line-height: 1.55;
+        }
+
+        .workbench-risk-toggle {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.75rem;
+        }
+
+        .workbench-risk-option {
+            min-height: 118px;
+            text-align: left;
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.28);
+            padding: 0.9rem;
+            transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease;
+        }
+
+        .workbench-risk-option[data-risk-profile="guarded"] {
+            border-color: rgba(96, 165, 250, 0.28);
+            background: rgba(30, 64, 175, 0.14);
+        }
+
+        .workbench-risk-option[data-risk-profile="balanced"] {
+            border-color: rgba(52, 211, 153, 0.28);
+            background: rgba(6, 78, 59, 0.16);
+        }
+
+        .workbench-risk-option[data-risk-profile="flexible"] {
+            border-color: rgba(251, 191, 36, 0.28);
+            background: rgba(146, 64, 14, 0.15);
+        }
+
+        .workbench-risk-option[data-risk-profile="guarded"]:hover,
+        .workbench-risk-option[data-risk-profile="guarded"].active {
+            border-color: rgba(96, 165, 250, 0.68);
+            background: rgba(30, 64, 175, 0.24);
+        }
+
+        .workbench-risk-option[data-risk-profile="balanced"]:hover,
+        .workbench-risk-option[data-risk-profile="balanced"].active {
+            border-color: rgba(52, 211, 153, 0.68);
+            background: rgba(6, 78, 59, 0.26);
+        }
+
+        .workbench-risk-option[data-risk-profile="flexible"]:hover,
+        .workbench-risk-option[data-risk-profile="flexible"].active {
+            border-color: rgba(251, 191, 36, 0.68);
+            background: rgba(146, 64, 14, 0.25);
+        }
+
+        .workbench-risk-option[data-risk-profile="guarded"].active {
+            box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.38);
+        }
+
+        .workbench-risk-option[data-risk-profile="balanced"].active {
+            box-shadow: inset 0 0 0 1px rgba(52, 211, 153, 0.38);
+        }
+
+        .workbench-risk-option[data-risk-profile="flexible"].active {
+            box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.38);
+        }
+
+        .workbench-risk-option strong {
+            display: block;
+            color: #f8fafc;
+            font-size: 0.95rem;
+            margin-bottom: 0.45rem;
+        }
+
+        .workbench-risk-option span {
+            display: block;
+            color: #94a3b8;
+            font-size: 0.78rem;
+            line-height: 1.4;
+        }
+
+        .workbench-config-read {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.75rem;
+        }
+
+        .workbench-config-read > div {
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.24);
+            padding: 0.85rem;
+        }
+
+        .workbench-config-read strong {
+            display: block;
+            color: #f8fafc;
+            font-size: 1.05rem;
+            margin-top: 0.32rem;
+        }
+
+        .workbench-config-read small {
+            display: block;
+            color: #94a3b8;
+            font-size: 0.72rem;
+            margin-top: 0.28rem;
+            line-height: 1.3;
+        }
+
         @media (max-width: 1180px) {
             .listing-pricing-visuals,
             .listing-strategy-grid,
             .competitive-layout,
             .competitive-grid,
-            .competitive-price-options {
+            .competitive-price-options,
+            .workbench-risk-toggle,
+            .workbench-config-read {
                 grid-template-columns: 1fr;
             }
         }
@@ -1839,6 +1984,7 @@
                         <button type="button" class="listing-workbench-tab" data-workbench-tab="competitive">Competitive Pricing</button>
                         <button type="button" class="listing-workbench-tab" data-workbench-tab="active">Active Listings</button>
                         <button type="button" class="listing-workbench-tab" data-workbench-tab="sales">Sales History</button>
+                        <button type="button" class="listing-workbench-tab" data-workbench-tab="config">Config</button>
                     </div>
 
                     <div class="listing-workbench-panel" data-workbench-panel="pricing">
@@ -1847,7 +1993,6 @@
                             <i class="fas fa-search text-slate-600 text-3xl mb-3"></i>
                             <p class="text-gray-500 text-sm">Select an item to see live market data, your sales history, and price options.</p>
                         </div>
-                        <div id="modal-market-price-hint" class="hidden text-gray-200"></div>
                         <div id="workbench-pricing-visuals"></div>
                     </div>
                     <div class="listing-workbench-panel hidden" data-workbench-panel="competitive">
@@ -1863,6 +2008,11 @@
                     <div class="listing-workbench-panel hidden" data-workbench-panel="sales">
                         <div id="workbench-sales-history" class="listing-workbench-tab-content">
                             <div class="listing-workbench-empty">Select an item to view sales history.</div>
+                        </div>
+                    </div>
+                    <div class="listing-workbench-panel hidden" data-workbench-panel="config">
+                        <div id="workbench-config" class="listing-workbench-tab-content">
+                            <div class="listing-workbench-empty">Loading configuration...</div>
                         </div>
                     </div>
                 </div>

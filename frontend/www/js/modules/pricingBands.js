@@ -1,4 +1,49 @@
-export function getCompetitiveThresholds(marketLowStack) {
+const COMPETITIVE_RISK_STORAGE_KEY = 'pda.competitiveRiskTolerance';
+
+export const COMPETITIVE_RISK_PROFILES = {
+    guarded: {
+        label: 'Guarded',
+        goldMultiplier: 0.7,
+        pctMultiplier: 0.75,
+        description: 'Keeps suggested competitive caps closer to the current floor.'
+    },
+    balanced: {
+        label: 'Balanced',
+        goldMultiplier: 1,
+        pctMultiplier: 1,
+        description: 'Uses the current Archives competitive pricing model.'
+    },
+    flexible: {
+        label: 'Flexible',
+        goldMultiplier: 1.35,
+        pctMultiplier: 1.25,
+        description: 'Allows more room above the floor when the market can support it.'
+    }
+};
+
+export function getCompetitiveRiskTolerance() {
+    try {
+        const saved = window.localStorage?.getItem(COMPETITIVE_RISK_STORAGE_KEY);
+        return COMPETITIVE_RISK_PROFILES[saved] ? saved : 'balanced';
+    } catch {
+        return 'balanced';
+    }
+}
+
+export function setCompetitiveRiskTolerance(profile) {
+    const nextProfile = COMPETITIVE_RISK_PROFILES[profile] ? profile : 'balanced';
+    try {
+        window.localStorage?.setItem(COMPETITIVE_RISK_STORAGE_KEY, nextProfile);
+    } catch {
+        // Local storage can be unavailable in some privacy modes; keep runtime defaults.
+    }
+    window.dispatchEvent(new CustomEvent('pda:competitive-risk-changed', {
+        detail: { profile: nextProfile }
+    }));
+    return nextProfile;
+}
+
+function getBaseCompetitiveThresholds(marketLowStack) {
     if (marketLowStack < 5) {
         return { maxGapGold: 2, maxGapPct: 35, label: '< 5g stack' };
     }
@@ -17,8 +62,21 @@ export function getCompetitiveThresholds(marketLowStack) {
     return { maxGapGold: 25, maxGapPct: 7, label: '300g+ stack' };
 }
 
-export function classifyCompetitiveGap(gap, gapPct, marketLowStack, leadingLabel = 'leading') {
-    const thresholds = getCompetitiveThresholds(marketLowStack);
+export function getCompetitiveThresholds(marketLowStack, profile = getCompetitiveRiskTolerance()) {
+    const base = getBaseCompetitiveThresholds(marketLowStack);
+    const riskProfile = COMPETITIVE_RISK_PROFILES[profile] || COMPETITIVE_RISK_PROFILES.balanced;
+    return {
+        ...base,
+        maxGapGold: Math.max(1, Math.round(base.maxGapGold * riskProfile.goldMultiplier)),
+        maxGapPct: Math.max(1, Math.round(base.maxGapPct * riskProfile.pctMultiplier)),
+        baseMaxGapGold: base.maxGapGold,
+        baseMaxGapPct: base.maxGapPct,
+        profile
+    };
+}
+
+export function classifyCompetitiveGap(gap, gapPct, marketLowStack, leadingLabel = 'leading', profile = getCompetitiveRiskTolerance()) {
+    const thresholds = getCompetitiveThresholds(marketLowStack, profile);
     const status = gap < -0.001
         ? leadingLabel
         : (gap <= thresholds.maxGapGold && gapPct <= thresholds.maxGapPct ? 'competitive' : 'undercut');

@@ -1,4 +1,4 @@
-import { getCompetitiveThresholds, classifyCompetitiveGap } from './pricingBands.js';
+import { getCompetitiveThresholds, classifyCompetitiveGap, getCompetitiveRiskTolerance } from './pricingBands.js';
 import { fetchZoneListings, loadItemsData } from '../services/gamingToolsService.js';
 
 export async function fetchItemSalesHistoryForListing({ supabase, currentCharacterId, itemId }) {
@@ -184,9 +184,8 @@ export function buildAddListingSuggestion(md, qualityMd, hist, count, stacks, is
             insightClass      = 'text-gray-400';
         }
     } else if (hasHist && hasCount) {
-        const bestHistPerUnit = Math.max(effectiveHist.maxPerUnit || 0, effectiveHist.avgPerUnit || 0);
-        suggestedPerStack = Math.round(bestHistPerUnit * count);
-        insight           = 'No live market listings - anchoring to your best historical sale is the safest baseline.';
+        suggestedPerStack = Math.round((effectiveHist.avgPerUnit || 0) * count);
+        insight           = 'No live market listings - anchoring to your normalized Archives sales average.';
         insightClass      = 'text-emerald-400';
     }
 
@@ -274,7 +273,7 @@ function getMatchExistingRecommendation(activeListings, count) {
 
 function getCompetitivePriceRecommendation({ stackMarketLow, stackMarketAvg, suggestionValue, hasHistory }) {
     const roundedLow = Math.round(stackMarketLow);
-    const thresholds = getCompetitiveThresholds(roundedLow);
+    const thresholds = getCompetitiveThresholds(roundedLow, getCompetitiveRiskTolerance());
     const bandCap = roundedLow + thresholds.maxGapGold;
 
     return {
@@ -292,15 +291,15 @@ function getHistoryOnlyPriceRecommendations(hist, count) {
     const historyAvgPerStack = Number.isFinite(hist.avgPerUnit)
         ? Math.round(hist.avgPerUnit * count)
         : null;
-    const bestHistoryPerUnit = Math.max(hist.maxPerUnit || 0, hist.avgPerUnit || 0);
-    const suggestedPerStack = bestHistoryPerUnit > 0
-        ? Math.round(bestHistoryPerUnit * count)
+    const suggestedPerStack = historyAvgPerStack && historyAvgPerStack > 0
+        ? historyAvgPerStack
         : null;
+    const thresholds = suggestedPerStack ? getCompetitiveThresholds(suggestedPerStack, getCompetitiveRiskTolerance()) : null;
     const marketLowPerStack = suggestedPerStack !== null
         ? Math.max(1, suggestedPerStack - getUndercutStep(suggestedPerStack))
         : historyAvgPerStack;
-    const higherAskPerStack = suggestedPerStack !== null
-        ? Math.max(suggestedPerStack + getUndercutStep(suggestedPerStack), Math.round(suggestedPerStack * 1.1))
+    const higherAskPerStack = suggestedPerStack !== null && thresholds
+        ? suggestedPerStack + thresholds.maxGapGold
         : null;
 
     return {
@@ -498,7 +497,7 @@ async function fetchProvinceValleys({ supabase, character }) {
     return [...new Set(valleys)];
 }
 
-async function fetchProvinceMarketContext({
+export async function fetchProvinceMarketContext({
     supabase,
     currentCharacterId,
     getCurrentCharacter,
@@ -590,7 +589,45 @@ function buildMarketDataFromListings(listings, itemId, isMastercrafted = null, e
     };
 }
 
-export function createAddListingIntelligenceController({
+export function getProvinceUnitFloor({ listings, itemId, count, isMastercrafted, enchantmentTier }) {
+    if (!Array.isArray(listings) || !itemId || !(count > 0)) return null;
+
+    const candidates = [];
+    const valleys = new Set();
+
+    for (const listing of listings) {
+        if (listing.item_id !== itemId) continue;
+        if ((listing.mastercraft ? 1 : 0) !== (isMastercrafted ? 1 : 0)) continue;
+        if ((listing.enchantment_level || 0) !== (enchantmentTier || 0)) continue;
+
+        const quantity = Math.max(Number(listing.quantity) || 1, 1);
+        const price = Number(listing.price);
+        if (!(price > 0)) continue;
+        candidates.push({
+            unitPrice: price / quantity,
+            quantity,
+            stackPrice: Math.round(price),
+            stackEquivalent: Math.round((price / quantity) * count)
+        });
+        if (listing._homeValley) valleys.add(listing._homeValley);
+    }
+
+    if (!candidates.length) return null;
+
+    candidates.sort((a, b) => a.unitPrice - b.unitPrice || a.stackPrice - b.stackPrice);
+    const best = candidates[0];
+
+    return {
+        value: best.stackEquivalent,
+        unitPrice: best.unitPrice,
+        sourceQuantity: best.quantity,
+        sourceStackPrice: best.stackPrice,
+        totalListings: candidates.length,
+        valleyCount: valleys.size
+    };
+}
+
+function createLegacyAddListingIntelligenceController({
     supabase,
     getCurrentCharacterId,
     getCurrentCharacter,
@@ -685,6 +722,46 @@ export function createAddListingIntelligenceController({
             }
             : null;
         const provinceDisplayMd = provinceQualityMd || provinceEstimatedMd || provinceAllQualityMd;
+        const provinceUnitFloor = provinceContext && hasCount
+            ? getProvinceUnitFloor({
+                listings: provinceContext.listings,
+                itemId: provinceContext.itemId,
+                count,
+                isMastercrafted,
+                enchantmentTier
+            })
+            : null;
+        const referenceFloorSource = displayMd && hasCount
+            ? 'home'
+            : provinceUnitFloor
+                ? 'province'
+                : null;
+        const referenceStackFloor = displayMd && hasCount
+            ? Math.round(displayMd.marketLow * count)
+            : provinceUnitFloor?.value ?? null;
+        window.dispatchEvent(new CustomEvent('pda:listing-reference-floor', {
+            detail: {
+                itemId: state.selectedItem?.item_id || null,
+                itemName: state.selectedItem?.item_name || '',
+                count: hasCount ? count : 0,
+                isMastercrafted,
+                enchantmentTier,
+                source: referenceFloorSource,
+                sourceLabel: referenceFloorSource === 'home'
+                    ? 'Home Valley live floor'
+                    : referenceFloorSource === 'province'
+                        ? 'Province unit floor'
+                        : '',
+                value: referenceStackFloor,
+                unitPrice: displayMd && hasCount
+                    ? displayMd.marketLow
+                    : provinceUnitFloor?.unitPrice ?? null,
+                sourceQuantity: provinceUnitFloor?.sourceQuantity ?? null,
+                sourceStackPrice: provinceUnitFloor?.sourceStackPrice ?? null,
+                totalListings: displayMd?.totalListings ?? provinceUnitFloor?.totalListings ?? null,
+                valleyCount: provinceUnitFloor?.valleyCount ?? null
+            }
+        }));
         const supplyCount = displayMd?.totalListings;
         const supplyTag = displayMd && supplyCount !== null && supplyCount !== undefined
             ? supplyCount <= 3
@@ -715,10 +792,10 @@ export function createAddListingIntelligenceController({
                        </div>
                        ${hasCount ? `<div class="flex justify-between gap-2 mt-0.5">
                            <span class="text-gray-300 text-sm">Province low/stack <span class="text-gray-500 text-xs">(${count})</span></span>
-                           <span class="text-indigo-300 font-bold text-sm">${fmt(provinceDisplayMd.marketLow * count)}g</span>
+                           <span class="text-indigo-300 font-bold text-sm">${fmt(provinceUnitFloor?.value ?? (provinceDisplayMd.marketLow * count))}g</span>
                        </div>` : ''}
                        <div class="text-gray-500 text-sm mt-0.5">
-                           ${provinceDisplayMd.totalListings} listing${provinceDisplayMd.totalListings !== 1 ? 's' : ''} across ${provinceDisplayMd.valleyCount || provinceContext?.loadedValleys?.length || 0} valley${(provinceDisplayMd.valleyCount || provinceContext?.loadedValleys?.length || 0) !== 1 ? 's' : ''}
+                           ${provinceUnitFloor ? `${provinceUnitFloor.totalListings} same-quality listing${provinceUnitFloor.totalListings !== 1 ? 's' : ''}; source ${provinceUnitFloor.sourceQuantity}-count at ${fmt(provinceUnitFloor.sourceStackPrice)}g` : `${provinceDisplayMd.totalListings} listing${provinceDisplayMd.totalListings !== 1 ? 's' : ''}`} across ${provinceUnitFloor?.valleyCount || provinceDisplayMd.valleyCount || provinceContext?.loadedValleys?.length || 0} valley${(provinceUnitFloor?.valleyCount || provinceDisplayMd.valleyCount || provinceContext?.loadedValleys?.length || 0) !== 1 ? 's' : ''}
                        </div>
                    </div>`
                 : provinceContext
@@ -909,43 +986,25 @@ export function createAddListingIntelligenceController({
 
         const suggestion = buildAddListingSuggestion(md, qualityMd, hist, count, stacks, isMastercrafted, enchantmentTier, state.ownCount);
 
-        const stackMarketLow = (displayMd && hasCount) ? (displayMd.marketLow * count) : null;
-        let provinceLowOption = null;
-        if (provinceContext && provinceDisplayMd) {
-            const provinceStackLow = hasCount ? provinceDisplayMd.marketLow * count : null;
-            if (provinceStackLow !== null) {
-                const provinceLowRecommendation = getMarketLowRecommendation(
-                    provinceStackLow,
-                    0,
-                    provinceDisplayMd.totalListings,
-                    false
-                );
-                provinceLowOption = {
-                    type: 'province-low',
-                    label: 'Province Low',
-                    badge: 'True Floor',
-                    value: provinceLowRecommendation.value,
-                    description: 'Match the broader province floor.',
-                    subtext: provinceLowRecommendation.subtext.replace('live market', 'province-wide market')
-                };
-            }
-        }
+        const stackMarketLow = referenceStackFloor;
+        const provinceLowOption = null;
 
         let competitiveCard = '';
         if (stackMarketLow !== null) {
             const roundedStackMarketLow = Math.round(stackMarketLow);
-            const thresholds = getCompetitiveThresholds(roundedStackMarketLow);
+            const riskProfile = getCompetitiveRiskTolerance();
+            const thresholds = getCompetitiveThresholds(roundedStackMarketLow, riskProfile);
             const competitiveCap = roundedStackMarketLow + thresholds.maxGapGold;
             const enteredGap = hasPrice ? price - roundedStackMarketLow : null;
             const enteredGapPct = (hasPrice && roundedStackMarketLow > 0) ? Math.round((enteredGap / roundedStackMarketLow) * 100) : null;
-            const enteredStatus = hasPrice ? classifyCompetitiveGap(enteredGap, enteredGapPct, roundedStackMarketLow).status : null;
+            const enteredStatus = hasPrice ? classifyCompetitiveGap(enteredGap, enteredGapPct, roundedStackMarketLow, 'leading', riskProfile).status : null;
             const hasSuggestedStackPrice = Number.isFinite(suggestion?.suggestedPerStack);
             const suggestionGap = hasSuggestedStackPrice ? suggestion.suggestedPerStack - roundedStackMarketLow : null;
             const suggestionGapPct = (hasSuggestedStackPrice && roundedStackMarketLow > 0)
                 ? Math.round((suggestionGap / roundedStackMarketLow) * 100)
                 : null;
             const suggestionStatus = hasSuggestedStackPrice
-                ? classifyCompetitiveGap(suggestionGap, suggestionGapPct, roundedStackMarketLow).status
+                ? classifyCompetitiveGap(suggestionGap, suggestionGapPct, roundedStackMarketLow, 'leading', riskProfile).status
                 : null;
             const enteredStatusDisplay = hasPrice ? getCompetitiveStatusPresentation(enteredStatus) : null;
             const suggestionStatusDisplay = suggestionStatus ? getCompetitiveStatusPresentation(suggestionStatus) : null;
@@ -1020,11 +1079,11 @@ export function createAddListingIntelligenceController({
                 <i class="fas ${icon} flex-shrink-0"></i><span>${q.text}</span></div>`;
         }
 
-        const hasHistoryOnlyCardSet = !displayMd && !!hist && hasCount;
+        const hasHistoryOnlyCardSet = !stackMarketLow && !!hist && hasCount;
         let suggestionCard = '';
-        if (suggestion || (hasCount && activeListingsForQuality.length) || provinceLowOption) {
+        if (suggestion || (hasCount && activeListingsForQuality.length) || stackMarketLow) {
             const suggestionOptions = [];
-            const historyOnlyRecommendations = !displayMd && hist && hasCount
+            const historyOnlyRecommendations = !stackMarketLow && hist && hasCount
                 ? getHistoryOnlyPriceRecommendations(hist, count)
                 : null;
             const matchExistingRecommendation = hasCount
@@ -1047,14 +1106,25 @@ export function createAddListingIntelligenceController({
                     displayMd?.totalListings,
                     isOwnListingAtMarketLow(state.ownListings, displayMd?.marketLow)
                 );
-                suggestionOptions.push({
-                    type: 'market-low',
-                    label: 'Market Low',
-                    badge: 'Fastest',
-                    value: marketLowRecommendation.value,
-                    description: marketLowRecommendation.description,
-                    subtext: marketLowRecommendation.subtext
-                });
+                if (referenceFloorSource === 'province' && provinceUnitFloor) {
+                    suggestionOptions.push({
+                        type: 'province-low',
+                        label: 'Province Low',
+                        badge: 'Unit Floor',
+                        value: stackMarketLow,
+                        description: `Match the broader province unit floor at ${count} count.`,
+                        subtext: `Lowest same-quality source is ${provinceUnitFloor.sourceQuantity}-count at ${fmt(provinceUnitFloor.sourceStackPrice)}g (${fmt(provinceUnitFloor.unitPrice)}g/unit).`
+                    });
+                } else {
+                    suggestionOptions.push({
+                        type: 'market-low',
+                        label: 'Market Low',
+                        badge: 'Fastest',
+                        value: marketLowRecommendation.value,
+                        description: marketLowRecommendation.description,
+                        subtext: marketLowRecommendation.subtext
+                    });
+                }
             }
 
             if (suggestion && suggestion.suggestedPerStack !== null && hasCount) {
@@ -1092,8 +1162,8 @@ export function createAddListingIntelligenceController({
                         label: 'Market Low',
                         badge: 'Fastest',
                         value: historyOnlyRecommendations.marketLowPerStack,
-                        description: 'Fast-move floor from sales history.',
-                        subtext: `Anchored from your best historical price of ${fmt(suggestion.suggestedPerStack)}g.`
+                        description: 'Fast-move floor from normalized sales history.',
+                        subtext: `Anchored from your weighted Archives estimate of ${fmt(suggestion.suggestedPerStack)}g.`
                     });
                 }
 
@@ -1107,7 +1177,7 @@ export function createAddListingIntelligenceController({
                         badge: 'Stretch',
                         value: historyOnlyRecommendations.higherAskPerStack,
                         description: 'Higher ask from sales history.',
-                        subtext: `About 10% above your best historical anchor of ${fmt(suggestion.suggestedPerStack)}g.`
+                        subtext: `Top of the selected competitive band from ${fmt(suggestion.suggestedPerStack)}g.`
                     });
                 }
             }
