@@ -1,4 +1,4 @@
-import { getCompetitiveThresholds, classifyCompetitiveGap, getCompetitiveRiskTolerance } from './pricingBands.js';
+import { getCompetitiveThresholds, classifyCompetitiveGap, getCompetitiveCap, getCompetitiveRiskTolerance } from './pricingBands.js';
 import { fetchZoneListings, loadItemsData } from '../services/gamingToolsService.js';
 
 export async function fetchItemSalesHistoryForListing({ supabase, currentCharacterId, itemId }) {
@@ -274,7 +274,7 @@ function getMatchExistingRecommendation(activeListings, count) {
 function getCompetitivePriceRecommendation({ stackMarketLow, stackMarketAvg, suggestionValue, hasHistory }) {
     const roundedLow = Math.round(stackMarketLow);
     const thresholds = getCompetitiveThresholds(roundedLow, getCompetitiveRiskTolerance());
-    const bandCap = roundedLow + thresholds.maxGapGold;
+    const bandCap = getCompetitiveCap(roundedLow, getCompetitiveRiskTolerance());
 
     return {
         value: bandCap,
@@ -299,7 +299,7 @@ function getHistoryOnlyPriceRecommendations(hist, count) {
         ? Math.max(1, suggestedPerStack - getUndercutStep(suggestedPerStack))
         : historyAvgPerStack;
     const higherAskPerStack = suggestedPerStack !== null && thresholds
-        ? suggestedPerStack + thresholds.maxGapGold
+        ? getCompetitiveCap(suggestedPerStack, getCompetitiveRiskTolerance())
         : null;
 
     return {
@@ -994,7 +994,7 @@ function createLegacyAddListingIntelligenceController({
             const roundedStackMarketLow = Math.round(stackMarketLow);
             const riskProfile = getCompetitiveRiskTolerance();
             const thresholds = getCompetitiveThresholds(roundedStackMarketLow, riskProfile);
-            const competitiveCap = roundedStackMarketLow + thresholds.maxGapGold;
+            const competitiveCap = getCompetitiveCap(roundedStackMarketLow, riskProfile);
             const enteredGap = hasPrice ? price - roundedStackMarketLow : null;
             const enteredGapPct = (hasPrice && roundedStackMarketLow > 0) ? Math.round((enteredGap / roundedStackMarketLow) * 100) : null;
             const enteredStatus = hasPrice ? classifyCompetitiveGap(enteredGap, enteredGapPct, roundedStackMarketLow, 'leading', riskProfile).status : null;
@@ -1043,7 +1043,7 @@ function createLegacyAddListingIntelligenceController({
                         </div>
                         <div class="flex justify-between gap-2 text-sm">
                             <span class="text-gray-300">Competitive cap</span>
-                            <span class="text-white">${fmt(competitiveCap)}g <span class="text-gray-500">(+${fmt(thresholds.maxGapGold)}g)</span></span>
+                            <span class="text-white">${fmt(competitiveCap)}g <span class="text-gray-500">(+${fmt(competitiveCap - roundedStackMarketLow)}g effective)</span></span>
                         </div>
                         <div class="flex justify-between gap-2 text-sm">
                             <span class="text-gray-300">Percent limit</span>

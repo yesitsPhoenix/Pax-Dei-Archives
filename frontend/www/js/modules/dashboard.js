@@ -9,7 +9,13 @@ import {
     getMarketDataByItemNameAndQuality,
     getZoneListingsForItemByQuality
 } from '../services/gamingToolsService.js';
-import { getCompetitiveThresholds, classifyCompetitiveGap, getCompetitiveBandDisplayRows, getStackAwareMarketLow, normalizeStackGoldAmount } from './pricingBands.js';
+import {
+    classifyCompetitiveGap,
+    getStackAwareMarketLow,
+    groupStackPriceListings,
+    normalizeStackGoldAmount,
+    reconcileMarketDepth
+} from './pricingBands.js';
 
 /** Cached result of the last analyzeOwnListings() call — used to populate the modal. */
 let _lastValleyAnalysis = null;
@@ -113,19 +119,13 @@ function buildHistoricalPricingNote({ stackPrice, sellerCount, historicalStats }
     return `History context: ${historicalStats.count} sales, median ${historicalStats.median.toLocaleString(undefined, { maximumFractionDigits: 2 })}g, range ${historicalStats.min.toLocaleString(undefined, { maximumFractionDigits: 2 })}g-${historicalStats.max.toLocaleString(undefined, { maximumFractionDigits: 2 })}g`;
 }
 
-function getValleyBucketRank(bucket) {
-    if (bucket === 'leading') return 0;
-    if (bucket === 'competitive') return 1;
-    return 2;
-}
-
 function buildCompetitiveChip(competitiveCount) {
     if (competitiveCount <= 0) return '';
     return `<span class="inline-flex items-center gap-1.5 bg-emerald-900/40 border border-emerald-500/40 rounded-full px-3 py-1 text-sm">
                 <i class="fas fa-handshake text-emerald-400 text-xs"></i>
                 <span class="text-white font-semibold">Competitive</span>
                 <span class="text-emerald-300 font-bold">${competitiveCount}</span>
-                <span class="text-white">${competitiveCount === 1 ? 'item' : 'items'}</span>
+                <span class="text-white">${competitiveCount === 1 ? 'stack' : 'stacks'}</span>
             </span>`;
 }
 
@@ -687,23 +687,27 @@ export function renderMarketPulse(zoneSummary, ownSummary, character, loading = 
         _lastValleyAnalysis = reconcileValleyBuckets(analysis);
         const { leading, competitive, undercut, valleySharePct, valleyShareAvailable, totalOwnListings, totalValleyListings, shareStatus } = _lastValleyAnalysis;
 
-        const leadingChip = leading.length > 0
+        const leadingCount = leading.reduce((sum, row) => sum + Number(row.yourCount || 0), 0);
+        const competitiveCount = competitive.reduce((sum, row) => sum + Number(row.yourCount || 0), 0);
+        const undercutCount = undercut.reduce((sum, row) => sum + Number(row.yourCount || 0), 0);
+
+        const leadingChip = leadingCount > 0
             ? `<span class="inline-flex items-center gap-1.5 bg-blue-900/40 border border-blue-500/40 rounded-full px-3 py-1 text-sm">
                    <i class="fas fa-arrow-trend-down text-blue-400 text-xs"></i>
                    <span class="text-white font-semibold">Below Market</span>
-                   <span class="text-blue-300 font-bold">${leading.length}</span>
-                   <span class="text-white">${leading.length === 1 ? 'item' : 'items'}</span>
+                   <span class="text-blue-300 font-bold">${leadingCount}</span>
+                   <span class="text-white">${leadingCount === 1 ? 'stack' : 'stacks'}</span>
                </span>`
             : '';
 
-        const competitiveChip = buildCompetitiveChip(competitive.length);
+        const competitiveChip = buildCompetitiveChip(competitiveCount);
 
-        const undercutChip = undercut.length > 0
+        const undercutChip = undercutCount > 0
             ? `<span class="inline-flex items-center gap-1.5 bg-rose-900/40 border border-rose-500/40 rounded-full px-3 py-1 text-sm">
                    <i class="fas fa-arrow-trend-up text-rose-400 text-xs"></i>
                    <span class="text-white font-semibold">Above Market</span>
-                   <span class="text-rose-300 font-bold">${undercut.length}</span>
-                   <span class="text-white">${undercut.length === 1 ? 'item' : 'items'}</span>
+                   <span class="text-rose-300 font-bold">${undercutCount}</span>
+                   <span class="text-white">${undercutCount === 1 ? 'stack' : 'stacks'}</span>
                </span>`
             : `<span class="inline-flex items-center gap-1.5 bg-slate-700/40 border border-slate-500/40 rounded-full px-3 py-1 text-sm">
                    <i class="fas fa-check text-gray-400 text-xs"></i>
@@ -845,13 +849,21 @@ async function buildValleyAnalysisFromSupabase() {
                 own.enchantmentTier
             );
 
-            let bestListingSummary = null;
+            const ownPriceGroups = groupStackPriceListings(own.listings);
 
-            for (const listing of own.listings) {
+            for (const listing of ownPriceGroups) {
                 const exactStackListings = marketVariantListings.filter(marketListing =>
                     Math.max(Number(marketListing.quantity) || 1, 1) === listing.stackSize
                 );
-                const matchingMarketListings = exactStackListings.length > 0 ? exactStackListings : marketVariantListings;
+                const externalExactListings = avatarHash
+                    ? exactStackListings.filter(marketListing => marketListing.avatar_hash !== avatarHash)
+                    : exactStackListings;
+                const externalVariantListings = avatarHash
+                    ? marketVariantListings.filter(marketListing => marketListing.avatar_hash !== avatarHash)
+                    : marketVariantListings;
+                const matchingMarketListings = externalExactListings.length > 0
+                    ? externalExactListings
+                    : externalVariantListings;
                 const sellerCount = new Set(
                     matchingMarketListings
                         .map(marketListing => marketListing.avatar_hash)
@@ -871,9 +883,11 @@ async function buildValleyAnalysisFromSupabase() {
                     salesByHistoryKey[buildHistoryKey(own.itemId, own.isMastercrafted, own.enchantmentTier, listing.stackSize)] || []
                 );
                 const yourCountForSize = own.listings.filter(ownListing => ownListing.stackSize === listing.stackSize).length;
-                const totalCount = exactStackListings.length > 0
-                    ? exactStackListings.length
-                    : (mktData?.totalListings ?? matchingMarketListings.length ?? own.count);
+                const totalCount = reconcileMarketDepth({
+                    externalExactCount: externalExactListings.length,
+                    externalVariantCount: externalVariantListings.length,
+                    ownComparableCount: yourCountForSize
+                });
                 const summaryRow = {
                     itemId: own.itemId,
                     itemName: own.itemName,
@@ -882,7 +896,8 @@ async function buildValleyAnalysisFromSupabase() {
                     enchantmentTier: own.enchantmentTier,
                     qualityLabel: own.qualityLabel,
                     yourLow: displayYourLow,
-                    yourCount: yourCountForSize,
+                    yourCount: listing.count,
+                    yourComparableCount: yourCountForSize,
                     totalCount,
                     sellerCount,
                     stackSize: listing.stackSize,
@@ -893,15 +908,13 @@ async function buildValleyAnalysisFromSupabase() {
                 };
 
                 if (displayMarketLow === null) {
-                    bestListingSummary = { bucket: 'leading', sortGap: 0, row: { ...summaryRow, marketLow: displayYourLow, noGtData: true } };
-                    break;
-                }
-
-                if (displayYourLow < displayMarketLow) {
-                    const candidate = { bucket: 'leading', sortGap: 0, row: summaryRow };
-                    if (!bestListingSummary || bestListingSummary.bucket !== 'leading' || displayYourLow < bestListingSummary.row.yourLow) {
-                        bestListingSummary = candidate;
-                    }
+                    competitive.push({
+                        ...summaryRow,
+                        marketLow: displayYourLow,
+                        gap: 0,
+                        gapPct: 0,
+                        noGtData: true
+                    });
                     continue;
                 }
 
@@ -913,47 +926,32 @@ async function buildValleyAnalysisFromSupabase() {
                     sellerCount,
                     historicalStats
                 });
-                const candidate = {
-                    bucket,
-                    sortGap: gapPct,
-                    row: {
-                        ...summaryRow,
-                        gap,
-                        gapPct,
-                        competitiveThresholds: thresholds,
-                        historyNote
-                    }
+                const row = {
+                    ...summaryRow,
+                    gap,
+                    gapPct,
+                    competitiveThresholds: thresholds,
+                    historyNote
                 };
 
-                const currentRank = bestListingSummary ? getValleyBucketRank(bestListingSummary.bucket) : Infinity;
-                const candidateRank = getValleyBucketRank(candidate.bucket);
-
-                if (
-                    !bestListingSummary ||
-                    candidateRank < currentRank ||
-                    (candidateRank === currentRank && gapPct < bestListingSummary.sortGap)
-                ) {
-                    bestListingSummary = candidate;
+                if (bucket === 'leading') {
+                    leading.push(row);
+                } else if (bucket === 'competitive') {
+                    competitive.push(row);
+                } else {
+                    undercut.push(row);
                 }
-            }
-
-            if (!bestListingSummary) continue;
-
-            if (bestListingSummary.bucket === 'leading') {
-                leading.push(bestListingSummary.row);
-            } else if (bestListingSummary.bucket === 'competitive') {
-                competitive.push(bestListingSummary.row);
-            } else {
-                undercut.push(bestListingSummary.row);
             }
         }
 
-        undercut.sort((a, b) => b.gap - a.gap);
-        competitive.sort((a, b) => a.gapPct - b.gapPct || a.gap - b.gap);
-        leading.sort((a, b) =>
+        const sortRows = (a, b) =>
             a.itemName.localeCompare(b.itemName) ||
-            a.qualityLabel.localeCompare(b.qualityLabel)
-        );
+            a.qualityLabel.localeCompare(b.qualityLabel) ||
+            a.stackSize - b.stackSize ||
+            a.yourLow - b.yourLow;
+        undercut.sort(sortRows);
+        competitive.sort(sortRows);
+        leading.sort(sortRows);
 
         // Valley share uses gaming.tools avatar-hash data (best available for total count)
         const gtAnalysis = avatarHash ? analyzeOwnListings(avatarHash) : null;
@@ -977,6 +975,188 @@ async function buildValleyAnalysisFromSupabase() {
  * against gaming.tools market data for Market Low / total counts.
  */
 export async function openValleyPresenceModal() {
+    const modal = document.getElementById('valleyPresenceModal');
+    const body = document.getElementById('valleyPresenceModalBody');
+    if (!modal || !body) return;
+
+    modal.classList.remove('hidden');
+    body.innerHTML = '<p class="text-gray-400 text-sm flex items-center gap-2"><i class="fas fa-spinner fa-spin"></i> Loading your listings…</p>';
+
+    const analysis = await buildValleyAnalysisFromSupabase();
+    if (!analysis) {
+        body.innerHTML = '<p class="text-gray-400 text-sm">No active listings found for this character.</p>';
+        return;
+    }
+
+    _lastValleyAnalysis = reconcileValleyBuckets(analysis);
+    const {
+        leading,
+        competitive,
+        undercut,
+        valleySharePct,
+        totalOwnListings,
+        totalValleyListings,
+        valleyShareAvailable,
+        shareStatus
+    } = _lastValleyAnalysis;
+    const fmt = (n) => typeof n === 'number'
+        ? n.toLocaleString(undefined, { maximumFractionDigits: 2 })
+        : '—';
+    const fmtG = (n) => `${fmt(n)}g`;
+    const stackCount = (rows) => rows.reduce((sum, row) => sum + Number(row.yourCount || 0), 0);
+    const leadingStacks = stackCount(leading);
+    const competitiveStacks = stackCount(competitive);
+    const aboveStacks = stackCount(undercut);
+    const shareChip = buildValleyShareChip({
+        valleyShareAvailable,
+        valleySharePct,
+        totalOwnListings,
+        totalValleyListings,
+        shareStatus
+    });
+    const rows = [
+        ...undercut.map(row => ({ ...row, status: 'above' })),
+        ...competitive.map(row => ({ ...row, status: 'competitive' })),
+        ...leading.map(row => ({ ...row, status: 'below' }))
+    ].sort((a, b) =>
+        a.itemName.localeCompare(b.itemName) ||
+        a.qualityLabel.localeCompare(b.qualityLabel) ||
+        a.stackSize - b.stackSize ||
+        a.yourLow - b.yourLow
+    );
+
+    const statusPresentation = {
+        above: {
+            label: 'Above market',
+            badge: 'bg-rose-900/35 border-rose-500/40 text-rose-200',
+            price: 'text-rose-300'
+        },
+        competitive: {
+            label: 'Competitive',
+            badge: 'bg-emerald-900/35 border-emerald-500/40 text-emerald-200',
+            price: 'text-emerald-300'
+        },
+        below: {
+            label: 'Below market',
+            badge: 'bg-blue-900/35 border-blue-500/40 text-blue-200',
+            price: 'text-blue-300'
+        }
+    };
+
+    body.innerHTML = `
+        <div class="valley-presence-workspace">
+            <div class="flex flex-wrap gap-2">
+                ${shareChip}
+                <span class="inline-flex items-center gap-1.5 bg-blue-900/40 border border-blue-500/40 rounded-full px-3 py-1 text-sm">
+                    <i class="fas fa-arrow-trend-down text-blue-400 text-xs"></i>
+                    <span class="text-white">Below Market <strong class="text-blue-300">${leadingStacks}</strong> stack${leadingStacks !== 1 ? 's' : ''}</span>
+                </span>
+                <span class="inline-flex items-center gap-1.5 bg-emerald-900/40 border border-emerald-500/40 rounded-full px-3 py-1 text-sm">
+                    <i class="fas fa-handshake text-emerald-400 text-xs"></i>
+                    <span class="text-white">Competitive <strong class="text-emerald-300">${competitiveStacks}</strong> stack${competitiveStacks !== 1 ? 's' : ''}</span>
+                </span>
+                <span class="inline-flex items-center gap-1.5 bg-rose-900/40 border border-rose-500/40 rounded-full px-3 py-1 text-sm">
+                    <i class="fas fa-arrow-trend-up text-rose-400 text-xs"></i>
+                    <span class="text-white">Above Market <strong class="text-rose-300">${aboveStacks}</strong> stack${aboveStacks !== 1 ? 's' : ''}</span>
+                </span>
+            </div>
+
+            <div class="valley-presence-toolbar">
+                <div>
+                    <label for="valleyPresenceSearch">Item</label>
+                    <input id="valleyPresenceSearch" type="search" placeholder="Search active listings…" autocomplete="off">
+                </div>
+                <div>
+                    <label for="valleyPresenceStatusFilter">Pricing Status</label>
+                    <select id="valleyPresenceStatusFilter">
+                        <option value="">All pricing statuses</option>
+                        <option value="above">Above market</option>
+                        <option value="competitive">Competitive</option>
+                        <option value="below">Below market</option>
+                    </select>
+                </div>
+                <p><strong>${fmt(totalOwnListings)}</strong> current Ledger stacks. Feed-owned rows are replaced with the current Ledger state before market depth is calculated.</p>
+            </div>
+
+            <div class="valley-presence-table-scroll">
+                <table class="valley-presence-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Status</th>
+                            <th class="text-right">Stack Size</th>
+                            <th class="text-right">Your Price</th>
+                            <th class="text-right">Market Low</th>
+                            <th class="text-right">Gap</th>
+                            <th class="text-right">Your Stacks</th>
+                            <th class="text-right">Market Depth</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.map(item => {
+                            const presentation = statusPresentation[item.status];
+                            const gapText = item.gap < 0
+                                ? `${fmtG(Math.abs(item.gap))} below`
+                                : item.gap > 0
+                                    ? `+${fmtG(item.gap)} (+${item.gapPct}%)`
+                                    : 'Matches floor';
+                            const searchValue = `${item.itemName} ${item.qualityLabel || ''} ${item.stackSize}`.toLowerCase();
+                            return `
+                                <tr data-valley-status="${item.status}" data-valley-search="${searchValue.replace(/"/g, '&quot;')}">
+                                    <td>${renderValleyItemLabel(item)}</td>
+                                    <td><span class="valley-status-pill ${presentation.badge}">${presentation.label}</span></td>
+                                    <td class="text-right">${fmt(item.stackSize)}</td>
+                                    <td class="text-right font-bold ${presentation.price}">${fmtG(item.yourLow)}</td>
+                                    <td class="text-right text-emerald-300">${fmtG(item.marketLow)}</td>
+                                    <td class="text-right text-gray-300">${gapText}</td>
+                                    <td class="text-right text-white font-semibold">${fmt(item.yourCount)}</td>
+                                    <td class="text-right text-gray-300">${fmt(item.totalCount)}</td>
+                                    <td class="text-right">
+                                        <button class="valley-edit-btn inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white rounded-full border border-blue-400/40 transition-colors"
+                                            data-item-name="${item.itemName.replace(/"/g, '&quot;')}"
+                                            data-item-id="${item.itemId}"
+                                            data-is-mastercrafted="${item.isMastercrafted ? 'true' : 'false'}"
+                                            data-enchantment-tier="${item.enchantmentTier}">
+                                            <i class="fas fa-pen text-xs"></i> Edit
+                                        </button>
+                                    </td>
+                                </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+                <div id="valleyPresenceEmptyFilter" class="hidden text-center text-gray-400 text-sm py-10">No listings match these filters.</div>
+            </div>
+            <p class="text-gray-500 text-xs italic">Gaming.tools market data updates hourly. Your current Ledger stacks are reconciled immediately and may temporarily exceed the hourly feed total.</p>
+        </div>`;
+
+    const applyFilters = () => {
+        const search = (body.querySelector('#valleyPresenceSearch')?.value || '').trim().toLowerCase();
+        const status = body.querySelector('#valleyPresenceStatusFilter')?.value || '';
+        let visibleCount = 0;
+        body.querySelectorAll('tbody tr[data-valley-status]').forEach(row => {
+            const matchesSearch = !search || (row.dataset.valleySearch || '').includes(search);
+            const matchesStatus = !status || row.dataset.valleyStatus === status;
+            row.classList.toggle('hidden', !(matchesSearch && matchesStatus));
+            if (matchesSearch && matchesStatus) visibleCount++;
+        });
+        body.querySelector('#valleyPresenceEmptyFilter')?.classList.toggle('hidden', visibleCount > 0);
+    };
+    body.querySelector('#valleyPresenceSearch')?.addEventListener('input', applyFilters);
+    body.querySelector('#valleyPresenceStatusFilter')?.addEventListener('change', applyFilters);
+    body.querySelectorAll('.valley-edit-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            showValleyItemEditModal(
+                btn.dataset.itemName,
+                parseInt(btn.dataset.itemId || '', 10),
+                btn.dataset.isMastercrafted === 'true',
+                normalizeEnchantmentTier(btn.dataset.enchantmentTier)
+            );
+        });
+    });
+}
+
+async function openValleyPresenceModalLegacy() {
     const modal = document.getElementById('valleyPresenceModal');
     const body  = document.getElementById('valleyPresenceModalBody');
     if (!modal || !body) return;

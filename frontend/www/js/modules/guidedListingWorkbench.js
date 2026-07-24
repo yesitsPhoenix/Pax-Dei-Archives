@@ -9,6 +9,8 @@ import {
 import {
     COMPETITIVE_RISK_PROFILES,
     classifyCompetitiveGap,
+    getCompetitiveBandDisplayRows,
+    getCompetitiveCap,
     getCompetitiveRiskTolerance,
     getCompetitiveThresholds,
     setCompetitiveRiskTolerance
@@ -296,7 +298,7 @@ function renderPricingVisuals({ selectedItem, marketData, referenceFloor, histor
         : referenceFloor?.value || rawStackPrices[0] || null;
     const riskProfile = getCompetitiveRiskTolerance();
     const competitiveCap = marketLowStack
-        ? Math.round(marketLowStack) + getCompetitiveThresholds(Math.round(marketLowStack), riskProfile).maxGapGold
+        ? getCompetitiveCap(Math.round(marketLowStack), riskProfile)
         : null;
     const depthCap = competitiveCap || (marketLowStack ? Math.round(marketLowStack * 1.3) : null);
     const stackPrices = rawStackPrices
@@ -336,7 +338,7 @@ function renderPricingVisuals({ selectedItem, marketData, referenceFloor, histor
             ? 'Lowest matching active Ledger listing.'
             : 'No live floor; using Archives sales signal.';
     const weightedOption = weightedSaleStack ? Math.round(weightedSaleStack) : null;
-    const competitiveOption = roundedFloor && thresholds ? roundedFloor + thresholds.maxGapGold : null;
+    const competitiveOption = roundedFloor && thresholds ? getCompetitiveCap(roundedFloor, riskProfile) : null;
     const suggestedOption = roundedFloor && competitiveOption
         ? Math.min(Math.max(weightedOption || roundedFloor, roundedFloor), competitiveOption)
         : weightedOption;
@@ -475,7 +477,7 @@ function renderCompetitivePricing({ selectedItem, marketData, referenceFloor, hi
         ? Math.round(marketData.marketLow * count)
         : referenceFloor?.value || null;
     const thresholds = stackFloor ? getCompetitiveThresholds(stackFloor, riskProfile) : null;
-    const cap = thresholds ? stackFloor + thresholds.maxGapGold : null;
+    const cap = thresholds ? getCompetitiveCap(stackFloor, riskProfile) : null;
     const enteredGap = price > 0 && stackFloor ? price - stackFloor : null;
     const enteredGapPct = enteredGap !== null && stackFloor > 0 ? Math.round((enteredGap / stackFloor) * 100) : null;
     const enteredStatus = enteredGap !== null
@@ -612,6 +614,57 @@ function renderConfig({ selectedItem, marketData, referenceFloor, activeListings
                             ? 'Archives weighted sales estimate'
                             : 'No live or Archives floor';
     const thresholds = stackFloor ? getCompetitiveThresholds(stackFloor, currentProfile) : null;
+    const competitiveCap = stackFloor ? getCompetitiveCap(stackFloor, currentProfile) : null;
+    const selectedGap = stackFloor && formState.price > 0 ? formState.price - stackFloor : null;
+    const selectedGapPct = selectedGap !== null && stackFloor > 0
+        ? Math.round((selectedGap / stackFloor) * 100)
+        : null;
+    const selectedStatus = selectedGap !== null
+        ? classifyCompetitiveGap(selectedGap, selectedGapPct, stackFloor, 'leading', currentProfile).status
+        : null;
+    const statusLabels = {
+        leading: 'Below market',
+        competitive: 'Competitive',
+        undercut: 'Above market'
+    };
+    const statusClasses = {
+        leading: 'text-blue-300',
+        competitive: 'text-emerald-300',
+        undercut: 'text-rose-300'
+    };
+    const dynamicExamples = stackFloor && competitiveCap
+        ? [
+            stackFloor > 1
+                ? {
+                    label: 'Below market',
+                    price: stackFloor - 1,
+                    status: classifyCompetitiveGap(-1, Math.round((-1 / stackFloor) * 100), stackFloor, 'leading', currentProfile).status
+                }
+                : null,
+            {
+                label: 'Top competitive price',
+                price: competitiveCap,
+                status: classifyCompetitiveGap(
+                    competitiveCap - stackFloor,
+                    Math.round(((competitiveCap - stackFloor) / stackFloor) * 100),
+                    stackFloor,
+                    'leading',
+                    currentProfile
+                ).status
+            },
+            {
+                label: 'First above-market price',
+                price: competitiveCap + 1,
+                status: classifyCompetitiveGap(
+                    competitiveCap + 1 - stackFloor,
+                    Math.round(((competitiveCap + 1 - stackFloor) / stackFloor) * 100),
+                    stackFloor,
+                    'leading',
+                    currentProfile
+                ).status
+            }
+        ].filter(Boolean)
+        : [];
 
     target.innerHTML = `
         <div class="workbench-config-shell">
@@ -648,8 +701,36 @@ function renderConfig({ selectedItem, marketData, referenceFloor, activeListings
                 </div>
                 <div>
                     <span>Competitive cap</span>
-                    <strong>${stackFloor && thresholds ? `${fmt(stackFloor + thresholds.maxGapGold)}g` : '--'}</strong>
+                    <strong>${competitiveCap ? `${fmt(competitiveCap)}g` : '--'}</strong>
+                    <small>${competitiveCap && stackFloor ? `Effective +${fmt(competitiveCap - stackFloor)}g; the lower of the gold and percentage limits wins.` : ''}</small>
                 </div>
+            </div>
+            <div class="pricing-judgment-grid">
+                <div class="pricing-judgment-card">
+                    <span>How pricing is judged</span>
+                    <h4>Both limits must pass</h4>
+                    <p>Archives first resolves the best stack-size-aware floor for the selected item and quality. A price is competitive only when both its gold gap and percentage gap remain inside the selected tolerance.</p>
+                    <ul>
+                        ${getCompetitiveBandDisplayRows().map(row => `<li>${escapeHtml(row)}</li>`).join('')}
+                    </ul>
+                </div>
+                <div class="pricing-judgment-card">
+                    <span>Current selection</span>
+                    <h4>${selectedItem ? `${escapeHtml(selectedItem.item_name)} · ${fmt(formState.count || 0)} count` : 'Select an item and stack size'}</h4>
+                    ${selectedStatus
+                        ? `<p>Your ${fmt(formState.price)}g price is <strong class="${statusClasses[selectedStatus]}">${statusLabels[selectedStatus]}</strong> against a ${fmt(stackFloor)}g floor: ${selectedGap > 0 ? '+' : ''}${fmt(selectedGap)}g (${selectedGapPct > 0 ? '+' : ''}${fmt(selectedGapPct)}%).</p>`
+                        : '<p>Enter a price to see the exact classification, gap, and active tolerance applied to this listing.</p>'}
+                    <p class="mt-2">Quality: <strong>${escapeHtml(qualityLabel(formState.isMastercrafted, formState.enchantmentTier))}</strong>. Profile: <strong>${escapeHtml(COMPETITIVE_RISK_PROFILES[currentProfile]?.label || currentProfile)}</strong>.</p>
+                </div>
+            </div>
+            <div class="pricing-dynamic-examples">
+                ${dynamicExamples.map(example => `
+                    <div>
+                        <span>${escapeHtml(example.label)}</span>
+                        <strong>${fmt(example.price)}g</strong>
+                        <small class="${statusClasses[example.status]}">${statusLabels[example.status]}</small>
+                    </div>
+                `).join('') || '<div class="listing-workbench-empty">Select an item and stack size to generate live examples from its current floor.</div>'}
             </div>
         </div>
     `;

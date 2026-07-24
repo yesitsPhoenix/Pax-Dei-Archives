@@ -77,11 +77,28 @@ export function getCompetitiveThresholds(marketLowStack, profile = getCompetitiv
 
 export function classifyCompetitiveGap(gap, gapPct, marketLowStack, leadingLabel = 'leading', profile = getCompetitiveRiskTolerance()) {
     const thresholds = getCompetitiveThresholds(marketLowStack, profile);
+    const exactGapPct = marketLowStack > 0
+        ? (gap / marketLowStack) * 100
+        : gapPct;
     const status = gap < -0.001
         ? leadingLabel
-        : (gap <= thresholds.maxGapGold && gapPct <= thresholds.maxGapPct ? 'competitive' : 'undercut');
+        : (
+            gap <= thresholds.maxGapGold + Number.EPSILON &&
+            exactGapPct <= thresholds.maxGapPct + 1e-9
+                ? 'competitive'
+                : 'undercut'
+        );
 
-    return { status, thresholds };
+    return { status, thresholds, exactGapPct };
+}
+
+export function getCompetitiveCap(marketLowStack, profile = getCompetitiveRiskTolerance()) {
+    const floor = normalizeStackGoldAmount(marketLowStack);
+    if (!(floor > 0)) return null;
+    const thresholds = getCompetitiveThresholds(floor, profile);
+    const percentageGap = floor * (thresholds.maxGapPct / 100);
+    const effectiveGap = Math.min(thresholds.maxGapGold, percentageGap);
+    return Math.floor(floor + effectiveGap + Number.EPSILON);
 }
 
 function getListingUnitPrice(listing) {
@@ -96,9 +113,36 @@ export function normalizeStackGoldAmount(amount) {
     return Number.isFinite(numericAmount) ? Math.round(numericAmount) : null;
 }
 
+export function groupStackPriceListings(listings = []) {
+    const groups = new Map();
+    for (const listing of listings) {
+        const stackSize = Math.max(Number(listing?.stackSize) || 1, 1);
+        const stackPrice = normalizeStackGoldAmount(listing?.stackPrice) ?? 0;
+        const key = `${stackSize}|${stackPrice}`;
+        if (!groups.has(key)) {
+            groups.set(key, {
+                ...listing,
+                stackSize,
+                stackPrice,
+                count: 0
+            });
+        }
+        groups.get(key).count += 1;
+    }
+    return [...groups.values()];
+}
+
+export function reconcileMarketDepth({ externalExactCount = 0, externalVariantCount = 0, ownComparableCount = 0 } = {}) {
+    const externalCount = externalExactCount > 0 ? externalExactCount : externalVariantCount;
+    return Math.max(Number(externalCount) || 0, 0) + Math.max(Number(ownComparableCount) || 0, 0);
+}
+
 export function getStackAwareMarketLow({ exactStackListings = [], marketVariantListings = [], mktData = null, stackSize, stackPrice, avatarHash = null }) {
-    if (exactStackListings.length > 0) {
-        return normalizeStackGoldAmount(Math.min(...exactStackListings.map(marketListing => Number(marketListing.price) || 0)));
+    const externalExactListings = avatarHash
+        ? exactStackListings.filter(marketListing => marketListing.avatar_hash !== avatarHash)
+        : exactStackListings;
+    if (externalExactListings.length > 0) {
+        return normalizeStackGoldAmount(Math.min(...externalExactListings.map(marketListing => Number(marketListing.price) || 0)));
     }
 
     const externalListings = avatarHash

@@ -1005,6 +1005,176 @@
             line-height: 1.3;
         }
 
+        .pricing-judgment-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.75rem;
+        }
+
+        .pricing-judgment-card {
+            padding: 0.9rem;
+            border: 1px solid rgba(56, 189, 248, 0.22);
+            border-radius: 0.75rem;
+            background: rgba(15, 23, 42, 0.28);
+        }
+
+        .pricing-judgment-card > span,
+        .pricing-dynamic-examples span {
+            display: block;
+            color: #7dd3fc;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .pricing-judgment-card h4 {
+            margin: 0.3rem 0 0.45rem;
+            color: #f8fafc;
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+
+        .pricing-judgment-card p,
+        .pricing-judgment-card li {
+            color: #cbd5e1;
+            font-size: 0.76rem;
+            line-height: 1.5;
+        }
+
+        .pricing-judgment-card ul {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.2rem 1rem;
+            margin-top: 0.65rem;
+            padding-left: 1rem;
+            list-style: disc;
+        }
+
+        .pricing-dynamic-examples {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.75rem;
+        }
+
+        .pricing-dynamic-examples > div {
+            padding: 0.85rem;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            border-radius: 0.7rem;
+            background: rgba(15, 23, 42, 0.24);
+        }
+
+        .pricing-dynamic-examples strong {
+            display: block;
+            margin: 0.3rem 0 0.2rem;
+            color: #f8fafc;
+            font-size: 1.15rem;
+        }
+
+        .pricing-dynamic-examples small {
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
+
+        .valley-presence-workspace {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            height: 100%;
+            min-height: 0;
+        }
+
+        .valley-presence-toolbar {
+            display: grid;
+            grid-template-columns: minmax(220px, 1fr) minmax(220px, 0.55fr) minmax(280px, 1.25fr);
+            gap: 0.85rem;
+            align-items: end;
+        }
+
+        .valley-presence-toolbar label {
+            display: block;
+            margin-bottom: 0.3rem;
+            color: #fbbf24;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .valley-presence-toolbar input,
+        .valley-presence-toolbar select {
+            width: 100%;
+            padding: 0.62rem 0.75rem;
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            border-radius: 0.65rem;
+            color: #f8fafc;
+            background: #334155;
+        }
+
+        .valley-presence-toolbar p {
+            margin: 0;
+            color: #94a3b8;
+            font-size: 0.78rem;
+            line-height: 1.45;
+        }
+
+        .valley-presence-toolbar p strong {
+            color: #f8fafc;
+        }
+
+        .valley-presence-table-scroll {
+            min-height: 0;
+            flex: 1;
+            overflow: auto;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            border-radius: 0.75rem;
+            background: rgba(15, 23, 42, 0.22);
+        }
+
+        .valley-presence-table {
+            width: 100%;
+            min-width: 1050px;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .valley-presence-table th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            padding: 0.72rem 0.8rem;
+            color: #94a3b8;
+            background: #1e293b;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-align: left;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .valley-presence-table td {
+            padding: 0.72rem 0.8rem;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+            font-size: 0.82rem;
+            vertical-align: middle;
+        }
+
+        .valley-presence-table tbody tr:hover {
+            background: rgba(51, 65, 85, 0.42);
+        }
+
+        .valley-status-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.22rem 0.5rem;
+            border-width: 1px;
+            border-radius: 999px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
         @media (max-width: 1180px) {
             .listing-pricing-visuals,
             .listing-strategy-grid,
@@ -1012,7 +1182,13 @@
             .competitive-grid,
             .competitive-price-options,
             .workbench-risk-toggle,
-            .workbench-config-read {
+            .workbench-config-read,
+            .pricing-judgment-grid,
+            .pricing-dynamic-examples {
+                grid-template-columns: 1fr;
+            }
+
+            .valley-presence-toolbar {
                 grid-template-columns: 1fr;
             }
         }
@@ -1313,8 +1489,8 @@
 
             <!-- Quick Guide Modal -->
             <!-- Valley Presence Modal -->
-            <div id="valleyPresenceModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center hidden" style="z-index:10000">
-                <div class="bg-gradient-to-br from-slate-800 to-slate-900 border border-emerald-500/30 rounded-2xl shadow-2xl w-full max-w-6xl mx-4 p-6 max-h-[85vh] flex flex-col">
+            <div id="valleyPresenceModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center hidden p-4" style="z-index:10000">
+                <div class="valley-presence-modal-shell bg-gradient-to-br from-slate-800 to-slate-900 border border-emerald-500/30 rounded-2xl shadow-2xl w-full max-w-[1680px] h-[calc(100vh-2rem)] p-6 flex flex-col">
                     <div class="flex items-start justify-between mb-4 flex-shrink-0">
                         <div class="flex items-center gap-2">
                             <i class="fas fa-store text-emerald-400 text-xl"></i>
@@ -1322,7 +1498,7 @@
                         </div>
                         <button id="valleyPresenceModalClose" class="text-gray-400 hover:text-white transition-colors text-xl leading-none">&times;</button>
                     </div>
-                    <div id="valleyPresenceModalBody" class="overflow-y-auto flex-1 pr-1"></div>
+                    <div id="valleyPresenceModalBody" class="flex-1 min-h-0 overflow-hidden"></div>
                     <div class="mt-5 flex justify-end flex-shrink-0">
                         <button id="valleyPresenceModalClose2" class="bg-slate-600 hover:bg-slate-500 text-gray-300 px-5 py-2 rounded-lg text-sm transition-all duration-200">Close</button>
                     </div>
