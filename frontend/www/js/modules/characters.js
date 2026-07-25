@@ -5,6 +5,7 @@ import { loadTransactionHistory, } from './sales.js';
 import { renderSalesChart } from './salesChart.js';
 import { createDefaultMarketStall } from './actions.js';
 import { PVE_TRANSACTION_SOURCES } from './pveTransactions.js';
+import { authSession } from '../authSessionManager.js';
 
 const characterSelect = document.getElementById('character-select');
 let createCharacterModal = null;
@@ -196,7 +197,7 @@ export const loadCharacters = async (onCharacterSelectedCallback) => {
         currentCharacterId = null;
         _currentCharacter = null; 
         setCurrentCharacterGold(0);
-        sessionStorage.removeItem('active_character_id');
+        authSession.clearActiveCharacterId(currentUserId);
         if (deleteCharacterBtn) deleteCharacterBtn.style.display = 'none';
         if (setGoldBtn) setGoldBtn.style.display = 'none';
         if (pveBtn) pveBtn.style.display = 'none';
@@ -213,14 +214,15 @@ export const loadCharacters = async (onCharacterSelectedCallback) => {
             characterSelect.appendChild(option);
         });
 
-        // Check sessionStorage first to maintain consistency across pages
-        const sessionCharId = sessionStorage.getItem('active_character_id');
+        // Use the shared, per-user preference to maintain consistency across
+        // pages and browser sessions.
+        const sessionCharId = authSession.getActiveCharacterId(currentUserId);
         
         if (sessionCharId && characters.some(char => char.character_id === sessionCharId)) {
             currentCharacterId = sessionCharId;
         } else if (!currentCharacterId || !characters.some(char => char.character_id === currentCharacterId)) {
             currentCharacterId = characters[0].character_id;
-            sessionStorage.setItem('active_character_id', currentCharacterId);
+            authSession.setActiveCharacterId(currentCharacterId, currentUserId);
         }
         
         characterSelect.value = currentCharacterId;
@@ -254,7 +256,7 @@ const hideAddPveTransactionModal = () => {
 
 const handleCharacterSelection = async (event) => {
     currentCharacterId = event.target.value;
-    sessionStorage.setItem('active_character_id', currentCharacterId);
+    authSession.setActiveCharacterId(currentCharacterId, currentUserId);
     _currentCharacter = cachedUserCharacters.find(char => char.character_id === currentCharacterId);
     if (_currentCharacter) {
         setCurrentCharacterGold(_currentCharacter.gold);
@@ -467,7 +469,7 @@ const handleCreateCharacter = async (e) => {
 
   const newCharacter = data[0];
   currentCharacterId = newCharacter.character_id;
-  sessionStorage.setItem('active_character_id', newCharacter.character_id);
+  authSession.setActiveCharacterId(newCharacter.character_id, currentUserId);
   _currentCharacter = newCharacter;
   setCurrentCharacterGold(newCharacter.gold);
   cachedUserCharacters.push(newCharacter);
@@ -643,9 +645,9 @@ export const handleDeleteCharacter = async (characterIdParam = null) => {
         cachedUserCharacters = cachedUserCharacters.filter(char => char.character_id !== characterId);
         _currentCharacter = null;
         
-        // Clear sessionStorage if we deleted the active character
-        if (sessionStorage.getItem('active_character_id') === characterId) {
-            sessionStorage.removeItem('active_character_id');
+        // Clear the shared preference if we deleted the active character.
+        if (authSession.getActiveCharacterId(currentUserId) === characterId) {
+            authSession.clearActiveCharacterId(currentUserId);
         }
 
         await loadCharacters(loadTraderPageData);

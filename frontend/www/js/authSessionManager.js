@@ -70,9 +70,56 @@ class AuthSessionManager {
         return await this._pendingInit;
     }
 
+    /**
+     * Return the user's last selected character.
+     *
+     * The durable value is scoped to the user so two accounts using the same
+     * browser cannot overwrite one another. The session value is retained as a
+     * compatibility mirror for older pages and is migrated on first read.
+     */
+    getActiveCharacterId(userId = this._currentUserId) {
+        if (!userId) return sessionStorage.getItem('active_character_id');
+
+        const storageKey = this._activeCharacterStorageKey(userId);
+        const persistedId = localStorage.getItem(storageKey);
+        if (persistedId) {
+            sessionStorage.setItem('active_character_id', persistedId);
+            return persistedId;
+        }
+
+        const sessionId = sessionStorage.getItem('active_character_id');
+        if (sessionId) localStorage.setItem(storageKey, sessionId);
+        return sessionId;
+    }
+
+    /**
+     * Persist the selected character across pages and browser sessions.
+     */
+    setActiveCharacterId(characterId, userId = this._currentUserId) {
+        if (!characterId) return;
+        sessionStorage.setItem('active_character_id', characterId);
+        if (userId) {
+            localStorage.setItem(this._activeCharacterStorageKey(userId), characterId);
+        }
+    }
+
+    /**
+     * Forget a character preference, for example after deleting that character.
+     */
+    clearActiveCharacterId(userId = this._currentUserId) {
+        sessionStorage.removeItem('active_character_id');
+        if (userId) {
+            localStorage.removeItem(this._activeCharacterStorageKey(userId));
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────
     // Internal
     // ─────────────────────────────────────────────────────────────
+
+    _activeCharacterStorageKey(userId) {
+        return `paxdei_active_character_id:${userId}`;
+    }
 
     _listen() {
         supabase.auth.onAuthStateChange((event, session) => {

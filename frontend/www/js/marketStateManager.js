@@ -12,6 +12,7 @@
  */
 
 import { supabase } from './supabaseClient.js';
+import { authSession } from './authSessionManager.js';
 
 class MarketStateManager {
   constructor() {
@@ -220,7 +221,7 @@ class MarketStateManager {
     }
     
     // Determine active character
-    const sessionCharId = sessionStorage.getItem('active_character_id');
+    const sessionCharId = authSession.getActiveCharacterId(userId);
     
     if (sessionCharId && this.cache.characters.some(c => c.character_id === sessionCharId)) {
       this.cache.activeCharacterId = sessionCharId;
@@ -236,7 +237,7 @@ class MarketStateManager {
     
     // Save to session
     if (this.cache.activeCharacterId) {
-      sessionStorage.setItem('active_character_id', this.cache.activeCharacterId);
+      authSession.setActiveCharacterId(this.cache.activeCharacterId, userId);
       
       // Load data for active character
       await this._loadCharacterData(this.cache.activeCharacterId);
@@ -372,7 +373,7 @@ async loadAllCharactersData() {
     }
     
     this.cache.activeCharacterId = characterId;
-    sessionStorage.setItem('active_character_id', characterId);
+    authSession.setActiveCharacterId(characterId, this.cache.user?.id);
     
     // Load character data if not cached
     if (!this.cache.characterData[characterId]) {
