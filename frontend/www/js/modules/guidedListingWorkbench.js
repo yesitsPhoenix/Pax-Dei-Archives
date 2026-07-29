@@ -297,13 +297,9 @@ function renderPricingVisuals({ selectedItem, marketData, referenceFloor, histor
         ? marketData.marketLow * count
         : referenceFloor?.value || rawStackPrices[0] || null;
     const riskProfile = getCompetitiveRiskTolerance();
-    const competitiveCap = marketLowStack
-        ? getCompetitiveCap(Math.round(marketLowStack), riskProfile)
-        : null;
-    const depthCap = competitiveCap || (marketLowStack ? Math.round(marketLowStack * 1.3) : null);
-    const stackPrices = rawStackPrices
-        .filter((stackPrice) => !depthCap || stackPrice <= depthCap)
-        .slice(0, 36);
+    // Market depth represents the complete matching feed. Keep it independent
+    // from the user's count and the competitive-price band used for guidance.
+    const stackPrices = rawStackPrices;
     const ledgerPrices = activeListings
         .map((listing) => Number(listing.total_listed_price) || 0)
         .filter(Boolean);
@@ -315,8 +311,7 @@ function renderPricingVisuals({ selectedItem, marketData, referenceFloor, histor
         buckets.set(stackPrice, (buckets.get(stackPrice) || 0) + 1);
     });
     const depthRows = Array.from(buckets, ([stackPrice, quantity]) => ({ stackPrice, quantity }))
-        .sort((a, b) => a.stackPrice - b.stackPrice)
-        .slice(0, 8);
+        .sort((a, b) => a.stackPrice - b.stackPrice);
     const maxDepth = Math.max(...depthRows.map((row) => row.quantity), 1);
 
     const recentSales = salesRows.slice(0, 6);
@@ -415,7 +410,7 @@ function renderPricingVisuals({ selectedItem, marketData, referenceFloor, histor
             <div class="listing-pricing-card">
                 <div class="listing-pricing-card-header">
                     <h4>Market Depth By Stack Price</h4>
-                    <span>${depthRows.length ? `${fmt(stackPrices.length)} competitive listings` : 'No feed depth'}</span>
+                    <span>${depthRows.length ? `${fmt(stackPrices.length)} market listings` : 'No feed depth'}</span>
                 </div>
                 <div class="listing-depth-list">
                     ${depthRows.length ? depthRows.map((row) => `
