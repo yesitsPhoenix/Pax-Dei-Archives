@@ -582,15 +582,6 @@ function renderPricingVisuals({ selectedItem, marketData, referenceFloor, histor
                     <div>
                         <h4>Market Pricing Landscape</h4>
                         <p>Signals show the unified pricing range. Enter a price to compare your listing.</p>
-                        <div class="listing-signal-legend">
-                            ${comparisonRows.map((row) => `
-                                <div style="--signal-color:${row.color};">
-                                    <i></i>
-                                    <span>${escapeHtml(row.label)}</span>
-                                    <strong>${fmt(row.value)}g</strong>
-                                </div>
-                            `).join('')}
-                        </div>
                     </div>
                 </div>
                 ${comparisonRows.length ? `
@@ -607,8 +598,12 @@ function renderPricingVisuals({ selectedItem, marketData, referenceFloor, histor
                             <span class="listing-market-signal listing-market-signal-${row.tone} ${row.edgeClass}"
                                   style="--point-position:${row.position.toFixed(2)}%; --signal-color:${row.color};"
                                   title="${escapeHtml(row.label)}: ${fmt(row.value)}g"
-                                  aria-label="${escapeHtml(row.label)}: ${fmt(row.value)}g">
+                                aria-label="${escapeHtml(row.label)}: ${fmt(row.value)}g">
                                 <span class="listing-market-signal-dot"></span>
+                                <span class="listing-market-signal-label">
+                                    ${escapeHtml(row.label)}
+                                    <strong>${fmt(row.value)}g</strong>
+                                </span>
                             </span>
                         `).join('')}
                         <span class="listing-market-axis-start">${fmt(comparisonMin)}g</span>

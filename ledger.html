@@ -1145,7 +1145,7 @@
 
         .listing-market-landscape-chart {
             position: relative;
-            height: 7.5rem;
+            height: 8.5rem;
             margin: 0 1rem 0.65rem;
         }
 
@@ -1318,18 +1318,33 @@
         }
 
         .listing-market-signal-suggested .listing-market-signal-label {
-            bottom: 1.7rem;
+            bottom: 1.75rem;
+            left: 50%;
+            transform: translateX(-100%);
+            text-align: right;
         }
 
         .listing-market-signal-floor .listing-market-signal-label,
-        .listing-market-signal-competitive .listing-market-signal-label,
-        .listing-market-signal-market-high .listing-market-signal-label,
         .listing-market-signal-entered .listing-market-signal-label {
-            top: 1.7rem;
+            top: 1.75rem;
+            left: 50%;
+            transform: none;
+            text-align: left;
+        }
+
+        .listing-market-signal-competitive .listing-market-signal-label {
+            top: 1.75rem;
+            left: 50%;
+            transform: none;
+            text-align: left;
         }
 
         .listing-market-signal-market-high .listing-market-signal-label {
-            top: 3.55rem;
+            right: 50%;
+            bottom: 1.75rem;
+            left: auto;
+            transform: none;
+            text-align: right;
         }
 
         .listing-market-signal.edge-start .listing-market-signal-label {
@@ -2572,7 +2587,7 @@
             </div>
         </div>
 
-    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 md:pb-8">
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 pt-3 pb-24 md:pb-8">
         
         <!-- Login Container -->
         <div id="traderLoginContainer" class="hidden animate-fade-in">
@@ -2593,7 +2608,7 @@
         <div id="traderDashboardAndForms" class="animate-fade-in">
             <!-- Header Section -->
             <div class="text-center mb-8">
-                <h1 class="text-xl font-semibold mt-6 mb-3 text-white">
+                <h1 class="text-xl font-semibold mt-2 mb-3 text-white">
                     Ledger
                 </h1>
                 <div class="h-1 w-24 bg-[#FFD700] mx-auto rounded-full"></div>
