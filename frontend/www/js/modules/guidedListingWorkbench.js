@@ -39,6 +39,28 @@ const escapeHtml = (value) => String(value ?? '')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 
+const WORKBENCH_TABLE_PAGE_SIZE = 8;
+let activeListingsPage = 0;
+let salesHistoryPage = 0;
+let lastActiveListingsArgs = null;
+let lastSalesHistoryArgs = null;
+let currentPricingModel = null;
+
+function renderTablePagination(kind, page, pageCount, totalRows) {
+    if (pageCount <= 1) return `<div class="listing-data-pagination"><span>${fmt(totalRows)} row${totalRows === 1 ? '' : 's'}</span></div>`;
+    return `
+        <div class="listing-data-pagination">
+            <button type="button" data-listing-table="${kind}" data-listing-page="${page - 1}" ${page === 0 ? 'disabled' : ''} aria-label="Previous page">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <span>Page ${page + 1} of ${pageCount} · ${fmt(totalRows)} rows</span>
+            <button type="button" data-listing-table="${kind}" data-listing-page="${page + 1}" ${page === pageCount - 1 ? 'disabled' : ''} aria-label="Next page">
+                <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+    `;
+}
+
 const relativeDate = (isoDate) => {
     if (!isoDate) return '--';
     const then = new Date(isoDate).getTime();
@@ -61,20 +83,20 @@ const getInputs = () => ({
 });
 
 const describeReferenceFloor = (referenceFloor, marketData) => {
-    if (marketData) return `${fmt(marketData.marketLow, 2)}g/unit from Home Valley feed`;
+    if (marketData) return 'Home Valley market reference for the selected stack size.';
     if (!referenceFloor) return 'No live or province floor';
     if (referenceFloor.source === 'province') {
         const sourceStack = referenceFloor.sourceQuantity && referenceFloor.sourceStackPrice
-            ? `; source ${fmt(referenceFloor.sourceQuantity)} count at ${fmt(referenceFloor.sourceStackPrice)}g`
+            ? ` Source listing: ${fmt(referenceFloor.sourceQuantity)} items for ${fmt(referenceFloor.sourceStackPrice)}g.`
             : '';
-        return `Province unit floor normalized to ${fmt(referenceFloor.count)} count${sourceStack}`;
+        return `Province market reference adjusted to this stack size.${sourceStack}`;
     }
     return referenceFloor.sourceLabel || 'Reference floor';
 };
 
 const getFormState = () => {
     const inputs = getInputs();
-    const count = parseInt(inputs.count?.value, 10) || 0;
+    const count = parseInt(inputs.count?.value, 10) || 1;
     const stacks = parseInt(inputs.stacks?.value, 10) || 0;
     const price = parseFloat(inputs.price?.value) || 0;
     const isMastercrafted = inputs.isMastercrafted?.value === 'true';
@@ -124,6 +146,14 @@ const getNormalizedSaleStackValue = (sale, targetCount) => {
     const total = Number(sale?.total_sale_price) || 0;
     if (!(count > 0) || !(total > 0)) return total;
     return (total / quantity) * count;
+};
+
+const getMarketUndercutStep = (stackPrice) => {
+    const value = Number(stackPrice) || 0;
+    if (value >= 250) return 5;
+    if (value >= 100) return 3;
+    if (value >= 25) return 2;
+    return 1;
 };
 
 const computeMarketData = (selectedItem, isMastercrafted, enchantmentTier) => {
@@ -180,7 +210,7 @@ const computeReferenceFloor = ({ selectedItem, marketData, provinceContext, form
         isMastercrafted: formState.isMastercrafted,
         enchantmentTier: formState.enchantmentTier,
         source: 'province',
-        sourceLabel: 'Province unit floor',
+        sourceLabel: 'Province market reference',
         ...provinceUnitFloor
     };
 };
@@ -225,6 +255,7 @@ function renderPricingSummary({ selectedItem, marketData, referenceFloor, histor
     if (!target || !preview || !rankTarget) return;
 
     if (!selectedItem) {
+        currentPricingModel = null;
         target.innerHTML = '<div class="listing-workbench-empty">Select an item to populate the decision summary.</div>';
         preview.innerHTML = '<span>Waiting for item</span><strong>--</strong>';
         rankTarget.innerHTML = '<span>Market position</span><strong>--</strong>';
@@ -234,14 +265,19 @@ function renderPricingSummary({ selectedItem, marketData, referenceFloor, histor
     const { count, stacks, price } = formState;
     const total = price > 0 && stacks > 0 ? price * stacks : 0;
     const fee = price > 0 && stacks > 0 ? Math.ceil(price * 0.05) * stacks : 0;
-    const unit = price > 0 && count > 0 ? price / count : 0;
-    const activePrices = activeListings.map((listing) => Number(listing.total_listed_price) || 0).filter(Boolean);
-    const rank = price > 0
+    const activePrices = count > 0
+        ? activeListings.map((listing) => {
+            const listingPrice = Number(listing.total_listed_price) || 0;
+            const listingQuantity = Math.max(Number(listing.quantity_listed) || 1, 1);
+            return listingPrice > 0 ? (listingPrice / listingQuantity) * count : 0;
+        }).filter(Boolean)
+        : [];
+    const rank = price > 0 && count > 0
         ? activePrices.filter((listingPrice) => listingPrice < price).length + 1
         : null;
 
     preview.innerHTML = `<span>Expected gross</span><strong>${fmt(total)}g</strong><small>${fmt(fee)}g estimated fees</small>`;
-    rankTarget.innerHTML = `<span>Market position</span><strong>${rank ? `#${rank}` : '--'}</strong><small>${unit ? `${fmt(unit, 2)}g per unit` : 'Enter price'}</small>`;
+    rankTarget.innerHTML = `<span>Market position</span><strong>${rank ? `#${rank}` : '--'}</strong><small>${price > 0 && count > 0 ? `${fmt(price)}g per stack` : 'Enter stack size and price'}</small>`;
 
     const marketLowStack = referenceFloor?.value || (marketData && count > 0 ? marketData.marketLow * count : null);
     const historyAvgStack = historyData && count > 0 ? historyData.avgPerUnit * count : null;
@@ -256,7 +292,7 @@ function renderPricingSummary({ selectedItem, marketData, referenceFloor, histor
         <div class="listing-workbench-metric">
             <span>Your avg sale</span>
             <strong>${historyAvgStack ? `${fmt(historyAvgStack)}g` : '--'}</strong>
-            <small>${historyData ? `${fmt(historyData.saleCount)} sales, best ${fmt((historyData.maxPerUnit || 0) * Math.max(count, 1))}g` : 'No sales history'}</small>
+            <small>${historyData && count > 0 ? `${fmt(historyData.saleCount)} sales, best ${fmt((historyData.maxPerUnit || 0) * count)}g` : count > 0 ? 'No sales history' : 'Enter items per stack'}</small>
         </div>
         <div class="listing-workbench-metric">
             <span>Ledger floor</span>
@@ -281,7 +317,8 @@ function renderPricingVisuals({ selectedItem, marketData, referenceFloor, histor
     placeholder?.classList.add('hidden');
 
     const { count, stacks, price, isMastercrafted, enchantmentTier } = formState;
-    const normalizedCount = Math.max(count, 1);
+    const hasCount = count > 0;
+    const normalizedCount = hasCount ? count : null;
     const zoneListings = getZoneListingsForItemByQuality(
         selectedItem.pax_dei_slug,
         selectedItem.item_name,
@@ -289,155 +326,335 @@ function renderPricingVisuals({ selectedItem, marketData, referenceFloor, histor
         enchantmentTier
     );
 
-    const rawStackPrices = zoneListings
-        .map((listing) => Math.round(Number(listing.price) || 0))
+    const rawStackPrices = hasCount ? zoneListings
+        .map((listing) => {
+            const listingPrice = Number(listing.price) || 0;
+            const listingQuantity = Math.max(Number(listing.quantity) || 1, 1);
+            return Math.round((listingPrice / listingQuantity) * normalizedCount);
+        })
         .filter((stackPrice) => stackPrice > 0)
-        .sort((a, b) => a - b);
-    const marketLowStack = marketData && count > 0
+        .sort((a, b) => a - b) : [];
+    const marketLowStack = marketData && hasCount
         ? marketData.marketLow * count
-        : referenceFloor?.value || rawStackPrices[0] || null;
+        : hasCount
+            ? referenceFloor?.value || rawStackPrices[0] || null
+            : null;
     const riskProfile = getCompetitiveRiskTolerance();
-    // Market depth represents the complete matching feed. Keep it independent
-    // from the user's count and the competitive-price band used for guidance.
-    const stackPrices = rawStackPrices;
-    const ledgerPrices = activeListings
-        .map((listing) => Number(listing.total_listed_price) || 0)
-        .filter(Boolean);
+    const ledgerPrices = hasCount ? activeListings
+        .map((listing) => {
+            const listingPrice = Number(listing.total_listed_price) || 0;
+            const listingQuantity = Math.max(Number(listing.quantity_listed) || 1, 1);
+            return listingPrice > 0 ? (listingPrice / listingQuantity) * normalizedCount : 0;
+        })
+        .filter(Boolean)
+        : [];
     const ledgerLowStack = ledgerPrices.length ? Math.min(...ledgerPrices) : null;
-    const weightedSaleStack = weightedAverage(salesRows, (sale) => getNormalizedSaleStackValue(sale, count), (sale) => sale.sale_date);
-    const supplyAfter = (marketData?.totalListings || zoneListings.length || 0) + (stacks || 0);
-    const buckets = new Map();
-    stackPrices.forEach((stackPrice) => {
-        buckets.set(stackPrice, (buckets.get(stackPrice) || 0) + 1);
-    });
-    const depthRows = Array.from(buckets, ([stackPrice, quantity]) => ({ stackPrice, quantity }))
-        .sort((a, b) => a.stackPrice - b.stackPrice);
-    const maxDepth = Math.max(...depthRows.map((row) => row.quantity), 1);
-
-    const recentSales = salesRows.slice(0, 6);
-    const bestRecentStack = recentSales.length
-        ? Math.max(...recentSales.map((sale) => Number(sale.total_sale_price) || 0))
+    const weightedSaleStack = hasCount
+        ? weightedAverage(salesRows, (sale) => getNormalizedSaleStackValue(sale, count), (sale) => sale.sale_date)
         : null;
+    const supplyAfter = (marketData?.totalListings || zoneListings.length || 0) + (stacks || 0);
+    const depthBuckets = new Map();
+    rawStackPrices.forEach((stackPrice) => {
+        depthBuckets.set(stackPrice, (depthBuckets.get(stackPrice) || 0) + 1);
+    });
+    const depthRows = Array.from(depthBuckets, ([stackPrice, quantity]) => ({ stackPrice, quantity }))
+        .sort((a, b) => a.stackPrice - b.stackPrice);
     const roundedFloor = marketLowStack ? Math.round(marketLowStack) : null;
     const thresholds = roundedFloor ? getCompetitiveThresholds(roundedFloor, riskProfile) : null;
+    const distinctMarketPrices = depthRows.map((row) => row.stackPrice);
+    const hasMarketRange = distinctMarketPrices.length > 1;
+    const floorDepth = depthRows.find((row) => row.stackPrice === roundedFloor)?.quantity || 0;
+    const nextMarketTier = roundedFloor
+        ? depthRows.find((row) => row.stackPrice > roundedFloor)
+        : null;
+    const staticCompetitiveOption = roundedFloor && thresholds
+        ? getCompetitiveCap(roundedFloor, riskProfile)
+        : null;
+    const visibleMarketSupply = rawStackPrices.length;
+    const nextTierShare = nextMarketTier && visibleMarketSupply > 0
+        ? nextMarketTier.quantity / visibleMarketSupply
+        : 0;
+    const supportedNextTier = nextMarketTier
+        && nextMarketTier.quantity >= 2
+        && nextTierShare >= 0.25
+        && nextMarketTier.quantity >= Math.ceil(floorDepth * 0.5)
+        && nextMarketTier.stackPrice > staticCompetitiveOption;
+    const wallCeiling = supportedNextTier
+        ? Math.max(roundedFloor, nextMarketTier.stackPrice - getMarketUndercutStep(nextMarketTier.stackPrice))
+        : null;
     const floorLabel = referenceFloor?.source === 'province'
         ? 'Province Low'
         : referenceFloor?.source === 'home'
             ? 'Market Low'
             : ledgerLowStack
                 ? 'Ledger Floor'
-                : 'Archives Weighted';
-    const floorDetail = referenceFloor
+                : 'Market Low';
+    const floorDetail = depthRows.length === 1
+        ? `Only one visible market price (${fmt(depthRows[0].quantity)} stack${depthRows[0].quantity === 1 ? '' : 's'}); no live range is established.`
+        : referenceFloor
         ? describeReferenceFloor(referenceFloor, marketData)
+        : marketData && roundedFloor
+            ? 'Home Valley market reference for the selected stack size.'
         : ledgerLowStack
             ? 'Lowest matching active Ledger listing.'
-            : 'No live floor; using Archives sales signal.';
+            : 'No live market floor is available for this item and quality.';
+    const displayFloorLabel = depthRows.length === 1
+        ? 'Single Market Price'
+        : depthRows.length === 0 && roundedFloor
+            ? 'Market Reference'
+            : floorLabel;
     const weightedOption = weightedSaleStack ? Math.round(weightedSaleStack) : null;
-    const competitiveOption = roundedFloor && thresholds ? getCompetitiveCap(roundedFloor, riskProfile) : null;
-    const suggestedOption = roundedFloor && competitiveOption
-        ? Math.min(Math.max(weightedOption || roundedFloor, roundedFloor), competitiveOption)
-        : weightedOption;
-    const priceOptions = [
+    const floorListingCount = roundedFloor
+        ? rawStackPrices.filter((stackPrice) => stackPrice === roundedFloor).length
+        : 0;
+    const profileConfig = COMPETITIVE_RISK_PROFILES[riskProfile] || COMPETITIVE_RISK_PROFILES.balanced;
+    const wallCeilingPositions = { guarded: 0.45, balanced: 0.75, flexible: 1 };
+    const wallSuggestedPositions = { guarded: 0.5, balanced: 0.65, flexible: 0.85 };
+    let competitiveOption = staticCompetitiveOption;
+    let suggestedOption = null;
+    let referencePrice = roundedFloor;
+    let evidenceType = roundedFloor ? 'market' : weightedOption ? 'sales' : 'none';
+    const ownLowestStack = ledgerLowStack ? Math.round(ledgerLowStack) : null;
+
+    if (roundedFloor && wallCeiling) {
+        const opportunityWidth = wallCeiling - roundedFloor;
+        competitiveOption = Math.round(roundedFloor + (opportunityWidth * wallCeilingPositions[riskProfile]));
+        suggestedOption = Math.round(roundedFloor + ((competitiveOption - roundedFloor) * wallSuggestedPositions[riskProfile]));
+    } else if (roundedFloor && competitiveOption) {
+        suggestedOption = Math.round(roundedFloor + ((competitiveOption - roundedFloor) * profileConfig.suggestedPosition));
+    } else if (weightedOption) {
+        referencePrice = weightedOption;
+        const salesCeiling = getCompetitiveCap(weightedOption, riskProfile);
+        competitiveOption = salesCeiling;
+        const salesPositions = { guarded: 0, balanced: 0.3, flexible: 0.55 };
+        suggestedOption = Math.round(weightedOption + ((salesCeiling - weightedOption) * salesPositions[riskProfile]));
+    } else if (ownLowestStack) {
+        referencePrice = ownLowestStack;
+        evidenceType = 'own-listing';
+        suggestedOption = ownLowestStack;
+        competitiveOption = getCompetitiveCap(ownLowestStack, riskProfile);
+    }
+
+    const recentThirtyDaySales = salesRows.filter((sale) => {
+        const soldAt = new Date(sale.sale_date).getTime();
+        return Number.isFinite(soldAt) && Date.now() - soldAt <= 30 * 864e5;
+    });
+    const momentumStrength = recentThirtyDaySales.length >= 6
+        ? 0.2
+        : recentThirtyDaySales.length >= 3
+            ? 0.12
+            : recentThirtyDaySales.length >= 1
+                ? 0.05
+                : 0;
+    if (suggestedOption && competitiveOption && momentumStrength > 0) {
+        suggestedOption = Math.min(
+            competitiveOption,
+            suggestedOption + Math.max(1, Math.round((competitiveOption - (referencePrice || suggestedOption)) * momentumStrength))
+        );
+    }
+    const isFloodedAtFloor = floorListingCount >= 10
+        && visibleMarketSupply > 0
+        && floorListingCount / visibleMarketSupply >= 0.4
+        && (!(weightedOption > 0) || weightedOption <= roundedFloor)
+        && !supportedNextTier;
+    if (isFloodedAtFloor) suggestedOption = roundedFloor;
+
+    const protectingOwnListing = ownLowestStack && suggestedOption && suggestedOption < ownLowestStack;
+    if (protectingOwnListing) {
+        suggestedOption = ownLowestStack;
+        competitiveOption = Math.max(competitiveOption || ownLowestStack, ownLowestStack);
+    }
+
+    if (suggestedOption && competitiveOption) {
+        const pricingSpan = Math.max(0, competitiveOption - (referencePrice || suggestedOption));
+        const recommendationGap = Math.max(1, Math.round(pricingSpan * 0.1));
+        if (suggestedOption >= competitiveOption) {
+            if (ownLowestStack && ownLowestStack >= competitiveOption - recommendationGap) {
+                suggestedOption = ownLowestStack;
+                competitiveOption = ownLowestStack + recommendationGap;
+            } else {
+                suggestedOption = Math.max(
+                    referencePrice || 1,
+                    competitiveOption - recommendationGap
+                );
+            }
+        }
+    }
+
+    currentPricingModel = {
+        itemId: selectedItem.item_id,
+        profile: riskProfile,
+        floor: roundedFloor,
+        referencePrice,
+        evidenceType,
+        suggested: suggestedOption,
+        ceiling: competitiveOption,
+        supportedWall: supportedNextTier ? nextMarketTier.stackPrice : null,
+        wallCeiling,
+        ownLowest: ownLowestStack,
+        protectingOwnListing: !!protectingOwnListing,
+        recentSalesCount: recentThirtyDaySales.length,
+        weightedSales: weightedOption,
+        flooded: isFloodedAtFloor,
+        noEvidence: evidenceType === 'none'
+    };
+    const primaryOptions = [
         {
-            label: floorLabel,
-            value: roundedFloor || ledgerLowStack || weightedOption,
-            detail: floorDetail
+            label: displayFloorLabel,
+            value: roundedFloor || ledgerLowStack,
+            detail: floorDetail,
+            tone: 'floor',
+            icon: 'fa-layer-group'
         },
         {
             label: 'Suggested Price',
             value: suggestedOption,
             detail: roundedFloor
-                ? 'Sales-informed guidance constrained to the current competitive band.'
-                : 'Archives weighted sales guidance because no live floor is available.'
+                ? supportedNextTier
+                    ? `A supported ${fmt(nextMarketTier.stackPrice)}g price wall creates room above the current floor.`
+                : suggestedOption === roundedFloor && floorListingCount >= 10
+                    ? 'Heavy supply at the floor favors matching the current market low.'
+                    : 'Strategy-based recommendation, adjusted by market depth and recent sales.'
+                : weightedOption
+                    ? 'Recent Archives sales provide guidance while no live floor is available.'
+                    : 'Requires live market or recent sales evidence.',
+            tone: 'suggested',
+            icon: 'fa-wand-magic-sparkles'
         },
         {
-            label: 'Competitive Price',
+            label: 'Competitive Ceiling',
             value: competitiveOption,
-            detail: thresholds ? `${thresholds.label}: +${fmt(thresholds.maxGapGold)}g / +${fmt(thresholds.maxGapPct)}%.` : 'Requires a reference floor.'
-        },
-        {
-            label: 'Province Low',
-            value: referenceFloor?.source === 'province' ? referenceFloor.value : null,
-            detail: referenceFloor?.source === 'province'
-                ? `Same item and quality, normalized to ${fmt(count)} count.`
-                : 'Shown when province floor fills a missing Home Valley floor.'
+            detail: supportedNextTier
+                ? `${COMPETITIVE_RISK_PROFILES[riskProfile].label} ceiling below the supported ${fmt(nextMarketTier.stackPrice)}g wall.`
+                : thresholds
+                    ? `${thresholds.label}: up to +${fmt(thresholds.maxGapGold)}g / +${fmt(thresholds.maxGapPct)}%.`
+                    : 'Requires a reference floor.',
+            tone: 'competitive',
+            icon: 'fa-chart-line'
         }
-    ].filter((option, index, options) => {
-        if (!(Number(option.value) > 0)) return false;
-        return options.findIndex((candidate) => Math.round(Number(candidate.value) || 0) === Math.round(Number(option.value) || 0) && candidate.label === option.label) === index;
+    ];
+    const comparisonRows = [
+        { label: displayFloorLabel, value: roundedFloor || ledgerLowStack, tone: 'floor', color: '#38bdf8' },
+        { label: 'Suggested', value: suggestedOption, tone: 'suggested', color: '#34d399' },
+        { label: 'Competitive ceiling', value: competitiveOption, tone: 'competitive', color: '#fbbf24' },
+        { label: 'Visible market high', value: hasMarketRange ? Math.max(...rawStackPrices) : null, tone: 'market-high', color: '#94a3b8' }
+    ].filter((row) => Number(row.value) > 0);
+    const comparisonValues = [
+        ...comparisonRows.map((row) => Number(row.value) || 0),
+        ...(price > 0 ? [price] : [])
+    ];
+    const comparisonMin = comparisonRows.length
+        ? Math.min(...comparisonValues)
+        : 0;
+    const comparisonMax = Math.max(...comparisonValues, 1);
+    const comparisonSpan = Math.max(comparisonMax - comparisonMin, 1);
+    comparisonRows.forEach((row) => {
+        row.position = 5 + (((Number(row.value) - comparisonMin) / comparisonSpan) * 90);
+        row.edgeClass = row.position <= 12
+            ? 'edge-start'
+            : row.position >= 88
+                ? 'edge-end'
+                : '';
     });
+    const selectedPricePosition = price > 0
+        ? 5 + (((price - comparisonMin) / comparisonSpan) * 90)
+        : null;
 
     if (summaryTarget) {
         summaryTarget.innerHTML = `
-        <div class="listing-strategy-grid">
-            <div class="listing-strategy-tile">
-                <span>Reference stack floor</span>
-                <strong class="text-emerald-300">${marketLowStack ? `${fmt(marketLowStack)}g` : '--'}</strong>
-                <small>${describeReferenceFloor(referenceFloor, marketData)}</small>
+        <div class="listing-overview-heading">
+            <div>
+                <p class="listing-workbench-section-label">Pricing decision</p>
+                <h3>Choose how you want to enter the market</h3>
             </div>
-            <div class="listing-strategy-tile">
-                <span>Ledger floor</span>
-                <strong>${ledgerLowStack ? `${fmt(ledgerLowStack)}g` : '--'}</strong>
-                <small>${activeListings.length ? `${activeListings.length} active Ledger listings` : 'No matching Ledger listings'}</small>
-            </div>
-            <div class="listing-strategy-tile">
-                <span>Archives weighted avg</span>
-                <strong>${weightedSaleStack ? `${fmt(weightedSaleStack)}g` : '--'}</strong>
-                <small>${salesRows.length ? `${fmt(salesRows.length)} Archives sales, normalized to ${fmt(normalizedCount)} count` : 'No Archives sales history'}</small>
-            </div>
-            <div class="listing-strategy-tile">
-                <span>Supply after listing</span>
-                <strong>${fmt(supplyAfter)}</strong>
-                <small>${stacks > 0 ? `Adding ${fmt(stacks)} stack${stacks === 1 ? '' : 's'}` : 'Enter stack count'}</small>
-            </div>
+        </div>
+        <div class="listing-overview-primary">
+            ${primaryOptions.map((option) => `
+                <article class="listing-overview-price-card listing-overview-price-card-${option.tone}">
+                    <div class="listing-overview-price-card-heading">
+                        <div class="listing-overview-price-icon"><i class="fas ${option.icon}"></i></div>
+                        <span>${escapeHtml(option.label)}</span>
+                    </div>
+                    <strong>${Number(option.value) > 0 ? `${fmt(option.value)}g` : '--'}</strong>
+                    <small>${escapeHtml(option.detail)}</small>
+                    ${Number(option.value) > 0
+                        ? `<button type="button" data-suggested-price="${Math.round(option.value)}">Use ${fmt(option.value)}g</button>`
+                        : '<button type="button" disabled>Unavailable</button>'}
+                </article>
+            `).join('')}
         </div>
         `;
     }
 
     target.innerHTML = `
-        <p class="listing-workbench-section-label mt-3">Price Options</p>
-        <div class="competitive-price-options">
-            ${priceOptions.map((option) => `
-                <div class="competitive-option-card">
-                    <span>${escapeHtml(option.label)}</span>
-                    <small>${escapeHtml(option.detail)}</small>
-                    <strong>${fmt(option.value)}g</strong>
-                    <button type="button" data-suggested-price="${Math.round(option.value)}">Use</button>
-                </div>
-            `).join('') || '<div class="listing-workbench-empty">Select an item and enter count to calculate price options.</div>'}
-        </div>
-        <div class="listing-pricing-visuals">
-            <div class="listing-pricing-card">
-                <div class="listing-pricing-card-header">
-                    <h4>Market Depth By Stack Price</h4>
-                    <span>${depthRows.length ? `${fmt(stackPrices.length)} market listings` : 'No feed depth'}</span>
-                </div>
-                <div class="listing-depth-list">
-                    ${depthRows.length ? depthRows.map((row) => `
-                        <div class="listing-depth-row">
-                            <strong>${fmt(row.stackPrice)}g</strong>
-                            <div class="listing-depth-bar"><span style="width:${Math.max(8, Math.round((row.quantity / maxDepth) * 100))}%"></span></div>
-                            <span>${fmt(row.quantity)}</span>
+        <div class="listing-overview-context listing-overview-context-condensed">
+            <section class="listing-overview-visuals listing-market-landscape">
+                <div class="listing-overview-market-depth-header">
+                    <div>
+                        <h4>Market Pricing Landscape</h4>
+                        <p>Signals show the unified pricing range. Enter a price to compare your listing.</p>
+                        <div class="listing-signal-legend">
+                            ${comparisonRows.map((row) => `
+                                <div style="--signal-color:${row.color};">
+                                    <i></i>
+                                    <span>${escapeHtml(row.label)}</span>
+                                    <strong>${fmt(row.value)}g</strong>
+                                </div>
+                            `).join('')}
                         </div>
-                    `).join('') : '<div class="listing-workbench-empty">No market-feed depth for this item and quality.</div>'}
+                    </div>
                 </div>
-            </div>
-
-            <div class="listing-pricing-card">
-                <div class="listing-pricing-card-header">
-                    <h4>Recent Stack Sales</h4>
-                    <span>${bestRecentStack ? `Best recent ${fmt(bestRecentStack)}g` : 'Ledger history'}</span>
-                </div>
-                <div class="listing-sales-context">
-                    ${recentSales.length ? recentSales.map((sale) => `
-                        <div class="listing-sales-context-row">
-                            <span>${escapeHtml(relativeDate(sale.sale_date))} ago</span>
-                            <span>${fmt(sale.quantity_sold)} count at ${fmt(sale.sale_price_per_unit, 2)}g/unit</span>
-                            <strong>${fmt(sale.total_sale_price)}g</strong>
-                        </div>
-                    `).join('') : '<div class="listing-workbench-empty">No recent sales for this item yet.</div>'}
-                </div>
-            </div>
+                ${comparisonRows.length ? `
+                    <div class="listing-market-landscape-chart"
+                         role="img"
+                        aria-label="Market depth and price signals from ${fmt(comparisonMin)}g to ${fmt(comparisonMax)}g">
+                        <div class="listing-market-landscape-track"></div>
+                        <output class="listing-market-slider-output ${price > 0 ? 'is-visible' : ''}"
+                                style="--point-position:${selectedPricePosition?.toFixed(2) || 5}%"
+                                data-workbench-slider-output>
+                            Your price <strong>${price > 0 ? `${fmt(price)}g` : ''}</strong>
+                        </output>
+                        ${comparisonRows.map((row) => `
+                            <span class="listing-market-signal listing-market-signal-${row.tone} ${row.edgeClass}"
+                                  style="--point-position:${row.position.toFixed(2)}%; --signal-color:${row.color};"
+                                  title="${escapeHtml(row.label)}: ${fmt(row.value)}g"
+                                  aria-label="${escapeHtml(row.label)}: ${fmt(row.value)}g">
+                                <span class="listing-market-signal-dot"></span>
+                            </span>
+                        `).join('')}
+                        <span class="listing-market-axis-start">${fmt(comparisonMin)}g</span>
+                        <span class="listing-market-axis-end">${fmt(comparisonMax)}g</span>
+                    </div>
+                    <div class="listing-market-depth-table-wrap">
+                        <table class="listing-market-depth-table">
+                            <thead>
+                                <tr><th>Price</th><th>Visible stacks</th><th>Market share</th><th>Signal</th></tr>
+                            </thead>
+                            <tbody>
+                                ${depthRows.map((row) => {
+                                    const signals = comparisonRows
+                                        .filter((signal) => signal.value === row.stackPrice)
+                                        .map((signal) => signal.label)
+                                        .join(', ');
+                                    return `<tr>
+                                        <td>${fmt(row.stackPrice)}g</td>
+                                        <td>${fmt(row.quantity)}</td>
+                                        <td>${visibleMarketSupply ? fmt((row.quantity / visibleMarketSupply) * 100) : 0}%</td>
+                                        <td>${escapeHtml(signals || (supportedNextTier && row.stackPrice === nextMarketTier.stackPrice ? 'Supported wall' : 'Market listing'))}</td>
+                                    </tr>`;
+                                }).join('')}
+                                ${comparisonRows.filter((signal) => !depthRows.some((row) => row.stackPrice === signal.value)).map((signal) => `
+                                    <tr class="is-signal">
+                                        <td>${fmt(signal.value)}g</td><td>—</td><td>—</td><td>${escapeHtml(signal.label)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                ` : `<div class="listing-workbench-empty">${hasCount
+                    ? 'No pricing signals are available for this item and quality.'
+                    : 'Enter items per stack to build the market pricing landscape.'}</div>`}
+            </section>
         </div>
     `;
 }
@@ -457,7 +674,63 @@ function attachWorkbenchPriceButtons(root = document) {
     });
 }
 
-function renderCompetitivePricing({ selectedItem, marketData, referenceFloor, historyData, activeListings, salesRows, formState }) {
+function renderCompetitivePricing({ selectedItem, formState }) {
+    const target = document.getElementById('workbench-competitive-pricing');
+    if (!target) return;
+    if (!selectedItem || !currentPricingModel) {
+        return renderEmpty(target, 'Select an item to calculate unified pricing guidance.');
+    }
+
+    const model = currentPricingModel;
+    const profileLabel = COMPETITIVE_RISK_PROFILES[model.profile]?.label || model.profile;
+    const referenceValue = model.floor || model.referencePrice;
+    const evidenceDescription = model.supportedWall
+        ? `${fmt(model.supportedWall)}g is supported by visible listing depth and helps define the upper opportunity.`
+        : model.evidenceType === 'own-listing'
+            ? `Your active ${fmt(model.ownLowest)}g listing is the protected reference; guidance will not undercut it automatically.`
+            : model.noEvidence
+                ? 'No live market price, active listing, or sales history is available, so no price is recommended.'
+                : 'No supported price wall is visible, so guidance uses the strongest available market or sales reference.';
+    target.innerHTML = `
+        <div class="workbench-unified-pricing">
+            <div class="competitive-section-heading">
+                <div>
+                    <p class="listing-workbench-section-label">Unified recommendation</p>
+                    <h3>Current strategy output</h3>
+                </div>
+            </div>
+            <div class="workbench-unified-pricing-grid">
+                <article><span>${model.floor ? 'Market low' : 'Market low'}</span><strong>${model.floor ? `${fmt(model.floor)}g` : 'Unavailable'}</strong></article>
+                <article><span>Suggested price</span><strong>${model.suggested ? `${fmt(model.suggested)}g` : 'Unavailable'}</strong></article>
+                <article><span>Competitive ceiling</span><strong>${model.ceiling ? `${fmt(model.ceiling)}g` : 'Unavailable'}</strong></article>
+            </div>
+            <div class="workbench-strategy-explainer">
+                <article>
+                    <span>How this strategy behaves</span>
+                    <h4>${escapeHtml(profileLabel)} applies one unified evidence model</h4>
+                    <p>${escapeHtml(evidenceDescription)}</p>
+                </article>
+                <article>
+                    <span>Worked output</span>
+                    <h4>${referenceValue ? `${fmt(referenceValue)}g reference → ${model.suggested ? `${fmt(model.suggested)}g suggested` : 'no suggestion'} → ${model.ceiling ? `${fmt(model.ceiling)}g ceiling` : 'no ceiling'}` : 'No supported pricing path yet'}</h4>
+                    <p>The tolerance changes both Suggested Price and Competitive Ceiling while preserving your active price.</p>
+                </article>
+                <article>
+                    <span>30-day sales momentum</span>
+                    <h4>${model.recentSalesCount ? `${fmt(model.recentSalesCount)} recent sale${model.recentSalesCount === 1 ? '' : 's'}` : 'No recent sales'}</h4>
+                    <p>${model.recentSalesCount ? `Recent demand can support a measured increase${model.weightedSales ? ` from the ${fmt(model.weightedSales)}g weighted baseline` : ''}.` : 'The model does not add a demand premium without recent sales.'}</p>
+                </article>
+                <article>
+                    <span>Active-listing protection</span>
+                    <h4>${model.ownLowest ? `${fmt(model.ownLowest)}g protected` : 'No matching active listing'}</h4>
+                    <p>${model.ownLowest ? 'Suggestions will match or exceed your lowest active listing unless you deliberately enter a lower price.' : 'No existing listing needs undercut protection.'}</p>
+                </article>
+            </div>
+        </div>
+    `;
+}
+
+function renderCompetitivePricingLegacy({ selectedItem, marketData, referenceFloor, historyData, activeListings, salesRows, formState }) {
     const target = document.getElementById('workbench-competitive-pricing');
     if (!target) return;
     if (!selectedItem) {
@@ -465,7 +738,7 @@ function renderCompetitivePricing({ selectedItem, marketData, referenceFloor, hi
     }
 
     const { count, price, stacks } = formState;
-    const stackCount = Math.max(count, 1);
+    const stackCount = count > 0 ? count : null;
     const riskProfile = getCompetitiveRiskTolerance();
     const riskProfileConfig = COMPETITIVE_RISK_PROFILES[riskProfile] || COMPETITIVE_RISK_PROFILES.balanced;
     const stackFloor = marketData && count > 0
@@ -478,7 +751,9 @@ function renderCompetitivePricing({ selectedItem, marketData, referenceFloor, hi
     const enteredStatus = enteredGap !== null
         ? classifyCompetitiveGap(enteredGap, enteredGapPct, stackFloor, 'leading', riskProfile).status
         : null;
-    const weightedStack = weightedAverage(salesRows, (sale) => getNormalizedSaleStackValue(sale, count), (sale) => sale.sale_date);
+    const weightedStack = count > 0
+        ? weightedAverage(salesRows, (sale) => getNormalizedSaleStackValue(sale, count), (sale) => sale.sale_date)
+        : null;
     const recentRows = salesRows.filter((sale) => {
         const date = new Date(sale.sale_date).getTime();
         return Number.isFinite(date) && (Date.now() - date) / 864e5 <= 30;
@@ -517,8 +792,12 @@ function renderCompetitivePricing({ selectedItem, marketData, referenceFloor, hi
     ].filter((option) => Number.isFinite(option.value) && option.value > 0);
 
     target.innerHTML = `
-        <div class="competitive-explainer">
-            <strong>Competitive pricing</strong> compares the current market floor against your recent sales momentum. Current tolerance is <strong>${escapeHtml(riskProfileConfig.label)}</strong>, which sets this band at ${thresholds ? `${fmt(thresholds.maxGapGold)}g / ${fmt(thresholds.maxGapPct)}% above floor` : 'the selected risk profile'}.
+        <div class="competitive-section-heading">
+            <div>
+                <span>Recommendations</span>
+                <h3>Competitive pricing</h3>
+            </div>
+            <p>${escapeHtml(riskProfileConfig.label)} profile${thresholds ? ` · +${fmt(thresholds.maxGapGold)}g / ${fmt(thresholds.maxGapPct)}% band` : ''}</p>
         </div>
         <div class="competitive-price-options">
             ${options.map((option) => `
@@ -536,14 +815,126 @@ function renderCompetitivePricing({ selectedItem, marketData, referenceFloor, hi
                 <span>${qualityLabel(formState.isMastercrafted, formState.enchantmentTier)}</span>
             </div>
             <div class="competitive-read">
-                <p>${stackFloor ? `The current reference floor is ${fmt(stackFloor)}g for a ${fmt(stackCount)} count stack. The competitive cap is ${cap ? `${fmt(cap)}g` : '--'}, based on the existing pricing band. ${escapeHtml(describeReferenceFloor(referenceFloor, marketData))}.` : 'No market floor is available for this item and quality yet.'}</p>
-                <p>${weightedStack ? `Recent weighted sales point toward ${fmt(weightedStack)}g per stack, while the all-time average is ${historyData?.avgPerStack ? `${fmt(historyData.avgPerStack)}g` : '--'}.` : 'There is not enough sales history to calculate recent weighted momentum.'}</p>
+                <p>${stackFloor ? `Floor ${fmt(stackFloor)}g · Competitive cap ${cap ? `${fmt(cap)}g` : '--'} · ${fmt(stackCount)} count stack.` : 'No market floor is available for this item and quality yet.'}</p>
+                <p>${weightedStack ? `Recent weighted sales: ${fmt(weightedStack)}g. All-time average: ${historyData?.avgPerStack ? `${fmt(historyData.avgPerStack)}g` : '--'}.` : 'Not enough sales history for weighted guidance.'}</p>
             </div>
         </div>
     `;
 }
 
-function renderConfig({ selectedItem, marketData, referenceFloor, activeListings = [], salesRows = [], formState }) {
+function renderConfig({ selectedItem }) {
+    const target = document.getElementById('workbench-config');
+    if (!target) return;
+    const currentProfile = getCompetitiveRiskTolerance();
+
+    target.innerHTML = `
+        <div class="workbench-strategy-selector">
+            <div class="workbench-strategy-heading">
+                <div>
+                    <span>Pricing tolerance</span>
+                    <h3>Choose your pricing strategy</h3>
+                </div>
+            </div>
+            <div class="workbench-risk-toggle" role="radiogroup" aria-label="Pricing strategy">
+                ${Object.entries(COMPETITIVE_RISK_PROFILES).map(([key, profile]) => `
+                    <button type="button"
+                            class="workbench-risk-option ${key === currentProfile ? 'active' : ''}"
+                            role="radio"
+                            aria-checked="${key === currentProfile ? 'true' : 'false'}"
+                            data-risk-profile="${escapeHtml(key)}">
+                        <strong>${escapeHtml(profile.label)}</strong>
+                        <span>${escapeHtml(profile.description)}</span>
+                        <span class="workbench-risk-check" aria-hidden="true">✓</span>
+                    </button>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+
+function renderConfigLegacyCompact({ selectedItem, marketData, referenceFloor, formState }) {
+    const target = document.getElementById('workbench-config');
+    if (!target) return;
+
+    const currentProfile = getCompetitiveRiskTolerance();
+    const hasCount = Number(formState.count) > 0;
+    const stackFloor = marketData && formState.count > 0
+        ? Math.round(marketData.marketLow * formState.count)
+        : referenceFloor?.value || null;
+    const thresholds = stackFloor ? getCompetitiveThresholds(stackFloor, currentProfile) : null;
+    const staticCompetitiveCap = stackFloor ? getCompetitiveCap(stackFloor, currentProfile) : null;
+    const zoneListings = selectedItem && hasCount ? getZoneListingsForItemByQuality(
+        selectedItem.pax_dei_slug,
+        selectedItem.item_name,
+        formState.isMastercrafted,
+        formState.enchantmentTier
+    ) : [];
+    const strategyDepth = new Map();
+    zoneListings.forEach((listing) => {
+        const listingPrice = Number(listing.price) || 0;
+        const listingQuantity = Math.max(Number(listing.quantity) || 1, 1);
+        const normalizedPrice = Math.round((listingPrice / listingQuantity) * formState.count);
+        if (normalizedPrice > 0) {
+            strategyDepth.set(normalizedPrice, (strategyDepth.get(normalizedPrice) || 0) + 1);
+        }
+    });
+    const strategyDepthRows = Array.from(strategyDepth, ([price, quantity]) => ({ price, quantity }))
+        .sort((a, b) => a.price - b.price);
+    const strategyFloorDepth = strategyDepth.get(stackFloor) || 0;
+    const strategyNextTier = strategyDepthRows.find((row) => row.price > stackFloor);
+    const strategyOpportunity = strategyNextTier
+        && strategyNextTier.quantity >= Math.max(2, Math.ceil(strategyFloorDepth * 0.75))
+        && strategyNextTier.price > staticCompetitiveCap;
+    const competitiveCap = strategyOpportunity
+        ? strategyNextTier.price - getMarketUndercutStep(strategyNextTier.price)
+        : staticCompetitiveCap;
+
+    target.innerHTML = `
+        <div class="workbench-strategy-selector">
+            <div class="workbench-strategy-heading">
+                <div>
+                    <span>Competitive tolerance</span>
+                    <h3>Choose your pricing strategy</h3>
+                </div>
+                <p>Controls how far recommendations may move above the current floor.</p>
+            </div>
+            <div class="workbench-risk-toggle" role="radiogroup" aria-label="Competitive price risk tolerance">
+                ${Object.entries(COMPETITIVE_RISK_PROFILES).map(([key, profile]) => `
+                    <button type="button"
+                            class="workbench-risk-option ${key === currentProfile ? 'active' : ''}"
+                            role="radio"
+                            aria-checked="${key === currentProfile ? 'true' : 'false'}"
+                            data-risk-profile="${escapeHtml(key)}">
+                        <strong>${escapeHtml(profile.label)}</strong>
+                        <span>${escapeHtml(profile.description)}</span>
+                    </button>
+                `).join('')}
+            </div>
+            ${!selectedItem ? `
+                <div class="workbench-strategy-status workbench-strategy-status-guidance">
+                    Select an item to calculate competitive pricing.
+                </div>
+            ` : !hasCount ? `
+                <div class="workbench-strategy-status workbench-strategy-status-guidance">
+                    Enter the number of items per stack to calculate its market floor and competitive range.
+                </div>
+            ` : !stackFloor ? `
+                <div class="workbench-strategy-status workbench-strategy-status-guidance">
+                    No live market floor is available for this item and quality. Sales-based recommendations remain available below.
+                </div>
+            ` : `
+                <div class="workbench-strategy-status">
+                    <span><strong>${escapeHtml(COMPETITIVE_RISK_PROFILES[currentProfile]?.label || currentProfile)}</strong> strategy</span>
+                    <span>Floor <strong>${fmt(stackFloor)}g</strong></span>
+                    ${strategyOpportunity ? `<span>Supported wall <strong>${fmt(strategyNextTier.price)}g</strong></span>` : ''}
+                    <span>Competitive range <strong>${fmt(stackFloor)}–${fmt(competitiveCap)}g</strong></span>
+                </div>
+            `}
+        </div>
+    `;
+}
+
+function renderConfigLegacyDetailed({ selectedItem, marketData, referenceFloor, activeListings = [], salesRows = [], formState }) {
     const target = document.getElementById('workbench-config');
     if (!target) return;
 
@@ -600,7 +991,7 @@ function renderConfig({ selectedItem, marketData, referenceFloor, activeListings
             : exactStackPrices.length
             ? 'Home Valley exact stack feed'
             : anyStackPrices.length
-                ? 'Home Valley per-unit estimate'
+                ? 'Home Valley adjusted stack estimate'
                 : ledgerExactPrices.length
                     ? 'Archives exact stack listing'
                     : ledgerAnyPrices.length
@@ -637,7 +1028,7 @@ function renderConfig({ selectedItem, marketData, referenceFloor, activeListings
                 }
                 : null,
             {
-                label: 'Top competitive price',
+                label: 'Competitive ceiling',
                 price: competitiveCap,
                 status: classifyCompetitiveGap(
                     competitiveCap - stackFloor,
@@ -665,8 +1056,8 @@ function renderConfig({ selectedItem, marketData, referenceFloor, activeListings
         <div class="workbench-config-shell">
             <div class="workbench-config-copy">
                 <span>Pricing model</span>
-                <h4>Competitive Price Tolerance</h4>
-                <p>Choose how much room Archives gives the competitive cap above the current stack floor. This uses live item summaries first, then Home Valley listing depth, then your Archives active listings or weighted sales when live data is missing. This setting only changes guidance and suggested buttons.</p>
+                <h4>Pricing Strategy</h4>
+                <p>Choose where the suggested price sits between the current market low and competitive ceiling. Recent sales can nudge the recommendation upward, while concentrated supply at the floor can pull it back.</p>
             </div>
             <div class="workbench-risk-toggle" role="radiogroup" aria-label="Competitive price risk tolerance">
                 ${Object.entries(COMPETITIVE_RISK_PROFILES).map(([key, profile]) => `
@@ -695,7 +1086,7 @@ function renderConfig({ selectedItem, marketData, referenceFloor, activeListings
                     <strong>${thresholds ? `+${fmt(thresholds.maxGapGold)}g / ${fmt(thresholds.maxGapPct)}%` : '--'}</strong>
                 </div>
                 <div>
-                    <span>Competitive cap</span>
+                    <span>Competitive ceiling</span>
                     <strong>${competitiveCap ? `${fmt(competitiveCap)}g` : '--'}</strong>
                     <small>${competitiveCap && stackFloor ? `Effective +${fmt(competitiveCap - stackFloor)}g; the lower of the gold and percentage limits wins.` : ''}</small>
                 </div>
@@ -732,6 +1123,7 @@ function renderConfig({ selectedItem, marketData, referenceFloor, activeListings
 }
 
 function renderActiveListings({ selectedItem, activeListings, formState }) {
+    lastActiveListingsArgs = { selectedItem, activeListings, formState };
     const target = document.getElementById('workbench-active-listings');
     if (!target) return;
     if (!selectedItem) return renderEmpty(target, 'Select an item to compare active listings.');
@@ -796,101 +1188,83 @@ function renderActiveListings({ selectedItem, activeListings, formState }) {
 
     const rows = [...ledgerRows, ...externalRows]
         .sort((a, b) => a.unitPrice - b.unitPrice)
-        .slice(0, 24);
+        .slice(0, 30);
 
     if (!rows.length) return renderEmpty(target, 'No active listings were found for this item and quality.');
+    const pageCount = Math.ceil(rows.length / WORKBENCH_TABLE_PAGE_SIZE);
+    activeListingsPage = Math.min(activeListingsPage, pageCount - 1);
+    const visibleRows = rows.slice(
+        activeListingsPage * WORKBENCH_TABLE_PAGE_SIZE,
+        activeListingsPage * WORKBENCH_TABLE_PAGE_SIZE + WORKBENCH_TABLE_PAGE_SIZE
+    );
 
     target.innerHTML = `
-        <table class="listing-workbench-table">
-            <thead>
-                <tr>
-                    <th>Source</th>
-                    <th>Stack</th>
-                    <th>Stack Price</th>
-                    <th>Unit</th>
-                    <th>Age</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${rows.map((row) => `
+        <div class="listing-data-table-scroll">
+            <table class="listing-workbench-table">
+                <thead>
                     <tr>
-                        <td>${escapeHtml(row.source)}${row.source.includes('feed matched') ? ' <span class="listing-feed-pill">Feed</span>' : ''}</td>
-                        <td>${fmt(row.quantity)}</td>
-                        <td class="text-emerald-300 font-bold">${fmt(row.stackPrice)}g</td>
-                        <td>${fmt(row.unitPrice, 2)}g</td>
-                        <td>${escapeHtml(row.age)}</td>
+                        <th>Source</th>
+                        <th>Stack</th>
+                        <th>Stack Price</th>
+                        <th>Age</th>
                     </tr>
-                `).join('')}
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    ${visibleRows.map((row) => `
+                        <tr>
+                            <td>${escapeHtml(row.source)}${row.source.includes('feed matched') ? ' <span class="listing-feed-pill">Feed</span>' : ''}</td>
+                            <td>${fmt(row.quantity)}</td>
+                            <td class="text-emerald-300 font-bold">${fmt(row.stackPrice)}g</td>
+                            <td>${escapeHtml(row.age)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+        ${renderTablePagination('active', activeListingsPage, pageCount, rows.length)}
     `;
 }
 
 function renderSalesHistory({ selectedItem, historyData, salesRows }) {
+    lastSalesHistoryArgs = { selectedItem, historyData, salesRows };
     const target = document.getElementById('workbench-sales-history');
     if (!target) return;
     if (!selectedItem) return renderEmpty(target, 'Select an item to view sales history.');
     if (!salesRows.length) return renderEmpty(target, 'No sales history found for this item yet.');
-    const recentRows = salesRows.filter((sale) => {
-        const date = new Date(sale.sale_date).getTime();
-        return Number.isFinite(date) && (Date.now() - date) / 864e5 <= 30;
-    });
-    const currentCount = Math.max(Number(document.getElementById('modal-item-count-per-stack')?.value) || 0, 0);
-    const weightedStack = weightedAverage(salesRows, (sale) => getNormalizedSaleStackValue(sale, currentCount), (sale) => sale.sale_date);
-    const weightedUnit = weightedAverage(salesRows, (sale) => sale.sale_price_per_unit, (sale) => sale.sale_date);
-    const recentAvgStack = recentRows.length
-        ? recentRows.reduce((sum, sale) => sum + (Number(getNormalizedSaleStackValue(sale, currentCount)) || 0), 0) / recentRows.length
-        : null;
-    const recentAvgUnit = recentRows.length
-        ? recentRows.reduce((sum, sale) => sum + (Number(sale.sale_price_per_unit) || 0), 0) / recentRows.length
-        : null;
+    const pageCount = Math.ceil(salesRows.length / WORKBENCH_TABLE_PAGE_SIZE);
+    salesHistoryPage = Math.min(salesHistoryPage, pageCount - 1);
+    const visibleRows = salesRows.slice(
+        salesHistoryPage * WORKBENCH_TABLE_PAGE_SIZE,
+        salesHistoryPage * WORKBENCH_TABLE_PAGE_SIZE + WORKBENCH_TABLE_PAGE_SIZE
+    );
 
     target.innerHTML = `
-        <div class="listing-workbench-history-grid">
-            <div class="listing-workbench-metric">
-                <span>Weighted recent stack</span>
-                <strong>${weightedStack ? `${fmt(weightedStack)}g` : '--'}</strong>
-                <small>Normalized to current count, 14 day half-life</small>
-            </div>
-            <div class="listing-workbench-metric">
-                <span>30 day stack avg</span>
-                <strong>${recentAvgStack ? `${fmt(recentAvgStack)}g` : '--'}</strong>
-                <small>${fmt(recentRows.length)} sales in the last 30 days, normalized</small>
-            </div>
-            <div class="listing-workbench-metric">
-                <span>All-time stack avg</span>
-                <strong>${historyData ? `${fmt(historyData.avgPerStack)}g` : '--'}</strong>
-                <small>${historyData ? `${fmt(historyData.saleCount)} total recorded sales` : ''}</small>
-            </div>
+        <div class="listing-data-table-scroll">
+            <table class="listing-workbench-table">
+                <thead>
+                    <tr>
+                        <th>Sold</th>
+                        <th>Stack</th>
+                        <th>Stack Price</th>
+                        <th>Quality</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${visibleRows.map((sale) => {
+                        const listing = sale.market_listings || {};
+                        return `
+                            <tr>
+                                <td>${escapeHtml(relativeDate(sale.sale_date))} ago</td>
+                                <td>${fmt(sale.quantity_sold)}</td>
+                                <td class="text-emerald-300 font-bold">${fmt(sale.total_sale_price)}g</td>
+                                <td>${escapeHtml(qualityLabel(!!listing.is_mastercrafted, listing.enchantment_tier || 0))}</td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
         </div>
-        <div class="listing-workbench-note mt-3">
-            Weighted averages respond faster to market movement. For this item, weighted unit is ${weightedUnit ? `${fmt(weightedUnit, 2)}g` : '--'}, 30 day unit is ${recentAvgUnit ? `${fmt(recentAvgUnit, 2)}g` : '--'}, and all-time unit is ${historyData?.avgPerUnit ? `${fmt(historyData.avgPerUnit, 2)}g` : '--'}.
-        </div>
-        <table class="listing-workbench-table mt-3">
-            <thead>
-                <tr>
-                    <th>Sold</th>
-                    <th>Stack</th>
-                    <th>Stack Price</th>
-                    <th>Unit Price</th>
-                    <th>Quality</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${salesRows.slice(0, 8).map((sale) => {
-                    const listing = sale.market_listings || {};
-                    return `
-                        <tr>
-                            <td>${escapeHtml(relativeDate(sale.sale_date))} ago</td>
-                            <td>${fmt(sale.quantity_sold)}</td>
-                            <td class="text-emerald-300 font-bold">${fmt(sale.total_sale_price)}g</td>
-                            <td>${fmt(sale.sale_price_per_unit, 2)}g</td>
-                            <td>${escapeHtml(qualityLabel(!!listing.is_mastercrafted, listing.enchantment_tier || 0))}</td>
-                        </tr>
-                    `;
-                }).join('')}
-            </tbody>
-        </table>
+        ${renderTablePagination('sales', salesHistoryPage, pageCount, salesRows.length)}
     `;
 }
 
@@ -978,7 +1352,25 @@ export function initializeGuidedListingWorkbench() {
     document.addEventListener('pda:item-selected', (event) => {
         if (event.detail?.inputId !== 'modal-item-name') return;
         selectedItem = event.detail.item;
+        const priceInput = document.getElementById('modal-item-price-per-stack');
+        if (priceInput) priceInput.value = '';
+        activeListingsPage = 0;
+        salesHistoryPage = 0;
         refreshWorkbench(selectedItem);
+    });
+
+    root.addEventListener('click', (event) => {
+        const pageButton = event.target.closest('[data-listing-table][data-listing-page]');
+        if (!pageButton || pageButton.disabled) return;
+        const page = Math.max(0, Number(pageButton.dataset.listingPage) || 0);
+        if (pageButton.dataset.listingTable === 'active' && lastActiveListingsArgs) {
+            activeListingsPage = page;
+            renderActiveListings(lastActiveListingsArgs);
+        }
+        if (pageButton.dataset.listingTable === 'sales' && lastSalesHistoryArgs) {
+            salesHistoryPage = page;
+            renderSalesHistory(lastSalesHistoryArgs);
+        }
     });
 
     ['modal-item-stacks', 'modal-item-count-per-stack', 'modal-item-price-per-stack', 'modal-market-stall-location'].forEach((id) => {

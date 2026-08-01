@@ -1,0 +1,529 @@
+/* Desktop Chronicle edition: authoritative publication layout. */
+@media (min-width: 1101px) {
+    .articles-page[data-publication-mode="latest"] .chronicle-shell {
+        width: min(1800px, calc(100% - 5rem));
+        padding-top: 1.75rem;
+    }
+
+    .articles-page[data-publication-mode="latest"] .latest-publication-header {
+        position: relative;
+        display: block;
+        margin-bottom: 1.5rem;
+        border-top: 1px solid rgba(255, 215, 0, 0.58);
+        border-bottom: 3px double rgba(255, 255, 255, 0.35);
+        padding: 0.75rem 12rem 1.15rem;
+        text-align: center;
+    }
+
+    .articles-page[data-publication-mode="latest"] .latest-publication-header .articles-section-label {
+        margin: 0 0 0.3rem;
+        color: var(--gold-color, #ffd700);
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: clamp(2.2rem, 3vw, 3.8rem);
+        line-height: 1;
+        font-weight: 900;
+        letter-spacing: -0.035em;
+        text-transform: uppercase;
+    }
+
+    .articles-page[data-publication-mode="latest"] .publication-current-header h2 {
+        max-width: 70rem;
+        margin: 0 auto;
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: clamp(1.15rem, 1.35vw, 1.55rem);
+        line-height: 1.2;
+        font-style: italic;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        text-wrap: balance;
+    }
+
+    .articles-page[data-publication-mode="latest"] .latest-publication-meta {
+        margin-top: 0.45rem;
+        font-family: 'Poppins', sans-serif;
+        font-size: 0.78rem;
+        font-style: normal;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+    }
+
+    .articles-page[data-publication-mode="latest"] .latest-publication-header .publication-editor-link {
+        position: absolute;
+        top: 50%;
+        right: 0;
+        transform: translateY(-50%);
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-card {
+        min-height: 0;
+        overflow: visible;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-card:hover {
+        transform: none;
+        border-color: inherit;
+        box-shadow: none;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-card-header {
+        padding: 0 0 0.45rem;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-card-header h2 {
+        font-family: 'Poppins', sans-serif;
+        font-size: 0.82rem;
+        line-height: 1.15;
+        font-weight: 900;
+        letter-spacing: 0.13em;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-image {
+        width: 100%;
+        margin: 0;
+        border-radius: 0;
+        filter: saturate(0.88) contrast(1.03);
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-card-body {
+        padding: 0.65rem 0 0;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-title-link {
+        display: block;
+        overflow: visible;
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: clamp(1.25rem, 1.3vw, 1.7rem);
+        line-height: 1.08;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        -webkit-line-clamp: initial;
+    }
+
+    .articles-page[data-publication-mode="latest"] .article-meta-row {
+        margin-bottom: 0.65rem;
+        border: 0;
+        padding: 0;
+        background: transparent;
+        font-family: 'Poppins', sans-serif;
+        font-size: 0.76rem;
+        line-height: 1.35;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-excerpt,
+    .articles-page[data-publication-mode="latest"] .chronicle-excerpt p {
+        color: rgba(255, 255, 255, 0.78);
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: 1rem;
+        line-height: 1.58;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-excerpt::after {
+        background: linear-gradient(to bottom, rgba(28, 28, 28, 0), #1c1c1c 84%);
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-read-link {
+        border-radius: 0;
+        border-width: 0 0 1px;
+        padding: 0.4rem 0 0.18rem;
+        background: transparent;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-read-link:hover,
+    .articles-page[data-publication-mode="latest"] .chronicle-read-link:focus-visible {
+        background: rgba(255, 215, 0, 0.12);
+        color: #fff;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-edition {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(19rem, 1fr);
+        gap: 0 1.5rem;
+        align-items: stretch;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-edition-lead {
+        min-width: 0;
+        height: 100%;
+        border-right: 1px solid rgba(255, 255, 255, 0.2);
+        padding-right: 1.5rem;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-card-edition-lead {
+        display: block;
+        height: 100%;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-card-edition-lead .chronicle-card-header {
+        display: block;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-card-edition-lead .chronicle-image {
+        display: block;
+        height: auto;
+        min-height: 0;
+        aspect-ratio: 16 / 8.5;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-card-edition-lead .chronicle-card-body {
+        display: block;
+        padding-top: 0.75rem;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-card-edition-lead .chronicle-title-link {
+        font-size: clamp(2rem, 2.3vw, 3rem);
+        line-height: 1;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-card.chronicle-card-edition-lead .chronicle-excerpt {
+        max-height: 22rem;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-card.chronicle-card-edition-lead .chronicle-excerpt,
+    .articles-page[data-publication-mode="latest"] .chronicle-card.chronicle-card-edition-lead .chronicle-excerpt p {
+        font-size: 1.06rem;
+        line-height: 1.62;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-edition-sidebar {
+        display: grid;
+        min-width: 0;
+        grid-auto-rows: max-content;
+        gap: 1rem;
+        align-content: start;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-edition-sidebar .chronicle-card {
+        border-bottom: 0;
+        padding-bottom: 1rem;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-edition-sidebar .chronicle-card:last-child {
+        border-bottom: 0;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-edition-sidebar .chronicle-image {
+        height: 8.75rem;
+        max-height: 8.75rem;
+        aspect-ratio: auto;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-edition-sidebar .chronicle-title-link {
+        font-size: clamp(1.35rem, 1.45vw, 1.75rem);
+        line-height: 1.06;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-edition-sidebar .chronicle-excerpt {
+        max-height: 6.5rem;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-edition-lower {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 2rem;
+        margin-top: 1.7rem;
+        border-top: 0;
+        padding-top: 0;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-edition-section + .chronicle-edition-section {
+        border-top: 0;
+        padding-top: 0;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-edition-section-size-2 {
+        grid-column: span 2;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-edition-section-size-3,
+    .articles-page[data-publication-mode="latest"] .chronicle-edition-classifieds {
+        grid-column: 1 / -1;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-edition-section-title {
+        margin: 0 0 0.9rem;
+        border-bottom: 1px solid rgba(255, 215, 0, 0.42);
+        padding-bottom: 0.45rem;
+        color: var(--gold-color, #ffd700);
+        font-family: 'Poppins', sans-serif;
+        font-size: 1rem;
+        line-height: 1.15;
+        font-weight: 900;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-edition-server-groups {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 1.4rem;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-server-count-1 > .chronicle-edition-server-group {
+        grid-column: span 6;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-server-count-2 > .chronicle-edition-server-group,
+    .articles-page[data-publication-mode="latest"] .chronicle-server-count-4 > .chronicle-edition-server-group {
+        grid-column: span 3;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-server-count-3 > .chronicle-edition-server-group,
+    .articles-page[data-publication-mode="latest"] .chronicle-server-count-5 > .chronicle-edition-server-group:nth-child(-n + 3),
+    .articles-page[data-publication-mode="latest"] .chronicle-server-count-6 > .chronicle-edition-server-group {
+        grid-column: span 2;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-server-count-5 > .chronicle-edition-server-group:nth-child(n + 4) {
+        grid-column: span 3;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-edition-server-group + .chronicle-edition-server-group {
+        border-left: 1px solid rgba(255, 255, 255, 0.16);
+        padding-left: 1.4rem;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-server-count-4 > .chronicle-edition-server-group:nth-child(3),
+    .articles-page[data-publication-mode="latest"] .chronicle-server-count-5 > .chronicle-edition-server-group:nth-child(4),
+    .articles-page[data-publication-mode="latest"] .chronicle-server-count-6 > .chronicle-edition-server-group:nth-child(4) {
+        border-left: 0;
+        padding-left: 0;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-edition-section-heading {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: end;
+        border-bottom: 1px solid rgba(255, 215, 0, 0.42);
+        margin-bottom: 0.9rem;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-edition-section-heading .chronicle-edition-section-title {
+        margin-bottom: 0;
+        border-bottom: 0;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-server-pagination {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding-bottom: 0.35rem;
+        color: rgba(255, 255, 255, 0.62);
+        font-family: 'Poppins', sans-serif;
+        font-size: 0.72rem;
+        font-weight: 800;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-server-page-button {
+        display: inline-grid;
+        width: 2rem;
+        height: 2rem;
+        place-items: center;
+        border: 1px solid rgba(255, 215, 0, 0.25);
+        border-radius: 50%;
+        background: rgba(255, 215, 0, 0.07);
+        color: var(--gold-color, #ffd700);
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-server-page-button:hover:not(:disabled) {
+        background: rgba(255, 215, 0, 0.16);
+        color: #fff;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-server-page-button:disabled {
+        opacity: 0.28;
+        cursor: not-allowed;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-edition-server-title {
+        margin: 0 0 0.75rem;
+        border: 0;
+        padding-bottom: 0;
+        color: rgba(255, 255, 255, 0.68);
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: 1.15rem;
+        font-style: italic;
+        font-weight: 700;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-edition-story-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+        gap: 0 1.25rem;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-edition-story-grid .chronicle-card {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.13);
+        padding-bottom: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-edition-story-grid .chronicle-card:last-child {
+        border-bottom: 0;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-edition-story-grid .chronicle-card-header {
+        display: none;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-edition-story-grid .chronicle-image {
+        height: 9rem;
+        aspect-ratio: auto;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-edition-story-grid .chronicle-excerpt {
+        max-height: 6.25rem;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-card-edition-group-story {
+        display: grid;
+        grid-template-columns: 7rem minmax(0, 1fr);
+        grid-template-rows: auto 1fr;
+        gap: 0 0.85rem;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-card-edition-group-story .chronicle-image {
+        grid-column: 1;
+        grid-row: 1 / span 2;
+        width: 7rem;
+        height: 7rem;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-card-edition-group-story .chronicle-card-body {
+        grid-column: 2;
+        grid-row: 1 / span 2;
+        padding-top: 0;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-card-edition-group-story .chronicle-excerpt {
+        display: none;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-edition-classified-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0 1.5rem;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-edition-classified-grid > .chronicle-card {
+        grid-column: auto;
+        width: auto;
+        min-width: 0;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-card-edition-classified {
+        border-right: 1px solid rgba(255, 255, 255, 0.16);
+        padding-right: 1.25rem;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-card-edition-classified:last-child {
+        border-right: 0;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-card-edition-classified .chronicle-card-header,
+    .articles-page[data-publication-mode="latest"] .chronicle-card-edition-classified .chronicle-image,
+    .articles-page[data-publication-mode="latest"] .chronicle-card-edition-classified .article-meta-row,
+    .articles-page[data-publication-mode="latest"] .chronicle-card-edition-classified .chronicle-read-link {
+        display: none;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-card-edition-classified .chronicle-title-link {
+        font-size: 1.12rem;
+        line-height: 1.15;
+        text-transform: uppercase;
+    }
+
+    .articles-page[data-publication-mode="latest"] .chronicle-card-edition-classified .chronicle-excerpt,
+    .articles-page[data-publication-mode="latest"] .chronicle-card-edition-classified .chronicle-excerpt p {
+        max-height: none;
+        font-size: 0.94rem;
+        line-height: 1.5;
+    }
+}
+
+@media (max-width: 1100px) {
+    .chronicle-edition-lead,
+    .chronicle-edition-sidebar,
+    .chronicle-edition-lower {
+        display: none;
+    }
+}
+
+/* The editor preview is narrower than the public page even on a desktop viewport. */
+@media (min-width: 1101px) {
+    .draft-edition-canvas.articles-page[data-publication-mode="latest"] .chronicle-edition {
+        grid-template-columns: minmax(0, 1.65fr) minmax(17rem, 1fr);
+        column-gap: 2rem;
+    }
+
+    .draft-edition-canvas.articles-page[data-publication-mode="latest"] .chronicle-edition-lead {
+        padding-right: 2rem;
+    }
+
+    .draft-edition-canvas.articles-page[data-publication-mode="latest"] .chronicle-edition-lower {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 2.75rem 2.25rem;
+        margin-top: 2.5rem;
+    }
+
+    .draft-edition-canvas.articles-page[data-publication-mode="latest"] .chronicle-edition-section-size-2 {
+        grid-column: span 1;
+    }
+
+    .draft-edition-canvas.articles-page[data-publication-mode="latest"] .chronicle-edition-section-size-3,
+    .draft-edition-canvas.articles-page[data-publication-mode="latest"] .chronicle-edition-classifieds {
+        grid-column: 1 / -1;
+    }
+
+    .draft-edition-canvas.articles-page[data-publication-mode="latest"] .chronicle-edition-story-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .draft-edition-canvas.articles-page[data-publication-mode="latest"] .chronicle-edition-server-groups {
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+    }
+
+    .draft-edition-canvas.articles-page[data-publication-mode="latest"] .chronicle-edition-server-group {
+        grid-column: auto;
+    }
+
+    .draft-edition-canvas.articles-page[data-publication-mode="latest"] .chronicle-card {
+        min-width: 0;
+        padding-bottom: 3.25rem;
+    }
+
+    .draft-edition-canvas.articles-page[data-publication-mode="latest"] .chronicle-edition-story-grid .chronicle-card {
+        padding-bottom: 3.25rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .draft-edition-canvas.articles-page[data-publication-mode="latest"] .chronicle-title-link {
+        overflow-wrap: anywhere;
+    }
+}
+
+@media (max-width: 1100px) {
+    .draft-edition-canvas .chronicle-edition {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1.5rem;
+    }
+
+    .draft-edition-canvas .chronicle-edition-lead,
+    .draft-edition-canvas .chronicle-edition-sidebar,
+    .draft-edition-canvas .chronicle-edition-lower {
+        display: grid;
+    }
+
+    .draft-edition-canvas .chronicle-edition-sidebar,
+    .draft-edition-canvas .chronicle-edition-lower {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1.5rem;
+    }
+}

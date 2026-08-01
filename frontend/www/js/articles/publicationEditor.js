@@ -53,6 +53,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   elements.savePublicationButton.addEventListener('click', () => savePublicationDraft(elements));
   elements.publishButton.addEventListener('click', () => publishActivePublication(elements));
   elements.carryOverEntryButton.addEventListener('click', () => carryOverSelectedEntry(elements));
+  elements.openLayoutMapButton.addEventListener('click', () => elements.layoutMapDialog.showModal());
+  elements.closeLayoutMapButton.addEventListener('click', () => elements.layoutMapDialog.close());
+  elements.layoutMapDialog.addEventListener('click', event => {
+    if (event.target === elements.layoutMapDialog) elements.layoutMapDialog.close();
+  });
   elements.form.addEventListener('submit', event => saveEntryToDraft(event, elements));
   elements.entrySectionSelect.addEventListener('change', () => updateEntryFieldRequirements(elements));
 
@@ -88,8 +93,14 @@ function getElements() {
     entryFullPreview: document.getElementById('entryFullPreview'),
     entryAuthorInput: document.getElementById('entryAuthor'),
     entrySectionSelect: document.getElementById('entrySection'),
+    entrySortOrderInput: document.getElementById('entrySortOrder'),
+    entryServerInput: document.getElementById('entryServerLabel'),
+    entryServerSuggestions: document.getElementById('entryServerSuggestions'),
     carryOverEntrySelect: document.getElementById('carryOverEntrySelect'),
     carryOverEntryButton: document.getElementById('carryOverEntryButton'),
+    openLayoutMapButton: document.getElementById('openPublicationLayoutMap'),
+    closeLayoutMapButton: document.getElementById('closePublicationLayoutMap'),
+    layoutMapDialog: document.getElementById('publicationLayoutMap'),
     messageEl: document.getElementById('publicationEditorMessage'),
     draftTitle: document.getElementById('draftPublicationTitle'),
     draftMeta: document.getElementById('draftPublicationMeta'),
@@ -117,6 +128,8 @@ function setupMarkdownEditor(elements) {
     elements.entryContentInput,
     elements.entryAuthorInput,
     elements.entrySectionSelect,
+    elements.entrySortOrderInput,
+    elements.entryServerInput,
   ].forEach(input => {
     input.addEventListener('input', schedulePreviewUpdate);
     input.addEventListener('change', () => updateEntryPreview(elements));
@@ -536,7 +549,8 @@ async function upsertPublicationEntry(entry) {
     thumbnail_url: entry.thumbnailUrl || null,
     content: entry.content,
     author: entry.author || 'Classifieds',
-    sort_order: CHRONICLE_SECTIONS.indexOf(entry.sectionKey),
+    sort_order: entry.sortOrder ?? CHRONICLE_SECTIONS.indexOf(entry.sectionKey),
+    server_label: entry.serverLabel || null,
   };
 
   const query = entry.id
@@ -641,7 +655,12 @@ function renderDraftPanel(elements, publication, entries) {
     elements.draftEntryList.querySelectorAll('.draft-entry-edit').forEach(button => {
       button.addEventListener('click', () => loadEntryForEditing(button.dataset.entryId, elements));
     });
+    elements.draftEntryList.querySelectorAll('.draft-entry-move').forEach(button => {
+      button.addEventListener('click', () => moveDraftEntry(button.dataset.entryId, Number(button.dataset.direction), elements));
+    });
   }
+
+  refreshServerSuggestions(elements, entries);
 
   elements.publishButton.disabled = !publication || !entries.length || status === 'published' || status === 'archived';
   elements.savePublicationButton.innerHTML = publication
@@ -650,28 +669,89 @@ function renderDraftPanel(elements, publication, entries) {
 }
 
 function renderDraftPublicationPreview(entries, canEditEntries, releaseDate) {
-  if (entries.length === 1) {
-    return renderDraftPublicationCard(entries[0], 'lead', canEditEntries, releaseDate);
-  }
-
-  const [leadEntry, ...secondaryEntries] = entries;
-  const articleEntries = secondaryEntries.filter(entry => !isClassifiedSection(entry.section_key));
-  const columns = distributeDraftBalancedFrontpageColumns(leadEntry, secondaryEntries);
-  const orderedFlowItems = buildOrderedDraftFrontpageFlowItems(secondaryEntries);
+  const orderedEntries = [...entries].sort(sortEntries);
+  const [leadEntry, ...secondaryEntries] = orderedEntries;
+  const sidebarEntries = secondaryEntries.slice(0, 2);
+  const lowerEntries = secondaryEntries.slice(2);
 
   return `
-    <div class="chronicle-frontpage chronicle-frontpage-balanced draft-chronicle-frontpage">
-      ${columns.map((column, columnIndex) => `
-        <div class="${columnIndex === 0 ? 'chronicle-frontpage-lead' : 'chronicle-flow-column'}">
-          ${column.map(item => renderDraftBalancedFrontpageItem(item, articleEntries, canEditEntries, releaseDate)).join('')}
-        </div>
-      `).join('')}
-      <div class="chronicle-frontpage-flow-mobile">
-        ${renderDraftPublicationCard(leadEntry, 'lead', canEditEntries, releaseDate)}
-        ${orderedFlowItems.map(item => renderDraftFrontpageFlowItem(item, articleEntries, canEditEntries, releaseDate)).join('')}
+    <div class="articles-page draft-edition-canvas" data-publication-mode="latest">
+      <div class="chronicle-frontpage chronicle-edition">
+        <section class="chronicle-edition-lead">
+          ${renderDraftPublicationCard(leadEntry, 'edition-lead', canEditEntries, releaseDate, 0, orderedEntries.length)}
+        </section>
+        <aside class="chronicle-edition-sidebar" aria-label="Opening features">
+          ${sidebarEntries.map((entry, index) => renderDraftPublicationCard(
+            entry,
+            index === 0 ? 'edition-side-feature' : 'edition-side-story',
+            canEditEntries,
+            releaseDate,
+            index + 1,
+            orderedEntries.length,
+          )).join('')}
+        </aside>
+        <section class="chronicle-edition-lower" aria-label="Grouped sections">
+          ${renderDraftEditionSections(lowerEntries, canEditEntries, releaseDate, orderedEntries)}
+        </section>
       </div>
     </div>
   `;
+}
+
+function renderDraftEditionSections(entries, canEditEntries, releaseDate, orderedEntries) {
+  const groupedEntries = entries.reduce((groups, entry) => {
+    const category = entry.section_key || 'More from this issue';
+    if (!groups.has(category)) groups.set(category, []);
+    groups.get(category).push(entry);
+    return groups;
+  }, new Map());
+
+  return [...groupedEntries.entries()].map(([category, categoryEntries]) => {
+    if (isClassifiedSection(category)) {
+      return `
+        <section class="chronicle-edition-section chronicle-edition-classifieds">
+          <h2 class="chronicle-edition-section-title">Classifieds</h2>
+          <div class="chronicle-edition-classified-grid">
+            ${categoryEntries.map(entry => renderDraftPublicationCard(
+              entry, 'edition-classified', canEditEntries, releaseDate,
+              orderedEntries.indexOf(entry), orderedEntries.length
+            )).join('')}
+          </div>
+        </section>
+      `;
+    }
+
+    const serverGroups = categoryEntries.reduce((groups, entry) => {
+      const server = getDraftEntryServer(entry);
+      if (!groups.has(server)) groups.set(server, []);
+      groups.get(server).push(entry);
+      return groups;
+    }, new Map());
+    const showServerLabels = serverGroups.size > 1 || !serverGroups.has('Across Gallia');
+
+    return `
+      <section class="chronicle-edition-section chronicle-edition-section-size-${Math.min(categoryEntries.length, 3)}">
+        <h2 class="chronicle-edition-section-title">${escapeHtml(category)}</h2>
+        <div class="chronicle-edition-server-groups">
+          ${[...serverGroups.entries()].map(([server, serverEntries]) => `
+            <div class="chronicle-edition-server-group">
+              ${showServerLabels ? `<h3 class="chronicle-edition-server-title">${escapeHtml(server)}</h3>` : ''}
+              <div class="chronicle-edition-story-grid">
+                ${serverEntries.map((entry, index) => renderDraftPublicationCard(
+                  entry,
+                  index === 0 ? 'edition-group-feature' : 'edition-group-story',
+                  canEditEntries,
+                  releaseDate,
+                  orderedEntries.indexOf(entry),
+                  orderedEntries.length,
+                )).join('')}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </section>
+    `;
+  }).join('');
 }
 
 function updateThumbnailFieldVisibility(elements) {
@@ -777,17 +857,21 @@ function getDraftSecondaryCardModifier(entry, index, entries) {
   return index % 2 === 0 ? 'secondary-standard' : 'secondary-narrow';
 }
 
-function renderDraftPublicationCard(entry, modifier, canEditEntries, releaseDate) {
+function renderDraftPublicationCard(entry, modifier, canEditEntries, releaseDate, position = 0, entryCount = 1) {
   const isClassified = isClassifiedSection(entry.section_key);
   const previewText = entry.content || entry.summary || '';
   const excerptHtml = DOMPurify.sanitize(renderMarkdownPreview(stripImages(previewText)));
+  const mediaUrl = entry.image_url || entry.thumbnail_url || '';
+  const placement = position === 0 ? 'Lead' : position < 3 ? `Opening ${position}` : `Position ${position + 1}`;
 
   return `
     <article class="chronicle-card ${modifier ? `chronicle-card-${modifier}` : ''} ${isClassified ? 'chronicle-card-classified' : ''}">
       <header class="chronicle-card-header">
         <h2>${escapeHtml(entry.section_key)}</h2>
       </header>
+      ${mediaUrl && !isClassified ? `<img class="chronicle-image" src="${escapeHtml(mediaUrl)}" alt="">` : ''}
       <div class="chronicle-card-body">
+        <span class="draft-placement-badge">${escapeHtml(placement)}</span>
         <h3>
           <span class="chronicle-title-link">${escapeHtml(entry.title)}</span>
         </h3>
@@ -800,13 +884,70 @@ function renderDraftPublicationCard(entry, modifier, canEditEntries, releaseDate
         <div class="chronicle-excerpt markdown-content">${excerptHtml}</div>
       </div>
       ${canEditEntries ? `
-        <button type="button" class="draft-entry-edit" data-entry-id="${escapeHtml(entry.id)}">
-          <i class="fas fa-pen"></i>
-          Edit
-        </button>
+        <div class="draft-entry-controls">
+          <button type="button" class="draft-entry-move" data-entry-id="${escapeHtml(entry.id)}" data-direction="-1" ${position === 0 ? 'disabled' : ''} aria-label="Move entry earlier">
+            <i class="fas fa-arrow-up"></i>
+          </button>
+          <button type="button" class="draft-entry-move" data-entry-id="${escapeHtml(entry.id)}" data-direction="1" ${position === entryCount - 1 ? 'disabled' : ''} aria-label="Move entry later">
+            <i class="fas fa-arrow-down"></i>
+          </button>
+          <button type="button" class="draft-entry-edit" data-entry-id="${escapeHtml(entry.id)}">
+            <i class="fas fa-pen"></i> Edit
+          </button>
+        </div>
       ` : ''}
     </article>
   `;
+}
+
+async function moveDraftEntry(entryId, direction, elements) {
+  const orderedEntries = [...activeEntries].sort(sortEntries);
+  const currentIndex = orderedEntries.findIndex(entry => entry.id === entryId);
+  const targetIndex = currentIndex + direction;
+  if (currentIndex < 0 || targetIndex < 0 || targetIndex >= orderedEntries.length) return;
+
+  [orderedEntries[currentIndex], orderedEntries[targetIndex]] = [orderedEntries[targetIndex], orderedEntries[currentIndex]];
+  elements.draftEntryList.classList.add('is-reordering');
+
+  try {
+    await requireAuthenticatedUser();
+    const updates = await Promise.all(orderedEntries.map((entry, index) => (
+      supabase
+        .from('publication_entries')
+        .update({ sort_order: (index + 1) * 10 })
+        .eq('id', entry.id)
+    )));
+    const failedUpdate = updates.find(result => result.error);
+    if (failedUpdate) throw failedUpdate.error;
+
+    clearPublicationCache();
+    await loadPublicationByIssue(elements, { silent: true });
+    showMessage(elements.messageEl, 'Entry order updated.', 'success');
+  } catch (error) {
+    console.error(error);
+    showMessage(elements.messageEl, `Unable to reorder entries: ${error.message}`, 'error');
+  } finally {
+    elements.draftEntryList.classList.remove('is-reordering');
+  }
+}
+
+function getDraftEntryServer(entry) {
+  if (String(entry.server_label || '').trim()) return String(entry.server_label).trim();
+  const match = String(entry.title || '').match(/^([A-Z][A-Za-z0-9' ]{1,30})\s*[-–—]\s+/);
+  return match ? match[1].trim() : 'Across Gallia';
+}
+
+function refreshServerSuggestions(elements, entries = []) {
+  if (!elements.entryServerSuggestions) return;
+  const labels = new Set(
+    [...publicationList.flatMap(publication => publication.publication_entries || []), ...entries]
+      .map(getDraftEntryServer)
+      .filter(label => label && label !== 'Across Gallia')
+  );
+  elements.entryServerSuggestions.innerHTML = [...labels]
+    .sort((a, b) => a.localeCompare(b))
+    .map(label => `<option value="${escapeHtml(label)}"></option>`)
+    .join('');
 }
 
 function loadEntryForEditing(entryId, elements) {
@@ -824,6 +965,10 @@ function loadEntryForEditing(entryId, elements) {
   updateThumbnailFieldVisibility(elements);
   elements.entryContentInput.value = entry.content || '';
   elements.entryAuthorInput.value = entry.author || 'Phoenix';
+  elements.entryServerInput.value = entry.server_label || '';
+  elements.entrySortOrderInput.value = entry.sort_order != null && Number.isFinite(Number(entry.sort_order))
+    ? Number(entry.sort_order)
+    : '';
   updateEntryPreview(elements);
 
   const submitButton = elements.form.querySelector('button[type="submit"]');
@@ -888,6 +1033,10 @@ function carryOverSelectedEntry(elements) {
   updateThumbnailFieldVisibility(elements);
   elements.entryContentInput.value = sourceEntry.content || '';
   elements.entryAuthorInput.value = sourceEntry.author || 'Phoenix';
+  elements.entryServerInput.value = sourceEntry.server_label || '';
+  elements.entrySortOrderInput.value = sourceEntry.sort_order != null && Number.isFinite(Number(sourceEntry.sort_order))
+    ? Number(sourceEntry.sort_order)
+    : '';
   updateEntryPreview(elements);
   resetSubmitButton(elements.form.querySelector('button[type="submit"]'));
 
@@ -911,6 +1060,10 @@ function readEntryInput(elements) {
     thumbnailUrl: elements.entryThumbnailUrlInput.value.trim(),
     content,
     author: elements.entryAuthorInput.value.trim() || (isClassifiedSection(sectionKey) ? 'Classifieds' : ''),
+    serverLabel: elements.entryServerInput.value.trim(),
+    sortOrder: elements.entrySortOrderInput.value === ''
+      ? null
+      : Math.max(0, Number.parseInt(elements.entrySortOrderInput.value, 10)),
   };
 }
 
@@ -942,6 +1095,8 @@ function clearEntryFields(elements) {
   updateThumbnailFieldVisibility(elements);
   elements.entryContentInput.value = '';
   elements.entryAuthorInput.value = 'Phoenix';
+  elements.entryServerInput.value = '';
+  elements.entrySortOrderInput.value = '';
   populateSectionSelect(elements.entrySectionSelect);
   updateEntryFieldRequirements(elements);
   updateEntryPreview(elements);

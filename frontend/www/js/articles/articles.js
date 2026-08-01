@@ -63,6 +63,7 @@ let filteredEntries = [];
 let activeCategory = 'All';
 let activePublicationKey = null;
 let isLegacyArchive = false;
+const serverSectionPages = new Map();
 
 export async function fetchAndRenderArticles(containerId, searchTerm = null, limit = null) {
   if (searchTerm) {
@@ -273,6 +274,7 @@ function normalizeEntry(entry, publication) {
     issueNumber: publication.issueNumber || publication.issue_number || null,
     publicationTitle: publication.title || null,
     sortOrder: entry.sort_order ?? entry.sortOrder ?? sectionSortIndex(section),
+    serverLabel: entry.server_label || entry.serverLabel || '',
     heroImage,
     thumbnailUrl,
     source: entry.source || '',
@@ -313,6 +315,7 @@ function renderArticlesPage(entries) {
   renderPublicationArchive();
   updateResultsMeta(entries);
   attachReadHandlers();
+  attachServerPageHandlers();
 }
 
 function renderPublicationHeader() {
@@ -367,6 +370,7 @@ function renderPublicationSelect() {
   select.onchange = () => {
     activePublicationKey = select.value;
     activeCategory = 'All';
+    serverSectionPages.clear();
     filteredEntries = getActivePublicationEntries();
     renderArticlesPage(filteredEntries);
     updatePublicationUrl();
@@ -418,7 +422,7 @@ function renderPublicationGrid(entries) {
     return;
   }
 
-  if (getPublicationPageMode() === 'latest' && activeEntries.length > 1) {
+  if (['latest', 'archive'].includes(getPublicationPageMode()) && activeEntries.length > 1) {
     grid.innerHTML = renderBalancedFrontpage(activeEntries);
     return;
   }
@@ -428,23 +432,118 @@ function renderPublicationGrid(entries) {
 
 function renderBalancedFrontpage(entries) {
   const [leadEntry, ...secondaryEntries] = entries;
-  const articleEntries = secondaryEntries.filter(entry => entry.category !== 'Classifieds');
-  const columns = distributeBalancedFrontpageColumns(leadEntry, secondaryEntries);
   const orderedFlowItems = buildOrderedFrontpageFlowItems(secondaryEntries);
+  const sidebarEntries = secondaryEntries.slice(0, 2);
+  const lowerEntries = secondaryEntries.slice(2);
 
   return `
-    <div class="chronicle-frontpage chronicle-frontpage-balanced">
-      ${columns.map((column, columnIndex) => `
-        <div class="${columnIndex === 0 ? 'chronicle-frontpage-lead' : 'chronicle-flow-column'}">
-          ${column.map(item => renderBalancedFrontpageItem(item, articleEntries)).join('')}
-        </div>
-      `).join('')}
+    <div class="chronicle-frontpage chronicle-edition">
+      <section class="chronicle-edition-lead">
+        ${renderPublicationCard(leadEntry, 'edition-lead')}
+      </section>
+      <aside class="chronicle-edition-sidebar" aria-label="Featured stories">
+        ${sidebarEntries.map((entry, index) => renderPublicationCard(
+          entry,
+          index === 0 ? 'edition-side-feature' : 'edition-side-story'
+        )).join('')}
+      </aside>
+      <section class="chronicle-edition-lower" aria-label="More from this issue">
+        ${renderEditionSections(lowerEntries)}
+      </section>
       <div class="chronicle-frontpage-flow-mobile">
         ${renderPublicationCard(leadEntry, 'lead')}
-        ${orderedFlowItems.map(item => renderFrontpageFlowItem(item, articleEntries)).join('')}
+        ${orderedFlowItems.map(item => renderFrontpageFlowItem(
+          item,
+          secondaryEntries.filter(entry => entry.category !== 'Classifieds')
+        )).join('')}
       </div>
     </div>
   `;
+}
+
+function renderEditionSections(entries) {
+  const groupedEntries = entries.reduce((groups, entry) => {
+    const category = entry.category || 'More from this issue';
+    if (!groups.has(category)) groups.set(category, []);
+    groups.get(category).push(entry);
+    return groups;
+  }, new Map());
+
+  return [...groupedEntries.entries()].map(([category, categoryEntries], sectionIndex) => {
+    if (category === 'Classifieds') {
+      return `
+        <section class="chronicle-edition-section chronicle-edition-classifieds">
+          <h2 class="chronicle-edition-section-title">Classifieds</h2>
+          <div class="chronicle-edition-classified-grid">
+            ${categoryEntries.map(entry => renderPublicationCard(entry, 'edition-classified')).join('')}
+          </div>
+        </section>
+      `;
+    }
+
+    const serverGroups = categoryEntries.reduce((groups, entry) => {
+      const server = getEntryServer(entry);
+      if (!groups.has(server)) groups.set(server, []);
+      groups.get(server).push(entry);
+      return groups;
+    }, new Map());
+    const showServerLabels = serverGroups.size > 1 || !serverGroups.has('Across Gallia');
+    const serverGroupEntries = [...serverGroups.entries()];
+    const sectionKey = `${slugify(category)}-${sectionIndex}`;
+    const pageCount = Math.ceil(serverGroupEntries.length / 6);
+    const requestedPage = serverSectionPages.get(sectionKey) || 0;
+    const activePage = Math.min(requestedPage, Math.max(0, pageCount - 1));
+    const visibleServerGroups = serverGroupEntries.slice(activePage * 6, activePage * 6 + 6);
+
+    return `
+      <section class="chronicle-edition-section chronicle-edition-section-size-${Math.min(categoryEntries.length, 3)}">
+        <div class="chronicle-edition-section-heading">
+          <h2 class="chronicle-edition-section-title">${escapeHtml(category)}</h2>
+          ${pageCount > 1 ? `
+            <div class="chronicle-server-pagination" aria-label="${escapeHtml(category)} server pages">
+              <span>${activePage + 1} / ${pageCount}</span>
+              <button type="button" class="chronicle-server-page-button" data-server-section="${escapeHtml(sectionKey)}" data-server-page="${activePage - 1}" ${activePage === 0 ? 'disabled' : ''} aria-label="Previous server page">
+                <i class="fas fa-arrow-left"></i>
+              </button>
+              <button type="button" class="chronicle-server-page-button" data-server-section="${escapeHtml(sectionKey)}" data-server-page="${activePage + 1}" ${activePage === pageCount - 1 ? 'disabled' : ''} aria-label="Next server page">
+                <i class="fas fa-arrow-right"></i>
+              </button>
+            </div>
+          ` : ''}
+        </div>
+        <div class="chronicle-edition-server-groups chronicle-server-count-${visibleServerGroups.length}">
+          ${visibleServerGroups.map(([server, serverEntries]) => `
+            <div class="chronicle-edition-server-group">
+              ${showServerLabels ? `<h3 class="chronicle-edition-server-title">${escapeHtml(server)}</h3>` : ''}
+              <div class="chronicle-edition-story-grid">
+                ${serverEntries.map((entry, index) => renderPublicationCard(
+                  entry,
+                  index === 0 ? 'edition-group-feature' : 'edition-group-story'
+                )).join('')}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </section>
+    `;
+  }).join('');
+}
+
+function attachServerPageHandlers() {
+  document.querySelectorAll('.chronicle-server-page-button').forEach(button => {
+    button.addEventListener('click', () => {
+      if (button.disabled) return;
+      serverSectionPages.set(button.dataset.serverSection, Math.max(0, Number(button.dataset.serverPage) || 0));
+      renderArticlesPage(filteredEntries);
+    });
+  });
+}
+
+function getEntryServer(entry) {
+  if (String(entry.serverLabel || '').trim()) return String(entry.serverLabel).trim();
+  const match = String(entry.title || '').match(/^([A-Z][A-Za-z0-9' ]{1,30})\s*[-–—]\s+/);
+  if (!match) return 'Across Gallia';
+  return match[1].trim();
 }
 
 function distributeBalancedFrontpageColumns(leadEntry, entries) {
@@ -726,6 +825,7 @@ function renderPublicationArchive() {
     button.addEventListener('click', () => {
       activePublicationKey = button.dataset.publication;
       activeCategory = 'All';
+      serverSectionPages.clear();
       filteredEntries = getActivePublicationEntries();
       renderArticlesPage(filteredEntries);
       updatePublicationUrl();
@@ -759,6 +859,7 @@ function attachReadHandlers() {
 
 function setActiveCategory(category) {
   activeCategory = category;
+  serverSectionPages.clear();
   const publicationEntries = getActivePublicationEntries();
   filteredEntries = category === 'All'
     ? [...publicationEntries]
@@ -883,7 +984,8 @@ export async function handleArticlePageLogic() {
 }
 
 function getPublicationPageMode() {
-  return document.querySelector('[data-publication-mode]')?.dataset.publicationMode || 'archive';
+  const page = document.querySelector('[data-publication-mode]');
+  return page?.dataset.publicationPageMode || page?.dataset.publicationMode || 'archive';
 }
 
 function getActivePublication() {

@@ -6,7 +6,8 @@
     <title>Pax Dei Archives - Publications Archive</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="frontend/www/css/style.css">
-    <link rel="stylesheet" href="frontend/www/css/articles.css?v=20260618-publication-spacing">
+    <link rel="stylesheet" href="frontend/www/css/articles.css?v=20260801-publication-base">
+    <link rel="stylesheet" href="frontend/www/css/publication-edition.css?v=20260801-server-layout">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <style>
         .markdown-content img {
@@ -75,7 +76,7 @@
 
 <div id="header-placeholder"></div>
 
-<main class="articles-page" data-publication-mode="archive">
+<main class="articles-page publication-archive-page" data-publication-mode="latest" data-publication-page-mode="archive">
     <section class="chronicle-shell">
         <div class="publication-archive-header publication-current-header">
             <div>
@@ -100,18 +101,6 @@
             <div class="chronicle-loading">Loading the Chronicle...</div>
         </section>
 
-        <section class="publication-archive">
-            <div class="publication-archive-header">
-                <div>
-                    <p class="articles-section-label">Publications Archive</p>
-                    <h2>Past Issues</h2>
-                </div>
-                <div class="articles-results-meta">
-                    <span id="resultCountLabel">0 entries</span>
-                </div>
-            </div>
-            <div id="publicationArchiveList" class="publication-archive-list"></div>
-        </section>
     </section>
 </main>
 

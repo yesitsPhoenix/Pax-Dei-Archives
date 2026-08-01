@@ -698,7 +698,7 @@ function createLegacyAddListingIntelligenceController({
             if (!qualityMd) qualityMd = getMarketDataByItemNameAndQuality(state.selectedItem.item_name, isMastercrafted, enchantmentTier);
         }
 
-        const count = parseInt(document.getElementById('modal-item-count-per-stack')?.value, 10);
+        const count = parseInt(document.getElementById('modal-item-count-per-stack')?.value, 10) || 1;
         const stacks = parseInt(document.getElementById('modal-item-stacks')?.value, 10);
         const price = parseFloat(document.getElementById('modal-item-price-per-stack')?.value);
         const hasCount = count > 0;
@@ -1267,7 +1267,7 @@ function createLegacyAddListingIntelligenceController({
         if (useHighBtn) {
             useHighBtn.addEventListener('click', () => {
                 const priceInput = document.getElementById('modal-item-price-per-stack');
-                const cnt = parseInt(document.getElementById('modal-item-count-per-stack')?.value, 10);
+                const cnt = parseInt(document.getElementById('modal-item-count-per-stack')?.value, 10) || 1;
                 if (priceInput && state.historyData?.maxPerUnit && cnt > 0) {
                     priceInput.value = Math.round(state.historyData.maxPerUnit * cnt);
                     priceInput.dispatchEvent(new Event('input'));

@@ -122,7 +122,7 @@ export const handleAddListing = async (e) => {
         const itemName = form.querySelector('[name="item-name"]').value.trim();
         // const itemCategory = parseInt(form.querySelector('[name="item-category"]').value, 10);
         const itemStacks = parseInt(form.querySelector('[name="item-stacks"]').value, 10);
-        const itemCountPerStack = parseInt(form.querySelector('[name="item-count-per-stack"]').value, 10);
+        const itemCountPerStack = parseInt(form.querySelector('[name="item-count-per-stack"]').value, 10) || 1;
         const itemPricePerStack = parseFloat(form.querySelector('[name="item-price-per-stack"]').value);
         const marketStallId = form.querySelector('[name="market-stall-location"]').value;
         const isMastercrafted = form.querySelector('[name="is-mastercrafted"]')?.value === 'true';

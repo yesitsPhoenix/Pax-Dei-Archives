@@ -6,7 +6,8 @@
     <title>Pax Dei Archives - Publication Editor</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="frontend/www/css/style.css">
-    <link rel="stylesheet" href="frontend/www/css/articles.css?v=20260618-publication-spacing">
+    <link rel="stylesheet" href="frontend/www/css/articles.css?v=20260801-publication-base">
+    <link rel="stylesheet" href="frontend/www/css/publication-edition.css?v=20260801-server-layout">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="icon" href="frontend/www/assets/logo.png" type="image/png">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -99,6 +100,10 @@
                         <i class="fas fa-save"></i>
                         Save Publication
                     </button>
+                    <button type="button" id="publishPublicationButton" class="publication-publish-action" disabled>
+                        <i class="fas fa-upload"></i>
+                        Publish Publication
+                    </button>
                 </div>
             </div>
         </section>
@@ -166,6 +171,17 @@
                             Section
                             <select id="entrySection" required></select>
                         </label>
+                        <label>
+                            Display Order
+                            <input type="number" id="entrySortOrder" min="0" step="1" placeholder="Automatic">
+                            <span>Lower numbers appear first. You can also reorder stories directly in the layout preview.</span>
+                        </label>
+                        <label>
+                            Server / Region
+                            <input type="text" id="entryServerLabel" list="entryServerSuggestions" placeholder="Across Gallia">
+                            <datalist id="entryServerSuggestions"></datalist>
+                            <span>Optional. Entries in the same section are grouped by this value. Leave blank for Across Gallia.</span>
+                        </label>
                     </div>
 
                     <div class="publication-markdown-editor">
@@ -208,18 +224,75 @@
                     <span id="draftPublicationStatus" class="publication-status-pill">None</span>
                 </div>
 
+                <div class="publication-layout-help">
+                    <strong>Layout guide</strong>
+                    <button type="button" id="openPublicationLayoutMap" class="publication-layout-map-button">
+                        <i class="fas fa-table-columns"></i>
+                        View Layout Map
+                    </button>
+                    <span>Position 1 is the lead story; positions 2–3 are the opening features. Everything after that is grouped by Section, then Server / Region. Classifieds are collected into their own three-column section.</span>
+                </div>
+
                 <div id="draftEntryList" class="draft-entry-list">
                     <div class="empty-draft-state">Saved entries for the selected issue will appear here.</div>
                 </div>
-
-                <button type="button" id="publishPublicationButton" class="publication-editor-submit publish-publication-button" disabled>
-                    <i class="fas fa-upload"></i>
-                    Publish Publication
-                </button>
             </aside>
         </div>
     </section>
 </main>
+
+<dialog id="publicationLayoutMap" class="publication-layout-map-dialog">
+    <div class="publication-layout-map-header">
+        <div>
+            <p class="articles-section-label">Publication Structure</p>
+            <h2>Layout Map</h2>
+            <p>Story order controls the opening positions. Remaining stories are divided by section and optional server grouping.</p>
+        </div>
+        <button type="button" id="closePublicationLayoutMap" class="publication-layout-map-close" aria-label="Close layout map">
+            <i class="fas fa-xmark"></i>
+        </button>
+    </div>
+    <div class="publication-layout-map-content">
+        <section class="publication-layout-map-example">
+            <h3>Desktop publication</h3>
+            <div class="layout-map-desktop" aria-label="Desktop publication layout diagram">
+                <div class="layout-map-box layout-map-lead">
+                    <strong>Position 1</strong><span>Lead story</span>
+                    <span class="layout-map-image-placeholder"></span>
+                    <span class="layout-map-copy-placeholder"></span>
+                </div>
+                <div class="layout-map-opening-column">
+                    <div class="layout-map-box"><strong>Position 2</strong><span>Opening 1</span></div>
+                    <div class="layout-map-box"><strong>Position 3</strong><span>Opening 2</span></div>
+                </div>
+                <div class="layout-map-section-divider"><strong>Section heading</strong><span>Gold rule</span></div>
+                <div class="layout-map-lower-grid">
+                    <div class="layout-map-box"><strong>Position 4+</strong><span>Section column</span></div>
+                    <div class="layout-map-box layout-map-server-split"><strong>Server / Region</strong><span>Optional subdivision</span></div>
+                    <div class="layout-map-box"><strong>Next section</strong><span>Additional stories</span></div>
+                    <div class="layout-map-box"><strong>Next section</strong><span>Additional stories</span></div>
+                </div>
+                <div class="layout-map-section-divider"><strong>Classifieds</strong><span>Gold rule</span></div>
+                <div class="layout-map-classifieds">
+                    <div class="layout-map-box">Classified 1</div>
+                    <div class="layout-map-box">Classified 2</div>
+                    <div class="layout-map-box">Classified 3</div>
+                </div>
+            </div>
+        </section>
+        <section class="publication-layout-map-example">
+            <h3>Mobile order</h3>
+            <div class="layout-map-mobile" aria-label="Mobile publication layout diagram">
+                <div class="layout-map-box"><strong>1</strong><span>Lead</span></div>
+                <div class="layout-map-box"><strong>2</strong><span>Opening 1</span></div>
+                <div class="layout-map-box"><strong>3</strong><span>Opening 2</span></div>
+                <div class="layout-map-section-divider"><strong>Sections</strong></div>
+                <div class="layout-map-box"><strong>4+</strong><span>Grouped stories</span></div>
+                <div class="layout-map-box"><strong>Last</strong><span>Classifieds</span></div>
+            </div>
+        </section>
+    </div>
+</dialog>
 
 <div id="footer-placeholder"></div>
 <script type="module" src="frontend/www/js/ui/loadHeader.js"></script>

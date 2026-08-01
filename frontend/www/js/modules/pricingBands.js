@@ -5,19 +5,22 @@ export const COMPETITIVE_RISK_PROFILES = {
         label: 'Guarded',
         goldMultiplier: 0.7,
         pctMultiplier: 0.75,
-        description: 'Keeps suggested competitive caps closer to the current floor.'
+        suggestedPosition: 0.2,
+        description: 'Keeps the recommendation near the floor and uses a tighter ceiling.'
     },
     balanced: {
         label: 'Balanced',
         goldMultiplier: 1,
         pctMultiplier: 1,
-        description: 'Uses the current Archives competitive pricing model.'
+        suggestedPosition: 0.35,
+        description: 'Balances sale priority with room above the current floor.'
     },
     flexible: {
         label: 'Flexible',
         goldMultiplier: 1.35,
         pctMultiplier: 1.25,
-        description: 'Allows more room above the floor when the market can support it.'
+        suggestedPosition: 0.55,
+        description: 'Places the recommendation higher when market and sales evidence support it.'
     }
 };
 
