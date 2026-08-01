@@ -382,13 +382,6 @@ function renderPricingVisuals({ selectedItem, marketData, referenceFloor, histor
     const wallCeiling = supportedNextTier
         ? Math.max(roundedFloor, nextMarketTier.stackPrice - getMarketUndercutStep(nextMarketTier.stackPrice))
         : null;
-    const floorLabel = referenceFloor?.source === 'province'
-        ? 'Province Low'
-        : referenceFloor?.source === 'home'
-            ? 'Market Low'
-            : ledgerLowStack
-                ? 'Ledger Floor'
-                : 'Market Low';
     const floorDetail = depthRows.length === 1
         ? `Only one visible market price (${fmt(depthRows[0].quantity)} stack${depthRows[0].quantity === 1 ? '' : 's'}); no live range is established.`
         : referenceFloor
@@ -398,11 +391,7 @@ function renderPricingVisuals({ selectedItem, marketData, referenceFloor, histor
         : ledgerLowStack
             ? 'Lowest matching active Ledger listing.'
             : 'No live market floor is available for this item and quality.';
-    const displayFloorLabel = depthRows.length === 1
-        ? 'Single Market Price'
-        : depthRows.length === 0 && roundedFloor
-            ? 'Market Reference'
-            : floorLabel;
+    const displayFloorLabel = 'Market Reference';
     const weightedOption = weightedSaleStack ? Math.round(weightedSaleStack) : null;
     const floorListingCount = roundedFloor
         ? rawStackPrices.filter((stackPrice) => stackPrice === roundedFloor).length
@@ -700,7 +689,7 @@ function renderCompetitivePricing({ selectedItem, formState }) {
                 </div>
             </div>
             <div class="workbench-unified-pricing-grid">
-                <article><span>${model.floor ? 'Market low' : 'Market low'}</span><strong>${model.floor ? `${fmt(model.floor)}g` : 'Unavailable'}</strong></article>
+                <article><span>Market Reference</span><strong>${model.referencePrice ? `${fmt(model.referencePrice)}g` : 'Unavailable'}</strong></article>
                 <article><span>Suggested price</span><strong>${model.suggested ? `${fmt(model.suggested)}g` : 'Unavailable'}</strong></article>
                 <article><span>Competitive ceiling</span><strong>${model.ceiling ? `${fmt(model.ceiling)}g` : 'Unavailable'}</strong></article>
             </div>
