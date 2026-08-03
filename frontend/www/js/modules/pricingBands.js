@@ -62,7 +62,16 @@ function getBaseCompetitiveThresholds(marketLowStack) {
     if (marketLowStack < 300) {
         return { maxGapGold: 15, maxGapPct: 10, label: '150g–299g stack' };
     }
-    return { maxGapGold: 25, maxGapPct: 7, label: '300g+ stack' };
+    if (marketLowStack < 1000) {
+        return { maxGapGold: 50, maxGapPct: 7, label: '300g–999g stack' };
+    }
+    if (marketLowStack < 2500) {
+        return { maxGapGold: 125, maxGapPct: 6, label: '1,000g–2,499g stack' };
+    }
+    if (marketLowStack < 5000) {
+        return { maxGapGold: 250, maxGapPct: 5, label: '2,500g–4,999g stack' };
+    }
+    return { maxGapGold: 500, maxGapPct: 4, label: '5,000g+ stack' };
 }
 
 export function getCompetitiveThresholds(marketLowStack, profile = getCompetitiveRiskTolerance()) {
@@ -210,6 +219,9 @@ export function getCompetitiveBandDisplayRows() {
         '20g-74g: up to 7g and 25%',
         '75g-149g: up to 12g and 12%',
         '150g-299g: up to 15g and 10%',
-        '300g+: up to 25g and 7%'
+        '300g-999g: up to 50g and 7%',
+        '1,000g-2,499g: up to 125g and 6%',
+        '2,500g-4,999g: up to 250g and 5%',
+        '5,000g+: up to 500g and 4%'
     ];
 }
