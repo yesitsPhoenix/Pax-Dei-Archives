@@ -5,7 +5,7 @@ import {
     getZoneListingsForItemByQuality,
     loadZoneDataForCharacter,
 } from '../services/gamingToolsService.js';
-import { classifyCompetitiveGap, getStackAwareMarketLow } from './pricingBands.js';
+import { classifyCompetitiveGap, getStackAwareMarketReference } from './pricingBands.js';
 
 export const LISTING_ALERT_BANDS = {
     aging: {
@@ -112,7 +112,7 @@ function getAlertMarketContext(alert) {
     const exactStackListings = alert.marketListings.filter((marketListing) =>
         Math.max(Number(marketListing.quantity) || 1, 1) === alert.quantity
     );
-    const marketLowStack = getStackAwareMarketLow({
+    const marketReference = getStackAwareMarketReference({
         exactStackListings,
         marketVariantListings: alert.marketListings,
         mktData: alert.marketSummary,
@@ -123,8 +123,8 @@ function getAlertMarketContext(alert) {
 
     return {
         exactStackListings,
-        marketLowStack,
-        isExactStackMatch: exactStackListings.length > 0,
+        marketLowStack: marketReference.value,
+        isExactStackMatch: marketReference.isExactStackMatch,
     };
 }
 

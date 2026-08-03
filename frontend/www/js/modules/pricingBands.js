@@ -140,12 +140,20 @@ export function reconcileMarketDepth({ externalExactCount = 0, externalVariantCo
     return Math.max(Number(externalCount) || 0, 0) + Math.max(Number(ownComparableCount) || 0, 0);
 }
 
-export function getStackAwareMarketLow({ exactStackListings = [], marketVariantListings = [], mktData = null, stackSize, stackPrice, avatarHash = null }) {
+export function getStackAwareMarketReference({ exactStackListings = [], marketVariantListings = [], mktData = null, stackSize, stackPrice, avatarHash = null }) {
     const externalExactListings = avatarHash
         ? exactStackListings.filter(marketListing => marketListing.avatar_hash !== avatarHash)
         : exactStackListings;
     if (externalExactListings.length > 0) {
-        return normalizeStackGoldAmount(Math.min(...externalExactListings.map(marketListing => Number(marketListing.price) || 0)));
+        const sourceListing = externalExactListings.reduce((lowest, listing) =>
+            (Number(listing.price) || 0) < (Number(lowest.price) || 0) ? listing : lowest
+        );
+        return {
+            value: normalizeStackGoldAmount(sourceListing.price),
+            isExactStackMatch: true,
+            sourceStackSize: Math.max(Number(sourceListing.quantity) || 1, 1),
+            sourceStackPrice: normalizeStackGoldAmount(sourceListing.price)
+        };
     }
 
     const externalListings = avatarHash
@@ -153,16 +161,46 @@ export function getStackAwareMarketLow({ exactStackListings = [], marketVariantL
         : marketVariantListings;
 
     if (externalListings.length > 0) {
-        return normalizeStackGoldAmount(Math.min(...externalListings.map(getListingUnitPrice)) * stackSize);
+        const sourceListing = externalListings.reduce((lowest, listing) =>
+            getListingUnitPrice(listing) < getListingUnitPrice(lowest) ? listing : lowest
+        );
+        return {
+            value: normalizeStackGoldAmount(getListingUnitPrice(sourceListing) * stackSize),
+            isExactStackMatch: false,
+            sourceStackSize: Math.max(Number(sourceListing.quantity) || 1, 1),
+            sourceStackPrice: normalizeStackGoldAmount(sourceListing.price)
+        };
     }
 
     if (marketVariantListings.length > 0) {
-        return normalizeStackGoldAmount(stackPrice);
+        return {
+            value: normalizeStackGoldAmount(stackPrice),
+            isExactStackMatch: true,
+            sourceStackSize: Math.max(Number(stackSize) || 1, 1),
+            sourceStackPrice: normalizeStackGoldAmount(stackPrice),
+            ownListingOnly: true
+        };
     }
 
-    return (mktData?.marketLow ?? null) !== null
-        ? normalizeStackGoldAmount(mktData.marketLow * stackSize)
-        : null;
+    if ((mktData?.marketLow ?? null) !== null) {
+        return {
+            value: normalizeStackGoldAmount(mktData.marketLow * stackSize),
+            isExactStackMatch: false,
+            sourceStackSize: null,
+            sourceStackPrice: null
+        };
+    }
+
+    return {
+        value: null,
+        isExactStackMatch: false,
+        sourceStackSize: null,
+        sourceStackPrice: null
+    };
+}
+
+export function getStackAwareMarketLow(options) {
+    return getStackAwareMarketReference(options).value;
 }
 
 export function getCompetitiveBandDisplayRows() {

@@ -11,7 +11,7 @@ import {
 } from '../services/gamingToolsService.js';
 import {
     classifyCompetitiveGap,
-    getStackAwareMarketLow,
+    getStackAwareMarketReference,
     groupStackPriceListings,
     normalizeStackGoldAmount,
     reconcileMarketDepth
@@ -869,7 +869,7 @@ async function buildValleyAnalysisFromSupabase() {
                         .map(marketListing => marketListing.avatar_hash)
                         .filter(Boolean)
                 ).size;
-                const marketLowStack = getStackAwareMarketLow({
+                const marketReference = getStackAwareMarketReference({
                     exactStackListings,
                     marketVariantListings,
                     mktData,
@@ -877,6 +877,7 @@ async function buildValleyAnalysisFromSupabase() {
                     stackPrice: listing.stackPrice,
                     avatarHash
                 });
+                const marketLowStack = marketReference.value;
                 const displayYourLow = normalizeStackGoldAmount(listing.stackPrice) ?? 0;
                 const displayMarketLow = normalizeStackGoldAmount(marketLowStack);
                 const historicalStats = summarizeHistoricalSales(
@@ -903,7 +904,9 @@ async function buildValleyAnalysisFromSupabase() {
                     stackSize: listing.stackSize,
                     stackLabel: `Stack of ${listing.stackSize.toLocaleString()}`,
                     marketLow: displayMarketLow,
-                    isExactStackMatch: exactStackListings.length > 0,
+                    isExactStackMatch: marketReference.isExactStackMatch,
+                    marketSourceStackSize: marketReference.sourceStackSize,
+                    marketSourceStackPrice: marketReference.sourceStackPrice,
                     historicalStats
                 };
 
@@ -1086,7 +1089,7 @@ export async function openValleyPresenceModal() {
                             <th>Status</th>
                             <th class="text-right">Stack Size</th>
                             <th class="text-right">Your Price</th>
-                            <th class="text-right">Market Low</th>
+                            <th class="text-right">Market Reference</th>
                             <th class="text-right">Gap</th>
                             <th class="text-right">Your Stacks</th>
                             <th class="text-right">Market Depth</th>
@@ -1108,7 +1111,12 @@ export async function openValleyPresenceModal() {
                                     <td><span class="valley-status-pill ${presentation.badge}">${presentation.label}</span></td>
                                     <td class="text-right">${fmt(item.stackSize)}</td>
                                     <td class="text-right font-bold ${presentation.price}">${fmtG(item.yourLow)}</td>
-                                    <td class="text-right text-emerald-300">${fmtG(item.marketLow)}</td>
+                                    <td class="text-right text-emerald-300">
+                                        ${fmtG(item.marketLow)}${item.isExactStackMatch ? '' : ' <span class="text-amber-300 text-xs">est.</span>'}
+                                        ${!item.isExactStackMatch && item.marketSourceStackSize && item.marketSourceStackPrice
+                                            ? `<div class="text-gray-500 text-xs">from ${fmt(item.marketSourceStackSize)} for ${fmtG(item.marketSourceStackPrice)}</div>`
+                                            : ''}
+                                    </td>
                                     <td class="text-right text-gray-300">${gapText}</td>
                                     <td class="text-right text-white font-semibold">${fmt(item.yourCount)}</td>
                                     <td class="text-right text-gray-300">${fmt(item.totalCount)}</td>
@@ -1127,7 +1135,7 @@ export async function openValleyPresenceModal() {
                 </table>
                 <div id="valleyPresenceEmptyFilter" class="hidden text-center text-gray-400 text-sm py-10">No listings match these filters.</div>
             </div>
-            <p class="text-gray-500 text-xs italic">Gaming.tools market data updates hourly. Your current Ledger stacks are reconciled immediately and may temporarily exceed the hourly feed total.</p>
+            <p class="text-gray-500 text-xs italic">Gaming.tools market data updates hourly. When no competing listing has the same stack size, the market reference is marked “est.” and normalized from the lowest per-item competing stack. Your current Ledger stacks are reconciled immediately and may temporarily exceed the hourly feed total.</p>
         </div>`;
 
     const applyFilters = () => {
