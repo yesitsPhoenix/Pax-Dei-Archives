@@ -50,38 +50,6 @@ const CHRONICLE_SECTION_GROUPS = [
   },
 ];
 const CHRONICLE_SECTIONS = CHRONICLE_SECTION_GROUPS.flatMap(group => group.sections);
-const EDITION_SECTION_ORDER = [
-  'Weekly News & Updates',
-  'Dev Updates',
-  'Exploration',
-  'Lore & History',
-  'Scholarly News',
-  'Scholarly Articles',
-  'Guides & Research',
-  'Map Updates',
-  'Economic Impact',
-  'Opinion & Editorial',
-  'Community Outreach',
-  'Community Reminder',
-  'Expert Tips',
-  'Building Highlights',
-  'Clan Highlights',
-  'Player & Clan Spotlights',
-  'Settlement Spotlights',
-  'Community Events',
-  'Tournaments & Competitions',
-  'Quests & Bounties',
-  'Politics & Diplomacy',
-  'Roleplay & Stories',
-  'Tools & Resources',
-  'Thaumaturgy',
-  'Crafting & Metallurgy',
-  'Enemy Spotlights',
-  'Combat Spotlights',
-  'Dungeon Spotlights',
-  'For Trade',
-  'Classifieds',
-];
 const ENTRY_PREVIEW_DEBOUNCE_MS = 750;
 
 let activePublication = null;
@@ -355,6 +323,9 @@ async function savePublicationDraft(elements) {
 
   try {
     validatePublication(issueNumber, releaseDate);
+    if (status === 'published' && !hasWeeklyNewsEntry(activeEntries)) {
+      throw new Error('Add a Weekly News & Updates entry before publishing this issue.');
+    }
     await requireAuthenticatedUser();
     activePublication = await upsertPublication(issueNumber, releaseDate, title, status);
     clearPublicationCache();
@@ -527,6 +498,11 @@ async function publishActivePublication(elements) {
 
   if (!activePublication || !activeEntries.length) {
     showMessage(elements.messageEl, 'Add at least one entry before publishing.', 'warning');
+    return;
+  }
+
+  if (!hasWeeklyNewsEntry(activeEntries)) {
+    showMessage(elements.messageEl, 'Add a Weekly News & Updates entry before publishing this issue.', 'warning');
     return;
   }
 
@@ -717,11 +693,16 @@ function renderDraftPanel(elements, publication, entries) {
     elements.draftEntryList.querySelectorAll('.draft-entry-move').forEach(button => {
       button.addEventListener('click', () => moveDraftEntry(button.dataset.entryId, Number(button.dataset.direction), elements));
     });
+    setupDraftDragAndDrop(elements);
   }
 
   refreshServerSuggestions(elements, entries);
 
-  elements.publishButton.disabled = !publication || !entries.length || status === 'published' || status === 'archived';
+  elements.publishButton.disabled = !publication
+    || !entries.length
+    || !hasWeeklyNewsEntry(entries)
+    || status === 'published'
+    || status === 'archived';
   elements.savePublicationButton.innerHTML = publication
     ? '<i class="fas fa-save"></i> Save Publication'
     : '<i class="fas fa-save"></i> Save Publication Draft';
@@ -731,16 +712,25 @@ function renderDraftPublicationPreview(entries, canEditEntries, releaseDate) {
   const orderedEntries = [...entries].sort(sortEntries);
   const nonClassifiedEntries = orderedEntries.filter(entry => !isClassifiedSection(entry.section_key));
   const classifiedEntries = orderedEntries.filter(entry => isClassifiedSection(entry.section_key));
-  const [leadEntry, ...secondaryEntries] = nonClassifiedEntries;
+  const weeklyLead = nonClassifiedEntries.find(entry => entry.section_key === 'Weekly News & Updates');
+  const leadEntry = weeklyLead || nonClassifiedEntries[0];
+  const secondaryEntries = nonClassifiedEntries.filter(entry => entry !== leadEntry);
+  const layoutEntries = leadEntry
+    ? [leadEntry, ...secondaryEntries, ...classifiedEntries]
+    : classifiedEntries;
   const sidebarEntries = secondaryEntries.slice(0, 2);
   const lowerEntries = [...secondaryEntries.slice(2), ...classifiedEntries];
+  const weeklyWarning = weeklyLead
+    ? ''
+    : '<div class="draft-layout-warning"><i class="fas fa-triangle-exclamation"></i> Add a Weekly News &amp; Updates entry to lock the lead story.</div>';
 
   if (!leadEntry) {
     return `
+      ${weeklyWarning}
       <div class="articles-page draft-edition-canvas" data-publication-mode="latest">
         <div class="chronicle-frontpage chronicle-edition">
           <section class="chronicle-edition-lower" aria-label="Classifieds">
-            ${renderDraftEditionSections(classifiedEntries, canEditEntries, releaseDate, orderedEntries)}
+            ${renderDraftServerEditionBody(classifiedEntries, canEditEntries, releaseDate, layoutEntries)}
           </section>
         </div>
       </div>
@@ -748,10 +738,11 @@ function renderDraftPublicationPreview(entries, canEditEntries, releaseDate) {
   }
 
   return `
+    ${weeklyWarning}
     <div class="articles-page draft-edition-canvas" data-publication-mode="latest">
       <div class="chronicle-frontpage chronicle-edition">
         <section class="chronicle-edition-lead">
-          ${renderDraftPublicationCard(leadEntry, 'edition-lead', canEditEntries, releaseDate, 0, orderedEntries.length)}
+          ${renderDraftPublicationCard(leadEntry, 'edition-lead', canEditEntries, releaseDate, 0, layoutEntries.length, Boolean(weeklyLead))}
         </section>
         <aside class="chronicle-edition-sidebar" aria-label="Opening features">
           ${sidebarEntries.map((entry, index) => renderDraftPublicationCard(
@@ -760,81 +751,77 @@ function renderDraftPublicationPreview(entries, canEditEntries, releaseDate) {
             canEditEntries,
             releaseDate,
             index + 1,
-            orderedEntries.length,
+            layoutEntries.length,
           )).join('')}
         </aside>
-        <section class="chronicle-edition-lower" aria-label="Grouped sections">
-          ${renderDraftEditionSections(lowerEntries, canEditEntries, releaseDate, orderedEntries)}
+        <section class="chronicle-edition-lower" aria-label="Server columns and classifieds">
+          ${renderDraftServerEditionBody(lowerEntries, canEditEntries, releaseDate, layoutEntries)}
         </section>
       </div>
     </div>
   `;
 }
 
-function renderDraftEditionSections(entries, canEditEntries, releaseDate, orderedEntries) {
-  const groupedEntries = entries.reduce((groups, entry) => {
-    const category = entry.section_key || 'More from this issue';
-    if (!groups.has(category)) groups.set(category, []);
-    groups.get(category).push(entry);
+function renderDraftServerEditionBody(entries, canEditEntries, releaseDate, layoutEntries) {
+  const articleEntries = entries.filter(entry => !isClassifiedSection(entry.section_key));
+  const classifiedEntries = entries.filter(entry => isClassifiedSection(entry.section_key));
+  const serverGroups = articleEntries.reduce((groups, entry) => {
+    const server = getDraftEntryServer(entry);
+    if (!groups.has(server)) groups.set(server, []);
+    groups.get(server).push(entry);
     return groups;
   }, new Map());
+  const acrossGalliaEntries = serverGroups.get('Across Gallia') || [];
+  serverGroups.delete('Across Gallia');
 
-  const orderedGroups = [...groupedEntries.entries()].sort(([categoryA], [categoryB]) => {
-    const orderA = isClassifiedSection(categoryA)
-      ? Number.MAX_SAFE_INTEGER
-      : getDraftSectionSortIndex(categoryA);
-    const orderB = isClassifiedSection(categoryB)
-      ? Number.MAX_SAFE_INTEGER
-      : getDraftSectionSortIndex(categoryB);
-    return orderA - orderB;
-  });
+  const renderEntry = (entry, modifier) => renderDraftPublicationCard(
+    entry,
+    modifier,
+    canEditEntries,
+    releaseDate,
+    layoutEntries.indexOf(entry),
+    layoutEntries.length,
+  );
 
-  return orderedGroups.map(([category, categoryEntries]) => {
-    if (isClassifiedSection(category)) {
-      return `
-        <section class="chronicle-edition-section chronicle-edition-classifieds">
-          <h2 class="chronicle-edition-section-title">Classifieds</h2>
-          <div class="chronicle-edition-classified-grid">
-            ${categoryEntries.map(entry => renderDraftPublicationCard(
-              entry, 'edition-classified', canEditEntries, releaseDate,
-              orderedEntries.indexOf(entry), orderedEntries.length
-            )).join('')}
-          </div>
-        </section>
-      `;
-    }
-
-    const serverGroups = categoryEntries.reduce((groups, entry) => {
-      const server = getDraftEntryServer(entry);
-      if (!groups.has(server)) groups.set(server, []);
-      groups.get(server).push(entry);
-      return groups;
-    }, new Map());
-    const showServerLabels = serverGroups.size > 1 || !serverGroups.has('Across Gallia');
-
-    return `
-      <section class="chronicle-edition-section chronicle-edition-section-size-${Math.min(categoryEntries.length, 3)}">
-        <h2 class="chronicle-edition-section-title">${escapeHtml(category)}</h2>
-        <div class="chronicle-edition-server-groups">
+  return `
+    ${acrossGalliaEntries.length ? `
+      <section class="chronicle-edition-section chronicle-edition-across-gallia">
+        <h2 class="chronicle-edition-section-title">Across Gallia</h2>
+        <div class="chronicle-edition-story-grid">
+          ${acrossGalliaEntries.map((entry, index) => renderEntry(
+            entry,
+            index === 0 ? 'edition-group-feature' : 'edition-group-story'
+          )).join('')}
+        </div>
+      </section>
+    ` : ''}
+    ${serverGroups.size ? `
+      <section class="chronicle-edition-section chronicle-edition-server-desk">
+        <h2 class="chronicle-edition-section-title">Server Dispatches</h2>
+        <div class="chronicle-edition-server-groups chronicle-server-count-${serverGroups.size}">
           ${[...serverGroups.entries()].map(([server, serverEntries]) => `
             <div class="chronicle-edition-server-group">
-              ${showServerLabels ? `<h3 class="chronicle-edition-server-title">${escapeHtml(server)}</h3>` : ''}
+              <h3 class="chronicle-edition-server-title">${escapeHtml(server)}</h3>
               <div class="chronicle-edition-story-grid">
-                ${serverEntries.map((entry, index) => renderDraftPublicationCard(
+                ${serverEntries.map((entry, index) => renderEntry(
                   entry,
-                  index === 0 ? 'edition-group-feature' : 'edition-group-story',
-                  canEditEntries,
-                  releaseDate,
-                  orderedEntries.indexOf(entry),
-                  orderedEntries.length,
+                  index === 0 ? 'edition-group-feature' : 'edition-group-story'
                 )).join('')}
               </div>
             </div>
           `).join('')}
         </div>
       </section>
-    `;
-  }).join('');
+    ` : ''}
+    ${classifiedEntries.length ? `
+      <section class="chronicle-edition-section chronicle-edition-classifieds">
+        <h2 class="chronicle-edition-section-title">Classifieds</h2>
+        <div class="chronicle-edition-classified-grid">
+          ${classifiedEntries.map(entry => renderEntry(entry, 'edition-classified')).join('')}
+        </div>
+      </section>
+    ` : ''}
+  `;
 }
 
 function updateThumbnailFieldVisibility(elements) {
@@ -940,7 +927,15 @@ function getDraftSecondaryCardModifier(entry, index, entries) {
   return index % 2 === 0 ? 'secondary-standard' : 'secondary-narrow';
 }
 
-function renderDraftPublicationCard(entry, modifier, canEditEntries, releaseDate, position = 0, entryCount = 1) {
+function renderDraftPublicationCard(
+  entry,
+  modifier,
+  canEditEntries,
+  releaseDate,
+  position = 0,
+  entryCount = 1,
+  isLockedLead = false,
+) {
   const isClassified = isClassifiedSection(entry.section_key);
   const previewText = entry.content || entry.summary || '';
   const excerptHtml = DOMPurify.sanitize(renderMarkdownPreview(stripImages(previewText)));
@@ -948,7 +943,7 @@ function renderDraftPublicationCard(entry, modifier, canEditEntries, releaseDate
   const placement = position === 0 ? 'Lead' : position < 3 ? `Opening ${position}` : `Position ${position + 1}`;
 
   return `
-    <article class="chronicle-card ${modifier ? `chronicle-card-${modifier}` : ''} ${isClassified ? 'chronicle-card-classified' : ''}">
+    <article class="chronicle-card draft-entry-card ${modifier ? `chronicle-card-${modifier}` : ''} ${isClassified ? 'chronicle-card-classified' : ''} ${mediaUrl && !isClassified ? 'chronicle-card-has-media' : ''}" data-entry-id="${escapeHtml(entry.id)}">
       <header class="chronicle-card-header">
         <h2>${escapeHtml(entry.section_key)}</h2>
       </header>
@@ -968,10 +963,19 @@ function renderDraftPublicationCard(entry, modifier, canEditEntries, releaseDate
       </div>
       ${canEditEntries ? `
         <div class="draft-entry-controls">
-          <button type="button" class="draft-entry-move" data-entry-id="${escapeHtml(entry.id)}" data-direction="-1" ${position === 0 ? 'disabled' : ''} aria-label="Move entry earlier">
+          ${isLockedLead ? `
+            <span class="draft-entry-lock" title="Weekly News & Updates is locked as the lead story">
+              <i class="fas fa-lock"></i> Lead
+            </span>
+          ` : `
+            <span class="draft-entry-drag-handle" draggable="true" data-entry-id="${escapeHtml(entry.id)}" title="Drag to reorder" aria-hidden="true">
+              <i class="fas fa-grip-vertical"></i>
+            </span>
+          `}
+          <button type="button" class="draft-entry-move" data-entry-id="${escapeHtml(entry.id)}" data-direction="-1" ${position === 0 || isLockedLead ? 'disabled' : ''} aria-label="Move entry earlier">
             <i class="fas fa-arrow-up"></i>
           </button>
-          <button type="button" class="draft-entry-move" data-entry-id="${escapeHtml(entry.id)}" data-direction="1" ${position === entryCount - 1 ? 'disabled' : ''} aria-label="Move entry later">
+          <button type="button" class="draft-entry-move" data-entry-id="${escapeHtml(entry.id)}" data-direction="1" ${position === entryCount - 1 || isLockedLead ? 'disabled' : ''} aria-label="Move entry later">
             <i class="fas fa-arrow-down"></i>
           </button>
           <button type="button" class="draft-entry-edit" data-entry-id="${escapeHtml(entry.id)}">
@@ -984,12 +988,92 @@ function renderDraftPublicationCard(entry, modifier, canEditEntries, releaseDate
 }
 
 async function moveDraftEntry(entryId, direction, elements) {
-  const orderedEntries = [...activeEntries].sort(sortEntries);
+  const orderedEntries = getDraftEditorialOrder(activeEntries);
   const currentIndex = orderedEntries.findIndex(entry => entry.id === entryId);
   const targetIndex = currentIndex + direction;
-  if (currentIndex < 0 || targetIndex < 0 || targetIndex >= orderedEntries.length) return;
+  const hasLockedLead = orderedEntries[0]?.section_key === 'Weekly News & Updates';
+  if (
+    currentIndex < 0
+    || (hasLockedLead && currentIndex === 0)
+    || targetIndex < (hasLockedLead ? 1 : 0)
+    || targetIndex >= orderedEntries.length
+  ) return;
 
   [orderedEntries[currentIndex], orderedEntries[targetIndex]] = [orderedEntries[targetIndex], orderedEntries[currentIndex]];
+  await persistDraftEntryOrder(orderedEntries, elements);
+}
+
+function setupDraftDragAndDrop(elements) {
+  let draggedEntryId = null;
+
+  elements.draftEntryList.querySelectorAll('.draft-entry-drag-handle').forEach(handle => {
+    handle.addEventListener('dragstart', event => {
+      draggedEntryId = handle.dataset.entryId;
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', draggedEntryId);
+      handle.closest('.draft-entry-card')?.classList.add('is-dragging');
+    });
+
+    handle.addEventListener('dragend', () => {
+      draggedEntryId = null;
+      elements.draftEntryList.querySelectorAll('.draft-entry-card').forEach(card => {
+        card.classList.remove('is-dragging', 'drop-before', 'drop-after');
+      });
+    });
+  });
+
+  elements.draftEntryList.querySelectorAll('.draft-entry-card').forEach(card => {
+    card.addEventListener('dragover', event => {
+      if (!draggedEntryId || draggedEntryId === card.dataset.entryId) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+      const placeAfter = event.clientY >= card.getBoundingClientRect().top + card.offsetHeight / 2;
+      card.classList.toggle('drop-before', !placeAfter);
+      card.classList.toggle('drop-after', placeAfter);
+    });
+
+    card.addEventListener('dragleave', event => {
+      if (card.contains(event.relatedTarget)) return;
+      card.classList.remove('drop-before', 'drop-after');
+    });
+
+    card.addEventListener('drop', event => {
+      event.preventDefault();
+      if (!draggedEntryId || draggedEntryId === card.dataset.entryId) return;
+      const placeAfter = event.clientY >= card.getBoundingClientRect().top + card.offsetHeight / 2;
+      reorderDraftEntry(draggedEntryId, card.dataset.entryId, placeAfter, elements);
+    });
+  });
+}
+
+function reorderDraftEntry(entryId, targetEntryId, placeAfter, elements) {
+  const orderedEntries = getDraftEditorialOrder(activeEntries);
+  const currentIndex = orderedEntries.findIndex(entry => entry.id === entryId);
+  const hasLockedLead = orderedEntries[0]?.section_key === 'Weekly News & Updates';
+  if (currentIndex < 0 || (hasLockedLead && currentIndex === 0)) return;
+
+  const [entry] = orderedEntries.splice(currentIndex, 1);
+  const targetIndex = orderedEntries.findIndex(candidate => candidate.id === targetEntryId);
+  if (targetIndex < 0) return;
+
+  const minimumIndex = hasLockedLead ? 1 : 0;
+  const insertionIndex = Math.max(minimumIndex, targetIndex + (placeAfter ? 1 : 0));
+  orderedEntries.splice(insertionIndex, 0, entry);
+  persistDraftEntryOrder(orderedEntries, elements);
+}
+
+function getDraftEditorialOrder(entries) {
+  const orderedEntries = [...entries].sort(sortEntries);
+  const articleEntries = orderedEntries.filter(entry => !isClassifiedSection(entry.section_key));
+  const classifiedEntries = orderedEntries.filter(entry => isClassifiedSection(entry.section_key));
+  const weeklyLead = articleEntries.find(entry => entry.section_key === 'Weekly News & Updates');
+
+  return weeklyLead
+    ? [weeklyLead, ...articleEntries.filter(entry => entry !== weeklyLead), ...classifiedEntries]
+    : [...articleEntries, ...classifiedEntries];
+}
+
+async function persistDraftEntryOrder(orderedEntries, elements) {
   elements.draftEntryList.classList.add('is-reordering');
 
   try {
@@ -1236,9 +1320,8 @@ function isClassifiedSection(section) {
   return String(section).toLowerCase() === 'classifieds';
 }
 
-function getDraftSectionSortIndex(section) {
-  const index = EDITION_SECTION_ORDER.indexOf(section);
-  return index === -1 ? EDITION_SECTION_ORDER.length : index;
+function hasWeeklyNewsEntry(entries) {
+  return entries.some(entry => entry.section_key === 'Weekly News & Updates');
 }
 
 function createPlainExcerpt(content, maxLength) {

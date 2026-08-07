@@ -462,7 +462,9 @@ function renderPublicationGrid(entries) {
 function renderBalancedFrontpage(entries) {
   const nonClassifiedEntries = entries.filter(entry => entry.category !== 'Classifieds');
   const classifiedEntries = entries.filter(entry => entry.category === 'Classifieds');
-  const [leadEntry, ...secondaryEntries] = nonClassifiedEntries;
+  const leadEntry = nonClassifiedEntries.find(entry => entry.category === 'Weekly News & Updates')
+    || nonClassifiedEntries[0];
+  const secondaryEntries = nonClassifiedEntries.filter(entry => entry !== leadEntry);
   const orderedFlowItems = buildOrderedFrontpageFlowItems([...secondaryEntries, ...classifiedEntries]);
   const sidebarEntries = secondaryEntries.slice(0, 2);
   const lowerEntries = [...secondaryEntries.slice(2), ...classifiedEntries];
@@ -471,7 +473,7 @@ function renderBalancedFrontpage(entries) {
     return `
       <div class="chronicle-frontpage chronicle-edition">
         <section class="chronicle-edition-lower" aria-label="Classifieds">
-          ${renderEditionSections(classifiedEntries)}
+          ${renderServerEditionBody(classifiedEntries)}
         </section>
         <div class="chronicle-frontpage-flow-mobile">
           ${classifiedEntries.map(entry => renderPublicationCard(entry, 'secondary-classified')).join('')}
@@ -492,7 +494,7 @@ function renderBalancedFrontpage(entries) {
         )).join('')}
       </aside>
       <section class="chronicle-edition-lower" aria-label="More from this issue">
-        ${renderEditionSections(lowerEntries)}
+        ${renderServerEditionBody(lowerEntries)}
       </section>
       <div class="chronicle-frontpage-flow-mobile">
         ${renderPublicationCard(leadEntry, 'lead')}
@@ -505,57 +507,48 @@ function renderBalancedFrontpage(entries) {
   `;
 }
 
-function renderEditionSections(entries) {
-  const groupedEntries = entries.reduce((groups, entry) => {
-    const category = entry.category || 'More from this issue';
-    if (!groups.has(category)) groups.set(category, []);
-    groups.get(category).push(entry);
+function renderServerEditionBody(entries) {
+  const articleEntries = entries.filter(entry => entry.category !== 'Classifieds');
+  const classifiedEntries = entries.filter(entry => entry.category === 'Classifieds');
+  const serverGroups = articleEntries.reduce((groups, entry) => {
+    const server = getEntryServer(entry);
+    if (!groups.has(server)) groups.set(server, []);
+    groups.get(server).push(entry);
     return groups;
   }, new Map());
+  const acrossGalliaEntries = serverGroups.get('Across Gallia') || [];
+  serverGroups.delete('Across Gallia');
 
-  const orderedGroups = [...groupedEntries.entries()].sort(([categoryA], [categoryB]) => {
-    const orderA = categoryA === 'Classifieds' ? Number.MAX_SAFE_INTEGER : sectionSortIndex(categoryA);
-    const orderB = categoryB === 'Classifieds' ? Number.MAX_SAFE_INTEGER : sectionSortIndex(categoryB);
-    return orderA - orderB;
-  });
+  const namedServerGroups = [...serverGroups.entries()];
+  const sectionKey = 'server-dispatches';
+  const pageCount = Math.ceil(namedServerGroups.length / 6);
+  const requestedPage = serverSectionPages.get(sectionKey) || 0;
+  const activePage = Math.min(requestedPage, Math.max(0, pageCount - 1));
+  const visibleServerGroups = namedServerGroups.slice(activePage * 6, activePage * 6 + 6);
 
-  return orderedGroups.map(([category, categoryEntries], sectionIndex) => {
-    if (category === 'Classifieds') {
-      return `
-        <section class="chronicle-edition-section chronicle-edition-classifieds">
-          <h2 class="chronicle-edition-section-title">Classifieds</h2>
-          <div class="chronicle-edition-classified-grid">
-            ${categoryEntries.map(entry => renderPublicationCard(entry, 'edition-classified')).join('')}
-          </div>
-        </section>
-      `;
-    }
-
-    const serverGroups = categoryEntries.reduce((groups, entry) => {
-      const server = getEntryServer(entry);
-      if (!groups.has(server)) groups.set(server, []);
-      groups.get(server).push(entry);
-      return groups;
-    }, new Map());
-    const showServerLabels = serverGroups.size > 1 || !serverGroups.has('Across Gallia');
-    const serverGroupEntries = [...serverGroups.entries()];
-    const sectionKey = `${slugify(category)}-${sectionIndex}`;
-    const pageCount = Math.ceil(serverGroupEntries.length / 6);
-    const requestedPage = serverSectionPages.get(sectionKey) || 0;
-    const activePage = Math.min(requestedPage, Math.max(0, pageCount - 1));
-    const visibleServerGroups = serverGroupEntries.slice(activePage * 6, activePage * 6 + 6);
-
-    return `
-      <section class="chronicle-edition-section chronicle-edition-section-size-${Math.min(categoryEntries.length, 3)}">
+  return `
+    ${acrossGalliaEntries.length ? `
+      <section class="chronicle-edition-section chronicle-edition-across-gallia">
+        <h2 class="chronicle-edition-section-title">Across Gallia</h2>
+        <div class="chronicle-edition-story-grid">
+          ${acrossGalliaEntries.map((entry, index) => renderPublicationCard(
+            entry,
+            index === 0 ? 'edition-group-feature' : 'edition-group-story'
+          )).join('')}
+        </div>
+      </section>
+    ` : ''}
+    ${visibleServerGroups.length ? `
+      <section class="chronicle-edition-section chronicle-edition-server-desk">
         <div class="chronicle-edition-section-heading">
-          <h2 class="chronicle-edition-section-title">${escapeHtml(category)}</h2>
+          <h2 class="chronicle-edition-section-title">Server Dispatches</h2>
           ${pageCount > 1 ? `
-            <div class="chronicle-server-pagination" aria-label="${escapeHtml(category)} server pages">
+            <div class="chronicle-server-pagination" aria-label="Server pages">
               <span>${activePage + 1} / ${pageCount}</span>
-              <button type="button" class="chronicle-server-page-button" data-server-section="${escapeHtml(sectionKey)}" data-server-page="${activePage - 1}" ${activePage === 0 ? 'disabled' : ''} aria-label="Previous server page">
+              <button type="button" class="chronicle-server-page-button" data-server-section="${sectionKey}" data-server-page="${activePage - 1}" ${activePage === 0 ? 'disabled' : ''} aria-label="Previous server page">
                 <i class="fas fa-arrow-left"></i>
               </button>
-              <button type="button" class="chronicle-server-page-button" data-server-section="${escapeHtml(sectionKey)}" data-server-page="${activePage + 1}" ${activePage === pageCount - 1 ? 'disabled' : ''} aria-label="Next server page">
+              <button type="button" class="chronicle-server-page-button" data-server-section="${sectionKey}" data-server-page="${activePage + 1}" ${activePage === pageCount - 1 ? 'disabled' : ''} aria-label="Next server page">
                 <i class="fas fa-arrow-right"></i>
               </button>
             </div>
@@ -564,7 +557,7 @@ function renderEditionSections(entries) {
         <div class="chronicle-edition-server-groups chronicle-server-count-${visibleServerGroups.length}">
           ${visibleServerGroups.map(([server, serverEntries]) => `
             <div class="chronicle-edition-server-group">
-              ${showServerLabels ? `<h3 class="chronicle-edition-server-title">${escapeHtml(server)}</h3>` : ''}
+              <h3 class="chronicle-edition-server-title">${escapeHtml(server)}</h3>
               <div class="chronicle-edition-story-grid">
                 ${serverEntries.map((entry, index) => renderPublicationCard(
                   entry,
@@ -575,8 +568,16 @@ function renderEditionSections(entries) {
           `).join('')}
         </div>
       </section>
-    `;
-  }).join('');
+    ` : ''}
+    ${classifiedEntries.length ? `
+      <section class="chronicle-edition-section chronicle-edition-classifieds">
+        <h2 class="chronicle-edition-section-title">Classifieds</h2>
+        <div class="chronicle-edition-classified-grid">
+          ${classifiedEntries.map(entry => renderPublicationCard(entry, 'edition-classified')).join('')}
+        </div>
+      </section>
+    ` : ''}
+  `;
 }
 
 function attachServerPageHandlers() {
@@ -705,7 +706,7 @@ function renderPublicationCard(entry, modifier = '') {
   );
 
   return `
-    <article class="chronicle-card ${modifier ? `chronicle-card-${modifier}` : ''} ${isClassified ? 'chronicle-card-classified' : ''}">
+    <article class="chronicle-card ${modifier ? `chronicle-card-${modifier}` : ''} ${isClassified ? 'chronicle-card-classified' : 'chronicle-card-has-media'}">
       <header class="chronicle-card-header">
         <h2>${escapeHtml(entry.category)}</h2>
       </header>

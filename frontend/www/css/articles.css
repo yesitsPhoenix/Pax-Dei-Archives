@@ -2011,8 +2011,14 @@
 }
 
 .draft-entry-controls .draft-entry-edit,
-.draft-entry-move {
+.draft-entry-move,
+.draft-entry-drag-handle,
+.draft-entry-lock {
     position: static;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
     min-height: 2rem;
     border: 1px solid rgba(255, 215, 0, 0.2);
     border-radius: 999px;
@@ -2023,8 +2029,24 @@
     font-weight: 800;
 }
 
+.draft-entry-drag-handle {
+    min-width: 2rem;
+    cursor: grab;
+    user-select: none;
+}
+
+.draft-entry-drag-handle:active {
+    cursor: grabbing;
+}
+
+.draft-entry-lock {
+    color: rgba(255, 255, 255, 0.65);
+    cursor: default;
+}
+
 .draft-entry-move:hover:not(:disabled),
-.draft-entry-controls .draft-entry-edit:hover {
+.draft-entry-controls .draft-entry-edit:hover,
+.draft-entry-drag-handle:hover {
     background: rgba(255, 215, 0, 0.2);
     color: #fff;
 }
@@ -2048,6 +2070,32 @@
 .draft-publication-preview.is-reordering {
     opacity: 0.62;
     pointer-events: none;
+}
+
+.draft-entry-card.is-dragging {
+    opacity: 0.35;
+}
+
+.draft-entry-card.drop-before {
+    box-shadow: inset 0 4px 0 var(--gold-color, #ffd700);
+}
+
+.draft-entry-card.drop-after {
+    box-shadow: inset 0 -4px 0 var(--gold-color, #ffd700);
+}
+
+.draft-layout-warning {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin-bottom: 1rem;
+    border: 1px solid rgba(255, 193, 7, 0.35);
+    border-radius: 0.5rem;
+    padding: 0.75rem 0.9rem;
+    background: rgba(255, 193, 7, 0.09);
+    color: #ffe082;
+    font-size: 0.85rem;
+    font-weight: 700;
 }
 
 .draft-edition-canvas {
