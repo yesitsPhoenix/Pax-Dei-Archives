@@ -16,8 +16,6 @@ if (window.marked?.setOptions) {
 const SECTION_DEFINITIONS = [
   'Weekly News & Updates',
   'Dev Updates',
-  'Community Outreach',
-  'Community Reminder',
   'Exploration',
   'Lore & History',
   'Scholarly News',
@@ -25,6 +23,9 @@ const SECTION_DEFINITIONS = [
   'Guides & Research',
   'Map Updates',
   'Economic Impact',
+  'Opinion & Editorial',
+  'Community Outreach',
+  'Community Reminder',
   'Expert Tips',
   'Building Highlights',
   'Clan Highlights',
@@ -35,15 +36,14 @@ const SECTION_DEFINITIONS = [
   'Quests & Bounties',
   'Politics & Diplomacy',
   'Roleplay & Stories',
-  'Opinion & Editorial',
   'Tools & Resources',
-  'For Trade',
   'Thaumaturgy',
   'Crafting & Metallurgy',
-  'Classifieds',
   'Enemy Spotlights',
   'Combat Spotlights',
   'Dungeon Spotlights',
+  'For Trade',
+  'Classifieds',
 ];
 
 const SECTION_ALIASES = new Map([
@@ -460,10 +460,25 @@ function renderPublicationGrid(entries) {
 }
 
 function renderBalancedFrontpage(entries) {
-  const [leadEntry, ...secondaryEntries] = entries;
-  const orderedFlowItems = buildOrderedFrontpageFlowItems(secondaryEntries);
+  const nonClassifiedEntries = entries.filter(entry => entry.category !== 'Classifieds');
+  const classifiedEntries = entries.filter(entry => entry.category === 'Classifieds');
+  const [leadEntry, ...secondaryEntries] = nonClassifiedEntries;
+  const orderedFlowItems = buildOrderedFrontpageFlowItems([...secondaryEntries, ...classifiedEntries]);
   const sidebarEntries = secondaryEntries.slice(0, 2);
-  const lowerEntries = secondaryEntries.slice(2);
+  const lowerEntries = [...secondaryEntries.slice(2), ...classifiedEntries];
+
+  if (!leadEntry) {
+    return `
+      <div class="chronicle-frontpage chronicle-edition">
+        <section class="chronicle-edition-lower" aria-label="Classifieds">
+          ${renderEditionSections(classifiedEntries)}
+        </section>
+        <div class="chronicle-frontpage-flow-mobile">
+          ${classifiedEntries.map(entry => renderPublicationCard(entry, 'secondary-classified')).join('')}
+        </div>
+      </div>
+    `;
+  }
 
   return `
     <div class="chronicle-frontpage chronicle-edition">
@@ -498,7 +513,13 @@ function renderEditionSections(entries) {
     return groups;
   }, new Map());
 
-  return [...groupedEntries.entries()].map(([category, categoryEntries], sectionIndex) => {
+  const orderedGroups = [...groupedEntries.entries()].sort(([categoryA], [categoryB]) => {
+    const orderA = categoryA === 'Classifieds' ? Number.MAX_SAFE_INTEGER : sectionSortIndex(categoryA);
+    const orderB = categoryB === 'Classifieds' ? Number.MAX_SAFE_INTEGER : sectionSortIndex(categoryB);
+    return orderA - orderB;
+  });
+
+  return orderedGroups.map(([category, categoryEntries], sectionIndex) => {
     if (category === 'Classifieds') {
       return `
         <section class="chronicle-edition-section chronicle-edition-classifieds">

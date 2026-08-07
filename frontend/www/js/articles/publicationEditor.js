@@ -50,6 +50,38 @@ const CHRONICLE_SECTION_GROUPS = [
   },
 ];
 const CHRONICLE_SECTIONS = CHRONICLE_SECTION_GROUPS.flatMap(group => group.sections);
+const EDITION_SECTION_ORDER = [
+  'Weekly News & Updates',
+  'Dev Updates',
+  'Exploration',
+  'Lore & History',
+  'Scholarly News',
+  'Scholarly Articles',
+  'Guides & Research',
+  'Map Updates',
+  'Economic Impact',
+  'Opinion & Editorial',
+  'Community Outreach',
+  'Community Reminder',
+  'Expert Tips',
+  'Building Highlights',
+  'Clan Highlights',
+  'Player & Clan Spotlights',
+  'Settlement Spotlights',
+  'Community Events',
+  'Tournaments & Competitions',
+  'Quests & Bounties',
+  'Politics & Diplomacy',
+  'Roleplay & Stories',
+  'Tools & Resources',
+  'Thaumaturgy',
+  'Crafting & Metallurgy',
+  'Enemy Spotlights',
+  'Combat Spotlights',
+  'Dungeon Spotlights',
+  'For Trade',
+  'Classifieds',
+];
 const ENTRY_PREVIEW_DEBOUNCE_MS = 750;
 
 let activePublication = null;
@@ -697,9 +729,23 @@ function renderDraftPanel(elements, publication, entries) {
 
 function renderDraftPublicationPreview(entries, canEditEntries, releaseDate) {
   const orderedEntries = [...entries].sort(sortEntries);
-  const [leadEntry, ...secondaryEntries] = orderedEntries;
+  const nonClassifiedEntries = orderedEntries.filter(entry => !isClassifiedSection(entry.section_key));
+  const classifiedEntries = orderedEntries.filter(entry => isClassifiedSection(entry.section_key));
+  const [leadEntry, ...secondaryEntries] = nonClassifiedEntries;
   const sidebarEntries = secondaryEntries.slice(0, 2);
-  const lowerEntries = secondaryEntries.slice(2);
+  const lowerEntries = [...secondaryEntries.slice(2), ...classifiedEntries];
+
+  if (!leadEntry) {
+    return `
+      <div class="articles-page draft-edition-canvas" data-publication-mode="latest">
+        <div class="chronicle-frontpage chronicle-edition">
+          <section class="chronicle-edition-lower" aria-label="Classifieds">
+            ${renderDraftEditionSections(classifiedEntries, canEditEntries, releaseDate, orderedEntries)}
+          </section>
+        </div>
+      </div>
+    `;
+  }
 
   return `
     <div class="articles-page draft-edition-canvas" data-publication-mode="latest">
@@ -733,7 +779,17 @@ function renderDraftEditionSections(entries, canEditEntries, releaseDate, ordere
     return groups;
   }, new Map());
 
-  return [...groupedEntries.entries()].map(([category, categoryEntries]) => {
+  const orderedGroups = [...groupedEntries.entries()].sort(([categoryA], [categoryB]) => {
+    const orderA = isClassifiedSection(categoryA)
+      ? Number.MAX_SAFE_INTEGER
+      : getDraftSectionSortIndex(categoryA);
+    const orderB = isClassifiedSection(categoryB)
+      ? Number.MAX_SAFE_INTEGER
+      : getDraftSectionSortIndex(categoryB);
+    return orderA - orderB;
+  });
+
+  return orderedGroups.map(([category, categoryEntries]) => {
     if (isClassifiedSection(category)) {
       return `
         <section class="chronicle-edition-section chronicle-edition-classifieds">
@@ -1178,6 +1234,11 @@ function updateEntryFieldRequirements(elements) {
 
 function isClassifiedSection(section) {
   return String(section).toLowerCase() === 'classifieds';
+}
+
+function getDraftSectionSortIndex(section) {
+  const index = EDITION_SECTION_ORDER.indexOf(section);
+  return index === -1 ? EDITION_SECTION_ORDER.length : index;
 }
 
 function createPlainExcerpt(content, maxLength) {
