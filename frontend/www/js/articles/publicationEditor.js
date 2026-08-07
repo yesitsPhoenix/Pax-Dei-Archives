@@ -2,27 +2,53 @@ import { supabase } from '../supabaseClient.js';
 import { replaceEmojiShortcodes, slugify } from '../utils.js';
 import DOMPurify from 'https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.es.min.js';
 
-const CHRONICLE_SECTIONS = [
-  'Weekly News & Updates',
-  'Dev Updates',
-  'Community Outreach',
-  'Community Reminder',
-  'Exploration',
-  'Scholarly News',
-  'Map Updates',
-  'Economic Impact',
-  'Expert Tips',
-  'Building Highlights',
-  'Clan Highlights',
-  'Community Events',
-  'For Trade',
-  'Thaumaturgy',
-  'Crafting & Metallurgy',
-  'Enemy Spotlights',
-  'Combat Spotlights',
-  'Dungeon Spotlights',
-  'Classifieds',
+const CHRONICLE_SECTION_GROUPS = [
+  {
+    label: 'Main Sections',
+    sections: [
+      'Weekly News & Updates',
+      'Dev Updates',
+      'Community Outreach',
+      'Community Reminder',
+      'Exploration',
+      'Lore & History',
+      'Scholarly News',
+      'Scholarly Articles',
+      'Guides & Research',
+      'Map Updates',
+      'Economic Impact',
+      'Opinion & Editorial',
+    ],
+  },
+  {
+    label: 'Community-Driven Sections',
+    sections: [
+      'Expert Tips',
+      'Building Highlights',
+      'Clan Highlights',
+      'Player & Clan Spotlights',
+      'Settlement Spotlights',
+      'Community Events',
+      'Events & Competitions',
+      'Politics & Diplomacy',
+      'Roleplay & Stories',
+      'Tools & Resources',
+      'For Trade',
+      'Thaumaturgy',
+      'Crafting & Metallurgy',
+      'Classifieds',
+    ],
+  },
+  {
+    label: 'Brainstorming Sections',
+    sections: [
+      'Enemy Spotlights',
+      'Combat Spotlights',
+      'Dungeon Spotlights',
+    ],
+  },
 ];
+const CHRONICLE_SECTIONS = CHRONICLE_SECTION_GROUPS.flatMap(group => group.sections);
 const ENTRY_PREVIEW_DEBOUNCE_MS = 750;
 
 let activePublication = null;
@@ -1126,8 +1152,14 @@ function resetSubmitButton(button) {
 }
 
 function populateSectionSelect(selectElement) {
-  selectElement.innerHTML = CHRONICLE_SECTIONS
-    .map(section => `<option value="${escapeHtml(section)}">${escapeHtml(section)}</option>`)
+  selectElement.innerHTML = CHRONICLE_SECTION_GROUPS
+    .map(group => `
+      <optgroup label="${escapeHtml(group.label)}">
+        ${group.sections
+          .map(section => `<option value="${escapeHtml(section)}">${escapeHtml(section)}</option>`)
+          .join('')}
+      </optgroup>
+    `)
     .join('');
 }
 
