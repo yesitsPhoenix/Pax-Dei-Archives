@@ -31,6 +31,13 @@ let _currentNameMap = null;
 
 /** Items data from items.json: item_id → { name, url } */
 let _itemsData = null;
+let _completeItemsData = null;
+
+const COMPLETE_CATALOG_URL = 'https://cdn-hosted.gaming.tools/paxdei/data/en/entities.d.json';
+const SELECTABLE_ENTITY_PREFIXES = [
+    'item_',
+    'projectile_'
+];
 
 /** Raw zone listings for the currently active character's zone. */
 let _currentZoneListings = [];
@@ -154,6 +161,50 @@ export async function loadItemsData() {
         _itemsData = {};
     }
     return _itemsData;
+}
+
+/**
+ * Loads gaming.tools' complete localized entity catalogue. Unlike the public
+ * market items.json dictionary, this includes valid game items that have not
+ * appeared in a tracked market listing yet.
+ *
+ * The feed uses devalue encoding, matching the decoder used by the companion.
+ * @returns {Promise<Object>} item/entity ID -> normalized item metadata
+ */
+export async function loadCompleteItemsData({ forceRefresh = false } = {}) {
+    if (forceRefresh) _completeItemsData = null;
+    if (_completeItemsData) return _completeItemsData;
+
+    try {
+        const response = await fetch(`${COMPLETE_CATALOG_URL}?version=${Date.now()}`, {
+            headers: { Accept: 'application/json' }
+        });
+        if (!response.ok) throw new Error(`complete catalogue HTTP ${response.status}`);
+
+        const encoded = await response.text();
+        const { parse } = await import('https://cdn.jsdelivr.net/npm/devalue@5.9.0/+esm');
+        const entities = parse(encoded);
+        if (!Array.isArray(entities)) throw new Error('complete catalogue returned an unexpected shape');
+
+        _completeItemsData = {};
+        for (const entity of entities) {
+            const id = String(entity?.id || '').trim();
+            const name = String(entity?.name || '').trim();
+            if (!id || !name || !SELECTABLE_ENTITY_PREFIXES.some((prefix) => id.startsWith(prefix))) continue;
+            _completeItemsData[id] = {
+                name,
+                url: entity.url || null,
+                iconPath: entity.iconPath || entity.icon || null
+            };
+        }
+
+        console.log(`[GamingTools] Loaded ${Object.keys(_completeItemsData).length} selectable entities from the complete catalogue`);
+    } catch (error) {
+        console.warn('[GamingTools] Complete entity catalogue load failed:', error.message);
+        _completeItemsData = {};
+    }
+
+    return _completeItemsData;
 }
 
 /**

@@ -46,7 +46,7 @@
     <div class="container mx-auto px-4 max-w-6xl">
 
         <!-- Stats Bar -->
-        <div class="grid grid-cols-3 gap-4 mb-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 text-center">
                 <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Total Items</p>
                 <p id="stat-total" class="text-white text-2xl font-bold">—</p>
@@ -58,6 +58,23 @@
             <div class="bg-gray-800 border border-green-700/40 rounded-lg p-4 text-center">
                 <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Categorized</p>
                 <p id="stat-categorized" class="text-green-400 text-2xl font-bold">—</p>
+            </div>
+            <div class="bg-gray-800 border border-violet-700/40 rounded-lg p-4 text-center">
+                <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Missing from Archives</p>
+                <p id="stat-missing" class="text-violet-400 text-2xl font-bold">—</p>
+            </div>
+        </div>
+
+        <div class="bg-gray-800 border border-violet-700/40 rounded-lg p-4 mb-4">
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="flex-1 min-w-[240px]">
+                    <h2 class="text-white text-sm font-semibold"><i class="fas fa-arrows-rotate text-violet-400 mr-2"></i>gaming.tools Catalog Review</h2>
+                    <p id="catalog-sync-status" class="text-gray-400 text-xs mt-1">Comparing the complete game catalog with the Archives…</p>
+                </div>
+                <button id="btn-refresh-catalog" type="button"
+                    class="bg-gray-700 hover:bg-gray-600 text-white text-sm px-4 py-2 rounded-lg transition-colors">
+                    <i class="fas fa-rotate mr-1"></i> Check Again
+                </button>
             </div>
         </div>
 

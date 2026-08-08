@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient.js';
+import { loadCompleteItemsData } from './services/gamingToolsService.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -12,6 +13,8 @@ let categories     = [];   // [{category_id, category_name}]
 let filteredItems  = [];   // result after applying current filters
 let currentPage    = 1;
 let selectedIds    = new Set();
+let missingItems   = [];
+let slugBackfills  = [];
 
 // ── DOM Refs ──────────────────────────────────────────────────────────────────
 
@@ -31,6 +34,9 @@ const itemsTable         = document.getElementById('items-table');
 const itemsTbody         = document.getElementById('items-tbody');
 const tableEmpty         = document.getElementById('table-empty');
 const paginationEl       = document.getElementById('pagination');
+const statMissing        = document.getElementById('stat-missing');
+const catalogSyncStatus  = document.getElementById('catalog-sync-status');
+const btnRefreshCatalog  = document.getElementById('btn-refresh-catalog');
 
 // ── Data Fetching ─────────────────────────────────────────────────────────────
 
@@ -41,7 +47,7 @@ async function fetchAllItems() {
     while (true) {
         const { data, error } = await supabase
             .from('items')
-            .select('item_id, item_name, category_id')
+            .select('item_id, item_name, category_id, pax_dei_slug')
             .order('item_name', { ascending: true })
             .range(from, from + FETCH_PAGE_SIZE - 1);
 
@@ -62,6 +68,136 @@ async function fetchCategories() {
 
     if (error) throw error;
     return data || [];
+}
+
+function normalizeGameId(value) {
+    const lastSegment = String(value || '').trim().split('/').filter(Boolean).pop();
+    return String(lastSegment || '').toLowerCase();
+}
+
+function compareCatalog(completeCatalog) {
+    const existingBySlug = new Map(allItems
+        .filter(item => normalizeGameId(item.pax_dei_slug))
+        .map(item => [normalizeGameId(item.pax_dei_slug), item]));
+    const existingByName = new Map(allItems
+        .filter(item => String(item.item_name || '').trim())
+        .map(item => [String(item.item_name).trim().toLowerCase(), item]));
+    const missing = [];
+    const backfills = [];
+
+    Object.entries(completeCatalog || {})
+        .map(([slug, item]) => ({
+            item_name: String(item?.name || '').trim(),
+            pax_dei_slug: normalizeGameId(slug)
+        }))
+        .filter(item => item.item_name && item.pax_dei_slug)
+        .forEach(item => {
+            if (existingBySlug.has(item.pax_dei_slug)) return;
+            const nameMatch = existingByName.get(item.item_name.toLowerCase());
+            if (nameMatch) {
+                backfills.push({
+                    item_id: nameMatch.item_id,
+                    item_name: nameMatch.item_name,
+                    pax_dei_slug: item.pax_dei_slug
+                });
+            } else {
+                missing.push(item);
+            }
+        });
+
+    missing.sort((a, b) => a.item_name.localeCompare(b.item_name));
+    backfills.sort((a, b) => a.item_name.localeCompare(b.item_name));
+    return { missing, backfills };
+}
+
+async function refreshMissingCatalog(forceRefresh = false) {
+    btnRefreshCatalog.disabled = true;
+    catalogSyncStatus.className = 'text-gray-400 text-xs mt-1';
+    catalogSyncStatus.textContent = 'Comparing the complete game catalog with the Archives…';
+
+    try {
+        const completeCatalog = await loadCompleteItemsData({ forceRefresh });
+        const catalogSize = Object.keys(completeCatalog || {}).length;
+        if (catalogSize < 500) {
+            throw new Error(`gaming.tools returned an incomplete catalog (${catalogSize} selectable items)`);
+        }
+        const comparison = compareCatalog(completeCatalog);
+        missingItems = comparison.missing;
+        slugBackfills = comparison.backfills;
+        statMissing.textContent = missingItems.length.toLocaleString();
+        if (missingItems.length || slugBackfills.length) {
+            await syncMissingItemsIntoReviewTable();
+        } else {
+            catalogSyncStatus.className = 'text-green-400 text-xs mt-1';
+            catalogSyncStatus.textContent = `Archives matches all ${catalogSize.toLocaleString()} selectable gaming.tools entities.`;
+        }
+    } catch (error) {
+        missingItems = [];
+        slugBackfills = [];
+        statMissing.textContent = '—';
+        catalogSyncStatus.className = 'text-red-400 text-xs mt-1';
+        catalogSyncStatus.textContent = `Catalog comparison failed: ${error.message}`;
+    } finally {
+        btnRefreshCatalog.disabled = false;
+    }
+}
+
+async function syncMissingItemsIntoReviewTable() {
+    const pending = [...missingItems];
+    const pendingBackfills = [...slugBackfills];
+    const imported = [];
+
+    try {
+        for (let index = 0; index < pendingBackfills.length; index++) {
+            const match = pendingBackfills[index];
+            catalogSyncStatus.className = 'text-gray-400 text-xs mt-1';
+            catalogSyncStatus.textContent = `Linking existing item IDs ${index + 1} of ${pendingBackfills.length}…`;
+            const { error } = await supabase
+                .from('items')
+                .update({ pax_dei_slug: match.pax_dei_slug })
+                .eq('item_id', match.item_id);
+            if (error) throw error;
+            const localItem = allItems.find(item => item.item_id === match.item_id);
+            if (localItem) localItem.pax_dei_slug = match.pax_dei_slug;
+        }
+
+        for (let offset = 0; offset < pending.length; offset += 100) {
+            const batch = pending.slice(offset, offset + 100).map(item => ({
+                item_name: item.item_name,
+                pax_dei_slug: item.pax_dei_slug,
+                category_id: null
+            }));
+            catalogSyncStatus.className = 'text-gray-400 text-xs mt-1';
+            catalogSyncStatus.textContent = `Importing ${Math.min(offset + batch.length, pending.length).toLocaleString()} of ${pending.length.toLocaleString()}…`;
+
+            const { data, error } = await supabase
+                .from('items')
+                .insert(batch)
+                .select('item_id, item_name, category_id, pax_dei_slug');
+            if (error) throw error;
+            imported.push(...(data || []));
+        }
+
+        allItems = await fetchAllItems();
+        missingItems = [];
+        slugBackfills = [];
+        updateStats();
+        applyFilters();
+        statMissing.textContent = '0';
+        catalogSyncStatus.className = 'text-green-400 text-xs mt-1';
+        catalogSyncStatus.textContent = `${imported.length.toLocaleString()} new items added to the uncategorized table below; ${pendingBackfills.length.toLocaleString()} existing game IDs linked.`;
+    } catch (error) {
+        allItems = await fetchAllItems();
+        const completeCatalog = await loadCompleteItemsData();
+        const comparison = compareCatalog(completeCatalog);
+        missingItems = comparison.missing;
+        slugBackfills = comparison.backfills;
+        updateStats();
+        applyFilters();
+        statMissing.textContent = missingItems.length.toLocaleString();
+        catalogSyncStatus.className = 'text-red-400 text-xs mt-1';
+        catalogSyncStatus.textContent = `Catalog sync stopped: ${error.message}. Check Again to reconcile any completed batches.`;
+    }
 }
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
@@ -345,6 +481,7 @@ async function init() {
         populateCategoryDropdowns();
         updateStats();
         applyFilters();
+        await refreshMissingCatalog();
 
     } catch (err) {
         console.error('categorize_items init error:', err);
@@ -382,6 +519,7 @@ selectAllCheckbox.addEventListener('change', () => {
 });
 
 btnBulkApply.addEventListener('click', handleBulkApply);
+btnRefreshCatalog.addEventListener('click', () => refreshMissingCatalog(true));
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
