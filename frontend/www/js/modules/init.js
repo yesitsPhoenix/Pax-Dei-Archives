@@ -67,6 +67,11 @@ import {
 } from './filter.js';
 
 import { cachedRegions } from './characters.js';
+import {
+    getItemData,
+    loadCompleteItemsData,
+    loadItemsData
+} from '../services/gamingToolsService.js';
 
 let cachedCategories = null;
 let cachedMarketStalls = null;
@@ -277,6 +282,15 @@ export const loadActiveListings = async (marketStallId = null) => {
 
         const listings = data;
         const total_count = listings.length > 0 ? listings[0].total_count : 0;
+
+        // The market dictionary only contains items observed by gaming.tools.
+        // Load the complete catalogue when a visible listing has no icon there.
+        await loadItemsData();
+        const needsCompleteCatalog = listings.some(listing => {
+            const slug = listing.pax_dei_slug || listing.items?.pax_dei_slug;
+            return !getItemData(slug, listing.item_name)?.iconPath;
+        });
+        if (needsCompleteCatalog) await loadCompleteItemsData();
 
         renderListingsTable(listings, actualListingsBody);
         renderListingsPagination(total_count, marketStallId);

@@ -47,7 +47,7 @@ export const renderListingsTable = (listings, actualListingsBody) => {
             (listing.items && listing.items.pax_dei_slug);
 
         // Use items.json for icon/name data; build the embed-compatible URL separately
-        const itemData   = paxDeiSlug ? getItemData(paxDeiSlug) : null;
+        const itemData = getItemData(paxDeiSlug, listing.item_name);
         const fallbackUrl = itemData?.url || (paxDeiSlug ? `https://paxdei.gaming.tools/${paxDeiSlug}` : '#');
         const { url: paxDeiUrl, noTooltip } = toEmbedUrl(paxDeiSlug, fallbackUrl);
         const isLinkEnabled = !!(itemData?.url || paxDeiSlug);

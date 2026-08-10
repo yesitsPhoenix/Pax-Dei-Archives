@@ -32,6 +32,7 @@ let _currentNameMap = null;
 /** Items data from items.json: item_id → { name, url } */
 let _itemsData = null;
 let _completeItemsData = null;
+let _completeItemsByName = null;
 
 const COMPLETE_CATALOG_URL = 'https://cdn-hosted.gaming.tools/paxdei/data/en/entities.d.json';
 const SELECTABLE_ENTITY_PREFIXES = [
@@ -172,7 +173,10 @@ export async function loadItemsData() {
  * @returns {Promise<Object>} item/entity ID -> normalized item metadata
  */
 export async function loadCompleteItemsData({ forceRefresh = false } = {}) {
-    if (forceRefresh) _completeItemsData = null;
+    if (forceRefresh) {
+        _completeItemsData = null;
+        _completeItemsByName = null;
+    }
     if (_completeItemsData) return _completeItemsData;
 
     try {
@@ -187,21 +191,25 @@ export async function loadCompleteItemsData({ forceRefresh = false } = {}) {
         if (!Array.isArray(entities)) throw new Error('complete catalogue returned an unexpected shape');
 
         _completeItemsData = {};
+        _completeItemsByName = {};
         for (const entity of entities) {
             const id = String(entity?.id || '').trim();
             const name = String(entity?.name || '').trim();
             if (!id || !name || !SELECTABLE_ENTITY_PREFIXES.some((prefix) => id.startsWith(prefix))) continue;
-            _completeItemsData[id] = {
+            const normalizedEntity = {
                 name,
                 url: entity.url || null,
                 iconPath: entity.iconPath || entity.icon || null
             };
+            _completeItemsData[id] = normalizedEntity;
+            _completeItemsByName[name.toLowerCase()] = normalizedEntity;
         }
 
         console.log(`[GamingTools] Loaded ${Object.keys(_completeItemsData).length} selectable entities from the complete catalogue`);
     } catch (error) {
         console.warn('[GamingTools] Complete entity catalogue load failed:', error.message);
         _completeItemsData = {};
+        _completeItemsByName = {};
     }
 
     return _completeItemsData;
@@ -483,12 +491,31 @@ export function getZoneListingsForItemByQuality(paxDeiSlug, itemName, isMastercr
 /**
  * Returns name and URL for a given item_id from the items.json dictionary.
  *
+ * The complete entity catalogue supplies metadata for valid items that have not
+ * appeared in the smaller market dictionary. The display-name fallback also
+ * covers old or missing database slugs.
+ *
  * @param {string} itemId - e.g. "wearable_leather_hands_pilgrim_0_t4_common"
+ * @param {string|null} itemName - optional English display name fallback
  * @returns {{ name: string, url: string }|null}
  */
-export function getItemData(itemId) {
-    if (!_itemsData || !itemId) return null;
-    return _itemsData[toBareId(itemId)] || null;
+export function getItemData(itemId, itemName = null) {
+    const bareId = itemId ? toBareId(itemId) : null;
+    const marketItem = bareId && _itemsData ? _itemsData[bareId] : null;
+    const completeItem = bareId && _completeItemsData ? _completeItemsData[bareId] : null;
+    const nameMatch = itemName && _completeItemsByName
+        ? _completeItemsByName[itemName.toLowerCase().trim()]
+        : null;
+
+    if (!marketItem && !completeItem && !nameMatch) return null;
+    return {
+        ...(nameMatch || {}),
+        ...(completeItem || {}),
+        ...(marketItem || {}),
+        // Prefer a populated value from any catalogue over a null market field.
+        url: marketItem?.url || completeItem?.url || nameMatch?.url || null,
+        iconPath: marketItem?.iconPath || completeItem?.iconPath || nameMatch?.iconPath || null
+    };
 }
 
 /**
