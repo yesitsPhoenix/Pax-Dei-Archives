@@ -221,8 +221,8 @@ function renderRows(target, rows) {
                 <td><button type="button" class="market-opportunity-star${starred ? ' active' : ''}" data-star-opportunity="${escapeHtml(prefKey)}" title="${starred ? 'Remove favorite' : 'Favorite item'}"><i class="${starred ? 'fas' : 'far'} fa-star"></i></button></td>
                 <td><div class="market-opportunity-item">${row.iconPath ? `<img src="${escapeHtml(row.iconPath)}" alt="" loading="lazy" onerror="this.style.display='none'">` : '<span class="market-opportunity-icon-fallback"><i class="fas fa-box"></i></span>'}<span><strong>${escapeHtml(row.itemName)}</strong><small>${escapeHtml(qualityLabel(row))}</small></span></div></td>
                 <td><span class="market-opportunity-valley">${escapeHtml(row.valley)}</span></td>
-                <td><strong>${fmt(row.quantity)} items for ${fmt(row.acquisitionCost)}g</strong><small>One listing &middot; ${fmt(row.unitCost, 2)}g each</small></td>
-                <td><strong>${fmt(row.historicalValue)}g</strong><small>${fmt(row.historicalUnitValue, 2)}g each</small></td>
+                <td><strong>${fmt(row.quantity)} units for ${fmt(row.acquisitionCost)}g</strong><small>1 stack &middot; ${fmt(row.unitCost, 2)}g/unit</small></td>
+                <td><strong>${fmt(row.historicalValue)}g</strong><small>${fmt(row.historicalUnitValue, 2)}g/unit</small></td>
                 <td><strong>${fmt(row.saleCount)} sales &middot; ${fmt(row.velocity, 1)}/mo</strong><small>newest ${fmt(row.daysSinceSale)}d ago &middot; ${fmt(row.priceSpreadPct)}% spread</small></td>
                 <td>${fmt(row.estimatedFee)}g</td><td class="market-opportunity-table-profit">+${fmt(row.estimatedProfit)}g<small>per listing</small></td><td><strong>${fmt(row.margin)}%</strong></td>
                 <td><button type="button" class="market-opportunity-exclude" data-exclude-opportunity="${escapeHtml(prefKey)}" title="Exclude this item"><i class="fas fa-eye-slash"></i></button></td>

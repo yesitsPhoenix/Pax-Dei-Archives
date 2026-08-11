@@ -1436,8 +1436,15 @@ async function showValleyItemEditModal(itemName, itemId = null, isMastercrafted 
     const updateFeeInfo = () => {
         const price = parseFloat(priceInput?.value);
         if (feeInfoEl && !isNaN(price) && price > 0) {
-            const feePerListing = Math.ceil(price * 0.05);
-            feeInfoEl.textContent = `Est. fee per listing: ${feePerListing}g  ·  ${listings.length} listing${listings.length !== 1 ? 's' : ''} = ${feePerListing * listings.length}g total (only charged if price increases)`;
+            const feeDeltas = listings.map((listing) => price > listing.total_listed_price
+                ? Math.max(0, Math.ceil(price * 0.05) - (Number(listing.market_fee) || 0))
+                : 0);
+            const totalAdditionalFee = feeDeltas.reduce((sum, fee) => sum + fee, 0);
+            const feeRange = [...new Set(feeDeltas)].sort((a, b) => a - b);
+            const perListingLabel = feeRange.length === 1
+                ? `${feeRange[0]}g per listing`
+                : `${feeRange[0]}g–${feeRange[feeRange.length - 1]}g per listing`;
+            feeInfoEl.textContent = `Additional repricing fee: ${perListingLabel} · ${totalAdditionalFee}g total`;
         } else if (feeInfoEl) {
             feeInfoEl.textContent = '';
         }
@@ -1490,88 +1497,32 @@ async function showValleyItemEditModal(itemName, itemId = null, isMastercrafted 
             saveBtn.textContent = 'Saving...';
 
             try {
-                // Calculate total additional fees (only charged when price increases)
-                let totalAdditionalFees = 0;
-                const ops = listings.map(listing => {
-                    const priceIncrease = newTotalPrice - listing.total_listed_price;
-                    let newFee = listing.market_fee;
-                    let additionalFee = 0;
-                    if (priceIncrease > 0) {
-                        newFee = Math.max(Math.ceil(newTotalPrice * 0.05), listing.market_fee);
-                        additionalFee = newFee - listing.market_fee;
-                        totalAdditionalFees += additionalFee;
-                    }
-                    return {
-                        listingId:    listing.listing_id,
-                        quantity:     listing.quantity_listed,
-                        newTotalPrice,
-                        newPricePerUnit: newTotalPrice / listing.quantity_listed,
-                        newFee
-                    };
+                const listingIds = listings.map((listing) => Number(listing.listing_id));
+                const { data: result, error: updateError } = await supabase.rpc('apply_bulk_listing_price_update', {
+                    p_character_id: currentCharacterId,
+                    p_listing_ids: listingIds,
+                    p_new_total_price: newTotalPrice
                 });
 
-                // Check gold if fees are due
-                if (totalAdditionalFees > 0) {
-                    const { data: charData } = await supabase
-                        .from('characters')
-                        .select('gold')
-                        .eq('character_id', currentCharacterId)
-                        .single();
+                if (updateError) throw updateError;
 
-                    const currentGold = charData?.gold || 0;
-                    if (currentGold < totalAdditionalFees) {
-                        if (errorEl) {
-                            errorEl.textContent = `Not enough gold! Need ${totalAdditionalFees.toLocaleString()}g for fees but only have ${currentGold.toLocaleString()}g.`;
-                            errorEl.classList.remove('hidden');
-                        }
-                        saveBtn.disabled    = false;
-                        saveBtn.textContent = 'Save All Listings';
-                        return;
-                    }
-                }
+                const additionalFee = Number(result?.additional_fee) || 0;
+                saveBtn.textContent = additionalFee > 0
+                    ? `Saved · ${additionalFee.toLocaleString()}g fee`
+                    : 'Saved';
 
-                // Apply updates in parallel
-                const results = await Promise.all(ops.map(op =>
-                    supabase
-                        .from('market_listings')
-                        .update({
-                            total_listed_price:   op.newTotalPrice,
-                            listed_price_per_unit: op.newPricePerUnit,
-                            market_fee:           op.newFee
-                        })
-                        .eq('listing_id',   op.listingId)
-                        .eq('character_id', currentCharacterId)
-                ));
-
-                const failed = results.filter(r => r.error);
-                if (failed.length > 0) {
-                    if (errorEl) { errorEl.textContent = `${failed.length} update(s) failed: ${failed[0].error.message}`; errorEl.classList.remove('hidden'); }
-                    saveBtn.disabled    = false;
-                    saveBtn.textContent = 'Save All Listings';
-                    return;
-                }
-
-                // Deduct additional fees from character gold
-                if (totalAdditionalFees > 0) {
-                    const { data: charData } = await supabase
-                        .from('characters')
-                        .select('gold')
-                        .eq('character_id', currentCharacterId)
-                        .single();
-                    if (charData) {
-                        await supabase
-                            .from('characters')
-                            .update({ gold: (charData.gold || 0) - totalAdditionalFees })
-                            .eq('character_id', currentCharacterId);
-                    }
-                }
+                const { loadTraderPageData } = await import('../trader.js');
+                await loadTraderPageData(false);
 
                 // Re-open valley modal and refresh the active listings table only after a successful save.
                 await closeAndRefreshAfterSave();
 
             } catch (e) {
                 console.error('[ValleyEdit] Unexpected error during save:', e);
-                if (errorEl) { errorEl.textContent = 'An unexpected error occurred. Check the console.'; errorEl.classList.remove('hidden'); }
+                if (errorEl) {
+                    errorEl.textContent = e?.message || 'The listings could not be updated.';
+                    errorEl.classList.remove('hidden');
+                }
                 saveBtn.disabled    = false;
                 saveBtn.textContent = 'Save All Listings';
             }

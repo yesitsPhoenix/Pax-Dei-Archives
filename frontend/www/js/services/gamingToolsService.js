@@ -31,14 +31,24 @@ let _currentNameMap = null;
 
 /** Items data from items.json: item_id → { name, url } */
 let _itemsData = null;
+let _itemsDataByName = null;
 let _completeItemsData = null;
 let _completeItemsByName = null;
 
 const COMPLETE_CATALOG_URL = 'https://cdn-hosted.gaming.tools/paxdei/data/en/entities.d.json';
 const SELECTABLE_ENTITY_PREFIXES = [
     'item_',
-    'projectile_'
+    'projectile_',
+    'resource_'
 ];
+
+function rebuildMarketItemsNameMap() {
+    _itemsDataByName = {};
+    for (const item of Object.values(_itemsData || {})) {
+        const name = String(item?.name || '').trim().toLowerCase();
+        if (name && !_itemsDataByName[name]) _itemsDataByName[name] = item;
+    }
+}
 
 /** Raw zone listings for the currently active character's zone. */
 let _currentZoneListings = [];
@@ -142,6 +152,7 @@ export async function loadItemsData() {
     const cached = cacheGet('items_data_v2');
     if (cached) {
         _itemsData = cached;
+        rebuildMarketItemsNameMap();
         return _itemsData;
     }
     try {
@@ -156,10 +167,12 @@ export async function loadItemsData() {
                 iconPath: item.iconPath || null
             };
         }
+        rebuildMarketItemsNameMap();
         cacheSet('items_data_v2', _itemsData);
     } catch (e) {
         console.warn('[GamingTools] items.json load failed:', e.message);
         _itemsData = {};
+        _itemsDataByName = {};
     }
     return _itemsData;
 }
@@ -503,18 +516,22 @@ export function getItemData(itemId, itemName = null) {
     const bareId = itemId ? toBareId(itemId) : null;
     const marketItem = bareId && _itemsData ? _itemsData[bareId] : null;
     const completeItem = bareId && _completeItemsData ? _completeItemsData[bareId] : null;
+    const marketNameMatch = itemName && _itemsDataByName
+        ? _itemsDataByName[itemName.toLowerCase().trim()]
+        : null;
     const nameMatch = itemName && _completeItemsByName
         ? _completeItemsByName[itemName.toLowerCase().trim()]
         : null;
 
-    if (!marketItem && !completeItem && !nameMatch) return null;
+    if (!marketItem && !completeItem && !marketNameMatch && !nameMatch) return null;
     return {
         ...(nameMatch || {}),
+        ...(marketNameMatch || {}),
         ...(completeItem || {}),
         ...(marketItem || {}),
         // Prefer a populated value from any catalogue over a null market field.
-        url: marketItem?.url || completeItem?.url || nameMatch?.url || null,
-        iconPath: marketItem?.iconPath || completeItem?.iconPath || nameMatch?.iconPath || null
+        url: marketItem?.url || completeItem?.url || marketNameMatch?.url || nameMatch?.url || null,
+        iconPath: marketItem?.iconPath || completeItem?.iconPath || marketNameMatch?.iconPath || nameMatch?.iconPath || null
     };
 }
 

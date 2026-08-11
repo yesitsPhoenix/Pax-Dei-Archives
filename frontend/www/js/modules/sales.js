@@ -26,14 +26,32 @@ let availableTransactionTypes = new Set();
 const fetchCharacterTransactions = async (characterId) => {
     if (!characterId) return [];
     
-    const { data, error } = await supabase
-        .rpc('get_full_transaction_history', { p_character_id: characterId });
+    const [{ data, error }, { data: feeAdjustments, error: feeAdjustmentError }] = await Promise.all([
+        supabase.rpc('get_full_transaction_history', { p_character_id: characterId }),
+        supabase.from('listing_fee_adjustments').select('*').eq('character_id', characterId)
+    ]);
         
     if (error) {
         console.error('Error fetching transaction history:', error.message);
         return [];
     }
-    return data || [];
+    if (feeAdjustmentError) {
+        console.warn('Listing fee adjustments unavailable:', feeAdjustmentError.message);
+    }
+    const adjustmentTransactions = (feeAdjustments || []).map((adjustment) => ({
+        id: adjustment.adjustment_id,
+        type: 'Listing Fee Adjustment',
+        date: adjustment.created_at,
+        item_name: adjustment.item_name,
+        category_name: adjustment.category_name,
+        market_stall_name: adjustment.market_stall_name,
+        quantity: Number(adjustment.quantity) || 0,
+        price_per_unit: Number(adjustment.new_total_price) / Math.max(Number(adjustment.quantity) || 1, 1),
+        total_amount: 0,
+        fee: Number(adjustment.fee) || 0,
+        listing_id: adjustment.listing_id
+    }));
+    return [...(data || []), ...adjustmentTransactions];
 };
 
 export const initializeSales = () => {
@@ -95,6 +113,11 @@ const handleDeleteTransaction = async (id, type) => {
         case 'Listing Fee':
             tableName = 'market_listings';
             idColumn = 'listing_id';
+            processedId = parseInt(id, 10);
+            break;
+        case 'Listing Fee Adjustment':
+            tableName = 'listing_fee_adjustments';
+            idColumn = 'adjustment_id';
             processedId = parseInt(id, 10);
             break;
         default:
