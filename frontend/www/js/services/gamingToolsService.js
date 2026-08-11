@@ -42,6 +42,27 @@ const SELECTABLE_ENTITY_PREFIXES = [
     'resource_'
 ];
 
+// A few valid market items are absent from, or inconsistently identified by,
+// the public item dictionaries. Keep verified canonical metadata here so an
+// old database slug cannot leave a blank icon in the ledger.
+const ITEM_METADATA_OVERRIDES_BY_NAME = {
+    'arrow shaft': {
+        name: 'Arrow Shaft',
+        url: 'https://paxdei.gaming.tools/materials/item_component_arrow_shaft',
+        iconPath: 'https://cdn-hosted.gaming.tools/paxdei/images/_pd/environment/props/economy/craftingproducts/icons/t_icon_arrowshaft.webp'
+    },
+    raspberry: {
+        name: 'Raspberry',
+        url: 'https://paxdei.gaming.tools/gatherables/resource_static_plant_berry_raspberries',
+        iconPath: 'https://cdn-hosted.gaming.tools/paxdei/images/_pd/environment/nature/resources/berries/raspberry/t_raspberry_08_inv_state_icon.webp'
+    }
+};
+
+const ITEM_METADATA_OVERRIDE_NAMES_BY_ID = {
+    item_component_arrow_shaft: 'arrow shaft',
+    resource_static_plant_berry_raspberries: 'raspberry'
+};
+
 function rebuildMarketItemsNameMap() {
     _itemsDataByName = {};
     for (const item of Object.values(_itemsData || {})) {
@@ -514,6 +535,11 @@ export function getZoneListingsForItemByQuality(paxDeiSlug, itemName, isMastercr
  */
 export function getItemData(itemId, itemName = null) {
     const bareId = itemId ? toBareId(itemId) : null;
+    const normalizedName = itemName ? itemName.toLowerCase().trim() : null;
+    const overrideName = (normalizedName && ITEM_METADATA_OVERRIDES_BY_NAME[normalizedName]
+        ? normalizedName
+        : ITEM_METADATA_OVERRIDE_NAMES_BY_ID[bareId]) || null;
+    const metadataOverride = overrideName ? ITEM_METADATA_OVERRIDES_BY_NAME[overrideName] : null;
     const marketItem = bareId && _itemsData ? _itemsData[bareId] : null;
     const completeItem = bareId && _completeItemsData ? _completeItemsData[bareId] : null;
     const marketNameMatch = itemName && _itemsDataByName
@@ -523,15 +549,16 @@ export function getItemData(itemId, itemName = null) {
         ? _completeItemsByName[itemName.toLowerCase().trim()]
         : null;
 
-    if (!marketItem && !completeItem && !marketNameMatch && !nameMatch) return null;
+    if (!marketItem && !completeItem && !marketNameMatch && !nameMatch && !metadataOverride) return null;
     return {
+        ...(metadataOverride || {}),
         ...(nameMatch || {}),
         ...(marketNameMatch || {}),
         ...(completeItem || {}),
         ...(marketItem || {}),
         // Prefer a populated value from any catalogue over a null market field.
-        url: marketItem?.url || completeItem?.url || marketNameMatch?.url || nameMatch?.url || null,
-        iconPath: marketItem?.iconPath || completeItem?.iconPath || marketNameMatch?.iconPath || nameMatch?.iconPath || null
+        url: marketItem?.url || completeItem?.url || marketNameMatch?.url || nameMatch?.url || metadataOverride?.url || null,
+        iconPath: marketItem?.iconPath || completeItem?.iconPath || marketNameMatch?.iconPath || nameMatch?.iconPath || metadataOverride?.iconPath || null
     };
 }
 
