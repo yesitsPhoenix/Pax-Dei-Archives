@@ -370,6 +370,579 @@
             z-index: 30000 !important;
         }
 
+        .market-opportunities-panel {
+            width: min(1500px, calc(100vw - 2rem));
+            max-height: calc(100vh - var(--market-opportunities-top-offset, 102px) - 1rem);
+            display: flex;
+            flex-direction: column;
+            border-radius: 18px;
+            overflow: hidden;
+        }
+
+        .market-opportunities-body {
+            padding: 1.25rem;
+            overflow-y: auto;
+            min-height: 0;
+        }
+
+        .market-opportunities-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .market-opportunities-toolbar label {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            min-width: 180px;
+            padding: 0.55rem 0.75rem;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            background: #0f172a;
+            color: #64748b;
+        }
+
+        .market-opportunities-toolbar input {
+            width: 100%;
+            border: 0;
+            outline: 0;
+            background: transparent;
+            color: #f8fafc;
+            font-size: 0.92rem;
+        }
+
+        .market-opportunities-toolbar select {
+            border: 1px solid #475569;
+            border-radius: 8px;
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 0.55rem 0.7rem;
+            font-size: 0.9rem;
+        }
+
+        .market-opportunities-toolbar > span {
+            min-width: 72px;
+            color: #94a3b8;
+            font-size: 0.85rem;
+            text-align: right;
+        }
+
+        .market-opportunities-table-wrap {
+            overflow-x: hidden;
+            overflow-y: auto;
+            max-height: calc(100vh - var(--market-opportunities-top-offset, 102px) - 230px);
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            border-radius: 10px;
+        }
+
+        .market-opportunities-table {
+            width: 100%;
+            min-width: 0;
+            table-layout: fixed;
+            border-collapse: collapse;
+            font-size: 0.92rem;
+        }
+
+        .market-opportunities-table thead {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: #111c2f;
+        }
+
+        .market-opportunities-table th {
+            color: #94a3b8;
+            font-size: 0.76rem;
+            font-weight: 800;
+            letter-spacing: 0.055em;
+            text-align: left;
+            text-transform: uppercase;
+            white-space: nowrap;
+            padding: 0.65rem 0.75rem;
+            border-bottom: 1px solid #475569;
+        }
+
+        .market-opportunities-table td {
+            color: #cbd5e1;
+            padding: 0.58rem 0.75rem;
+            border-bottom: 1px solid rgba(71, 85, 105, 0.48);
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+
+        .market-opportunities-table th:nth-child(1),
+        .market-opportunities-table th:nth-child(10) { width: 34px; }
+        .market-opportunities-table th:nth-child(2) { width: 15%; }
+        .market-opportunities-table th:nth-child(3) { width: 8%; }
+        .market-opportunities-table th:nth-child(4) { width: 17%; }
+        .market-opportunities-table th:nth-child(5) { width: 14%; }
+        .market-opportunities-table th:nth-child(6) { width: 20%; }
+        .market-opportunities-table th:nth-child(7) { width: 5%; }
+        .market-opportunities-table th:nth-child(8) { width: 10%; }
+        .market-opportunities-table th:nth-child(9) { width: 7%; }
+
+        .market-opportunities-table tbody tr:nth-child(even) {
+            background: rgba(15, 23, 42, 0.34);
+        }
+
+        .market-opportunities-table tbody tr:hover {
+            background: rgba(52, 211, 153, 0.07);
+        }
+
+        .market-opportunities-table td strong,
+        .market-opportunities-table td small {
+            display: block;
+        }
+
+        .market-opportunities-table td strong {
+            color: #f8fafc;
+        }
+
+        .market-opportunities-table td small {
+            color: #7f8da3;
+            font-size: 0.78rem;
+            margin-top: 0.1rem;
+        }
+
+        .market-opportunity-valley {
+            color: #6ee7b7;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .market-opportunities-table .market-opportunity-table-profit {
+            color: #34d399;
+            font-size: 1rem;
+            font-weight: 900;
+        }
+
+        .market-opportunities-no-match {
+            height: 140px;
+            text-align: center;
+            color: #94a3b8 !important;
+        }
+
+        .market-opportunities-pagination {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.65rem;
+            min-height: 34px;
+            color: #94a3b8;
+            font-size: 0.82rem;
+            padding-top: 0.55rem;
+        }
+
+        .market-opportunities-pagination button {
+            width: 28px;
+            height: 28px;
+            border: 1px solid #475569;
+            border-radius: 999px;
+            color: #cbd5e1;
+        }
+
+        .market-opportunities-pagination button:disabled {
+            opacity: 0.3;
+        }
+
+        .market-opportunity-item {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+        }
+
+        .market-opportunity-item img,
+        .market-opportunity-icon-fallback {
+            width: 38px;
+            height: 38px;
+            flex: 0 0 38px;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 7px;
+            background: #0f172a;
+            object-fit: cover;
+        }
+
+        .market-opportunity-icon-fallback {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+        }
+
+        .market-opportunities-history-control {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            white-space: nowrap;
+        }
+
+        .market-opportunities-history-control label {
+            color: #cbd5e1;
+            font-size: 0.88rem;
+            font-weight: 700;
+        }
+
+        .market-opportunities-history-control select {
+            border: 1px solid #475569;
+            border-radius: 8px;
+            background: #0f172a;
+            color: #f8fafc;
+            padding: 0.5rem 0.65rem;
+            font-size: 0.88rem;
+        }
+
+        .market-opportunities-panel > .px-5 {
+            font-size: 0.9rem;
+            line-height: 1.45;
+        }
+
+        .market-opportunity-tabs {
+            display: flex;
+            gap: 0.45rem;
+            padding: 0.75rem 1.25rem 0;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+            background: rgba(15, 23, 42, 0.2);
+        }
+
+        .market-opportunity-tab {
+            padding: 0.65rem 0.9rem;
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            border-bottom: 0;
+            border-radius: 9px 9px 0 0;
+            color: #94a3b8;
+            font-size: 0.88rem;
+            font-weight: 800;
+        }
+
+        .market-opportunity-tab.active {
+            border-color: rgba(52, 211, 153, 0.45);
+            background: #1f2937;
+            color: #f8fafc;
+        }
+
+        .market-opportunity-config {
+            padding: 1.25rem;
+            overflow-y: auto;
+        }
+
+        .market-opportunity-presets {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.75rem;
+        }
+
+        .market-opportunity-preset {
+            padding: 0.9rem;
+            border: 1px solid #475569;
+            border-radius: 10px;
+            color: #cbd5e1;
+            text-align: left;
+        }
+
+        .market-opportunity-preset strong,
+        .market-opportunity-preset span {
+            display: block;
+        }
+
+        .market-opportunity-preset strong {
+            color: #f8fafc;
+            font-size: 0.95rem;
+        }
+
+        .market-opportunity-preset span {
+            margin-top: 0.25rem;
+            color: #94a3b8;
+            font-size: 0.8rem;
+            line-height: 1.4;
+        }
+
+        .market-opportunity-preset.active {
+            border-color: #34d399;
+            background: rgba(16, 185, 129, 0.09);
+            box-shadow: inset 0 0 0 1px rgba(52, 211, 153, 0.25);
+        }
+
+        .market-opportunity-config-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .market-opportunity-config-section {
+            padding: 1rem;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.3);
+        }
+
+        .market-opportunity-config-section h4 {
+            color: #6ee7b7;
+            font-size: 0.76rem;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 0.75rem;
+        }
+
+        .market-opportunity-field {
+            display: grid;
+            grid-template-columns: 1fr 115px;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 0.65rem;
+        }
+
+        .market-opportunity-field label {
+            color: #cbd5e1;
+            font-size: 0.86rem;
+        }
+
+        .market-opportunity-field input,
+        .market-opportunity-field select {
+            width: 100%;
+            padding: 0.48rem 0.58rem;
+            border: 1px solid #475569;
+            border-radius: 7px;
+            background: #0f172a;
+            color: #f8fafc;
+            font-size: 0.86rem;
+        }
+
+        .market-opportunity-config-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        #marketOpportunityConfigPreview {
+            color: #94a3b8;
+            font-size: 0.88rem;
+        }
+
+        #marketOpportunityConfigPreview strong {
+            color: #34d399;
+            font-size: 1.1rem;
+        }
+
+        .market-opportunity-excluded {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+            margin-top: 0.6rem;
+        }
+
+        .market-opportunity-excluded span {
+            color: #64748b;
+            font-size: 0.82rem;
+        }
+
+        .market-opportunity-excluded button {
+            padding: 0.35rem 0.55rem;
+            border: 1px solid #475569;
+            border-radius: 999px;
+            color: #cbd5e1;
+            font-size: 0.78rem;
+        }
+
+        .market-opportunity-star,
+        .market-opportunity-exclude {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        .market-opportunity-star.active {
+            color: #fbbf24;
+        }
+
+        .market-opportunity-exclude:hover {
+            color: #fb7185;
+        }
+
+        .market-opportunity-card {
+            border: 1px solid rgba(52, 211, 153, 0.28);
+            border-radius: 14px;
+            background: rgba(15, 23, 42, 0.45);
+            padding: 1rem;
+        }
+
+        .market-opportunity-heading {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .market-opportunity-heading p {
+            color: #6ee7b7;
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .market-opportunity-heading h4 {
+            color: #f8fafc;
+            font-size: 1.08rem;
+            font-weight: 800;
+            margin-top: 0.15rem;
+        }
+
+        .market-opportunity-heading span,
+        .market-opportunity-profit span,
+        .market-opportunity-profit small,
+        .market-opportunity-metrics span,
+        .market-opportunity-metrics small {
+            color: #94a3b8;
+            font-size: 0.75rem;
+        }
+
+        .market-opportunity-profit {
+            min-width: 150px;
+            text-align: right;
+        }
+
+        .market-opportunity-profit strong {
+            display: block;
+            color: #34d399;
+            font-size: 1.35rem;
+            line-height: 1.15;
+        }
+
+        .market-opportunity-profit small {
+            display: block;
+        }
+
+        .market-opportunity-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.9rem;
+        }
+
+        .market-opportunity-metrics > div {
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            border-radius: 10px;
+            background: rgba(30, 41, 59, 0.68);
+            padding: 0.7rem 0.8rem;
+        }
+
+        .market-opportunity-metrics strong,
+        .market-opportunity-metrics small {
+            display: block;
+        }
+
+        .market-opportunity-metrics strong {
+            color: #f8fafc;
+            font-size: 1rem;
+        }
+
+        .market-opportunities-empty {
+            min-height: 220px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #94a3b8;
+            gap: 0.65rem;
+            padding: 2rem;
+        }
+
+        .market-opportunities-empty i {
+            color: #34d399;
+            font-size: 1.8rem;
+        }
+
+        .market-opportunities-empty h4 {
+            color: #e2e8f0;
+            font-size: 1rem;
+            font-weight: 800;
+        }
+
+        .market-opportunities-empty p {
+            max-width: 620px;
+            font-size: 0.82rem;
+        }
+
+        .market-opportunities-error i {
+            color: #fb7185;
+        }
+
+        @media (max-width: 720px) {
+            .market-opportunities-toolbar {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .market-opportunities-toolbar > span {
+                text-align: left;
+            }
+
+            .market-opportunity-heading {
+                flex-direction: column;
+            }
+
+            .market-opportunity-profit {
+                text-align: left;
+            }
+
+            .market-opportunity-metrics {
+                grid-template-columns: 1fr;
+            }
+
+            .market-opportunity-presets,
+            .market-opportunity-config-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .market-opportunity-config-footer {
+                align-items: stretch;
+                flex-direction: column;
+            }
+        }
+
+        @media (max-width: 1100px) {
+            .market-opportunities-table th,
+            .market-opportunities-table td {
+                padding-left: 0.45rem;
+                padding-right: 0.45rem;
+            }
+
+            .market-opportunities-table th:nth-child(7),
+            .market-opportunities-table td:nth-child(7) {
+                display: none;
+            }
+
+            .market-opportunities-table th:nth-child(2) { width: 17%; }
+            .market-opportunities-table th:nth-child(4) { width: 18%; }
+            .market-opportunities-table th:nth-child(5) { width: 15%; }
+            .market-opportunities-table th:nth-child(6) { width: 22%; }
+            .market-opportunities-table th:nth-child(8) { width: 11%; }
+            .market-opportunities-table th:nth-child(9) { width: 8%; }
+        }
+
+        @media (max-width: 760px) {
+            .market-opportunities-table th:nth-child(5),
+            .market-opportunities-table td:nth-child(5),
+            .market-opportunities-table th:nth-child(9),
+            .market-opportunities-table td:nth-child(9) {
+                display: none;
+            }
+
+            .market-opportunities-table th:nth-child(2) { width: 24%; }
+            .market-opportunities-table th:nth-child(3) { width: 13%; }
+            .market-opportunities-table th:nth-child(4) { width: 22%; }
+            .market-opportunities-table th:nth-child(6) { width: 27%; }
+            .market-opportunities-table th:nth-child(8) { width: 14%; }
+        }
+
         .listing-workbench {
             border-radius: 18px;
             width: min(1680px, calc(100vw - 2rem));
@@ -2503,6 +3076,12 @@
       </a>
     </li>
     <li>
+      <a href="#" class="flex items-center p-2 text-white rounded-lg hover:bg-[#2a2a2a]" id="marketOpportunitiesSidebarBtn">
+        <i class="fas fa-arrows-rotate w-5 h-5 text-emerald-300 transition duration-75"></i>
+        <span class="ml-3">Market Opportunities</span>
+      </a>
+    </li>
+    <li>
       <a href="#" class="flex items-center p-2 text-white rounded-lg hover:bg-[#2a2a2a]" id="addPveTransactionSidebarBtn">
         <i class="fas fa-solid fa-chess-rook w-5 h-5 text-white transition duration-75"></i>
         <span class="ml-3">Add PVE Transaction</span>
@@ -3466,6 +4045,71 @@
         </div>
     </div>
 
+    <div id="marketOpportunitiesModal" class="hidden fixed inset-0 bg-gray-950/80 flex items-start justify-center z-50 modal-backdrop px-3 pb-6 overflow-y-auto" style="padding-top:var(--market-opportunities-top-offset, 102px)">
+        <div class="market-opportunities-panel bg-slate-800 shadow-2xl border border-emerald-400/30">
+            <div class="listing-workbench-header">
+                <div>
+                    <p class="text-xs uppercase tracking-[0.18em] text-emerald-300 font-bold mb-1">Province Market Intelligence</p>
+                    <h3 class="text-xl font-bold text-white">Market Opportunities</h3>
+                    <p id="marketOpportunitiesSummary" class="text-sm text-slate-400 mt-1">Compare remote listings with your matching historical sales.</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button type="button" data-close-market-opportunities class="bg-slate-600 hover:bg-slate-700 text-white py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 transition-all duration-300">
+                        Close
+                    </button>
+                </div>
+            </div>
+            <div class="market-opportunity-tabs">
+                <button type="button" class="market-opportunity-tab active" data-market-opportunity-tab="listings"><i class="fas fa-list mr-2"></i>Listings</button>
+                <button type="button" class="market-opportunity-tab" data-market-opportunity-tab="configuration"><i class="fas fa-sliders mr-2"></i>Configuration</button>
+            </div>
+            <div data-market-opportunity-panel="listings">
+                <div class="px-5 py-3 border-b border-slate-700 bg-slate-900/30 text-slate-400">
+                    Each row is one actual market listing with its listed quantity and price. Profit estimates exclude an estimated 5% resale fee.
+                </div>
+                <div id="marketOpportunitiesBody" class="market-opportunities-body">
+                    <div class="market-opportunities-empty"><i class="fas fa-magnifying-glass-chart"></i><h4>Open the scanner to review supported bargains</h4></div>
+                </div>
+            </div>
+            <div class="market-opportunity-config hidden" data-market-opportunity-panel="configuration">
+                <form id="marketOpportunityConfigForm">
+                    <div class="market-opportunity-presets">
+                        <button type="button" class="market-opportunity-preset" data-opportunity-preset="broad"><strong>Broad Search</strong><span>5g profit, 50% return, 0.5 sales/month, latest sale within 120 days.</span></button>
+                        <button type="button" class="market-opportunity-preset" data-opportunity-preset="balanced"><strong>Balanced</strong><span>10g profit, 75% return, 1 sale/month, latest sale within 60 days.</span></button>
+                        <button type="button" class="market-opportunity-preset" data-opportunity-preset="confident"><strong>High Confidence</strong><span>25g profit, 6 sales, 2 sales/month, latest sale within 30 days.</span></button>
+                    </div>
+                    <div class="market-opportunity-config-grid">
+                        <section class="market-opportunity-config-section">
+                            <h4><i class="fas fa-coins mr-1"></i>Return requirements</h4>
+                            <div class="market-opportunity-field"><label for="opportunityMinProfit">Minimum profit</label><input id="opportunityMinProfit" type="number" min="0" step="1"></div>
+                            <div class="market-opportunity-field"><label for="opportunityMinRoi">Minimum return %</label><input id="opportunityMinRoi" type="number" min="0" step="1"></div>
+                            <div class="market-opportunity-field"><label for="opportunityMaxPurchase">Maximum purchase</label><input id="opportunityMaxPurchase" type="number" min="0" step="1" placeholder="No limit"></div>
+                        </section>
+                        <section class="market-opportunity-config-section">
+                            <h4><i class="fas fa-chart-line mr-1"></i>Demand requirements</h4>
+                            <div class="market-opportunity-field"><label for="opportunityMinSales">Minimum sales</label><input id="opportunityMinSales" type="number" min="1" step="1"></div>
+                            <div class="market-opportunity-field"><label for="opportunityMinVelocity">Sales per month</label><input id="opportunityMinVelocity" type="number" min="0" step="0.1"></div>
+                            <div class="market-opportunity-field"><label for="opportunityMaxDays">Newest sale within</label><input id="opportunityMaxDays" type="number" min="1" step="1"></div>
+                        </section>
+                        <section class="market-opportunity-config-section">
+                            <h4><i class="fas fa-shield-halved mr-1"></i>Historical confidence</h4>
+                            <div class="market-opportunity-field"><label for="marketOpportunitiesHistoryWindow">Sales history</label><select id="marketOpportunitiesHistoryWindow"><option value="90">90 days</option><option value="120">120 days</option><option value="180">180 days</option></select></div>
+                            <div class="market-opportunity-field"><label for="opportunityMaxSpread">Maximum price spread %</label><input id="opportunityMaxSpread" type="number" min="0" step="1"></div>
+                        </section>
+                    </div>
+                    <section class="market-opportunity-config-section mt-4">
+                        <h4><i class="fas fa-eye-slash mr-1"></i>Excluded items</h4>
+                        <div id="marketOpportunityExcludedItems" class="market-opportunity-excluded"><span>No manually excluded items.</span></div>
+                    </section>
+                    <div class="market-opportunity-config-footer">
+                        <p id="marketOpportunityConfigPreview">Threshold preview will appear after the market scan.</p>
+                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-5 rounded-lg"><i class="fas fa-check mr-2"></i>Apply thresholds</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <div id="recordPurchaseModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 modal-backdrop">
         <div class="bg-slate-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border border-emerald-400/30">
             <h2 class="text-xl font-bold text-white mb-6 text-center">Record New Purchase</h2>
@@ -3588,6 +4232,7 @@
     <script type="module" src="frontend/www/js/main.js"></script>
     <script type="module" src="frontend/www/js/trader.js"></script>
     <script type="module" src="frontend/www/js/modules/guidedListingWorkbench.js"></script>
+    <script type="module" src="frontend/www/js/modules/marketOpportunities.js"></script>
     <script type="module" src="frontend/www/js/modules/dom.js"></script>
     <script type="module" src="frontend/www/js/modules/init.js"></script>
     <script type="module" src="frontend/www/js/modules/listings.js"></script>

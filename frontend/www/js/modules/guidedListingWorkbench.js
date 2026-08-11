@@ -1,10 +1,8 @@
 import { supabase } from '../supabaseClient.js';
-import { currentCharacterId, getCurrentCharacter } from './characters.js';
+import { currentCharacterId } from './characters.js';
 import {
     fetchActiveListingsForListing,
-    fetchItemSalesHistoryForListing,
-    fetchProvinceMarketContext,
-    getProvinceUnitFloor
+    fetchItemSalesHistoryForListing
 } from './addListingIntelligence.js';
 import {
     COMPETITIVE_RISK_PROFILES,
@@ -20,8 +18,6 @@ import {
     getMarketDataByItemNameAndQuality,
     getMarketDataForSlug,
     getMarketDataForSlugByQuality,
-    getItemIdByName,
-    getItemNameForSlug,
     getSavedAvatarHash,
     getZoneListingsForItemByQuality
 } from '../services/gamingToolsService.js';
@@ -140,6 +136,44 @@ const weightedAverage = (rows, valueGetter, dateGetter, halfLifeDays = 14) => {
     return weightTotal > 0 ? weightedSum / weightTotal : null;
 };
 
+const weightedMedian = (rows, valueGetter, dateGetter, halfLifeDays = 14) => {
+    const weightedRows = rows.map((row) => {
+        const value = Number(valueGetter(row));
+        const date = new Date(dateGetter(row)).getTime();
+        if (!Number.isFinite(value) || !Number.isFinite(date)) return null;
+        const ageDays = Math.max(0, (Date.now() - date) / 864e5);
+        return { value, weight: Math.pow(0.5, ageDays / halfLifeDays) };
+    }).filter(Boolean).sort((a, b) => a.value - b.value);
+    const totalWeight = weightedRows.reduce((sum, row) => sum + row.weight, 0);
+    let cumulativeWeight = 0;
+    for (const row of weightedRows) {
+        cumulativeWeight += row.weight;
+        if (cumulativeWeight >= totalWeight / 2) return row.value;
+    }
+    return null;
+};
+
+const filterSalesRowsByQuality = (sales, isMastercrafted, enchantmentTier) => (sales || []).filter((sale) => {
+    const listing = Array.isArray(sale.market_listings) ? sale.market_listings[0] : sale.market_listings;
+    return !!listing
+        && !!listing.is_mastercrafted === isMastercrafted
+        && (parseInt(listing.enchantment_tier || '0', 10) || 0) === enchantmentTier;
+});
+
+const buildHistoryDataFromSales = (sales) => {
+    if (!sales?.length) return null;
+    const perUnitValues = sales.map((sale) => {
+        const quantity = Math.max(Number(sale.quantity_sold) || 1, 1);
+        return (Number(sale.total_sale_price) || 0) / quantity;
+    }).filter((value) => value > 0);
+    if (!perUnitValues.length) return null;
+    return {
+        avgPerUnit: perUnitValues.reduce((sum, value) => sum + value, 0) / perUnitValues.length,
+        maxPerUnit: Math.max(...perUnitValues),
+        saleCount: sales.length
+    };
+};
+
 const getNormalizedSaleStackValue = (sale, targetCount) => {
     const count = Math.max(Number(targetCount) || 0, 0);
     const quantity = Math.max(Number(sale?.quantity_sold) || 1, 1);
@@ -172,7 +206,7 @@ const computeMarketData = (selectedItem, isMastercrafted, enchantmentTier) => {
     return getMarketDataByItemName(selectedItem.item_name);
 };
 
-const computeReferenceFloor = ({ selectedItem, marketData, provinceContext, formState }) => {
+const computeReferenceFloor = ({ selectedItem, marketData, formState }) => {
     if (!selectedItem || !formState?.count) return null;
 
     if (marketData) {
@@ -191,28 +225,7 @@ const computeReferenceFloor = ({ selectedItem, marketData, provinceContext, form
         };
     }
 
-    const provinceUnitFloor = provinceContext
-        ? getProvinceUnitFloor({
-            listings: provinceContext.listings,
-            itemId: provinceContext.itemId,
-            count: formState.count,
-            isMastercrafted: formState.isMastercrafted,
-            enchantmentTier: formState.enchantmentTier
-        })
-        : null;
-
-    if (!provinceUnitFloor) return null;
-
-    return {
-        itemId: selectedItem.item_id || null,
-        itemName: selectedItem.item_name || '',
-        count: formState.count,
-        isMastercrafted: formState.isMastercrafted,
-        enchantmentTier: formState.enchantmentTier,
-        source: 'province',
-        sourceLabel: 'Province market reference',
-        ...provinceUnitFloor
-    };
+    return null;
 };
 
 const getSelectedItemFromInput = () => {
@@ -280,14 +293,19 @@ function renderPricingSummary({ selectedItem, marketData, referenceFloor, histor
     rankTarget.innerHTML = `<span>Market position</span><strong>${rank ? `#${rank}` : '--'}</strong><small>${price > 0 && count > 0 ? `${fmt(price)}g per stack` : 'Enter stack size and price'}</small>`;
 
     const marketLowStack = referenceFloor?.value || (marketData && count > 0 ? marketData.marketLow * count : null);
+    const pricingReferenceStack = currentPricingModel?.referencePrice || marketLowStack;
     const historyAvgStack = historyData && count > 0 ? historyData.avgPerUnit * count : null;
     const lowestActive = activePrices.length ? Math.min(...activePrices) : null;
 
     target.innerHTML = `
         <div class="listing-workbench-metric">
-            <span>Reference floor</span>
-            <strong>${marketLowStack ? `${fmt(marketLowStack)}g` : '--'}</strong>
-            <small>${describeReferenceFloor(referenceFloor, marketData)}</small>
+            <span>Pricing reference</span>
+            <strong>${pricingReferenceStack ? `${fmt(pricingReferenceStack)}g` : '--'}</strong>
+            <small>${currentPricingModel?.excludedLocalOutlier
+                ? `${fmt(marketLowStack)}g local floor excluded as an outlier`
+                : currentPricingModel?.evidenceType === 'sales'
+                    ? 'Quality-matched recent sales reference'
+                    : describeReferenceFloor(referenceFloor, marketData)}</small>
         </div>
         <div class="listing-workbench-metric">
             <span>Your avg sale</span>
@@ -350,7 +368,7 @@ function renderPricingVisuals({ selectedItem, marketData, referenceFloor, histor
         : [];
     const ledgerLowStack = ledgerPrices.length ? Math.min(...ledgerPrices) : null;
     const weightedSaleStack = hasCount
-        ? weightedAverage(salesRows, (sale) => getNormalizedSaleStackValue(sale, count), (sale) => sale.sale_date)
+        ? weightedMedian(salesRows, (sale) => getNormalizedSaleStackValue(sale, count), (sale) => sale.sale_date)
         : null;
     const supplyAfter = (marketData?.totalListings || zoneListings.length || 0) + (stacks || 0);
     const depthBuckets = new Map();
@@ -359,7 +377,19 @@ function renderPricingVisuals({ selectedItem, marketData, referenceFloor, histor
     });
     const depthRows = Array.from(depthBuckets, ([stackPrice, quantity]) => ({ stackPrice, quantity }))
         .sort((a, b) => a.stackPrice - b.stackPrice);
-    const roundedFloor = marketLowStack ? Math.round(marketLowStack) : null;
+    const rawRoundedFloor = marketLowStack ? Math.round(marketLowStack) : null;
+    const recentThirtyDaySales = salesRows.filter((sale) => {
+        const soldAt = new Date(sale.sale_date).getTime();
+        return Number.isFinite(soldAt) && Date.now() - soldAt <= 30 * 864e5;
+    });
+    const weightedOption = weightedSaleStack ? Math.round(weightedSaleStack) : null;
+    const isLocalFloorOutlier = !!(
+        rawRoundedFloor
+        && weightedOption
+        && recentThirtyDaySales.length >= 3
+        && rawRoundedFloor < weightedOption * 0.6
+    );
+    const roundedFloor = isLocalFloorOutlier ? null : rawRoundedFloor;
     const thresholds = roundedFloor ? getCompetitiveThresholds(roundedFloor, riskProfile) : null;
     const distinctMarketPrices = depthRows.map((row) => row.stackPrice);
     const hasMarketRange = distinctMarketPrices.length > 1;
@@ -392,7 +422,6 @@ function renderPricingVisuals({ selectedItem, marketData, referenceFloor, histor
             ? 'Lowest matching active Ledger listing.'
             : 'No live market floor is available for this item and quality.';
     const displayFloorLabel = 'Market Reference';
-    const weightedOption = weightedSaleStack ? Math.round(weightedSaleStack) : null;
     const floorListingCount = roundedFloor
         ? rawStackPrices.filter((stackPrice) => stackPrice === roundedFloor).length
         : 0;
@@ -415,8 +444,9 @@ function renderPricingVisuals({ selectedItem, marketData, referenceFloor, histor
         referencePrice = weightedOption;
         const salesCeiling = getCompetitiveCap(weightedOption, riskProfile);
         competitiveOption = salesCeiling;
-        const salesPositions = { guarded: 0, balanced: 0.3, flexible: 0.55 };
-        suggestedOption = Math.round(weightedOption + ((salesCeiling - weightedOption) * salesPositions[riskProfile]));
+        suggestedOption = Math.round(
+            weightedOption + ((salesCeiling - weightedOption) * profileConfig.suggestedPosition)
+        );
     } else if (ownLowestStack) {
         referencePrice = ownLowestStack;
         evidenceType = 'own-listing';
@@ -424,10 +454,6 @@ function renderPricingVisuals({ selectedItem, marketData, referenceFloor, histor
         competitiveOption = getCompetitiveCap(ownLowestStack, riskProfile);
     }
 
-    const recentThirtyDaySales = salesRows.filter((sale) => {
-        const soldAt = new Date(sale.sale_date).getTime();
-        return Number.isFinite(soldAt) && Date.now() - soldAt <= 30 * 864e5;
-    });
     const momentumStrength = recentThirtyDaySales.length >= 6
         ? 0.2
         : recentThirtyDaySales.length >= 3
@@ -435,7 +461,7 @@ function renderPricingVisuals({ selectedItem, marketData, referenceFloor, histor
             : recentThirtyDaySales.length >= 1
                 ? 0.05
                 : 0;
-    if (suggestedOption && competitiveOption && momentumStrength > 0) {
+    if (evidenceType === 'market' && suggestedOption && competitiveOption && momentumStrength > 0) {
         suggestedOption = Math.min(
             competitiveOption,
             suggestedOption + Math.max(1, Math.round((competitiveOption - (referencePrice || suggestedOption)) * momentumStrength))
@@ -485,13 +511,18 @@ function renderPricingVisuals({ selectedItem, marketData, referenceFloor, histor
         recentSalesCount: recentThirtyDaySales.length,
         weightedSales: weightedOption,
         flooded: isFloodedAtFloor,
+        excludedLocalOutlier: isLocalFloorOutlier,
         noEvidence: evidenceType === 'none'
     };
     const primaryOptions = [
         {
-            label: displayFloorLabel,
-            value: roundedFloor || ledgerLowStack,
-            detail: floorDetail,
+            label: evidenceType === 'sales' ? 'Recent Sales Reference' : displayFloorLabel,
+            value: evidenceType === 'sales' ? weightedOption : (roundedFloor || ledgerLowStack),
+            detail: isLocalFloorOutlier
+                ? `${fmt(rawRoundedFloor)}g local floor excluded as an outlier against ${fmt(recentThirtyDaySales.length)} recent matching sales.`
+                : evidenceType === 'sales'
+                    ? `Recency-weighted median from ${fmt(recentThirtyDaySales.length)} matching sales.`
+                    : floorDetail,
             tone: 'floor',
             icon: 'fa-layer-group'
         },
@@ -517,13 +548,15 @@ function renderPricingVisuals({ selectedItem, marketData, referenceFloor, histor
                 ? `${COMPETITIVE_RISK_PROFILES[riskProfile].label} ceiling below the supported ${fmt(nextMarketTier.stackPrice)}g wall.`
                 : thresholds
                     ? `${thresholds.label}: up to +${fmt(thresholds.maxGapGold)}g / +${fmt(thresholds.maxGapPct)}%.`
-                    : 'Requires a reference floor.',
+                    : weightedOption
+                        ? `${COMPETITIVE_RISK_PROFILES[riskProfile].label} ceiling above the recent-sales reference.`
+                        : 'Requires a pricing reference.',
             tone: 'competitive',
             icon: 'fa-chart-line'
         }
     ];
     const comparisonRows = [
-        { label: displayFloorLabel, value: roundedFloor || ledgerLowStack, tone: 'floor', color: '#38bdf8' },
+        { label: evidenceType === 'sales' ? 'Recent Sales Reference' : displayFloorLabel, value: evidenceType === 'sales' ? weightedOption : (roundedFloor || ledgerLowStack), tone: 'floor', color: '#38bdf8' },
         { label: 'Suggested', value: suggestedOption, tone: 'suggested', color: '#34d399' },
         { label: 'Competitive ceiling', value: competitiveOption, tone: 'competitive', color: '#fbbf24' },
         { label: 'Visible market high', value: hasMarketRange ? Math.max(...rawStackPrices) : null, tone: 'market-high', color: '#94a3b8' }
@@ -684,7 +717,7 @@ function renderCompetitivePricing({ selectedItem, formState }) {
                 </div>
             </div>
             <div class="workbench-unified-pricing-grid">
-                <article><span>Market Reference</span><strong>${model.referencePrice ? `${fmt(model.referencePrice)}g` : 'Unavailable'}</strong></article>
+                <article><span>Pricing reference</span><strong>${model.referencePrice ? `${fmt(model.referencePrice)}g` : 'Unavailable'}</strong></article>
                 <article><span>Suggested price</span><strong>${model.suggested ? `${fmt(model.suggested)}g` : 'Unavailable'}</strong></article>
                 <article><span>Competitive ceiling</span><strong>${model.ceiling ? `${fmt(model.ceiling)}g` : 'Unavailable'}</strong></article>
             </div>
@@ -1235,7 +1268,7 @@ function renderSalesHistory({ selectedItem, historyData, salesRows }) {
                 </thead>
                 <tbody>
                     ${visibleRows.map((sale) => {
-                        const listing = sale.market_listings || {};
+                        const listing = Array.isArray(sale.market_listings) ? sale.market_listings[0] : (sale.market_listings || {});
                         return `
                             <tr>
                                 <td>${escapeHtml(relativeDate(sale.sale_date))} ago</td>
@@ -1272,24 +1305,15 @@ async function refreshWorkbench(selectedItem) {
         el.innerHTML = '<div class="listing-workbench-empty">Loading real listing data...</div>';
     });
 
-    const [historyData, activeListings, salesRows, provinceContext] = await Promise.all([
+    const [historyData, activeListings, salesRows] = await Promise.all([
         fetchItemSalesHistoryForListing({ supabase, currentCharacterId, itemId: selectedItem.item_id }),
         fetchActiveListingsForListing({ supabase, currentCharacterId, itemId: selectedItem.item_id }),
-        fetchRecentSalesRows(selectedItem.item_id),
-        fetchProvinceMarketContext({
-            supabase,
-            currentCharacterId,
-            getCurrentCharacter,
-            selectedItem,
-            getItemNameForSlug,
-            getItemIdByName
-        }).catch((error) => {
-            console.warn('[ListingWorkbench] province context unavailable:', error?.message || error);
-            return null;
-        })
+        fetchRecentSalesRows(selectedItem.item_id)
     ]);
     const marketData = computeMarketData(selectedItem, formState.isMastercrafted, formState.enchantmentTier);
-    const referenceFloor = computeReferenceFloor({ selectedItem, marketData, provinceContext, formState });
+    const referenceFloor = computeReferenceFloor({ selectedItem, marketData, formState });
+    const qualitySalesRows = filterSalesRowsByQuality(salesRows, formState.isMastercrafted, formState.enchantmentTier);
+    const qualityHistoryData = buildHistoryDataFromSales(qualitySalesRows);
 
     const qualityActiveListings = filterLedgerListingsByQuality(
         activeListings,
@@ -1297,13 +1321,13 @@ async function refreshWorkbench(selectedItem) {
         formState.enchantmentTier
     );
 
-    renderPricingSummary({ selectedItem, marketData, referenceFloor, historyData, activeListings: qualityActiveListings, formState });
-    renderPricingVisuals({ selectedItem, marketData, referenceFloor, historyData, activeListings: qualityActiveListings, salesRows, formState });
-    renderCompetitivePricing({ selectedItem, marketData, referenceFloor, historyData, activeListings: qualityActiveListings, salesRows, formState });
-    renderConfig({ selectedItem, marketData, referenceFloor, activeListings: qualityActiveListings, salesRows, formState });
+    renderPricingVisuals({ selectedItem, marketData, referenceFloor, historyData: qualityHistoryData, activeListings: qualityActiveListings, salesRows: qualitySalesRows, formState });
+    renderPricingSummary({ selectedItem, marketData, referenceFloor, historyData: qualityHistoryData, activeListings: qualityActiveListings, formState });
+    renderCompetitivePricing({ selectedItem, marketData, referenceFloor, historyData: qualityHistoryData, activeListings: qualityActiveListings, salesRows: qualitySalesRows, formState });
+    renderConfig({ selectedItem, marketData, referenceFloor, activeListings: qualityActiveListings, salesRows: qualitySalesRows, formState });
     attachWorkbenchPriceButtons(document.getElementById('guidedListingWorkbench') || document);
     renderActiveListings({ selectedItem, activeListings: qualityActiveListings, formState });
-    renderSalesHistory({ selectedItem, historyData, salesRows });
+    renderSalesHistory({ selectedItem, historyData: qualityHistoryData, salesRows: qualitySalesRows });
 }
 
 export function initializeGuidedListingWorkbench() {

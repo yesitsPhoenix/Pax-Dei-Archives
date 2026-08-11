@@ -497,24 +497,18 @@ async function fetchProvinceValleys({ supabase, character }) {
     return [...new Set(valleys)];
 }
 
-export async function fetchProvinceMarketContext({
+export async function fetchProvinceMarketData({
     supabase,
     currentCharacterId,
-    getCurrentCharacter,
-    selectedItem,
-    getItemNameForSlug,
-    getItemIdByName
+    getCurrentCharacter
 }) {
-    if (!currentCharacterId || !selectedItem) return null;
+    if (!currentCharacterId) return null;
 
     const character = getCurrentCharacter
         ? await getCurrentCharacter(true)
         : null;
 
     if (!character?.shard || !character?.province) return null;
-
-    const itemId = await resolveSelectedGamingToolsItemId(selectedItem, getItemNameForSlug, getItemIdByName);
-    if (!itemId) return null;
 
     const cacheKey = `${character.shard}::${character.province}`;
     const cached = provinceMarketCache.get(cacheKey);
@@ -557,8 +551,25 @@ export async function fetchProvinceMarketContext({
 
     return {
         ...provinceData,
-        itemId
+        homeValley: character.home_valley || null
     };
+}
+
+export async function fetchProvinceMarketContext({
+    supabase,
+    currentCharacterId,
+    getCurrentCharacter,
+    selectedItem,
+    getItemNameForSlug,
+    getItemIdByName
+}) {
+    if (!selectedItem) return null;
+    const [provinceData, itemId] = await Promise.all([
+        fetchProvinceMarketData({ supabase, currentCharacterId, getCurrentCharacter }),
+        resolveSelectedGamingToolsItemId(selectedItem, getItemNameForSlug, getItemIdByName)
+    ]);
+    if (!provinceData || !itemId) return null;
+    return { ...provinceData, itemId };
 }
 
 function buildMarketDataFromListings(listings, itemId, isMastercrafted = null, enchantmentTier = null) {
