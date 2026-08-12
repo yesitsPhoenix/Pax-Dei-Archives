@@ -519,7 +519,7 @@
         }
 
         .market-opportunities-table td small {
-            color: #7f8da3;
+            color: #d3d3d3;
             font-size: 0.78rem;
             margin-top: 0.1rem;
         }
@@ -827,13 +827,13 @@
         .market-opportunities-table.simple th:nth-child(7) { width: 11%; }
         .market-opportunities-table.simple th:nth-child(8) { width: 8%; }
 
-        .market-opportunities-table.valley-gaps.advanced th:nth-child(1) { width: 17%; }
+        .market-opportunities-table.valley-gaps.advanced th:nth-child(1) { width: 16%; }
         .market-opportunities-table.valley-gaps.advanced th:nth-child(2) { width: 11%; }
         .market-opportunities-table.valley-gaps.advanced th:nth-child(3) { width: 14%; }
-        .market-opportunities-table.valley-gaps.advanced th:nth-child(4) { width: 22%; }
-        .market-opportunities-table.valley-gaps.advanced th:nth-child(5) { width: 8%; }
-        .market-opportunities-table.valley-gaps.advanced th:nth-child(6) { width: 16%; }
-        .market-opportunities-table.valley-gaps.advanced th:nth-child(7) { width: 12%; }
+        .market-opportunities-table.valley-gaps.advanced th:nth-child(4) { width: 18%; }
+        .market-opportunities-table.valley-gaps.advanced th:nth-child(5) { width: 15%; }
+        .market-opportunities-table.valley-gaps.advanced th:nth-child(6) { width: 15%; }
+        .market-opportunities-table.valley-gaps.advanced th:nth-child(7) { width: 11%; }
 
         .market-opportunities-table.valley-gaps .market-opportunity-valley,
         .market-opportunities-table.valley-gaps .market-opportunity-table-profit {
@@ -848,11 +848,12 @@
             color: #60a5fa;
         }
 
-        .market-opportunities-table.valley-gaps.simple th:nth-child(1) { width: 22%; }
-        .market-opportunities-table.valley-gaps.simple th:nth-child(2) { width: 23%; }
-        .market-opportunities-table.valley-gaps.simple th:nth-child(3) { width: 23%; }
-        .market-opportunities-table.valley-gaps.simple th:nth-child(4) { width: 19%; }
-        .market-opportunities-table.valley-gaps.simple th:nth-child(5) { width: 13%; }
+        .market-opportunities-table.valley-gaps.simple th:nth-child(1) { width: 18%; }
+        .market-opportunities-table.valley-gaps.simple th:nth-child(2) { width: 19%; }
+        .market-opportunities-table.valley-gaps.simple th:nth-child(3) { width: 19%; }
+        .market-opportunities-table.valley-gaps.simple th:nth-child(4) { width: 18%; }
+        .market-opportunities-table.valley-gaps.simple th:nth-child(5) { width: 16%; }
+        .market-opportunities-table.valley-gaps.simple th:nth-child(6) { width: 10%; }
 
         .market-gap-deal-cell strong,
         .market-gap-deal-cell span,
@@ -863,7 +864,7 @@
         .market-gap-deal-cell span,
         .market-opportunities-table.valley-gaps.simple .market-opportunity-table-profit span {
             margin-top: 0.12rem;
-            color: #7f8da3;
+            color: #d3d3d3;
             font-size: 0.76rem;
         }
 
@@ -916,7 +917,7 @@
         }
 
         .market-gap-inline-detail {
-            color: #7f8da3;
+            color: #d3d3d3;
             font-size: 0.8rem;
         }
 
@@ -929,7 +930,7 @@
             min-height: 1em;
             margin-top: 0.14rem;
             overflow: hidden;
-            color: #7f8da3;
+            color: #d3d3d3;
             font-size: 0.76rem;
             line-height: 1.2;
             text-overflow: ellipsis;
@@ -937,7 +938,7 @@
         }
 
         .market-gap-primary-context {
-            color: #7f8da3;
+            color: #d3d3d3;
             font-size: 0.76rem;
             font-weight: 500;
         }
@@ -957,10 +958,25 @@
         .market-gap-signals-secondary {
             display: flex;
             align-items: center;
+            flex-wrap: wrap;
             gap: 0.22rem;
-            min-height: 1em;
+            min-height: 1.15rem;
             margin-top: 0.22rem;
-            overflow: hidden;
+            overflow: visible;
+        }
+
+        .market-gap-evidence-cell {
+            overflow: visible !important;
+        }
+
+        .market-gap-signals-cell {
+            overflow: visible !important;
+            white-space: normal !important;
+        }
+
+        .market-gap-evidence-cell .market-gap-cell-detail {
+            overflow: visible;
+            text-overflow: clip;
         }
 
         .market-gap-signal {
@@ -977,6 +993,21 @@
         .market-gap-signal.high { color: #fda4af; background: rgba(244, 63, 94, 0.12); border-color: rgba(251, 113, 133, 0.28); }
         .market-gap-signal.neutral { color: #cbd5e1; background: rgba(148, 163, 184, 0.1); border-color: rgba(148, 163, 184, 0.2); }
         .market-gap-signal.anomaly { color: #c4b5fd; background: rgba(139, 92, 246, 0.12); border-color: rgba(167, 139, 250, 0.28); }
+
+        .market-evidence-signal {
+            display: inline-block;
+            padding: 0.16rem 0.4rem;
+            border: 1px solid transparent;
+            border-radius: 999px;
+            font-size: 0.68rem;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .market-evidence-signal.supports { color: #6ee7b7; background: rgba(16, 185, 129, 0.12); border-color: rgba(52, 211, 153, 0.3); }
+        .market-evidence-signal.mixed { color: #fcd34d; background: rgba(245, 158, 11, 0.12); border-color: rgba(251, 191, 36, 0.3); }
+        .market-evidence-signal.contradicts { color: #fda4af; background: rgba(244, 63, 94, 0.12); border-color: rgba(251, 113, 133, 0.3); }
+        .market-evidence-signal.none { color: #cbd5e1; background: rgba(148, 163, 184, 0.1); border-color: rgba(148, 163, 184, 0.22); }
 
         .market-gap-signal-filters {
             display: flex;
@@ -4384,12 +4415,11 @@
                 </div>
             </div>
             <div class="market-opportunity-tabs">
-                <button type="button" class="market-opportunity-tab active" data-market-opportunity-tab="listings"><i class="fas fa-list mr-2"></i>Listings</button>
-                <button type="button" class="market-opportunity-tab" data-market-opportunity-tab="gaps"><i class="fas fa-arrow-right-arrow-left mr-2"></i>Valley Price Gaps</button>
+                <button type="button" class="market-opportunity-tab active" data-market-opportunity-tab="gaps"><i class="fas fa-chart-line mr-2"></i>Opportunities</button>
                 <button type="button" class="market-opportunity-tab" data-market-opportunity-tab="configuration"><i class="fas fa-sliders mr-2"></i>Configuration</button>
                 <button type="button" class="market-opportunity-tab" data-market-opportunity-tab="guide"><i class="fas fa-circle-info mr-2"></i>How it works</button>
             </div>
-            <div data-market-opportunity-panel="listings">
+            <div class="hidden" data-market-opportunity-panel="listings">
                 <div class="px-5 py-3 border-b border-slate-700 bg-slate-900/30 text-slate-400">
                     Each row is one listed stack with its unit count and total stack price. Profit estimates exclude an estimated 5% resale fee.
                 </div>
@@ -4399,7 +4429,7 @@
             </div>
             <div class="hidden" data-market-opportunity-panel="gaps">
                 <div class="px-5 py-3 border-b border-slate-700 bg-slate-900/30 text-slate-400">
-                    Compares current unit-price floors across every loaded province and valley on the selected shard. Sales history and opportunity thresholds are not used, so a gap signals a pricing difference&mdash;not proven demand or guaranteed profit.
+                    Finds live price gaps across the selected shard, then uses your completed sales to support, weaken, or contradict each opportunity. Locations remain visible because collection may require cross-province travel and Grace.
                 </div>
                 <div id="marketValleyGapsBody" class="market-opportunities-body">
                     <div class="market-opportunities-empty"><i class="fas fa-magnifying-glass-chart"></i><h4>Open the scanner to compare valley prices</h4></div>
@@ -4473,8 +4503,12 @@
                         <p><strong>Fee</strong> is an estimated 5% resale fee. <strong>Profit</strong> is typical value minus that fee and your purchase cost. <strong>Margin</strong> is the estimated profit divided by the purchase cost.</p>
                     </section>
                     <section class="market-opportunity-guide-card market-opportunity-guide-example">
-                        <h4>Valley Price Gaps</h4>
-                        <p>This shard-wide view does not use your sales history. It compares the cheapest live unit price for the same item and quality in every loaded province and valley. The after-fee gap asks, “What would remain if the cheapest stack were valued at another valley's current floor?” It is not projected profit: a listing price does not prove demand, and that competing listing may change or disappear.</p>
+                        <h4>Unified opportunities</h4>
+                        <p>Live cross-valley prices discover possible deals. Your completed sales then provide a second opinion. When history exists, the projected gap uses the lower of the live comparison price and your historical value, preventing an unsupported asking price from inflating the estimate. A live asking price still does not prove demand.</p>
+                    </section>
+                    <section class="market-opportunity-guide-card market-opportunity-guide-example">
+                        <h4>Travel burden</h4>
+                        <p>Home-province purchases are separated from cross-province purchases. Crossing provinces generally involves gate travel and may consume Grace, so location affects practical value even though Grace is not yet deducted from the displayed gap.</p>
                     </section>
                     <section class="market-opportunity-guide-card market-opportunity-guide-example">
                         <h4>Gap risk signals</h4>

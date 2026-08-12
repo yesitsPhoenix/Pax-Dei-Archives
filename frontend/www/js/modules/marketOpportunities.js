@@ -83,12 +83,18 @@ function percentile(sorted, ratio) {
 async function fetchOpportunitySales(historyDays) {
     if (!currentCharacterId) return [];
     const cutoff = new Date(Date.now() - historyDays * 864e5).toISOString();
-    const { data, error } = await supabase.from('sales')
-        .select('quantity_sold, total_sale_price, sale_date, market_listings!inner(item_id, is_mastercrafted, enchantment_tier, items(item_name, pax_dei_slug))')
-        .eq('character_id', currentCharacterId).gte('sale_date', cutoff)
-        .order('sale_date', { ascending: false }).limit(1000);
-    if (error) throw error;
-    return data || [];
+    const pageSize = 1000;
+    const sales = [];
+    for (let offset = 0; offset < 10000; offset += pageSize) {
+        const { data, error } = await supabase.from('sales')
+            .select('quantity_sold, total_sale_price, sale_date, market_listings!inner(item_id, is_mastercrafted, enchantment_tier, items(item_name, pax_dei_slug))')
+            .eq('character_id', currentCharacterId).gte('sale_date', cutoff)
+            .order('sale_date', { ascending: false }).range(offset, offset + pageSize - 1);
+        if (error) throw error;
+        sales.push(...(data || []));
+        if (!data || data.length < pageSize) break;
+    }
+    return sales;
 }
 
 function buildHistoryIndex(sales) {
@@ -145,7 +151,7 @@ function buildOpportunities(provinceData, historyIndex, historyDays) {
     }).filter(Boolean);
 }
 
-function buildValleyPriceGaps(provinceData) {
+function buildValleyPriceGaps(provinceData, historyIndex = new Map()) {
     const groups = new Map();
     for (const listing of provinceData?.listings || []) {
         const quantity = Math.max(Number(listing.quantity) || 1, 1);
@@ -175,18 +181,28 @@ function buildValleyPriceGaps(provinceData) {
         const source = floors[0];
         const destination = floors[floors.length - 1];
         if (!(destination.unitPrice > source.unitPrice)) continue;
-        const comparisonValue = destination.unitPrice * source.quantity;
+        const history = historyIndex.get(qualityKey(source.listing.item_id, source.listing.mastercraft, source.listing.enchantment_level)) || null;
+        const historicalUnitValue = history?.unitValue || null;
+        const evidenceLevel = !history ? 'none'
+            : historicalUnitValue >= destination.unitPrice * 0.8 ? 'supports'
+                : historicalUnitValue > source.unitPrice * 1.05 ? 'mixed' : 'contradicts';
+        const supportedUnitValue = history ? Math.min(destination.unitPrice, historicalUnitValue) : destination.unitPrice;
+        const comparisonValue = supportedUnitValue * source.quantity;
         const estimatedFee = Math.ceil(comparisonValue * FEE_RATE);
         const afterFeeGap = comparisonValue - estimatedFee - source.stackPrice;
         if (!(afterFeeGap > 0)) continue;
         const gapPct = ((destination.unitPrice - source.unitPrice) / source.unitPrice) * 100;
         const stackMultiple = source.quantity / destination.quantity;
+        const travelLevel = source.province === provinceData?.homeProvince ? 'home' : 'cross-province';
         let riskScore = 0;
         if (stackMultiple > 5) riskScore += 2;
         else if (stackMultiple > 2) riskScore += 1;
         if (destination.listingCount === 1) riskScore += 2;
         else if (destination.listingCount < 3) riskScore += 1;
         if (gapPct >= 1000) riskScore += 1;
+        if (evidenceLevel === 'contradicts') riskScore += 2;
+        else if (evidenceLevel === 'mixed') riskScore += 1;
+        if (travelLevel === 'cross-province') riskScore += 1;
         const item = getItemData(source.listing.item_id);
         gaps.push({
             itemName: item?.name || bareItemId(source.listing.item_id).replaceAll('_', ' '),
@@ -204,12 +220,18 @@ function buildValleyPriceGaps(provinceData) {
             sourceStackPrice: source.stackPrice,
             sourceUnitPrice: source.unitPrice,
             destinationUnitPrice: destination.unitPrice,
+            supportedUnitValue,
             comparisonValue,
             estimatedFee,
             afterFeeGap,
             gapPct,
             stackMultiple,
             referenceCount: destination.listingCount,
+            historicalUnitValue,
+            historicalSaleCount: history?.saleCount || 0,
+            historicalDaysSinceSale: history ? Math.max(0, Math.round((Date.now() - history.newestSale) / 864e5)) : null,
+            evidenceLevel,
+            travelLevel,
             riskLevel: riskScore >= 4 ? 'high' : riskScore >= 2 ? 'caution' : 'lower',
             valleyCount: valleyFloors.size
         });
@@ -366,13 +388,19 @@ function renderValleyPriceGaps() {
             <span class="market-gap-filter-divider"></span>
             <button type="button" data-gap-signal="anomaly:large">Large gap</button>
             <button type="button" data-gap-signal="anomaly:extreme">Extreme gap</button>
+            <span class="market-gap-filter-divider"></span>
+            <button type="button" data-gap-signal="evidence:supports">Sales supported</button>
+            <button type="button" data-gap-signal="evidence:mixed">Mixed evidence</button>
+            <button type="button" data-gap-signal="evidence:none">No history</button>
+            <button type="button" data-gap-signal="travel:home">Home province</button>
+            <button type="button" data-gap-signal="travel:cross-province">Cross-province</button>
             <button type="button" class="market-gap-clear-signals" data-clear-gap-signals disabled>Clear</button>
         </div>
         <div class="market-gap-table-shell">
             <div class="market-opportunities-table-wrap"><table class="market-opportunities-table valley-gaps ${advanced ? 'advanced' : 'simple'}"><thead><tr>
                 ${advanced
-                    ? '<th>Item</th><th>Location</th><th>Listed stack</th><th>Compare with</th><th>Price gap</th><th>Signals</th><th>After-fee gap</th>'
-                    : '<th>Item</th><th>Buy this stack</th><th>Compared with</th><th>Potential gap</th><th>Risk</th>'}
+                    ? '<th>Item</th><th>Buy location</th><th>Listed stack</th><th>Live comparison</th><th>Sales evidence</th><th>Signals</th><th>After-fee gap</th>'
+                    : '<th>Item</th><th>Buy this stack</th><th>Compared with</th><th>Evidence & travel</th><th>Potential gap</th><th>Risk</th>'}
             </tr></thead><tbody></tbody></table></div>
             <div class="market-opportunities-pagination"></div>
         </div>`;
@@ -394,16 +422,23 @@ function renderValleyPriceGaps() {
         const maximumPurchase = Number(purchaseFilter.value) || 0;
         const selectedRisks = [...selectedSignals].filter((value) => value.startsWith('risk:')).map((value) => value.slice(5));
         const selectedAnomalies = [...selectedSignals].filter((value) => value.startsWith('anomaly:')).map((value) => value.slice(8));
+        const selectedEvidence = [...selectedSignals].filter((value) => value.startsWith('evidence:')).map((value) => value.slice(9));
+        const selectedTravel = [...selectedSignals].filter((value) => value.startsWith('travel:')).map((value) => value.slice(7));
         const rows = latestMarketGaps.filter((row) => {
             const anomaly = row.gapPct >= 1000 ? 'extreme' : row.gapPct >= 250 ? 'large' : null;
             return (!query || row.itemName.toLowerCase().includes(query))
                 && (!valleyFilter.value || row.sourceLocation === valleyFilter.value)
                 && row.gapPct >= minimum
                 && (!(maximumPurchase > 0) || row.sourceStackPrice <= maximumPurchase)
+                && row.afterFeeGap >= opportunitySettings.minProfit
+                && ((row.afterFeeGap / row.sourceStackPrice) * 100) >= opportunitySettings.minRoi
+                && (!(opportunitySettings.maxPurchasePrice > 0) || row.sourceStackPrice <= opportunitySettings.maxPurchasePrice)
                 && (!selectedRisks.length || selectedRisks.includes(row.riskLevel))
                 && (!selectedSignals.has('stack') || row.stackMultiple > 2)
                 && (!selectedSignals.has('reference') || row.referenceCount === 1)
-                && (!selectedAnomalies.length || selectedAnomalies.includes(anomaly));
+                && (!selectedAnomalies.length || selectedAnomalies.includes(anomaly))
+                && (!selectedEvidence.length || selectedEvidence.includes(row.evidenceLevel))
+                && (!selectedTravel.length || selectedTravel.includes(row.travelLevel));
         });
         rows.sort((a, b) => {
             if (sort.value === 'percent') return b.gapPct - a.gapPct || b.afterFeeGap - a.afterFeeGap;
@@ -417,20 +452,24 @@ function renderValleyPriceGaps() {
         rowsTarget.innerHTML = visible.length ? visible.map((row) => {
             const itemCell = `<td><div class="market-opportunity-item">${row.iconPath ? `<img src="${escapeHtml(row.iconPath)}" alt="" loading="lazy" onerror="this.style.display='none'">` : '<span class="market-opportunity-icon-fallback"><i class="fas fa-box"></i></span>'}<strong>${escapeHtml(row.itemName)}</strong>${qualityLabel(row) !== 'Standard' ? `<span class="market-gap-quality">${escapeHtml(qualityLabel(row))}</span>` : ''}</div></td>`;
             const riskLabel = row.riskLevel === 'high' ? 'High risk' : row.riskLevel === 'caution' ? 'Caution' : 'Lower risk';
+            const evidenceLabel = row.evidenceLevel === 'supports' ? 'Supported by sales' : row.evidenceLevel === 'mixed' ? 'Partial sales support' : row.evidenceLevel === 'contradicts' ? 'Contradicted by sales' : 'No sales history';
+            const evidenceClass = row.evidenceLevel === 'supports' ? 'supports' : row.evidenceLevel === 'mixed' ? 'mixed' : row.evidenceLevel === 'contradicts' ? 'contradicts' : 'none';
+            const travelLabel = row.travelLevel === 'home' ? 'Home province' : 'Cross-province travel';
             if (!advanced) return `<tr>${itemCell}
                 <td class="market-gap-deal-cell"><strong>${fmt(row.quantity)} for ${fmt(row.sourceStackPrice)}g</strong><span>Buy in ${escapeHtml(row.sourceValley)} (${escapeHtml(row.sourceProvince)})</span></td>
                 <td class="market-gap-deal-cell market-gap-compare-cell"><strong>${fmt(row.destinationQuantity)} for ${fmt(row.destinationStackPrice)}g</strong><span>Live in ${escapeHtml(row.destinationValley)} (${escapeHtml(row.destinationProvince)})</span></td>
-                <td class="market-opportunity-table-profit">+${fmt(row.afterFeeGap)}g<span>if all ${fmt(row.quantity)} match that unit price</span></td>
+                <td><span class="market-evidence-signal ${evidenceClass}">${evidenceLabel}</span><span class="market-gap-cell-detail">${travelLabel}</span></td>
+                <td class="market-opportunity-table-profit">+${fmt(row.afterFeeGap)}g<span>${row.historicalSaleCount ? `using ${fmt(row.supportedUnitValue, 2)}g/unit supported value` : `if all ${fmt(row.quantity)} match the live unit price`}</span></td>
                 <td><span class="market-gap-signal ${row.riskLevel}">${riskLabel}</span><span class="market-gap-cell-detail">overall signal</span></td></tr>`;
-            const supportingSignals = `${row.stackMultiple > 2 ? `<span class="market-gap-signal neutral">${fmt(row.stackMultiple, 1)}× stack</span>` : ''}${row.referenceCount === 1 ? '<span class="market-gap-signal neutral">1 reference</span>' : ''}${row.gapPct >= 1000 ? '<span class="market-gap-signal anomaly">Extreme gap</span>' : row.gapPct >= 250 ? '<span class="market-gap-signal anomaly">Large gap</span>' : ''}`;
+            const supportingSignals = `${row.travelLevel === 'cross-province' ? '<span class="market-gap-signal neutral">Cross-province</span>' : ''}${row.stackMultiple > 2 ? `<span class="market-gap-signal neutral">${fmt(row.stackMultiple, 1)}× stack</span>` : ''}${row.referenceCount === 1 ? '<span class="market-gap-signal neutral">1 reference</span>' : ''}${row.gapPct >= 1000 ? '<span class="market-gap-signal anomaly">Extreme gap</span>' : row.gapPct >= 250 ? '<span class="market-gap-signal anomaly">Large gap</span>' : ''}`;
             return `<tr>${itemCell}
                 <td><span class="market-opportunity-valley market-gap-cell-primary">${escapeHtml(row.sourceValley)}</span><span class="market-gap-cell-detail">${escapeHtml(row.sourceProvince)}</span></td>
                 <td><strong class="market-gap-cell-primary">${fmt(row.quantity)} for ${fmt(row.sourceStackPrice)}g</strong><span class="market-gap-cell-detail">${fmt(row.sourceUnitPrice, 2)}g/unit</span></td>
                 <td><span class="market-opportunity-valley market-gap-compare-location market-gap-cell-primary">${escapeHtml(row.destinationValley)} <span class="market-gap-primary-context">(${escapeHtml(row.destinationProvince)})</span></span><span class="market-gap-cell-detail">${fmt(row.destinationQuantity)} for ${fmt(row.destinationStackPrice)}g · ${fmt(row.destinationUnitPrice, 2)}g/unit</span></td>
-                <td><strong class="market-gap-cell-primary">${fmt(row.gapPct)}%</strong><span class="market-gap-cell-detail">unit-price difference</span></td>
-                <td><div class="market-gap-signals"><div><span class="market-gap-signal ${row.riskLevel}">${riskLabel}</span></div><div class="market-gap-signals-secondary">${supportingSignals || '<span class="market-gap-cell-detail">No added warnings</span>'}</div></div></td>
-                <td class="market-opportunity-table-profit"><span class="market-gap-cell-primary">+${fmt(row.afterFeeGap)}g</span><span class="market-gap-cell-detail">${fmt(row.estimatedFee)}g estimated fee</span></td></tr>`;
-        }).join('') : `<tr><td colspan="${advanced ? 7 : 5}" class="market-opportunities-no-match">No price gaps match these filters.</td></tr>`;
+                <td class="market-gap-evidence-cell"><span class="market-evidence-signal ${evidenceClass}">${evidenceLabel}</span><span class="market-gap-cell-detail">${row.historicalSaleCount ? `${fmt(row.historicalSaleCount)} sales · ${fmt(row.historicalUnitValue, 2)}g/unit · ${fmt(row.historicalDaysSinceSale)}d ago` : 'Live asking prices only'}</span></td>
+                <td class="market-gap-signals-cell"><div class="market-gap-signals"><div><span class="market-gap-signal ${row.riskLevel}">${riskLabel}</span></div><div class="market-gap-signals-secondary">${supportingSignals || '<span class="market-gap-cell-detail">No added warnings</span>'}</div></div></td>
+                <td class="market-opportunity-table-profit"><span class="market-gap-cell-primary">+${fmt(row.afterFeeGap)}g</span><span class="market-gap-cell-detail">${fmt(row.estimatedFee)}g fee · ${fmt(row.supportedUnitValue, 2)}g/unit basis</span></td></tr>`;
+        }).join('') : `<tr><td colspan="${advanced ? 7 : 6}" class="market-opportunities-no-match">No opportunities match these filters.</td></tr>`;
         countTarget.textContent = `${fmt(rows.length)} result${rows.length === 1 ? '' : 's'}`;
         pagination.innerHTML = pageCount > 1 ? `<button type="button" data-gap-page="${page - 1}" ${page === 0 ? 'disabled' : ''}><i class="fas fa-arrow-left"></i></button><span>Page ${page + 1} of ${pageCount}</span><button type="button" data-gap-page="${page + 1}" ${page >= pageCount - 1 ? 'disabled' : ''}><i class="fas fa-arrow-right"></i></button>` : '';
         pagination.querySelectorAll('[data-gap-page]').forEach((button) => button.addEventListener('click', () => { page = Number(button.dataset.gapPage) || 0; paint(); }));
@@ -483,7 +522,7 @@ async function loadOpportunities() {
         latestShardData = shardData;
         const historyIndex = buildHistoryIndex(sales);
         latestCandidates = buildOpportunities(provinceData, historyIndex, opportunitySettings.historyDays);
-        latestMarketGaps = buildValleyPriceGaps(shardData);
+        latestMarketGaps = buildValleyPriceGaps({ ...shardData, homeProvince: provinceData.province }, historyIndex);
         renderCurrentResults();
         renderValleyPriceGaps();
     } catch (error) {
@@ -527,7 +566,7 @@ export function initializeMarketOpportunities() {
         positionBelowHeader();
         modal.classList.remove('hidden');
         document.body.classList.add('market-opportunities-modal-open');
-        selectTab('listings');
+        selectTab('gaps');
         renderConfigurationState();
         loadOpportunities();
     });
