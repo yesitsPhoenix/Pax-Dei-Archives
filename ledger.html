@@ -371,7 +371,8 @@
         }
 
         .market-opportunities-panel {
-            width: min(1500px, calc(100vw - 2rem));
+            width: min(1700px, calc(100vw - 2rem));
+            height: calc(100vh - var(--market-opportunities-top-offset, 102px) - 1rem);
             max-height: calc(100vh - var(--market-opportunities-top-offset, 102px) - 1rem);
             display: flex;
             flex-direction: column;
@@ -379,9 +380,23 @@
             overflow: hidden;
         }
 
+        body.market-opportunities-modal-open {
+            overflow: hidden;
+        }
+
+        #marketOpportunitiesModal [data-market-opportunity-panel]:not(.hidden) {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            min-height: 0;
+        }
+
         .market-opportunities-body {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
             padding: 1.25rem;
-            overflow-y: auto;
+            overflow: hidden;
             min-height: 0;
         }
 
@@ -433,7 +448,9 @@
         .market-opportunities-table-wrap {
             overflow-x: hidden;
             overflow-y: auto;
-            max-height: calc(100vh - var(--market-opportunities-top-offset, 102px) - 230px);
+            flex: 1;
+            max-height: none;
+            min-height: 0;
             border: 1px solid rgba(148, 163, 184, 0.24);
             border-radius: 10px;
         }
@@ -629,6 +646,29 @@
             overflow-y: auto;
         }
 
+        .market-opportunity-toast {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 70;
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            padding: 0.7rem 0.9rem;
+            border: 1px solid rgba(52, 211, 153, 0.45);
+            border-radius: 10px;
+            background: #102a25;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+            color: #d1fae5;
+            font-size: 0.84rem;
+            font-weight: 700;
+            animation: market-opportunity-toast-in 160ms ease-out;
+        }
+
+        .market-opportunity-toast i { color: #34d399; }
+        .market-opportunity-toast.leaving { opacity: 0; transform: translateY(6px); transition: opacity 180ms ease, transform 180ms ease; }
+        @keyframes market-opportunity-toast-in { from { opacity: 0; transform: translateY(6px); } }
+
         .market-opportunity-guide {
             padding: 1.25rem;
             overflow-y: auto;
@@ -636,26 +676,27 @@
         }
 
         .market-opportunity-guide-intro {
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
             color: #94a3b8;
-            line-height: 1.55;
+            font-size: 0.84rem;
+            line-height: 1.45;
         }
 
         .market-opportunity-guide-grid {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 1rem;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.75rem;
         }
 
         .market-opportunity-guide-card {
-            padding: 1rem;
+            padding: 0.8rem;
             border: 1px solid rgba(148, 163, 184, 0.22);
             border-radius: 12px;
             background: rgba(15, 23, 42, 0.3);
         }
 
         .market-opportunity-guide-card h4 {
-            margin-bottom: 0.45rem;
+            margin-bottom: 0.3rem;
             color: #6ee7b7;
             font-weight: 800;
         }
@@ -663,8 +704,8 @@
         .market-opportunity-guide-card p,
         .market-opportunity-guide-card li {
             color: #aebbd0;
-            font-size: 0.88rem;
-            line-height: 1.55;
+            font-size: 0.8rem;
+            line-height: 1.45;
         }
 
         .market-opportunity-guide-card ul {
@@ -673,7 +714,6 @@
         }
 
         .market-opportunity-guide-example {
-            grid-column: 1 / -1;
             border-color: rgba(52, 211, 153, 0.35);
             background: rgba(16, 185, 129, 0.07);
         }
@@ -787,6 +827,196 @@
         .market-opportunities-table.simple th:nth-child(7) { width: 11%; }
         .market-opportunities-table.simple th:nth-child(8) { width: 8%; }
 
+        .market-opportunities-table.valley-gaps.advanced th:nth-child(1) { width: 17%; }
+        .market-opportunities-table.valley-gaps.advanced th:nth-child(2) { width: 11%; }
+        .market-opportunities-table.valley-gaps.advanced th:nth-child(3) { width: 14%; }
+        .market-opportunities-table.valley-gaps.advanced th:nth-child(4) { width: 22%; }
+        .market-opportunities-table.valley-gaps.advanced th:nth-child(5) { width: 8%; }
+        .market-opportunities-table.valley-gaps.advanced th:nth-child(6) { width: 16%; }
+        .market-opportunities-table.valley-gaps.advanced th:nth-child(7) { width: 12%; }
+
+        .market-opportunities-table.valley-gaps .market-opportunity-valley,
+        .market-opportunities-table.valley-gaps .market-opportunity-table-profit {
+            color: #34d399;
+        }
+
+        .market-opportunities-table.valley-gaps .market-gap-compare-location {
+            color: #60a5fa;
+        }
+
+        .market-opportunities-table.valley-gaps .market-gap-compare-cell strong {
+            color: #60a5fa;
+        }
+
+        .market-opportunities-table.valley-gaps.simple th:nth-child(1) { width: 22%; }
+        .market-opportunities-table.valley-gaps.simple th:nth-child(2) { width: 23%; }
+        .market-opportunities-table.valley-gaps.simple th:nth-child(3) { width: 23%; }
+        .market-opportunities-table.valley-gaps.simple th:nth-child(4) { width: 19%; }
+        .market-opportunities-table.valley-gaps.simple th:nth-child(5) { width: 13%; }
+
+        .market-gap-deal-cell strong,
+        .market-gap-deal-cell span,
+        .market-opportunities-table.valley-gaps.simple .market-opportunity-table-profit span {
+            display: block;
+        }
+
+        .market-gap-deal-cell span,
+        .market-opportunities-table.valley-gaps.simple .market-opportunity-table-profit span {
+            margin-top: 0.12rem;
+            color: #7f8da3;
+            font-size: 0.76rem;
+        }
+
+        .market-valley-gaps-toolbar {
+            flex-wrap: wrap;
+        }
+
+        .market-valley-gaps-toolbar label {
+            flex-basis: 260px;
+        }
+
+        .market-gap-table-shell {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            min-height: 0;
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .market-gap-table-shell .market-opportunities-table-wrap {
+            border: 0;
+            border-radius: 0;
+        }
+
+        .market-gap-table-shell .market-opportunities-pagination {
+            border-top: 1px solid rgba(71, 85, 105, 0.48);
+            background: rgba(15, 23, 42, 0.45);
+            padding: 0.4rem;
+        }
+
+        .market-opportunities-table.valley-gaps td {
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .market-opportunities-table.valley-gaps .market-opportunity-item {
+            gap: 0.45rem;
+            white-space: nowrap;
+        }
+
+        .market-opportunities-table.valley-gaps .market-opportunity-item img,
+        .market-opportunities-table.valley-gaps .market-opportunity-icon-fallback {
+            width: 34px;
+            height: 34px;
+        }
+
+        .market-gap-inline-detail {
+            color: #7f8da3;
+            font-size: 0.8rem;
+        }
+
+        .market-gap-cell-primary,
+        .market-gap-cell-detail {
+            display: block;
+        }
+
+        .market-gap-cell-detail {
+            min-height: 1em;
+            margin-top: 0.14rem;
+            overflow: hidden;
+            color: #7f8da3;
+            font-size: 0.76rem;
+            line-height: 1.2;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .market-gap-primary-context {
+            color: #7f8da3;
+            font-size: 0.76rem;
+            font-weight: 500;
+        }
+
+        .market-gap-quality {
+            padding: 0.12rem 0.35rem;
+            border-radius: 999px;
+            background: rgba(148, 163, 184, 0.12);
+            color: #94a3b8;
+            font-size: 0.68rem;
+        }
+
+        .market-gap-signals {
+            display: block;
+        }
+
+        .market-gap-signals-secondary {
+            display: flex;
+            align-items: center;
+            gap: 0.22rem;
+            min-height: 1em;
+            margin-top: 0.22rem;
+            overflow: hidden;
+        }
+
+        .market-gap-signal {
+            padding: 0.15rem 0.38rem;
+            border: 1px solid transparent;
+            border-radius: 999px;
+            font-size: 0.67rem;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .market-gap-signal.lower { color: #6ee7b7; background: rgba(16, 185, 129, 0.12); border-color: rgba(52, 211, 153, 0.28); }
+        .market-gap-signal.caution { color: #fcd34d; background: rgba(245, 158, 11, 0.12); border-color: rgba(251, 191, 36, 0.28); }
+        .market-gap-signal.high { color: #fda4af; background: rgba(244, 63, 94, 0.12); border-color: rgba(251, 113, 133, 0.28); }
+        .market-gap-signal.neutral { color: #cbd5e1; background: rgba(148, 163, 184, 0.1); border-color: rgba(148, 163, 184, 0.2); }
+        .market-gap-signal.anomaly { color: #c4b5fd; background: rgba(139, 92, 246, 0.12); border-color: rgba(167, 139, 250, 0.28); }
+
+        .market-gap-signal-filters {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            margin: -0.2rem 0 0.65rem;
+            color: #64748b;
+            font-size: 0.75rem;
+        }
+
+        .market-gap-signal-filters > button {
+            padding: 0.28rem 0.5rem;
+            border: 1px solid #475569;
+            border-radius: 999px;
+            color: #94a3b8;
+            line-height: 1.2;
+        }
+
+        .market-gap-signal-filters > button.active {
+            border-color: #34d399;
+            background: rgba(16, 185, 129, 0.12);
+            color: #d1fae5;
+        }
+
+        .market-gap-signal-filters > button:disabled {
+            opacity: 0.35;
+        }
+
+        .market-gap-filter-divider {
+            width: 1px;
+            height: 18px;
+            margin: 0 0.15rem;
+            background: #475569;
+        }
+
+        .market-gap-clear-signals {
+            margin-left: auto;
+        }
+
         .market-opportunity-field {
             display: grid;
             grid-template-columns: 1fr 115px;
@@ -800,6 +1030,13 @@
             font-size: 0.86rem;
         }
 
+        .market-opportunity-field .market-opportunity-field-help {
+            grid-column: 2;
+            margin-top: -0.45rem;
+            color: #64748b;
+            font-size: 0.72rem;
+        }
+
         .market-opportunity-field input,
         .market-opportunity-field select {
             width: 100%;
@@ -809,24 +1046,6 @@
             background: #0f172a;
             color: #f8fafc;
             font-size: 0.86rem;
-        }
-
-        .market-opportunity-config-footer {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        #marketOpportunityConfigPreview {
-            color: #94a3b8;
-            font-size: 0.88rem;
-        }
-
-        #marketOpportunityConfigPreview strong {
-            color: #34d399;
-            font-size: 1.1rem;
         }
 
         .market-opportunity-excluded {
@@ -983,6 +1202,10 @@
                 text-align: left;
             }
 
+            .market-valley-gaps-toolbar select {
+                width: 100%;
+            }
+
             .market-opportunity-heading {
                 flex-direction: column;
             }
@@ -1004,45 +1227,45 @@
 
             .market-opportunity-guide-example { grid-column: auto; }
 
-            .market-opportunity-config-footer {
-                align-items: stretch;
-                flex-direction: column;
-            }
         }
 
-        @media (max-width: 1100px) {
+        @media (min-width: 721px) and (max-width: 1100px) {
+            .market-opportunity-guide-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
             .market-opportunities-table th,
             .market-opportunities-table td {
                 padding-left: 0.45rem;
                 padding-right: 0.45rem;
             }
 
-            .market-opportunities-table th:nth-child(7),
-            .market-opportunities-table td:nth-child(7) {
+            .market-opportunities-table:not(.valley-gaps) th:nth-child(7),
+            .market-opportunities-table:not(.valley-gaps) td:nth-child(7) {
                 display: none;
             }
 
-            .market-opportunities-table th:nth-child(2) { width: 17%; }
-            .market-opportunities-table th:nth-child(4) { width: 18%; }
-            .market-opportunities-table th:nth-child(5) { width: 15%; }
-            .market-opportunities-table th:nth-child(6) { width: 22%; }
-            .market-opportunities-table th:nth-child(8) { width: 11%; }
-            .market-opportunities-table th:nth-child(9) { width: 8%; }
+            .market-opportunities-table:not(.valley-gaps) th:nth-child(2) { width: 17%; }
+            .market-opportunities-table:not(.valley-gaps) th:nth-child(4) { width: 18%; }
+            .market-opportunities-table:not(.valley-gaps) th:nth-child(5) { width: 15%; }
+            .market-opportunities-table:not(.valley-gaps) th:nth-child(6) { width: 22%; }
+            .market-opportunities-table:not(.valley-gaps) th:nth-child(8) { width: 11%; }
+            .market-opportunities-table:not(.valley-gaps) th:nth-child(9) { width: 8%; }
         }
 
         @media (max-width: 760px) {
-            .market-opportunities-table th:nth-child(5),
-            .market-opportunities-table td:nth-child(5),
-            .market-opportunities-table th:nth-child(9),
-            .market-opportunities-table td:nth-child(9) {
+            .market-opportunities-table:not(.valley-gaps) th:nth-child(5),
+            .market-opportunities-table:not(.valley-gaps) td:nth-child(5),
+            .market-opportunities-table:not(.valley-gaps) th:nth-child(9),
+            .market-opportunities-table:not(.valley-gaps) td:nth-child(9) {
                 display: none;
             }
 
-            .market-opportunities-table th:nth-child(2) { width: 24%; }
-            .market-opportunities-table th:nth-child(3) { width: 13%; }
-            .market-opportunities-table th:nth-child(4) { width: 22%; }
-            .market-opportunities-table th:nth-child(6) { width: 27%; }
-            .market-opportunities-table th:nth-child(8) { width: 14%; }
+            .market-opportunities-table:not(.valley-gaps) th:nth-child(2) { width: 24%; }
+            .market-opportunities-table:not(.valley-gaps) th:nth-child(3) { width: 13%; }
+            .market-opportunities-table:not(.valley-gaps) th:nth-child(4) { width: 22%; }
+            .market-opportunities-table:not(.valley-gaps) th:nth-child(6) { width: 27%; }
+            .market-opportunities-table:not(.valley-gaps) th:nth-child(8) { width: 14%; }
         }
 
         .listing-workbench {
@@ -4147,13 +4370,12 @@
         </div>
     </div>
 
-    <div id="marketOpportunitiesModal" class="hidden fixed inset-0 bg-gray-950/80 flex items-start justify-center z-50 modal-backdrop px-3 pb-6 overflow-y-auto" style="padding-top:var(--market-opportunities-top-offset, 102px)">
+    <div id="marketOpportunitiesModal" class="hidden fixed inset-0 bg-gray-950/80 flex items-start justify-center z-50 modal-backdrop px-3 pb-4 overflow-hidden" style="padding-top:var(--market-opportunities-top-offset, 102px)">
         <div class="market-opportunities-panel bg-slate-800 shadow-2xl border border-emerald-400/30">
             <div class="listing-workbench-header">
                 <div>
-                    <p class="text-xs uppercase tracking-[0.18em] text-emerald-300 font-bold mb-1">Province Market Intelligence</p>
+                    <p class="text-xs uppercase tracking-[0.18em] text-emerald-300 font-bold mb-1">Market Intelligence</p>
                     <h3 class="text-xl font-bold text-white">Market Opportunities</h3>
-                    <p id="marketOpportunitiesSummary" class="text-sm text-slate-400 mt-1">Compare remote listings with your matching historical sales.</p>
                 </div>
                 <div class="flex items-center gap-3">
                     <button type="button" data-close-market-opportunities class="bg-slate-600 hover:bg-slate-700 text-white py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 transition-all duration-300">
@@ -4163,6 +4385,7 @@
             </div>
             <div class="market-opportunity-tabs">
                 <button type="button" class="market-opportunity-tab active" data-market-opportunity-tab="listings"><i class="fas fa-list mr-2"></i>Listings</button>
+                <button type="button" class="market-opportunity-tab" data-market-opportunity-tab="gaps"><i class="fas fa-arrow-right-arrow-left mr-2"></i>Valley Price Gaps</button>
                 <button type="button" class="market-opportunity-tab" data-market-opportunity-tab="configuration"><i class="fas fa-sliders mr-2"></i>Configuration</button>
                 <button type="button" class="market-opportunity-tab" data-market-opportunity-tab="guide"><i class="fas fa-circle-info mr-2"></i>How it works</button>
             </div>
@@ -4174,13 +4397,21 @@
                     <div class="market-opportunities-empty"><i class="fas fa-magnifying-glass-chart"></i><h4>Open the scanner to review supported bargains</h4></div>
                 </div>
             </div>
+            <div class="hidden" data-market-opportunity-panel="gaps">
+                <div class="px-5 py-3 border-b border-slate-700 bg-slate-900/30 text-slate-400">
+                    Compares current unit-price floors across every loaded province and valley on the selected shard. Sales history and opportunity thresholds are not used, so a gap signals a pricing difference&mdash;not proven demand or guaranteed profit.
+                </div>
+                <div id="marketValleyGapsBody" class="market-opportunities-body">
+                    <div class="market-opportunities-empty"><i class="fas fa-magnifying-glass-chart"></i><h4>Open the scanner to compare valley prices</h4></div>
+                </div>
+            </div>
             <div class="market-opportunity-config hidden" data-market-opportunity-panel="configuration">
                 <form id="marketOpportunityConfigForm">
                     <section class="market-opportunity-config-section mb-4">
                         <h4><i class="fas fa-table-columns mr-1"></i>Listing detail</h4>
                         <div class="market-opportunity-display-options" role="radiogroup" aria-label="Listing detail level">
-                            <label><input type="radio" name="marketOpportunityDisplayMode" value="simple"><span><strong>Simple</strong><small>Show the price, typical value, past sales, profit, and margin.</small></span></label>
-                            <label><input type="radio" name="marketOpportunityDisplayMode" value="advanced"><span><strong>Advanced</strong><small>Also show unit prices, sales speed, recency, price spread, and resale fee.</small></span></label>
+                            <label><input type="radio" name="marketOpportunityDisplayMode" value="simple"><span><strong>Simple</strong><small>Show each opportunity as a clear buy, comparison, potential gap, and risk decision.</small></span></label>
+                            <label><input type="radio" name="marketOpportunityDisplayMode" value="advanced"><span><strong>Advanced</strong><small>Also show unit prices, percentages, fees, sales evidence, and individual risk signals.</small></span></label>
                         </div>
                     </section>
                     <div class="market-opportunity-presets">
@@ -4199,11 +4430,11 @@
                             <h4><i class="fas fa-chart-line mr-1"></i>Demand requirements</h4>
                             <div class="market-opportunity-field"><label for="opportunityMinSales">Minimum sales</label><input id="opportunityMinSales" type="number" min="1" step="1"></div>
                             <div class="market-opportunity-field"><label for="opportunityMinVelocity">Sales per month</label><input id="opportunityMinVelocity" type="number" min="0" step="0.1"></div>
-                            <div class="market-opportunity-field"><label for="opportunityMaxDays">Newest sale within</label><input id="opportunityMaxDays" type="number" min="1" step="1"></div>
+                            <div class="market-opportunity-field"><label for="opportunityMaxDays">Newest sale within</label><input id="opportunityMaxDays" type="number" min="1" max="365" step="1"><small class="market-opportunity-field-help">Up to 365 days; use a history window at least this long.</small></div>
                         </section>
                         <section class="market-opportunity-config-section">
                             <h4><i class="fas fa-shield-halved mr-1"></i>Historical confidence</h4>
-                            <div class="market-opportunity-field"><label for="marketOpportunitiesHistoryWindow">Sales history</label><select id="marketOpportunitiesHistoryWindow"><option value="90">90 days</option><option value="120">120 days</option><option value="180">180 days</option></select></div>
+                            <div class="market-opportunity-field"><label for="marketOpportunitiesHistoryWindow">Sales history</label><select id="marketOpportunitiesHistoryWindow"><option value="90">90 days</option><option value="120">120 days</option><option value="180">180 days</option><option value="365">1 year</option></select></div>
                             <div class="market-opportunity-field"><label for="opportunityMaxSpread">Maximum price spread %</label><input id="opportunityMaxSpread" type="number" min="0" step="1"></div>
                         </section>
                     </div>
@@ -4211,10 +4442,6 @@
                         <h4><i class="fas fa-eye-slash mr-1"></i>Excluded items</h4>
                         <div id="marketOpportunityExcludedItems" class="market-opportunity-excluded"><span>No manually excluded items.</span></div>
                     </section>
-                    <div class="market-opportunity-config-footer">
-                        <p id="marketOpportunityConfigPreview">Threshold preview will appear after the market scan.</p>
-                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-5 rounded-lg"><i class="fas fa-check mr-2"></i>Apply thresholds</button>
-                    </div>
                 </form>
             </div>
             <div class="market-opportunity-guide hidden" data-market-opportunity-panel="guide">
@@ -4244,6 +4471,14 @@
                     <section class="market-opportunity-guide-card">
                         <h4>Fee, profit, and margin</h4>
                         <p><strong>Fee</strong> is an estimated 5% resale fee. <strong>Profit</strong> is typical value minus that fee and your purchase cost. <strong>Margin</strong> is the estimated profit divided by the purchase cost.</p>
+                    </section>
+                    <section class="market-opportunity-guide-card market-opportunity-guide-example">
+                        <h4>Valley Price Gaps</h4>
+                        <p>This shard-wide view does not use your sales history. It compares the cheapest live unit price for the same item and quality in every loaded province and valley. The after-fee gap asks, “What would remain if the cheapest stack were valued at another valley's current floor?” It is not projected profit: a listing price does not prove demand, and that competing listing may change or disappear.</p>
+                    </section>
+                    <section class="market-opportunity-guide-card market-opportunity-guide-example">
+                        <h4>Gap risk signals</h4>
+                        <ul><li><strong>Lower risk / Caution / High risk:</strong> combines the warnings below; it does not measure demand.</li><li><strong>X× stack:</strong> the purchase stack is over twice the comparison stack, increasing extrapolation risk.</li><li><strong>1 reference:</strong> the comparison floor rests on one live listing.</li><li><strong>Large gap:</strong> 250–999%. <strong>Extreme gap:</strong> 1,000% or more.</li><li><strong>Signal filters:</strong> choices within a category use “either”; different categories stack using “and.”</li></ul>
                     </section>
                     <section class="market-opportunity-guide-card market-opportunity-guide-example">
                         <h4>Worked example</h4>

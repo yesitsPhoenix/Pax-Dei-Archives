@@ -1,11 +1,12 @@
 import { supabase } from '../supabaseClient.js';
 import { currentCharacterId, getCurrentCharacter } from './characters.js';
-import { fetchProvinceMarketData } from './addListingIntelligence.js';
+import { fetchProvinceMarketData, fetchShardMarketData } from './addListingIntelligence.js';
 import { getItemData, loadItemsData } from '../services/gamingToolsService.js';
 
 const SETTINGS_KEY = 'pda.marketOpportunitySettings.v1';
 const FEE_RATE = 0.05;
 const OPPORTUNITIES_PAGE_SIZE = 25;
+const VALLEY_GAPS_PAGE_SIZE = 15;
 const DEFAULT_SETTINGS = {
     preset: 'balanced', historyDays: 180, minProfit: 10, minRoi: 75,
     minSales: 3, minVelocity: 1, maxDaysSinceSale: 60, maxPriceSpread: 60,
@@ -18,7 +19,9 @@ const PRESETS = {
 };
 
 let latestCandidates = [];
+let latestMarketGaps = [];
 let latestProvinceData = null;
+let latestShardData = null;
 let opportunitySettings = loadSettings();
 
 const fmt = (value, digits = 0) => Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: digits });
@@ -40,6 +43,18 @@ function loadSettings() {
 
 function saveSettings() {
     try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(opportunitySettings)); } catch { /* optional persistence */ }
+}
+
+function showSettingsSavedToast(modal) {
+    modal.querySelector('[data-market-opportunity-toast]')?.remove();
+    const toast = document.createElement('div');
+    toast.className = 'market-opportunity-toast';
+    toast.dataset.marketOpportunityToast = '';
+    toast.setAttribute('role', 'status');
+    toast.innerHTML = '<i class="fas fa-check-circle"></i><span>Opportunity settings saved</span>';
+    modal.appendChild(toast);
+    setTimeout(() => toast.classList.add('leaving'), 1800);
+    setTimeout(() => toast.remove(), 2200);
 }
 
 function weightedMedian(rows) {
@@ -130,6 +145,78 @@ function buildOpportunities(provinceData, historyIndex, historyDays) {
     }).filter(Boolean);
 }
 
+function buildValleyPriceGaps(provinceData) {
+    const groups = new Map();
+    for (const listing of provinceData?.listings || []) {
+        const quantity = Math.max(Number(listing.quantity) || 1, 1);
+        const stackPrice = Number(listing.price) || 0;
+        const province = listing._province || provinceData?.province || 'Unknown province';
+        const valley = listing._homeValley || 'Unknown valley';
+        if (!(stackPrice > 0)) continue;
+        const key = qualityKey(listing.item_id, listing.mastercraft, listing.enchantment_level);
+        if (!groups.has(key)) groups.set(key, new Map());
+        const unitPrice = stackPrice / quantity;
+        const locationKey = `${province}::${valley}`;
+        const current = groups.get(key).get(locationKey);
+        if (!current) {
+            groups.get(key).set(locationKey, { listing, quantity, stackPrice, unitPrice, province, valley, listingCount: 1 });
+        } else {
+            current.listingCount += 1;
+            if (unitPrice < current.unitPrice) {
+                groups.get(key).set(locationKey, { listing, quantity, stackPrice, unitPrice, province, valley, listingCount: current.listingCount });
+            }
+        }
+    }
+
+    const gaps = [];
+    for (const valleyFloors of groups.values()) {
+        if (valleyFloors.size < 2) continue;
+        const floors = [...valleyFloors.values()].sort((a, b) => a.unitPrice - b.unitPrice);
+        const source = floors[0];
+        const destination = floors[floors.length - 1];
+        if (!(destination.unitPrice > source.unitPrice)) continue;
+        const comparisonValue = destination.unitPrice * source.quantity;
+        const estimatedFee = Math.ceil(comparisonValue * FEE_RATE);
+        const afterFeeGap = comparisonValue - estimatedFee - source.stackPrice;
+        if (!(afterFeeGap > 0)) continue;
+        const gapPct = ((destination.unitPrice - source.unitPrice) / source.unitPrice) * 100;
+        const stackMultiple = source.quantity / destination.quantity;
+        let riskScore = 0;
+        if (stackMultiple > 5) riskScore += 2;
+        else if (stackMultiple > 2) riskScore += 1;
+        if (destination.listingCount === 1) riskScore += 2;
+        else if (destination.listingCount < 3) riskScore += 1;
+        if (gapPct >= 1000) riskScore += 1;
+        const item = getItemData(source.listing.item_id);
+        gaps.push({
+            itemName: item?.name || bareItemId(source.listing.item_id).replaceAll('_', ' '),
+            iconPath: item?.iconPath || null,
+            isMastercrafted: !!source.listing.mastercraft,
+            enchantmentTier: Number(source.listing.enchantment_level) || 0,
+            sourceProvince: source.province,
+            sourceValley: source.valley,
+            sourceLocation: `${source.province} / ${source.valley}`,
+            destinationProvince: destination.province,
+            destinationValley: destination.valley,
+            destinationQuantity: destination.quantity,
+            destinationStackPrice: destination.stackPrice,
+            quantity: source.quantity,
+            sourceStackPrice: source.stackPrice,
+            sourceUnitPrice: source.unitPrice,
+            destinationUnitPrice: destination.unitPrice,
+            comparisonValue,
+            estimatedFee,
+            afterFeeGap,
+            gapPct,
+            stackMultiple,
+            referenceCount: destination.listingCount,
+            riskLevel: riskScore >= 4 ? 'high' : riskScore >= 2 ? 'caution' : 'lower',
+            valleyCount: valleyFloors.size
+        });
+    }
+    return gaps.sort((a, b) => b.afterFeeGap - a.afterFeeGap || b.gapPct - a.gapPct);
+}
+
 const qualityLabel = (row) => {
     const labels = [];
     if (row.isMastercrafted) labels.push('Mastercrafted');
@@ -168,8 +255,6 @@ function renderConfigurationState() {
         input.checked = input.value === opportunitySettings.displayMode;
     });
     document.querySelectorAll('[data-opportunity-preset]').forEach((button) => button.classList.toggle('active', button.dataset.opportunityPreset === opportunitySettings.preset));
-    const preview = document.getElementById('marketOpportunityConfigPreview');
-    if (preview) preview.innerHTML = `<strong>${fmt(qualifiedCandidates().length)}</strong> of ${fmt(latestCandidates.length)} raw candidates meet these thresholds.`;
     const excluded = document.getElementById('marketOpportunityExcludedItems');
     if (excluded) {
         excluded.innerHTML = opportunitySettings.excludedItems.length
@@ -251,36 +336,158 @@ function renderRows(target, rows) {
     paint();
 }
 
+function renderValleyPriceGaps() {
+    const target = document.getElementById('marketValleyGapsBody');
+    if (!target) return;
+    if (!latestShardData) {
+        target.innerHTML = '<div class="market-opportunities-empty"><i class="fas fa-spinner fa-spin"></i><h4>Scanning province markets...</h4></div>';
+        return;
+    }
+    const locations = (latestShardData.loadedLocations || []).slice()
+        .sort((a, b) => a.province.localeCompare(b.province) || a.valley.localeCompare(b.valley));
+    const advanced = opportunitySettings.displayMode === 'advanced';
+    target.innerHTML = `
+        <div class="market-opportunities-toolbar market-valley-gaps-toolbar">
+            <label><i class="fas fa-search"></i><input type="search" placeholder="Search items" autocomplete="off"></label>
+            <select data-gap-filter="valley" aria-label="Filter by item location"><option value="">All locations</option>${locations.map((row) => { const location = `${row.province} / ${row.valley}`; return `<option value="${escapeHtml(location)}">${escapeHtml(location)}</option>`; }).join('')}</select>
+            <select data-gap-filter="minimum" aria-label="Minimum live price gap"><option value="0">Any gap</option><option value="25">25%+ gap</option><option value="50">50%+ gap</option><option value="100">100%+ gap</option><option value="250">250%+ gap</option><option value="500">500%+ gap</option><option value="1000">1,000%+ gap</option><option value="2500">2,500%+ gap</option><option value="5000">5,000%+ gap</option></select>
+            <select data-gap-filter="purchase" aria-label="Maximum purchase price"><option value="0">Any purchase price</option><option value="100">Up to 100g</option><option value="500">Up to 500g</option><option value="1000">Up to 1,000g</option><option value="2500">Up to 2,500g</option><option value="5000">Up to 5,000g</option><option value="10000">Up to 10,000g</option><option value="25000">Up to 25,000g</option><option value="50000">Up to 50,000g</option></select>
+            <select data-gap-filter="sort" aria-label="Sort valley price gaps"><option value="net">Largest after-fee gap</option><option value="percent">Largest percentage gap</option><option value="price">Lowest purchase price</option><option value="item">Item name</option></select>
+            <span></span>
+        </div>
+        <div class="market-gap-signal-filters" aria-label="Filter by opportunity signals">
+            <span>Signals</span>
+            <button type="button" data-gap-signal="risk:lower">Lower risk</button>
+            <button type="button" data-gap-signal="risk:caution">Caution</button>
+            <button type="button" data-gap-signal="risk:high">High risk</button>
+            <span class="market-gap-filter-divider"></span>
+            <button type="button" data-gap-signal="stack">Large stack</button>
+            <button type="button" data-gap-signal="reference">One reference</button>
+            <span class="market-gap-filter-divider"></span>
+            <button type="button" data-gap-signal="anomaly:large">Large gap</button>
+            <button type="button" data-gap-signal="anomaly:extreme">Extreme gap</button>
+            <button type="button" class="market-gap-clear-signals" data-clear-gap-signals disabled>Clear</button>
+        </div>
+        <div class="market-gap-table-shell">
+            <div class="market-opportunities-table-wrap"><table class="market-opportunities-table valley-gaps ${advanced ? 'advanced' : 'simple'}"><thead><tr>
+                ${advanced
+                    ? '<th>Item</th><th>Location</th><th>Listed stack</th><th>Compare with</th><th>Price gap</th><th>Signals</th><th>After-fee gap</th>'
+                    : '<th>Item</th><th>Buy this stack</th><th>Compared with</th><th>Potential gap</th><th>Risk</th>'}
+            </tr></thead><tbody></tbody></table></div>
+            <div class="market-opportunities-pagination"></div>
+        </div>`;
+    const search = target.querySelector('input');
+    const valleyFilter = target.querySelector('[data-gap-filter="valley"]');
+    const minimumFilter = target.querySelector('[data-gap-filter="minimum"]');
+    const purchaseFilter = target.querySelector('[data-gap-filter="purchase"]');
+    const sort = target.querySelector('[data-gap-filter="sort"]');
+    const rowsTarget = target.querySelector('tbody');
+    const countTarget = target.querySelector('.market-opportunities-toolbar > span');
+    const pagination = target.querySelector('.market-opportunities-pagination');
+    const signalButtons = [...target.querySelectorAll('[data-gap-signal]')];
+    const clearSignals = target.querySelector('[data-clear-gap-signals]');
+    const selectedSignals = new Set();
+    let page = 0;
+    const paint = () => {
+        const query = search.value.trim().toLowerCase();
+        const minimum = Number(minimumFilter.value) || 0;
+        const maximumPurchase = Number(purchaseFilter.value) || 0;
+        const selectedRisks = [...selectedSignals].filter((value) => value.startsWith('risk:')).map((value) => value.slice(5));
+        const selectedAnomalies = [...selectedSignals].filter((value) => value.startsWith('anomaly:')).map((value) => value.slice(8));
+        const rows = latestMarketGaps.filter((row) => {
+            const anomaly = row.gapPct >= 1000 ? 'extreme' : row.gapPct >= 250 ? 'large' : null;
+            return (!query || row.itemName.toLowerCase().includes(query))
+                && (!valleyFilter.value || row.sourceLocation === valleyFilter.value)
+                && row.gapPct >= minimum
+                && (!(maximumPurchase > 0) || row.sourceStackPrice <= maximumPurchase)
+                && (!selectedRisks.length || selectedRisks.includes(row.riskLevel))
+                && (!selectedSignals.has('stack') || row.stackMultiple > 2)
+                && (!selectedSignals.has('reference') || row.referenceCount === 1)
+                && (!selectedAnomalies.length || selectedAnomalies.includes(anomaly));
+        });
+        rows.sort((a, b) => {
+            if (sort.value === 'percent') return b.gapPct - a.gapPct || b.afterFeeGap - a.afterFeeGap;
+            if (sort.value === 'price') return a.sourceStackPrice - b.sourceStackPrice || b.gapPct - a.gapPct;
+            if (sort.value === 'item') return a.itemName.localeCompare(b.itemName) || a.sourceStackPrice - b.sourceStackPrice;
+            return b.afterFeeGap - a.afterFeeGap || b.gapPct - a.gapPct;
+        });
+        const pageCount = Math.max(1, Math.ceil(rows.length / VALLEY_GAPS_PAGE_SIZE));
+        page = Math.min(page, pageCount - 1);
+        const visible = rows.slice(page * VALLEY_GAPS_PAGE_SIZE, (page + 1) * VALLEY_GAPS_PAGE_SIZE);
+        rowsTarget.innerHTML = visible.length ? visible.map((row) => {
+            const itemCell = `<td><div class="market-opportunity-item">${row.iconPath ? `<img src="${escapeHtml(row.iconPath)}" alt="" loading="lazy" onerror="this.style.display='none'">` : '<span class="market-opportunity-icon-fallback"><i class="fas fa-box"></i></span>'}<strong>${escapeHtml(row.itemName)}</strong>${qualityLabel(row) !== 'Standard' ? `<span class="market-gap-quality">${escapeHtml(qualityLabel(row))}</span>` : ''}</div></td>`;
+            const riskLabel = row.riskLevel === 'high' ? 'High risk' : row.riskLevel === 'caution' ? 'Caution' : 'Lower risk';
+            if (!advanced) return `<tr>${itemCell}
+                <td class="market-gap-deal-cell"><strong>${fmt(row.quantity)} for ${fmt(row.sourceStackPrice)}g</strong><span>Buy in ${escapeHtml(row.sourceValley)} (${escapeHtml(row.sourceProvince)})</span></td>
+                <td class="market-gap-deal-cell market-gap-compare-cell"><strong>${fmt(row.destinationQuantity)} for ${fmt(row.destinationStackPrice)}g</strong><span>Live in ${escapeHtml(row.destinationValley)} (${escapeHtml(row.destinationProvince)})</span></td>
+                <td class="market-opportunity-table-profit">+${fmt(row.afterFeeGap)}g<span>if all ${fmt(row.quantity)} match that unit price</span></td>
+                <td><span class="market-gap-signal ${row.riskLevel}">${riskLabel}</span><span class="market-gap-cell-detail">overall signal</span></td></tr>`;
+            const supportingSignals = `${row.stackMultiple > 2 ? `<span class="market-gap-signal neutral">${fmt(row.stackMultiple, 1)}× stack</span>` : ''}${row.referenceCount === 1 ? '<span class="market-gap-signal neutral">1 reference</span>' : ''}${row.gapPct >= 1000 ? '<span class="market-gap-signal anomaly">Extreme gap</span>' : row.gapPct >= 250 ? '<span class="market-gap-signal anomaly">Large gap</span>' : ''}`;
+            return `<tr>${itemCell}
+                <td><span class="market-opportunity-valley market-gap-cell-primary">${escapeHtml(row.sourceValley)}</span><span class="market-gap-cell-detail">${escapeHtml(row.sourceProvince)}</span></td>
+                <td><strong class="market-gap-cell-primary">${fmt(row.quantity)} for ${fmt(row.sourceStackPrice)}g</strong><span class="market-gap-cell-detail">${fmt(row.sourceUnitPrice, 2)}g/unit</span></td>
+                <td><span class="market-opportunity-valley market-gap-compare-location market-gap-cell-primary">${escapeHtml(row.destinationValley)} <span class="market-gap-primary-context">(${escapeHtml(row.destinationProvince)})</span></span><span class="market-gap-cell-detail">${fmt(row.destinationQuantity)} for ${fmt(row.destinationStackPrice)}g · ${fmt(row.destinationUnitPrice, 2)}g/unit</span></td>
+                <td><strong class="market-gap-cell-primary">${fmt(row.gapPct)}%</strong><span class="market-gap-cell-detail">unit-price difference</span></td>
+                <td><div class="market-gap-signals"><div><span class="market-gap-signal ${row.riskLevel}">${riskLabel}</span></div><div class="market-gap-signals-secondary">${supportingSignals || '<span class="market-gap-cell-detail">No added warnings</span>'}</div></div></td>
+                <td class="market-opportunity-table-profit"><span class="market-gap-cell-primary">+${fmt(row.afterFeeGap)}g</span><span class="market-gap-cell-detail">${fmt(row.estimatedFee)}g estimated fee</span></td></tr>`;
+        }).join('') : `<tr><td colspan="${advanced ? 7 : 5}" class="market-opportunities-no-match">No price gaps match these filters.</td></tr>`;
+        countTarget.textContent = `${fmt(rows.length)} result${rows.length === 1 ? '' : 's'}`;
+        pagination.innerHTML = pageCount > 1 ? `<button type="button" data-gap-page="${page - 1}" ${page === 0 ? 'disabled' : ''}><i class="fas fa-arrow-left"></i></button><span>Page ${page + 1} of ${pageCount}</span><button type="button" data-gap-page="${page + 1}" ${page >= pageCount - 1 ? 'disabled' : ''}><i class="fas fa-arrow-right"></i></button>` : '';
+        pagination.querySelectorAll('[data-gap-page]').forEach((button) => button.addEventListener('click', () => { page = Number(button.dataset.gapPage) || 0; paint(); }));
+    };
+    search.addEventListener('input', () => { page = 0; paint(); });
+    [valleyFilter, minimumFilter, purchaseFilter, sort].forEach((control) => control.addEventListener('change', () => { page = 0; paint(); }));
+    signalButtons.forEach((button) => button.addEventListener('click', () => {
+        const signal = button.dataset.gapSignal;
+        if (selectedSignals.has(signal)) selectedSignals.delete(signal);
+        else selectedSignals.add(signal);
+        button.classList.toggle('active', selectedSignals.has(signal));
+        button.setAttribute('aria-pressed', selectedSignals.has(signal) ? 'true' : 'false');
+        clearSignals.disabled = selectedSignals.size === 0;
+        page = 0;
+        paint();
+    }));
+    clearSignals.addEventListener('click', () => {
+        selectedSignals.clear();
+        signalButtons.forEach((button) => { button.classList.remove('active'); button.setAttribute('aria-pressed', 'false'); });
+        clearSignals.disabled = true;
+        page = 0;
+        paint();
+    });
+    paint();
+}
+
 function renderCurrentResults() {
     const body = document.getElementById('marketOpportunitiesBody');
-    const summary = document.getElementById('marketOpportunitiesSummary');
     if (!body) return;
     const qualified = qualifiedCandidates();
     if (!qualified.length) {
         body.innerHTML = `<div class="market-opportunities-empty"><i class="fas fa-sliders"></i><h4>No listings meet your thresholds</h4><p>${fmt(latestCandidates.length)} raw candidate${latestCandidates.length === 1 ? '' : 's'} were reviewed. Open Configuration to broaden the return, demand, or confidence requirements.</p></div>`;
     } else renderRows(body, qualified);
-    if (summary && latestProvinceData) summary.textContent = `${qualified.length} of ${latestCandidates.length} candidates qualify across ${latestProvinceData.loadedValleys?.length || 0} valleys`;
     renderConfigurationState();
 }
 
 async function loadOpportunities() {
     const body = document.getElementById('marketOpportunitiesBody');
-    const summary = document.getElementById('marketOpportunitiesSummary');
     if (!body) return;
     body.innerHTML = '<div class="market-opportunities-empty"><i class="fas fa-spinner fa-spin"></i><h4>Scanning province markets...</h4></div>';
-    if (summary) summary.textContent = 'Comparing actual remote listings with your matching sales history';
     try {
-        const [sales, provinceData] = await Promise.all([
+        const [sales, provinceData, shardData] = await Promise.all([
             fetchOpportunitySales(opportunitySettings.historyDays),
-            fetchProvinceMarketData({ supabase, currentCharacterId, getCurrentCharacter }), loadItemsData()
+            fetchProvinceMarketData({ supabase, currentCharacterId, getCurrentCharacter }),
+            fetchShardMarketData({ supabase, currentCharacterId, getCurrentCharacter }),
+            loadItemsData()
         ]);
-        if (!provinceData) throw new Error('Select a character with a shard, province, and home valley first.');
+        if (!provinceData || !shardData) throw new Error('Select a character with a shard, province, and home valley first.');
         latestProvinceData = provinceData;
-        latestCandidates = buildOpportunities(provinceData, buildHistoryIndex(sales), opportunitySettings.historyDays);
+        latestShardData = shardData;
+        const historyIndex = buildHistoryIndex(sales);
+        latestCandidates = buildOpportunities(provinceData, historyIndex, opportunitySettings.historyDays);
+        latestMarketGaps = buildValleyPriceGaps(shardData);
         renderCurrentResults();
+        renderValleyPriceGaps();
     } catch (error) {
         body.innerHTML = `<div class="market-opportunities-empty market-opportunities-error"><i class="fas fa-triangle-exclamation"></i><h4>Market scan unavailable</h4><p>${escapeHtml(error?.message || 'Unable to load market data.')}</p></div>`;
-        if (summary) summary.textContent = 'The scan could not be completed';
     }
 }
 
@@ -291,7 +498,7 @@ function readConfiguration() {
         displayMode: document.querySelector('[name="marketOpportunityDisplayMode"]:checked')?.value || 'simple',
         historyDays: number('marketOpportunitiesHistoryWindow', 180), minProfit: number('opportunityMinProfit', 10),
         minRoi: number('opportunityMinRoi', 75), minSales: number('opportunityMinSales', 3),
-        minVelocity: number('opportunityMinVelocity', 1), maxDaysSinceSale: number('opportunityMaxDays', 60),
+        minVelocity: number('opportunityMinVelocity', 1), maxDaysSinceSale: Math.min(365, Math.max(1, number('opportunityMaxDays', 60))),
         maxPriceSpread: number('opportunityMaxSpread', 60),
         maxPurchasePrice: document.getElementById('opportunityMaxPurchase')?.value ? number('opportunityMaxPurchase', null) : null
     };
@@ -301,7 +508,10 @@ export function initializeMarketOpportunities() {
     const modal = document.getElementById('marketOpportunitiesModal');
     const openButton = document.getElementById('marketOpportunitiesSidebarBtn');
     if (!modal || !openButton) return;
-    const close = () => modal.classList.add('hidden');
+    const close = () => {
+        modal.classList.add('hidden');
+        document.body.classList.remove('market-opportunities-modal-open');
+    };
     const positionBelowHeader = () => {
         const header = document.querySelector('.header-area') || document.querySelector('header');
         modal.style.setProperty('--market-opportunities-top-offset', `${Math.round((header ? Math.max(0, header.getBoundingClientRect().bottom) : 86) + 16)}px`);
@@ -310,35 +520,55 @@ export function initializeMarketOpportunities() {
         modal.querySelectorAll('[data-market-opportunity-tab]').forEach((button) => button.classList.toggle('active', button.dataset.marketOpportunityTab === tabName));
         modal.querySelectorAll('[data-market-opportunity-panel]').forEach((panel) => panel.classList.toggle('hidden', panel.dataset.marketOpportunityPanel !== tabName));
         if (tabName === 'configuration') renderConfigurationState();
+        if (tabName === 'gaps') renderValleyPriceGaps();
     };
-    openButton.addEventListener('click', (event) => { event.preventDefault(); positionBelowHeader(); modal.classList.remove('hidden'); selectTab('listings'); renderConfigurationState(); loadOpportunities(); });
+    openButton.addEventListener('click', (event) => {
+        event.preventDefault();
+        positionBelowHeader();
+        modal.classList.remove('hidden');
+        document.body.classList.add('market-opportunities-modal-open');
+        selectTab('listings');
+        renderConfigurationState();
+        loadOpportunities();
+    });
     modal.querySelectorAll('[data-close-market-opportunities]').forEach((button) => button.addEventListener('click', close));
     modal.querySelectorAll('[data-market-opportunity-tab]').forEach((button) => button.addEventListener('click', () => selectTab(button.dataset.marketOpportunityTab)));
+    modal.querySelectorAll('[name="marketOpportunityDisplayMode"]').forEach((input) => input.addEventListener('change', () => {
+        if (!input.checked) return;
+        opportunitySettings = { ...opportunitySettings, displayMode: input.value === 'advanced' ? 'advanced' : 'simple' };
+        saveSettings();
+        renderCurrentResults();
+        renderValleyPriceGaps();
+        showSettingsSavedToast(modal);
+    }));
     modal.querySelectorAll('[data-opportunity-preset]').forEach((button) => button.addEventListener('click', () => {
         const preset = button.dataset.opportunityPreset;
         const previousHistoryDays = opportunitySettings.historyDays;
         opportunitySettings = { ...opportunitySettings, ...PRESETS[preset], preset };
         saveSettings(); renderConfigurationState(); renderCurrentResults();
+        showSettingsSavedToast(modal);
         if (previousHistoryDays !== opportunitySettings.historyDays) loadOpportunities();
     }));
     const configForm = document.getElementById('marketOpportunityConfigForm');
+    let autosaveTimer = null;
     configForm?.addEventListener('submit', (event) => {
         event.preventDefault();
-        const previousDays = opportunitySettings.historyDays;
-        opportunitySettings = readConfiguration(); saveSettings(); renderConfigurationState();
-        if (previousDays !== opportunitySettings.historyDays) loadOpportunities(); else renderCurrentResults();
     });
-    configForm?.addEventListener('input', () => {
-        const previewSettings = readConfiguration();
-        const preview = document.getElementById('marketOpportunityConfigPreview');
-        if (preview) {
-            const count = latestCandidates.filter((row) => exclusionReasons(row, previewSettings).length === 0).length;
-            preview.innerHTML = `<strong>${fmt(count)}</strong> of ${fmt(latestCandidates.length)} raw candidates would meet these thresholds.`;
-        }
+    configForm?.addEventListener('input', (event) => {
+        if (event.target?.name === 'marketOpportunityDisplayMode') return;
+        clearTimeout(autosaveTimer);
+        autosaveTimer = setTimeout(() => {
+            const previousDays = opportunitySettings.historyDays;
+            opportunitySettings = readConfiguration();
+            saveSettings();
+            if (previousDays !== opportunitySettings.historyDays) loadOpportunities();
+            else { renderCurrentResults(); renderValleyPriceGaps(); }
+            showSettingsSavedToast(modal);
+        }, 600);
     });
     modal.addEventListener('click', (event) => { if (event.target === modal) close(); });
     document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !modal.classList.contains('hidden')) close(); });
-    document.addEventListener('characterChanged', () => { latestCandidates = []; latestProvinceData = null; if (!modal.classList.contains('hidden')) loadOpportunities(); });
+    document.addEventListener('characterChanged', () => { latestCandidates = []; latestMarketGaps = []; latestProvinceData = null; latestShardData = null; if (!modal.classList.contains('hidden')) loadOpportunities(); });
     window.addEventListener('resize', () => { if (!modal.classList.contains('hidden')) positionBelowHeader(); });
 }
 

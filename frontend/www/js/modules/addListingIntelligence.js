@@ -435,6 +435,7 @@ function getRelativeTime(isoDate) {
 }
 
 const provinceMarketCache = new Map();
+const shardMarketCache = new Map();
 
 function toBareItemId(slug) {
     if (!slug) return null;
@@ -553,6 +554,58 @@ export async function fetchProvinceMarketData({
         ...provinceData,
         homeValley: character.home_valley || null
     };
+}
+
+export async function fetchShardMarketData({
+    supabase,
+    currentCharacterId,
+    getCurrentCharacter
+}) {
+    if (!currentCharacterId) return null;
+    const character = getCurrentCharacter ? await getCurrentCharacter(true) : null;
+    if (!character?.shard || !supabase) return null;
+
+    const cacheKey = character.shard;
+    const cached = shardMarketCache.get(cacheKey);
+    const now = Date.now();
+    let shardData = cached && now - cached.ts < 45 * 60 * 1000 ? cached : null;
+
+    if (!shardData) {
+        const { data, error } = await supabase.from('regions')
+            .select('province, home_valley')
+            .eq('shard', character.shard)
+            .order('province', { ascending: true })
+            .order('home_valley', { ascending: true });
+        if (error) throw error;
+
+        const seen = new Set();
+        const locations = (data || []).filter((row) => {
+            if (!row.province || !row.home_valley) return false;
+            const key = `${row.province}::${row.home_valley}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+        const results = await Promise.allSettled(locations.map(async ({ province, home_valley: valley }) => {
+            const listings = await fetchZoneListings(character.shard, province, valley);
+            return {
+                province,
+                valley,
+                listings: (listings || []).map((listing) => ({ ...listing, _province: province, _homeValley: valley }))
+            };
+        }));
+
+        const loadedLocations = [];
+        const listings = [];
+        for (const result of results) {
+            if (result.status !== 'fulfilled') continue;
+            loadedLocations.push({ province: result.value.province, valley: result.value.valley });
+            listings.push(...result.value.listings);
+        }
+        shardData = { ts: now, shard: character.shard, locations, loadedLocations, listings };
+        shardMarketCache.set(cacheKey, shardData);
+    }
+    return shardData;
 }
 
 export async function fetchProvinceMarketContext({
