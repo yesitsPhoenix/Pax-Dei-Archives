@@ -214,12 +214,6 @@ function setupRoadmapModal() {
 }
 
 $(document).ready(async function() {
-    const utcClockDisplay = document.getElementById('utc-clock-display');
-    if (utcClockDisplay) {
-        updateUtcClock(utcClockDisplay);
-        setInterval(() => updateUtcClock(utcClockDisplay), 1000);
-    }
-    
         $(document).on('click', '.menu-trigger', function() {
         $(this).toggleClass('active');
         $('.header-area .nav').toggleClass('active');
@@ -265,12 +259,3 @@ $(document).ready(async function() {
         handleArticlePageLogic();
     }
 });
-
-export const updateUtcClock = (element) => {
-    if (!element) return;
-    const now = new Date();
-    const hours = now.getUTCHours().toString().padStart(2, '0');
-    const minutes = now.getUTCMinutes().toString().padStart(2, '0');
-    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    element.textContent = `${monthNames[now.getUTCMonth()]} ${now.getUTCDate()}, ${hours}:${minutes} UTC`;
-};

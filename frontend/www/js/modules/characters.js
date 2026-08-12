@@ -155,6 +155,49 @@ export const initializeCharacters = async (userId = null, onCharacterSelectedCal
     addCharacterEventListeners();
 };
 
+// Loads only the active-character context needed by standalone tools such as
+// Market Opportunities. Unlike initializeCharacters(), this does not require
+// the Ledger's character selector or modal controls to exist in the DOM.
+export const initializeCharacterContext = async () => {
+    const existingCharacterId = sessionStorage.getItem('active_character_id');
+    if (existingCharacterId) {
+        currentCharacterId = existingCharacterId;
+        _currentCharacter = null;
+        const existingCharacter = await getCurrentCharacter(true);
+        if (existingCharacter) {
+            currentCharacterGold = Number(existingCharacter.gold) || 0;
+            return existingCharacter;
+        }
+    }
+
+    const user = await authSession.getUser();
+    if (!user?.id) return null;
+
+    const { data, error } = await supabase
+        .from('characters')
+        .select('character_id, character_name, gold')
+        .eq('user_id', user.id)
+        .is('deleted_at', null);
+    if (error) throw error;
+
+    cachedUserCharacters = data || [];
+    currentUserId = user.id;
+    if (!cachedUserCharacters.length) {
+        currentCharacterId = null;
+        _currentCharacter = null;
+        return null;
+    }
+
+    const preferredId = authSession.getActiveCharacterId(user.id);
+    const selected = cachedUserCharacters.find((character) => character.character_id === preferredId)
+        || cachedUserCharacters[0];
+    currentCharacterId = selected.character_id;
+    currentCharacterGold = Number(selected.gold) || 0;
+    _currentCharacter = null;
+    authSession.setActiveCharacterId(currentCharacterId, user.id);
+    return getCurrentCharacter(true);
+};
+
 
 export const loadCharacters = async (onCharacterSelectedCallback) => {
     if (!currentUserId) {

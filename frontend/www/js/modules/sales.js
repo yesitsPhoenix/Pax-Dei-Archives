@@ -1,7 +1,6 @@
 import { supabase } from '../supabaseClient.js';
 import { showCustomModal } from '../trader.js';
 import { currentCharacterId } from './characters.js';
-import { updateUtcClock } from '../main.js';
 import { isPveGoldTransaction, PVE_LEDGER_TRANSACTION_TYPE } from './pveTransactions.js';
 
 const salesLoader = document.getElementById('sales-loader');
@@ -9,7 +8,6 @@ const salesBody = document.getElementById('sales-body');
 const salesTable = document.getElementById('sales-table');
 const salesPaginationContainer = document.getElementById('sales-pagination');
 const downloadSalesCsvButton = document.getElementById('download-sales-csv');
-const utcClockDisplay = document.getElementById('utc-clock-display');
 
 const transactionSearchInput = document.getElementById('transaction-search-input');
 const transactionCategoryFilter = document.getElementById('transaction-category-filter');
@@ -58,11 +56,6 @@ export const initializeSales = () => {
     if (downloadSalesCsvButton) {
         downloadSalesCsvButton.addEventListener('click', handleDownloadCsv);
     }
-    if (utcClockDisplay) {
-        updateUtcClock(utcClockDisplay);
-        setInterval(() => updateUtcClock(utcClockDisplay), 1000);
-    }
-
     if (transactionSearchInput) {
         transactionSearchInput.addEventListener('input', applyTransactionFilters);
     }

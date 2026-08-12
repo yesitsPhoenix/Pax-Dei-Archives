@@ -39,7 +39,8 @@ const COMPLETE_CATALOG_URL = 'https://cdn-hosted.gaming.tools/paxdei/data/en/ent
 const SELECTABLE_ENTITY_PREFIXES = [
     'item_',
     'projectile_',
-    'resource_'
+    'resource_',
+    'building_prop_'
 ];
 
 // A few valid market items are absent from, or inconsistently identified by,
@@ -55,12 +56,30 @@ const ITEM_METADATA_OVERRIDES_BY_NAME = {
         name: 'Raspberry',
         url: 'https://paxdei.gaming.tools/gatherables/resource_static_plant_berry_raspberries',
         iconPath: 'https://cdn-hosted.gaming.tools/paxdei/images/_pd/environment/nature/resources/berries/raspberry/t_raspberry_08_inv_state_icon.webp'
+    },
+    'birdbearer statue': {
+        name: 'Birdbearer Statue',
+        url: 'https://paxdei.gaming.tools/props/building_prop_gardenstatue_pigeon',
+        iconPath: 'https://cdn-hosted.gaming.tools/paxdei/images/_pd/environment/modularbuildings/da_buildingpieces/icons/menu_tab_building_pieces/tab_group_garden/t_icon_garden_statue_pigeon_01.webp'
+    },
+    'lyrebearer statue': {
+        name: 'Lyrebearer Statue',
+        url: 'https://paxdei.gaming.tools/props/building_prop_gardenstatue_lyre',
+        iconPath: 'https://cdn-hosted.gaming.tools/paxdei/images/_pd/environment/modularbuildings/da_buildingpieces/icons/menu_tab_building_pieces/tab_group_garden/t_icon_garden_statue_lyremoon_01.webp'
+    },
+    'wheatbearer statue': {
+        name: 'Wheatbearer Statue',
+        url: 'https://paxdei.gaming.tools/props/building_prop_gardenstatue_wheat',
+        iconPath: 'https://cdn-hosted.gaming.tools/paxdei/images/_pd/environment/modularbuildings/da_buildingpieces/icons/menu_tab_building_pieces/tab_group_garden/t_icon_garden_statue_wheat_01.webp'
     }
 };
 
 const ITEM_METADATA_OVERRIDE_NAMES_BY_ID = {
     item_component_arrow_shaft: 'arrow shaft',
-    resource_static_plant_berry_raspberries: 'raspberry'
+    resource_static_plant_berry_raspberries: 'raspberry',
+    building_prop_gardenstatue_pigeon: 'birdbearer statue',
+    building_prop_gardenstatue_lyre: 'lyrebearer statue',
+    building_prop_gardenstatue_wheat: 'wheatbearer statue'
 };
 
 function rebuildMarketItemsNameMap() {

@@ -18,16 +18,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             footerPlaceholder.replaceWith(footerElement);
 
-            const clockDisplay = document.getElementById('utc-clock-display');
-            if (clockDisplay) {
-                const updateClock = () => {
-                    const now = new Date();
-                    const utcString = now.toISOString().replace('T', ' ').substring(0, 16) + ' UTC';
-                    clockDisplay.textContent = utcString;
-                };
-                updateClock();
-                setInterval(updateClock, 60000);
-            }
         })
         .catch(e => {
             console.error('Error in footer loading:', e);

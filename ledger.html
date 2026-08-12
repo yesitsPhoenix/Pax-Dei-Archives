@@ -676,20 +676,20 @@
         }
 
         .market-opportunity-guide-intro {
-            margin-bottom: 0.75rem;
-            color: #94a3b8;
-            font-size: 0.84rem;
-            line-height: 1.45;
+            margin-bottom: 1rem;
+            color: #d3d3d3;
+            font-size: 0.92rem;
+            line-height: 1.5;
         }
 
         .market-opportunity-guide-grid {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 0.75rem;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.85rem;
         }
 
         .market-opportunity-guide-card {
-            padding: 0.8rem;
+            padding: 1rem;
             border: 1px solid rgba(148, 163, 184, 0.22);
             border-radius: 12px;
             background: rgba(15, 23, 42, 0.3);
@@ -703,9 +703,9 @@
 
         .market-opportunity-guide-card p,
         .market-opportunity-guide-card li {
-            color: #aebbd0;
-            font-size: 0.8rem;
-            line-height: 1.45;
+            color: #d3d3d3;
+            font-size: 0.88rem;
+            line-height: 1.5;
         }
 
         .market-opportunity-guide-card ul {
@@ -827,13 +827,13 @@
         .market-opportunities-table.simple th:nth-child(7) { width: 11%; }
         .market-opportunities-table.simple th:nth-child(8) { width: 8%; }
 
-        .market-opportunities-table.valley-gaps.advanced th:nth-child(1) { width: 16%; }
-        .market-opportunities-table.valley-gaps.advanced th:nth-child(2) { width: 11%; }
-        .market-opportunities-table.valley-gaps.advanced th:nth-child(3) { width: 14%; }
-        .market-opportunities-table.valley-gaps.advanced th:nth-child(4) { width: 18%; }
-        .market-opportunities-table.valley-gaps.advanced th:nth-child(5) { width: 15%; }
+        .market-opportunities-table.valley-gaps.advanced th:nth-child(1) { width: 17%; }
+        .market-opportunities-table.valley-gaps.advanced th:nth-child(2) { width: 9%; }
+        .market-opportunities-table.valley-gaps.advanced th:nth-child(3) { width: 13%; }
+        .market-opportunities-table.valley-gaps.advanced th:nth-child(4) { width: 17%; }
+        .market-opportunities-table.valley-gaps.advanced th:nth-child(5) { width: 14%; }
         .market-opportunities-table.valley-gaps.advanced th:nth-child(6) { width: 15%; }
-        .market-opportunities-table.valley-gaps.advanced th:nth-child(7) { width: 11%; }
+        .market-opportunities-table.valley-gaps.advanced th:nth-child(7) { width: 15%; }
 
         .market-opportunities-table.valley-gaps .market-opportunity-valley,
         .market-opportunities-table.valley-gaps .market-opportunity-table-profit {
@@ -866,6 +866,29 @@
             margin-top: 0.12rem;
             color: #d3d3d3;
             font-size: 0.76rem;
+        }
+
+        .market-gap-deal-cell strong .market-gap-price-location {
+            display: inline;
+            margin: 0;
+            color: #d3d3d3;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        .market-simple-pill-group {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.3rem;
+        }
+
+        .market-gap-percent {
+            display: inline !important;
+            margin: 0 0 0 0.2rem !important;
+            color: #d3d3d3 !important;
+            font-size: 0.78rem !important;
+            font-weight: 700;
         }
 
         .market-valley-gaps-toolbar {
@@ -980,12 +1003,22 @@
         }
 
         .market-gap-signal {
+            display: inline-flex;
+            align-items: center;
+            white-space: nowrap;
             padding: 0.15rem 0.38rem;
             border: 1px solid transparent;
             border-radius: 999px;
             font-size: 0.67rem;
             font-weight: 800;
             line-height: 1.2;
+        }
+
+        .market-opportunities-table.valley-gaps.advanced td:last-child,
+        .market-opportunities-table.valley-gaps.advanced td:last-child .market-gap-cell-detail {
+            overflow: visible;
+            text-overflow: clip;
+            white-space: normal;
         }
 
         .market-gap-signal.lower { color: #6ee7b7; background: rgba(16, 185, 129, 0.12); border-color: rgba(52, 211, 153, 0.28); }
@@ -1008,6 +1041,20 @@
         .market-evidence-signal.mixed { color: #fcd34d; background: rgba(245, 158, 11, 0.12); border-color: rgba(251, 191, 36, 0.3); }
         .market-evidence-signal.contradicts { color: #fda4af; background: rgba(244, 63, 94, 0.12); border-color: rgba(251, 113, 133, 0.3); }
         .market-evidence-signal.none { color: #cbd5e1; background: rgba(148, 163, 184, 0.1); border-color: rgba(148, 163, 184, 0.22); }
+
+        .market-travel-signal {
+            display: inline-block;
+            padding: 0.16rem 0.4rem;
+            border: 1px solid transparent;
+            border-radius: 999px;
+            font-size: 0.68rem;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .market-travel-signal.home-valley { color: #6ee7b7; background: rgba(16, 185, 129, 0.12); border-color: rgba(52, 211, 153, 0.3); }
+        .market-travel-signal.same-province { color: #93c5fd; background: rgba(59, 130, 246, 0.12); border-color: rgba(96, 165, 250, 0.3); }
+        .market-travel-signal.cross-province { color: #c4b5fd; background: rgba(139, 92, 246, 0.12); border-color: rgba(167, 139, 250, 0.3); }
 
         .market-gap-signal-filters {
             display: flex;
@@ -3432,7 +3479,7 @@
       </a>
     </li>
     <li>
-      <a href="#" class="flex items-center p-2 text-white rounded-lg hover:bg-[#2a2a2a]" id="marketOpportunitiesSidebarBtn">
+      <a href="opportunities.html" class="flex items-center p-2 text-white rounded-lg hover:bg-[#2a2a2a]">
         <i class="fas fa-arrows-rotate w-5 h-5 text-emerald-300 transition duration-75"></i>
         <span class="ml-3">Market Opportunities</span>
       </a>
@@ -4475,52 +4522,27 @@
                 </form>
             </div>
             <div class="market-opportunity-guide hidden" data-market-opportunity-panel="guide">
-                <p class="market-opportunity-guide-intro">The scanner compares listings in other valleys with your own recorded sales of the same item and quality. It estimates what the listed stack could resell for, then applies your Configuration thresholds. These are estimates, not guaranteed sale prices.</p>
+                <p class="market-opportunity-guide-intro">Opportunities begin with live price differences across valleys. Your completed sales then strengthen, weaken, or limit that estimate. Every result is a lead to investigate—not a guaranteed sale.</p>
                 <div class="market-opportunity-guide-grid">
-                    <section class="market-opportunity-guide-card">
-                        <h4>Actual listing</h4>
-                        <p>The stack currently offered in another valley. The large price is the cost of the whole stack; Advanced view also shows the cost per individual item.</p>
-                    </section>
-                    <section class="market-opportunity-guide-card">
-                        <h4>Typical value</h4>
-                        <p>An estimate based on the median historical unit price, with recent sales given more importance. That unit value is multiplied by the number of items in the listed stack.</p>
-                    </section>
-                    <section class="market-opportunity-guide-card">
-                        <h4>Sales and sales/month</h4>
-                        <p><strong>Sales</strong> is the number of matching recorded sales inside your selected history window. <strong>Sales/month</strong> averages that count over the full window and gives a rough indication of demand.</p>
-                    </section>
-                    <section class="market-opportunity-guide-card">
-                        <h4>Newest sale</h4>
-                        <p>How many days have passed since the most recent matching sale. Recent evidence is generally more useful because market prices and demand can change.</p>
-                    </section>
-                    <section class="market-opportunity-guide-card">
-                        <h4>Price spread</h4>
-                        <p>How widely the middle half of historical unit prices vary, measured against the typical unit value. A low spread means prices were consistent; a high spread means the value estimate is less predictable.</p>
-                        <ul><li><strong>0%:</strong> the middle prices were the same.</li><li><strong>20%:</strong> fairly consistent prices.</li><li><strong>60%+:</strong> prices varied substantially; use more caution.</li></ul>
-                    </section>
-                    <section class="market-opportunity-guide-card">
-                        <h4>Fee, profit, and margin</h4>
-                        <p><strong>Fee</strong> is an estimated 5% resale fee. <strong>Profit</strong> is typical value minus that fee and your purchase cost. <strong>Margin</strong> is the estimated profit divided by the purchase cost.</p>
+                    <section class="market-opportunity-guide-card market-opportunity-guide-example">
+                        <h4>Potential gap</h4>
+                        <p>The estimate uses the middle price among other valley floors, avoiding the most expensive outlier. When sales history exists, it uses the lower of that live price and your historical value. The displayed gap then subtracts the purchase price and estimated 5% resale fee.</p>
                     </section>
                     <section class="market-opportunity-guide-card market-opportunity-guide-example">
-                        <h4>Unified opportunities</h4>
-                        <p>Live cross-valley prices discover possible deals. Your completed sales then provide a second opinion. When history exists, the projected gap uses the lower of the live comparison price and your historical value, preventing an unsupported asking price from inflating the estimate. A live asking price still does not prove demand.</p>
+                        <h4>Sales evidence</h4>
+                        <p><strong>Supported</strong> means your sales agree with the live comparison. <strong>Mixed</strong> means they only partly agree or are inconsistent. <strong>No history</strong> means the estimate rests entirely on current asking prices, which do not prove demand.</p>
                     </section>
                     <section class="market-opportunity-guide-card market-opportunity-guide-example">
-                        <h4>Travel burden</h4>
-                        <p>Home-province purchases are separated from cross-province purchases. Crossing provinces generally involves gate travel and may consume Grace, so location affects practical value even though Grace is not yet deducted from the displayed gap.</p>
+                        <h4>Travel labels</h4>
+                        <p>Travel describes where you would buy: <strong>Home valley</strong> is your character's valley, <strong>Same province</strong> is another valley in their province, and <strong>Cross-province</strong> leaves it. Possible Grace costs are not deducted from the gap.</p>
                     </section>
                     <section class="market-opportunity-guide-card market-opportunity-guide-example">
-                        <h4>Gap risk signals</h4>
-                        <ul><li><strong>Lower risk / Caution / High risk:</strong> combines the warnings below; it does not measure demand.</li><li><strong>X× stack:</strong> the purchase stack is over twice the comparison stack, increasing extrapolation risk.</li><li><strong>1 reference:</strong> the comparison floor rests on one live listing.</li><li><strong>Large gap:</strong> 250–999%. <strong>Extreme gap:</strong> 1,000% or more.</li><li><strong>Signal filters:</strong> choices within a category use “either”; different categories stack using “and.”</li></ul>
+                        <h4>Risk signals</h4>
+                        <p><strong>Lower risk, Caution, and High risk</strong> summarize pricing warnings—not demand. <strong>X× stack</strong> warns that a larger purchase is being valued from a smaller comparison. <strong>1 reference</strong> means only one live listing supports the comparison.</p>
                     </section>
                     <section class="market-opportunity-guide-card market-opportunity-guide-example">
-                        <h4>Worked example</h4>
-                        <p>A stack costs <strong>50g</strong> and its typical historical value is <strong>215g</strong>. The estimated resale fee is <strong>11g</strong>, so estimated profit is <strong>215g − 11g − 50g = 154g</strong>. The margin is <strong>154g ÷ 50g = 308%</strong>. If the middle half of its historical unit prices ran from 3.5g to 5.1g around a 4.3g typical value, its spread would be about <strong>37%</strong>.</p>
-                    </section>
-                    <section class="market-opportunity-guide-card market-opportunity-guide-example">
-                        <h4>Why a listing qualifies</h4>
-                        <p>A candidate appears only when it has a positive estimated profit and then passes every threshold in Configuration: minimum profit and margin, sales count and speed, sale recency, maximum spread, purchase limit, and any manual exclusions.</p>
+                        <h4>Gap labels &amp; filters</h4>
+                        <p><strong>Large gap</strong> requires at least 250% and 100g after fees. <strong>Extreme gap</strong> requires at least 1,000% and 500g, so cheap low-value differences are not overstated. Within one signal group, selected filters mean “either”; selections across groups must all match.</p>
                     </section>
                 </div>
             </div>

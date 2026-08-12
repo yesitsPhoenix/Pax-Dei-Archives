@@ -138,18 +138,14 @@ export async function fetchAllItemsForDropdown() {
 }
 
 
-export const loadTraderPageData = async (reloadActiveListings = true) => traderPage.loadTraderPageData(reloadActiveListings);
+export const loadTraderPageData = async (reloadActiveListings = true) => traderPage?.loadTraderPageData(reloadActiveListings);
 
-
+const initializeTraderControllers = () => {
+if (traderPage) return;
 traderSession = createTraderSessionController({
-    supabase,
-    insertCharacterModalHtml,
-    initializeCharacters,
-    initializeListings,
-    initializeSales,
+    supabase, insertCharacterModalHtml, initializeCharacters, initializeListings, initializeSales,
     onLoadTraderPageData: () => loadTraderPageData()
 });
-
 traderPage = createTraderPageController({
     supabase,
     getCurrentCharacterId: () => currentCharacterId,
@@ -189,6 +185,12 @@ traderPage = createTraderPageController({
     },
     initializeTraderModals
 });
+};
+
+// characters.js imports a small set of trader helpers. Deferring controller
+// construction until the import graph has settled avoids touching its exports
+// while that circular dependency is still being initialized.
+queueMicrotask(initializeTraderControllers);
 
 
 function createAutocompleteHandlers(inputElement, suggestionsContainerElement, dataArray, selectionCallback) {
@@ -365,5 +367,6 @@ function initializeAutocomplete(allItems) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    if (!traderPage) initializeTraderControllers();
     await traderPage.initializePage();
 });
