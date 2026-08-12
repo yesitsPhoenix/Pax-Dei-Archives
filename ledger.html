@@ -629,6 +629,59 @@
             overflow-y: auto;
         }
 
+        .market-opportunity-guide {
+            padding: 1.25rem;
+            overflow-y: auto;
+            color: #cbd5e1;
+        }
+
+        .market-opportunity-guide-intro {
+            margin-bottom: 1rem;
+            color: #94a3b8;
+            line-height: 1.55;
+        }
+
+        .market-opportunity-guide-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1rem;
+        }
+
+        .market-opportunity-guide-card {
+            padding: 1rem;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.3);
+        }
+
+        .market-opportunity-guide-card h4 {
+            margin-bottom: 0.45rem;
+            color: #6ee7b7;
+            font-weight: 800;
+        }
+
+        .market-opportunity-guide-card p,
+        .market-opportunity-guide-card li {
+            color: #aebbd0;
+            font-size: 0.88rem;
+            line-height: 1.55;
+        }
+
+        .market-opportunity-guide-card ul {
+            margin: 0.6rem 0 0 1.15rem;
+            list-style: disc;
+        }
+
+        .market-opportunity-guide-example {
+            grid-column: 1 / -1;
+            border-color: rgba(52, 211, 153, 0.35);
+            background: rgba(16, 185, 129, 0.07);
+        }
+
+        .market-opportunity-guide-example strong {
+            color: #f8fafc;
+        }
+
         .market-opportunity-presets {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -688,6 +741,51 @@
             text-transform: uppercase;
             margin-bottom: 0.75rem;
         }
+
+        .market-opportunity-display-options {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.75rem;
+        }
+
+        .market-opportunity-display-options label {
+            display: flex;
+            gap: 0.7rem;
+            padding: 0.75rem;
+            border: 1px solid #475569;
+            border-radius: 9px;
+            color: #f8fafc;
+            cursor: pointer;
+        }
+
+        .market-opportunity-display-options label:has(input:checked) {
+            border-color: #34d399;
+            background: rgba(16, 185, 129, 0.09);
+        }
+
+        .market-opportunity-display-options input {
+            accent-color: #10b981;
+        }
+
+        .market-opportunity-display-options strong,
+        .market-opportunity-display-options small {
+            display: block;
+        }
+
+        .market-opportunity-display-options small {
+            margin-top: 0.2rem;
+            color: #94a3b8;
+            font-size: 0.8rem;
+            line-height: 1.35;
+        }
+
+        .market-opportunities-table.simple th:nth-child(2) { width: 17%; }
+        .market-opportunities-table.simple th:nth-child(3) { width: 10%; }
+        .market-opportunities-table.simple th:nth-child(4) { width: 18%; }
+        .market-opportunities-table.simple th:nth-child(5) { width: 15%; }
+        .market-opportunities-table.simple th:nth-child(6) { width: 16%; }
+        .market-opportunities-table.simple th:nth-child(7) { width: 11%; }
+        .market-opportunities-table.simple th:nth-child(8) { width: 8%; }
 
         .market-opportunity-field {
             display: grid;
@@ -898,9 +996,13 @@
             }
 
             .market-opportunity-presets,
-            .market-opportunity-config-grid {
+            .market-opportunity-config-grid,
+            .market-opportunity-display-options,
+            .market-opportunity-guide-grid {
                 grid-template-columns: 1fr;
             }
+
+            .market-opportunity-guide-example { grid-column: auto; }
 
             .market-opportunity-config-footer {
                 align-items: stretch;
@@ -4062,6 +4164,7 @@
             <div class="market-opportunity-tabs">
                 <button type="button" class="market-opportunity-tab active" data-market-opportunity-tab="listings"><i class="fas fa-list mr-2"></i>Listings</button>
                 <button type="button" class="market-opportunity-tab" data-market-opportunity-tab="configuration"><i class="fas fa-sliders mr-2"></i>Configuration</button>
+                <button type="button" class="market-opportunity-tab" data-market-opportunity-tab="guide"><i class="fas fa-circle-info mr-2"></i>How it works</button>
             </div>
             <div data-market-opportunity-panel="listings">
                 <div class="px-5 py-3 border-b border-slate-700 bg-slate-900/30 text-slate-400">
@@ -4073,6 +4176,13 @@
             </div>
             <div class="market-opportunity-config hidden" data-market-opportunity-panel="configuration">
                 <form id="marketOpportunityConfigForm">
+                    <section class="market-opportunity-config-section mb-4">
+                        <h4><i class="fas fa-table-columns mr-1"></i>Listing detail</h4>
+                        <div class="market-opportunity-display-options" role="radiogroup" aria-label="Listing detail level">
+                            <label><input type="radio" name="marketOpportunityDisplayMode" value="simple"><span><strong>Simple</strong><small>Show the price, typical value, past sales, profit, and margin.</small></span></label>
+                            <label><input type="radio" name="marketOpportunityDisplayMode" value="advanced"><span><strong>Advanced</strong><small>Also show unit prices, sales speed, recency, price spread, and resale fee.</small></span></label>
+                        </div>
+                    </section>
                     <div class="market-opportunity-presets">
                         <button type="button" class="market-opportunity-preset" data-opportunity-preset="broad"><strong>Broad Search</strong><span>5g profit, 50% return, 0.5 sales/month, latest sale within 120 days.</span></button>
                         <button type="button" class="market-opportunity-preset" data-opportunity-preset="balanced"><strong>Balanced</strong><span>10g profit, 75% return, 1 sale/month, latest sale within 60 days.</span></button>
@@ -4106,6 +4216,44 @@
                         <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-5 rounded-lg"><i class="fas fa-check mr-2"></i>Apply thresholds</button>
                     </div>
                 </form>
+            </div>
+            <div class="market-opportunity-guide hidden" data-market-opportunity-panel="guide">
+                <p class="market-opportunity-guide-intro">The scanner compares listings in other valleys with your own recorded sales of the same item and quality. It estimates what the listed stack could resell for, then applies your Configuration thresholds. These are estimates, not guaranteed sale prices.</p>
+                <div class="market-opportunity-guide-grid">
+                    <section class="market-opportunity-guide-card">
+                        <h4>Actual listing</h4>
+                        <p>The stack currently offered in another valley. The large price is the cost of the whole stack; Advanced view also shows the cost per individual item.</p>
+                    </section>
+                    <section class="market-opportunity-guide-card">
+                        <h4>Typical value</h4>
+                        <p>An estimate based on the median historical unit price, with recent sales given more importance. That unit value is multiplied by the number of items in the listed stack.</p>
+                    </section>
+                    <section class="market-opportunity-guide-card">
+                        <h4>Sales and sales/month</h4>
+                        <p><strong>Sales</strong> is the number of matching recorded sales inside your selected history window. <strong>Sales/month</strong> averages that count over the full window and gives a rough indication of demand.</p>
+                    </section>
+                    <section class="market-opportunity-guide-card">
+                        <h4>Newest sale</h4>
+                        <p>How many days have passed since the most recent matching sale. Recent evidence is generally more useful because market prices and demand can change.</p>
+                    </section>
+                    <section class="market-opportunity-guide-card">
+                        <h4>Price spread</h4>
+                        <p>How widely the middle half of historical unit prices vary, measured against the typical unit value. A low spread means prices were consistent; a high spread means the value estimate is less predictable.</p>
+                        <ul><li><strong>0%:</strong> the middle prices were the same.</li><li><strong>20%:</strong> fairly consistent prices.</li><li><strong>60%+:</strong> prices varied substantially; use more caution.</li></ul>
+                    </section>
+                    <section class="market-opportunity-guide-card">
+                        <h4>Fee, profit, and margin</h4>
+                        <p><strong>Fee</strong> is an estimated 5% resale fee. <strong>Profit</strong> is typical value minus that fee and your purchase cost. <strong>Margin</strong> is the estimated profit divided by the purchase cost.</p>
+                    </section>
+                    <section class="market-opportunity-guide-card market-opportunity-guide-example">
+                        <h4>Worked example</h4>
+                        <p>A stack costs <strong>50g</strong> and its typical historical value is <strong>215g</strong>. The estimated resale fee is <strong>11g</strong>, so estimated profit is <strong>215g − 11g − 50g = 154g</strong>. The margin is <strong>154g ÷ 50g = 308%</strong>. If the middle half of its historical unit prices ran from 3.5g to 5.1g around a 4.3g typical value, its spread would be about <strong>37%</strong>.</p>
+                    </section>
+                    <section class="market-opportunity-guide-card market-opportunity-guide-example">
+                        <h4>Why a listing qualifies</h4>
+                        <p>A candidate appears only when it has a positive estimated profit and then passes every threshold in Configuration: minimum profit and margin, sales count and speed, sale recency, maximum spread, purchase limit, and any manual exclusions.</p>
+                    </section>
+                </div>
             </div>
         </div>
     </div>

@@ -9,7 +9,7 @@ const OPPORTUNITIES_PAGE_SIZE = 25;
 const DEFAULT_SETTINGS = {
     preset: 'balanced', historyDays: 180, minProfit: 10, minRoi: 75,
     minSales: 3, minVelocity: 1, maxDaysSinceSale: 60, maxPriceSpread: 60,
-    maxPurchasePrice: null, excludedItems: [], starredItems: []
+    maxPurchasePrice: null, excludedItems: [], starredItems: [], displayMode: 'simple'
 };
 const PRESETS = {
     broad: { historyDays: 180, minProfit: 5, minRoi: 50, minSales: 3, minVelocity: 0.5, maxDaysSinceSale: 120, maxPriceSpread: 100, maxPurchasePrice: null },
@@ -164,6 +164,9 @@ function renderConfigurationState() {
     setValue('opportunityMaxDays', opportunitySettings.maxDaysSinceSale);
     setValue('opportunityMaxSpread', opportunitySettings.maxPriceSpread);
     setValue('opportunityMaxPurchase', opportunitySettings.maxPurchasePrice);
+    document.querySelectorAll('[name="marketOpportunityDisplayMode"]').forEach((input) => {
+        input.checked = input.value === opportunitySettings.displayMode;
+    });
     document.querySelectorAll('[data-opportunity-preset]').forEach((button) => button.classList.toggle('active', button.dataset.opportunityPreset === opportunitySettings.preset));
     const preview = document.getElementById('marketOpportunityConfigPreview');
     if (preview) preview.innerHTML = `<strong>${fmt(qualifiedCandidates().length)}</strong> of ${fmt(latestCandidates.length)} raw candidates meet these thresholds.`;
@@ -180,6 +183,7 @@ function renderConfigurationState() {
 }
 
 function renderRows(target, rows) {
+    const advanced = opportunitySettings.displayMode === 'advanced';
     target.innerHTML = `
         <div class="market-opportunities-toolbar">
             <label><i class="fas fa-search"></i><input id="marketOpportunitiesSearch" type="search" placeholder="Search item or valley" autocomplete="off"></label>
@@ -188,8 +192,8 @@ function renderRows(target, rows) {
                 <option value="velocity">Fastest selling</option><option value="price">Lowest purchase price</option><option value="item">Item name</option>
             </select><span id="marketOpportunitiesVisibleCount"></span>
         </div>
-        <div class="market-opportunities-table-wrap"><table class="market-opportunities-table"><thead><tr>
-            <th></th><th>Item</th><th>Valley</th><th>Actual Listing</th><th>Historical Value</th><th>Evidence</th><th>Fee</th><th>Est. Profit</th><th>Margin</th><th></th>
+        <div class="market-opportunities-table-wrap"><table class="market-opportunities-table ${advanced ? 'advanced' : 'simple'}"><thead><tr>
+            <th></th><th>Item</th><th>Valley</th><th>Actual Listing</th><th>${advanced ? 'Historical Value' : 'Typical Value'}</th><th>Evidence</th>${advanced ? '<th>Fee</th>' : ''}<th>Est. Profit</th><th>Margin</th><th></th>
         </tr></thead><tbody id="marketOpportunitiesRows"></tbody></table></div>
         <div id="marketOpportunitiesPagination" class="market-opportunities-pagination"></div>`;
     const search = target.querySelector('#marketOpportunitiesSearch');
@@ -221,13 +225,13 @@ function renderRows(target, rows) {
                 <td><button type="button" class="market-opportunity-star${starred ? ' active' : ''}" data-star-opportunity="${escapeHtml(prefKey)}" title="${starred ? 'Remove favorite' : 'Favorite item'}"><i class="${starred ? 'fas' : 'far'} fa-star"></i></button></td>
                 <td><div class="market-opportunity-item">${row.iconPath ? `<img src="${escapeHtml(row.iconPath)}" alt="" loading="lazy" onerror="this.style.display='none'">` : '<span class="market-opportunity-icon-fallback"><i class="fas fa-box"></i></span>'}<span><strong>${escapeHtml(row.itemName)}</strong><small>${escapeHtml(qualityLabel(row))}</small></span></div></td>
                 <td><span class="market-opportunity-valley">${escapeHtml(row.valley)}</span></td>
-                <td><strong>${fmt(row.quantity)} units for ${fmt(row.acquisitionCost)}g</strong><small>1 stack &middot; ${fmt(row.unitCost, 2)}g/unit</small></td>
-                <td><strong>${fmt(row.historicalValue)}g</strong><small>${fmt(row.historicalUnitValue, 2)}g/unit</small></td>
-                <td><strong>${fmt(row.saleCount)} sales &middot; ${fmt(row.velocity, 1)}/mo</strong><small>newest ${fmt(row.daysSinceSale)}d ago &middot; ${fmt(row.priceSpreadPct)}% spread</small></td>
-                <td>${fmt(row.estimatedFee)}g</td><td class="market-opportunity-table-profit">+${fmt(row.estimatedProfit)}g<small>per listing</small></td><td><strong>${fmt(row.margin)}%</strong></td>
+                <td><strong>${fmt(row.quantity)} units for ${fmt(row.acquisitionCost)}g</strong>${advanced ? `<small>1 stack &middot; ${fmt(row.unitCost, 2)}g/unit</small>` : ''}</td>
+                <td><strong>${fmt(row.historicalValue)}g</strong>${advanced ? `<small>${fmt(row.historicalUnitValue, 2)}g/unit</small>` : ''}</td>
+                <td><strong>${advanced ? `${fmt(row.saleCount)} sales &middot; ${fmt(row.velocity, 1)}/mo` : `${fmt(row.saleCount)} past sales`}</strong>${advanced ? `<small>newest ${fmt(row.daysSinceSale)}d ago &middot; ${fmt(row.priceSpreadPct)}% spread</small>` : ''}</td>
+                ${advanced ? `<td>${fmt(row.estimatedFee)}g</td>` : ''}<td class="market-opportunity-table-profit">+${fmt(row.estimatedProfit)}g${advanced ? '<small>per listing</small>' : ''}</td><td><strong>${fmt(row.margin)}%</strong></td>
                 <td><button type="button" class="market-opportunity-exclude" data-exclude-opportunity="${escapeHtml(prefKey)}" title="Exclude this item"><i class="fas fa-eye-slash"></i></button></td>
             </tr>`;
-        }).join('') : '<tr><td colspan="10" class="market-opportunities-no-match">No opportunities match this search.</td></tr>';
+        }).join('') : `<tr><td colspan="${advanced ? 10 : 9}" class="market-opportunities-no-match">No opportunities match this search.</td></tr>`;
         countTarget.textContent = `${fmt(sorted.length)} listing${sorted.length === 1 ? '' : 's'}`;
         pagination.innerHTML = pageCount > 1 ? `<button type="button" data-opportunity-page="${page - 1}" ${page === 0 ? 'disabled' : ''}><i class="fas fa-arrow-left"></i></button><span>Page ${page + 1} of ${pageCount}</span><button type="button" data-opportunity-page="${page + 1}" ${page >= pageCount - 1 ? 'disabled' : ''}><i class="fas fa-arrow-right"></i></button>` : '';
         pagination.querySelectorAll('[data-opportunity-page]').forEach((button) => button.addEventListener('click', () => { page = Number(button.dataset.opportunityPage) || 0; paint(); }));
@@ -284,6 +288,7 @@ function readConfiguration() {
     const number = (id, fallback) => { const value = Number(document.getElementById(id)?.value); return Number.isFinite(value) ? value : fallback; };
     return {
         ...opportunitySettings, preset: 'custom',
+        displayMode: document.querySelector('[name="marketOpportunityDisplayMode"]:checked')?.value || 'simple',
         historyDays: number('marketOpportunitiesHistoryWindow', 180), minProfit: number('opportunityMinProfit', 10),
         minRoi: number('opportunityMinRoi', 75), minSales: number('opportunityMinSales', 3),
         minVelocity: number('opportunityMinVelocity', 1), maxDaysSinceSale: number('opportunityMaxDays', 60),
