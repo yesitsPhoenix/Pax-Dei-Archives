@@ -788,9 +788,9 @@ function renderDraftServerEditionBody(entries, canEditEntries, releaseDate, layo
       <section class="chronicle-edition-section chronicle-edition-across-gallia">
         <h2 class="chronicle-edition-section-title">Across Gallia</h2>
         <div class="chronicle-edition-story-grid">
-          ${acrossGalliaEntries.map((entry, index) => renderEntry(
+          ${acrossGalliaEntries.map(entry => renderEntry(
             entry,
-            index === 0 ? 'edition-group-feature' : 'edition-group-story'
+            'edition-group-feature'
           )).join('')}
         </div>
       </section>
