@@ -252,7 +252,7 @@ async function fetchAndRenderUserRoles() {
 
     const { data, error } = await supabase
         .from('admin_users')
-        .select('user_id, role, quest_role, lore_role, campaign_role, is_admin, is_editor, can_post_articles')
+        .select('user_id, role, quest_role, lore_role, campaign_role, warfront_role, is_admin, is_editor, can_post_articles')
         .order('user_id', { ascending: true });
 
     if (loadingEl) loadingEl.classList.add('hidden');
@@ -294,6 +294,7 @@ async function fetchAndRenderUserRoles() {
         const questRole       = u.quest_role || null;
         const isLoreEditor    = u.lore_role === 'lore_editor';
         const isCampaignEditor = u.campaign_role === 'campaign_editor';
+        const warfrontRole    = u.warfront_role || null;
         const isAdmin         = u.is_admin === true;
         const hasAccess       = u.is_editor === true;
         const canPostArticles = u.can_post_articles === true;
@@ -348,6 +349,14 @@ async function fetchAndRenderUserRoles() {
                 : '<span class="role-badge none">\u2014</span>')
             + '</td>';
 
+        const warfrontCell = '<td class="px-4 py-3">'
+            + (warfrontRole === 'warfront_admin'
+                ? '<span class="role-badge warfront"><i class="fas fa-shield-halved"></i> Warfront Admin</span>'
+                : warfrontRole === 'warfront_referee'
+                ? '<span class="role-badge warfront"><i class="fas fa-scale-balanced"></i> Warfront Referee</span>'
+                : '<span class="role-badge none">\u2014</span>')
+            + '</td>';
+
         const accessCell = '<td class="px-4 py-3">'
             + (hasAccess
                 ? '<span class="role-badge none"><i class="fas fa-user-edit"></i> editor</span>'
@@ -366,6 +375,7 @@ async function fetchAndRenderUserRoles() {
                 + ' data-quest-role="' + (questRole || '') + '"'
                 + ' data-is-lore-editor="' + isLoreEditor + '"'
                 + ' data-is-campaign-editor="' + isCampaignEditor + '"'
+                + ' data-warfront-role="' + (warfrontRole || '') + '"'
                 + '>'
                 + '<i class="fas fa-pen mr-1"></i>Edit Roles'
                 + '</button>'
@@ -380,7 +390,7 @@ async function fetchAndRenderUserRoles() {
         const actionsCell = '<td class="px-4 py-3"><div class="flex gap-2 flex-wrap">' + actionsContent + '</div></td>';
 
         const tr = document.createElement('tr');
-        tr.innerHTML = userCell + adminCell + commenterCell + questCell + canPostArticlesCell + loreCell + campaignCell + accessCell + actionsCell;
+        tr.innerHTML = userCell + adminCell + commenterCell + questCell + canPostArticlesCell + loreCell + campaignCell + warfrontCell + accessCell + actionsCell;
         tbody.appendChild(tr);
     });
 
@@ -440,7 +450,8 @@ async function fetchAndRenderUserRoles() {
                 isCommenter: btn.dataset.isCommenter === 'true',
                 questRole: btn.dataset.questRole || '',
                 isLoreEditor: btn.dataset.isLoreEditor === 'true',
-                isCampaignEditor: btn.dataset.isCampaignEditor === 'true'
+                isCampaignEditor: btn.dataset.isCampaignEditor === 'true',
+                warfrontRole: btn.dataset.warfrontRole || ''
             });
         });
     });
@@ -461,6 +472,7 @@ function openManageUserRoleModal(opts) {
     const questRoleSelect  = document.getElementById('roleSelect_quest_role');
     const ckLore           = document.getElementById('roleCheck_lore_editor');
     const ckCampaign       = document.getElementById('roleCheck_campaign_editor');
+    const warfrontRoleSelect = document.getElementById('roleSelect_warfront_role');
     const msgEl         = document.getElementById('addUserRoleMessage');
 
     if (msgEl) { msgEl.classList.add('hidden'); msgEl.textContent = ''; }
@@ -475,6 +487,7 @@ function openManageUserRoleModal(opts) {
         if (questRoleSelect) questRoleSelect.value  = opts.questRole      || '';
         if (ckLore)          ckLore.checked         = opts.isLoreEditor   || false;
         if (ckCampaign)      ckCampaign.checked     = opts.isCampaignEditor || false;
+        if (warfrontRoleSelect) warfrontRoleSelect.value = opts.warfrontRole || '';
     } else {
         // Grant mode — reset form
         if (userSelect)      userSelect.value      = '';
@@ -485,13 +498,19 @@ function openManageUserRoleModal(opts) {
         if (questRoleSelect) questRoleSelect.value  = '';
         if (ckLore)          ckLore.checked         = false;
         if (ckCampaign)      ckCampaign.checked     = false;
+        if (warfrontRoleSelect) warfrontRoleSelect.value = '';
     }
 
     modal.classList.remove('hidden');
 }
 
 async function saveUserRoles(userId, roles) {
+    if (!currentUserIsAdmin) return { error: 'Only Archives administrators can manage user roles.' };
     if (!userId) return { error: 'Please select a user.' };
+
+    const warfrontRole = roles.warfrontRole === 'warfront_admin' || roles.warfrontRole === 'warfront_referee'
+        ? roles.warfrontRole
+        : null;
 
     const upsertData = {
         user_id:          userId,
@@ -501,7 +520,8 @@ async function saveUserRoles(userId, roles) {
         role:             roles.isCommenter ? 'comment_adder' : '',
         quest_role:       roles.questRole || null,
         lore_role:        roles.isLoreEditor ? 'lore_editor'  : null,
-        campaign_role:    roles.isCampaignEditor ? 'campaign_editor' : null
+        campaign_role:    roles.isCampaignEditor ? 'campaign_editor' : null,
+        warfront_role:    warfrontRole
     };
 
     const { error } = await supabase
@@ -988,6 +1008,10 @@ function setupModalHandlers() {
 
     if (submitRoleBtn) {
         submitRoleBtn.addEventListener('click', async function() {
+            if (!currentUserIsAdmin) {
+                if (roleMsg) { roleMsg.className = 'form-message error'; roleMsg.textContent = 'Only Archives administrators can manage user roles.'; roleMsg.classList.remove('hidden'); }
+                return;
+            }
             const userId = document.getElementById('roleUserSelect') ? document.getElementById('roleUserSelect').value : '';
             const roles = {
                 isAdmin:         document.getElementById('roleCheck_is_admin')          ? document.getElementById('roleCheck_is_admin').checked          : false,
@@ -996,7 +1020,8 @@ function setupModalHandlers() {
                 isCommenter:     document.getElementById('roleCheck_comment_adder')     ? document.getElementById('roleCheck_comment_adder').checked     : false,
                 questRole:       document.getElementById('roleSelect_quest_role')       ? document.getElementById('roleSelect_quest_role').value         : '',
                 isLoreEditor:    document.getElementById('roleCheck_lore_editor')       ? document.getElementById('roleCheck_lore_editor').checked       : false,
-                isCampaignEditor: document.getElementById('roleCheck_campaign_editor')  ? document.getElementById('roleCheck_campaign_editor').checked   : false
+                isCampaignEditor: document.getElementById('roleCheck_campaign_editor')  ? document.getElementById('roleCheck_campaign_editor').checked   : false,
+                warfrontRole:     document.getElementById('roleSelect_warfront_role')    ? document.getElementById('roleSelect_warfront_role').value       : ''
             };
 
             if (roleMsg) { roleMsg.className = 'form-message info'; roleMsg.textContent = 'Saving\u2026'; roleMsg.classList.remove('hidden'); }

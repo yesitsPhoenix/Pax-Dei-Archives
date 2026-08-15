@@ -69,6 +69,7 @@
         .role-badge.lore    { background: rgba(52,211,153,0.15); color: #34d399; border: 1px solid rgba(52,211,153,0.3); }
         .role-badge.article    { background: rgba(52, 129, 211, 0.15); color: #3469d3; border: 1px solid rgba(52, 129, 211, 0.3); }
         .role-badge.campaign { background: rgba(244,114,182,0.15); color: #f472b6; border: 1px solid rgba(244,114,182,0.3); }
+        .role-badge.warfront { background: rgba(34,211,238,0.15); color: #22d3ee; border: 1px solid rgba(34,211,238,0.3); }
         .role-badge.none    { background: rgba(107,114,128,0.15); color: #6b7280; border: 1px solid rgba(107,114,128,0.3); }
 
         /* ── Dev comment form ── */
@@ -431,6 +432,7 @@
                                 <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Publication Poster</th>
                                 <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Lore Editor</th>
                                 <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Campaign Editor</th>
+                                <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Warfront Access</th>
                                 <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">General Access</th>
                                 <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">Actions</th>
                             </tr>
@@ -612,6 +614,15 @@
                     <input type="checkbox" id="roleCheck_campaign_editor" class="rounded text-violet-600 focus:ring-violet-500 w-4 h-4">
                     <span class="text-white text-sm"><span class="role-badge campaign mr-2"><i class="fas fa-route"></i> campaign_editor</span> Can manage Campaigns</span>
                 </label>
+
+                <div class="p-3 bg-slate-700/50 rounded-lg flex flex-col gap-2">
+                    <span class="text-white text-base"><span class="role-badge warfront mr-2"><i class="fas fa-shield-halved"></i> warfront_role</span> Warfront access level</span>
+                    <select id="roleSelect_warfront_role" class="w-full bg-[#1e293b] border border-slate-600 rounded-lg px-3 py-2 text-white text-base outline-none focus:border-violet-500">
+                        <option value="">None</option>
+                        <option value="warfront_referee">Warfront Referee</option>
+                        <option value="warfront_admin">Warfront Admin</option>
+                    </select>
+                </div>
             </div>
 
             <p id="addUserRoleMessage" class="text-sm hidden"></p>
