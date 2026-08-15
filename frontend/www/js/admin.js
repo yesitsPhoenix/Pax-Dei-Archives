@@ -366,7 +366,7 @@ async function fetchAndRenderUserRoles() {
         // Action buttons: only logged-in admins see Edit / Delete buttons
         var actionsContent = '';
         if (currentUserIsAdmin) {
-            actionsContent = '<button class="edit-role-btn text-lg px-3 py-1 rounded transition-all bg-violet-900/40 text-violet-300 hover:bg-violet-900/70 border border-violet-500/30"'
+            actionsContent = '<button class="edit-role-btn text-sm px-2 py-1.5 rounded transition-all bg-violet-900/40 text-violet-300 hover:bg-violet-900/70 border border-violet-500/30"'
                 + ' data-uid="' + u.user_id + '"'
                 + ' data-is-admin="' + isAdmin + '"'
                 + ' data-is-editor="' + hasAccess + '"'
@@ -377,9 +377,9 @@ async function fetchAndRenderUserRoles() {
                 + ' data-is-campaign-editor="' + isCampaignEditor + '"'
                 + ' data-warfront-role="' + (warfrontRole || '') + '"'
                 + '>'
-                + '<i class="fas fa-pen mr-1"></i>Edit Roles'
+                + '<i class="fas fa-pen mr-1"></i>Edit'
                 + '</button>'
-                + '<button class="delete-user-btn text-lg px-3 py-1 rounded transition-all bg-red-900/40 text-red-300 hover:bg-red-900/70 border border-red-500/30"'
+                + '<button class="delete-user-btn text-sm px-2 py-1.5 rounded transition-all bg-red-900/40 text-red-300 hover:bg-red-900/70 border border-red-500/30"'
                 + ' data-uid="' + u.user_id + '"'
                 + ' data-username="' + (username || shortId) + '"'
                 + '>'
@@ -387,7 +387,7 @@ async function fetchAndRenderUserRoles() {
                 + '</button>';
         }
 
-        const actionsCell = '<td class="px-4 py-3"><div class="flex gap-2 flex-wrap">' + actionsContent + '</div></td>';
+        const actionsCell = '<td class="px-4 py-3"><div class="role-actions">' + actionsContent + '</div></td>';
 
         const tr = document.createElement('tr');
         tr.innerHTML = userCell + adminCell + commenterCell + questCell + canPostArticlesCell + loreCell + campaignCell + warfrontCell + accessCell + actionsCell;

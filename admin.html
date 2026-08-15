@@ -72,6 +72,36 @@
         .role-badge.warfront { background: rgba(34,211,238,0.15); color: #22d3ee; border: 1px solid rgba(34,211,238,0.3); }
         .role-badge.none    { background: rgba(107,114,128,0.15); color: #6b7280; border: 1px solid rgba(107,114,128,0.3); }
 
+        /* Keep the expanded role matrix readable without crushing the action controls. */
+        #userRolesTable {
+            table-layout: fixed;
+            min-width: 1120px;
+        }
+        #userRolesTable th,
+        #userRolesTable td {
+            padding-left: 0.55rem;
+            padding-right: 0.55rem;
+            vertical-align: middle;
+        }
+        #userRolesTable th {
+            font-size: 0.75rem;
+            line-height: 1.15rem;
+        }
+        #userRolesTable .role-badge {
+            max-width: 100%;
+            font-size: 0.64rem;
+            white-space: nowrap;
+        }
+        #userRolesTable .role-actions {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.4rem;
+        }
+        #userRolesTable .role-actions button {
+            width: 100%;
+            white-space: nowrap;
+        }
+
         /* ── Dev comment form ── */
         #devCommentForm label,
         #addLoreItemForm label { display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #9ca3af; margin-bottom: 0.25rem; margin-top: 0.75rem; }
@@ -422,7 +452,19 @@
                 </div>
 
                 <div id="userRolesTableContainer" class="hidden overflow-x-auto rounded-xl">
-                    <table class="w-full">
+                    <table id="userRolesTable" class="w-full">
+                        <colgroup>
+                            <col style="width:15%">
+                            <col style="width:7%">
+                            <col style="width:11%">
+                            <col style="width:10%">
+                            <col style="width:12%">
+                            <col style="width:9%">
+                            <col style="width:11%">
+                            <col style="width:10%">
+                            <col style="width:8%">
+                            <col style="width:7%">
+                        </colgroup>
                         <thead class="bg-slate-700">
                             <tr>
                                 <th class="px-4 py-3 text-left text-md font-semibold text-violet-400 uppercase">User ID</th>
