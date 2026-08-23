@@ -8,12 +8,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const modalContentWrapper = document.getElementById('modal-content-wrapper');
 
     const DEFAULT_AVATAR_URL = 'https://cdn.discordapp.com/embed/avatars/0.png';
-    const creatorCredit = `
-        <div class="auth-creator-credit">
-            <img src="frontend/www/assets/phoenix.png" alt="" aria-hidden="true">
-            <span>Made by Phoenix ✨</span>
-        </div>`;
-
     const setFloatingAvatar = (url, loaded = true) => {
         if (!floatingAvatar) return;
         floatingAvatar.src = url;
@@ -45,7 +39,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <button id="logoutButton" class="logout-button modal-button">
                     <i class="fa-solid fa-right-from-bracket"></i> Logout
                 </button>
-                ${creatorCredit}
             `;
             document.getElementById('logoutButton').addEventListener('click', async () => {
                 await logout();
@@ -63,7 +56,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <button id="discordLoginButton" class="login-button modal-button">
                     <i class="fa-brands fa-discord"></i> Login with Discord
                 </button>
-                ${creatorCredit}
             `;
             document.getElementById('discordLoginButton').addEventListener('click', async () => {
                 await supabase.auth.signInWithOAuth({

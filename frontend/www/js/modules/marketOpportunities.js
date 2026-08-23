@@ -4,6 +4,7 @@ import { fetchProvinceMarketData, fetchShardMarketData } from './addListingIntel
 import { getItemData, loadCompleteItemsData, loadItemsData } from '../services/gamingToolsService.js';
 
 const SETTINGS_KEY = 'pda.marketOpportunitySettings.v1';
+const COLUMN_WIDTHS_KEY = 'pda.marketOpportunityColumnWidths.v1';
 const FEE_RATE = 0.05;
 const OPPORTUNITIES_PAGE_SIZE = 25;
 const VALLEY_GAPS_PAGE_SIZE = 15;
@@ -35,6 +36,89 @@ const fallbackItemName = (value) => bareItemId(value)
 const qualityKey = (itemId, mastercrafted, enchantmentTier) => `${bareItemId(itemId)}::${mastercrafted ? 1 : 0}::${Number(enchantmentTier) || 0}`;
 const itemPreferenceKey = (row) => `${row.itemName}::${row.isMastercrafted ? 1 : 0}::${row.enchantmentTier || 0}`;
 const listingRelation = (sale) => Array.isArray(sale.market_listings) ? sale.market_listings[0] : sale.market_listings;
+
+function toGamingToolsEmbedUrl(itemId, fallbackUrl = '') {
+    const bare = bareItemId(itemId);
+    try {
+        const fallback = new URL(fallbackUrl);
+        if (fallback.hostname === 'paxdei.gaming.tools') {
+            const parts = fallback.pathname.split('/').filter(Boolean);
+            const sourceCategory = parts[0] || '';
+            const fallbackId = parts.at(-1) || bare;
+            if (sourceCategory === 'wearables') return `https://paxdei.gaming.tools/armor/${encodeURIComponent(fallbackId)}`;
+            if (sourceCategory === 'wieldables') {
+                const category = fallbackId.startsWith('wieldable_tool') ? 'tools'
+                    : fallbackId.startsWith('wieldable_shield') ? 'shields' : 'weapons';
+                return `https://paxdei.gaming.tools/${category}/${encodeURIComponent(fallbackId)}`;
+            }
+            const validCategories = new Set(['armor', 'weapons', 'tools', 'shields', 'consumables', 'gatherables', 'recipes', 'projectiles', 'props', 'materials', 'buildingpieces']);
+            if (validCategories.has(sourceCategory) && fallbackId) return `https://paxdei.gaming.tools/${sourceCategory}/${encodeURIComponent(fallbackId)}`;
+        }
+    } catch { /* fall through to item-id inference */ }
+    const prefix = bare.split('_')[0];
+    const categories = {
+        wearable: 'armor', wearables: 'armor', wieldable: 'weapons', wieldables: 'weapons',
+        consumable: 'consumables', consumables: 'consumables', gatherable: 'gatherables', gatherables: 'gatherables',
+        recipe: 'recipes', recipes: 'recipes', projectile: 'projectiles', projectiles: 'projectiles',
+        building: 'props', props: 'props', material: 'materials', materials: 'materials', resource: 'gatherables'
+    };
+    if (bare.startsWith('wieldable_tool')) return `https://paxdei.gaming.tools/tools/${encodeURIComponent(bare)}`;
+    if (bare.startsWith('wieldable_shield')) return `https://paxdei.gaming.tools/shields/${encodeURIComponent(bare)}`;
+    if (categories[prefix]) return `https://paxdei.gaming.tools/${categories[prefix]}/${encodeURIComponent(bare)}`;
+    return fallbackUrl || '#';
+}
+
+function itemLinkHtml(row) {
+    const url = toGamingToolsEmbedUrl(row.itemId, row.itemUrl);
+    const attributes = url === '#' ? 'data-no-tooltip aria-disabled="true"' : `href="${escapeHtml(row.itemUrl || url)}" data-tooltip-href="${escapeHtml(url)}" target="_blank" rel="noopener"`;
+    return `<a ${attributes} class="market-opportunity-item-link">${escapeHtml(row.itemName)}</a>`;
+}
+
+function enableColumnResizing(table, storageSuffix) {
+    if (!table || table.dataset.columnsResizable === 'true') return;
+    table.dataset.columnsResizable = 'true';
+    const headers = [...table.querySelectorAll('thead th')];
+    const key = `${COLUMN_WIDTHS_KEY}.${storageSuffix}`;
+    let saved = [];
+    try { saved = JSON.parse(localStorage.getItem(key) || '[]'); } catch { saved = []; }
+    if (saved.length === headers.length) {
+        table.classList.add('has-resized-columns');
+        headers.forEach((header, index) => { if (saved[index] > 40) header.style.width = `${saved[index]}px`; });
+    }
+    headers.slice(0, -1).forEach((header) => {
+        const handle = document.createElement('span');
+        handle.className = 'market-column-resize-handle';
+        handle.setAttribute('role', 'separator');
+        handle.setAttribute('aria-orientation', 'vertical');
+        handle.title = 'Drag to resize column · double-click to reset';
+        header.appendChild(handle);
+        handle.addEventListener('pointerdown', (event) => {
+            event.preventDefault();
+            const initial = headers.map((cell) => Math.round(cell.getBoundingClientRect().width));
+            headers.forEach((cell, index) => { cell.style.width = `${initial[index]}px`; });
+            table.classList.add('has-resized-columns');
+            document.body.classList.add('market-column-resizing');
+            const index = headers.indexOf(header);
+            const startX = event.clientX;
+            const startWidth = initial[index];
+            const move = (moveEvent) => { header.style.width = `${Math.max(70, startWidth + moveEvent.clientX - startX)}px`; };
+            const finish = () => {
+                document.removeEventListener('pointermove', move);
+                document.removeEventListener('pointerup', finish);
+                document.body.classList.remove('market-column-resizing');
+                try { localStorage.setItem(key, JSON.stringify(headers.map((cell) => Math.round(cell.getBoundingClientRect().width)))); } catch { /* optional persistence */ }
+            };
+            document.addEventListener('pointermove', move);
+            document.addEventListener('pointerup', finish, { once: true });
+        });
+        handle.addEventListener('dblclick', (event) => {
+            event.preventDefault();
+            headers.forEach((cell) => { cell.style.width = ''; });
+            table.classList.remove('has-resized-columns');
+            try { localStorage.removeItem(key); } catch { /* optional persistence */ }
+        });
+    });
+}
 
 function classifyGapAnomaly(gapPct, afterFeeGap) {
     if (gapPct >= 1000 && afterFeeGap >= 500) return 'extreme';
@@ -149,8 +233,9 @@ function buildOpportunities(provinceData, historyIndex, historyDays) {
         const estimatedProfit = historicalValue - estimatedFee - acquisitionCost;
         if (estimatedProfit <= 0) return null;
         const daysSinceSale = Math.max(0, Math.round((Date.now() - history.newestSale) / 864e5));
+        const item = getItemData(listing.item_id, history.itemName);
         return {
-            itemName: history.itemName, iconPath: getItemData(listing.item_id, history.itemName)?.iconPath || null,
+            itemId: listing.item_id, itemName: history.itemName, itemUrl: item?.url || null, iconPath: item?.iconPath || null,
             valley: listing._homeValley || 'Unknown valley', quantity, acquisitionCost,
             unitCost: acquisitionCost / quantity, historicalUnitValue: history.unitValue, historicalValue,
             estimatedFee, estimatedProfit, margin: (estimatedProfit / acquisitionCost) * 100,
@@ -218,7 +303,9 @@ function buildValleyPriceGaps(provinceData, historyIndex = new Map()) {
         if (travelLevel === 'cross-province') riskScore += 1;
         const item = getItemData(source.listing.item_id);
         gaps.push({
+            itemId: source.listing.item_id,
             itemName: item?.name || fallbackItemName(source.listing.item_id),
+            itemUrl: item?.url || null,
             iconPath: item?.iconPath || null,
             isMastercrafted: !!source.listing.mastercraft,
             enchantmentTier: Number(source.listing.enchantment_level) || 0,
@@ -345,7 +432,7 @@ function renderRows(target, rows) {
             const starred = opportunitySettings.starredItems.includes(prefKey);
             return `<tr>
                 <td><button type="button" class="market-opportunity-star${starred ? ' active' : ''}" data-star-opportunity="${escapeHtml(prefKey)}" title="${starred ? 'Remove favorite' : 'Favorite item'}"><i class="${starred ? 'fas' : 'far'} fa-star"></i></button></td>
-                <td><div class="market-opportunity-item">${row.iconPath ? `<img src="${escapeHtml(row.iconPath)}" alt="" loading="lazy" onerror="this.style.display='none'">` : '<span class="market-opportunity-icon-fallback"><i class="fas fa-box"></i></span>'}<span><strong>${escapeHtml(row.itemName)}</strong><small>${escapeHtml(qualityLabel(row))}</small></span></div></td>
+                <td><div class="market-opportunity-item">${row.iconPath ? `<img src="${escapeHtml(row.iconPath)}" alt="" loading="lazy" onerror="this.style.display='none'">` : '<span class="market-opportunity-icon-fallback"><i class="fas fa-box"></i></span>'}<span><strong>${itemLinkHtml(row)}</strong><small>${escapeHtml(qualityLabel(row))}</small></span></div></td>
                 <td><span class="market-opportunity-valley">${escapeHtml(row.valley)}</span></td>
                 <td><strong>${fmt(row.quantity)} units for ${fmt(row.acquisitionCost)}g</strong>${advanced ? `<small>1 stack &middot; ${fmt(row.unitCost, 2)}g/unit</small>` : ''}</td>
                 <td><strong>${fmt(row.historicalValue)}g</strong>${advanced ? `<small>${fmt(row.historicalUnitValue, 2)}g/unit</small>` : ''}</td>
@@ -370,6 +457,7 @@ function renderRows(target, rows) {
     };
     search.addEventListener('input', () => { page = 0; paint(); });
     sort.addEventListener('change', () => { page = 0; paint(); });
+    enableColumnResizing(target.querySelector('.market-opportunities-table'), advanced ? 'listings-advanced' : 'listings-simple');
     paint();
 }
 
@@ -473,7 +561,7 @@ function renderValleyPriceGaps() {
         page = Math.min(page, pageCount - 1);
         const visible = rows.slice(page * VALLEY_GAPS_PAGE_SIZE, (page + 1) * VALLEY_GAPS_PAGE_SIZE);
         rowsTarget.innerHTML = visible.length ? visible.map((row) => {
-            const itemCell = `<td><div class="market-opportunity-item">${row.iconPath ? `<img src="${escapeHtml(row.iconPath)}" alt="" loading="lazy" onerror="this.style.display='none'">` : '<span class="market-opportunity-icon-fallback"><i class="fas fa-box"></i></span>'}<strong>${escapeHtml(row.itemName)}</strong>${qualityLabel(row) !== 'Standard' ? `<span class="market-gap-quality">${escapeHtml(qualityLabel(row))}</span>` : ''}</div></td>`;
+            const itemCell = `<td><div class="market-opportunity-item">${row.iconPath ? `<img src="${escapeHtml(row.iconPath)}" alt="" loading="lazy" onerror="this.style.display='none'">` : '<span class="market-opportunity-icon-fallback"><i class="fas fa-box"></i></span>'}<strong>${itemLinkHtml(row)}</strong>${qualityLabel(row) !== 'Standard' ? `<span class="market-gap-quality">${escapeHtml(qualityLabel(row))}</span>` : ''}</div></td>`;
             const riskLabel = row.riskLevel === 'high' ? 'High risk' : row.riskLevel === 'caution' ? 'Caution' : 'Lower risk';
             const evidenceLabel = row.evidenceLevel === 'supports' ? 'Supported by sales' : row.evidenceLevel === 'mixed' ? 'Partial sales support' : row.evidenceLevel === 'contradicts' ? 'Contradicted by sales' : 'No sales history';
             const evidenceClass = row.evidenceLevel === 'supports' ? 'supports' : row.evidenceLevel === 'mixed' ? 'mixed' : row.evidenceLevel === 'contradicts' ? 'contradicts' : 'none';
@@ -488,7 +576,7 @@ function renderValleyPriceGaps() {
                 <td class="market-gap-deal-cell market-gap-compare-cell"><strong>${fmt(row.destinationQuantity)} for ${fmt(row.destinationStackPrice)}g <span class="market-gap-price-location">(${escapeHtml(row.destinationValley)})</span></strong></td>
                 <td><div class="market-simple-pill-group"><span class="market-evidence-signal ${evidenceClass}">${evidenceLabel}</span><span class="market-travel-signal ${travelClass}">${travelLabel}</span></div></td>
                 <td class="market-opportunity-table-profit">+${fmt(row.afterFeeGap)}g <span class="market-gap-percent">(${fmt(row.gapPct)}%)</span><span>${fmt(row.comparisonValue)}g potential sale · ${fmt(row.quantity)} units</span></td>
-                <td><div class="market-simple-pill-group"><span class="market-gap-signal ${row.riskLevel}">${riskLabel}</span>${anomalySignal}</div></td></tr>`;
+                <td class="market-gap-risk-cell"><div class="market-simple-pill-group"><span class="market-gap-signal ${row.riskLevel}">${riskLabel}</span>${anomalySignal}</div></td></tr>`;
             const supportingSignals = `${row.travelLevel === 'cross-province' ? '<span class="market-gap-signal neutral">Cross-province</span>' : row.travelLevel === 'home-valley' ? '<span class="market-gap-signal neutral">Home valley</span>' : '<span class="market-gap-signal neutral">Same province</span>'}${row.stackMultiple > 2 ? `<span class="market-gap-signal neutral">${fmt(row.stackMultiple, 1)}× stack</span>` : ''}${row.referenceCount === 1 ? '<span class="market-gap-signal neutral">1 reference</span>' : ''}${row.anomalyLevel === 'extreme' ? '<span class="market-gap-signal anomaly">Extreme gap</span>' : row.anomalyLevel === 'large' ? '<span class="market-gap-signal anomaly">Large gap</span>' : ''}`;
             return `<tr>${itemCell}
                 <td><span class="market-opportunity-valley market-gap-cell-primary">${escapeHtml(row.sourceValley)}</span><span class="market-gap-cell-detail">${escapeHtml(row.sourceProvince)}</span></td>
@@ -538,6 +626,7 @@ function renderValleyPriceGaps() {
         page = 0;
         paint();
     });
+    enableColumnResizing(target.querySelector('.market-opportunities-table'), advanced ? 'gaps-advanced' : 'gaps-simple');
     paint();
 }
 

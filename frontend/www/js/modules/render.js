@@ -16,7 +16,17 @@ function toEmbedUrl(paxDeiSlug, fallback) {
     if (!paxDeiSlug) return { url: fallback, noTooltip: true };
     const slash  = paxDeiSlug.lastIndexOf('/');
     const bare   = slash !== -1 ? paxDeiSlug.slice(slash + 1) : paxDeiSlug;
-    const prefix = slash !== -1 ? paxDeiSlug.slice(0, slash) : '';
+    let prefix = slash !== -1 ? paxDeiSlug.slice(0, slash) : '';
+    if (!prefix) {
+        if (bare.startsWith('wearable_')) prefix = 'wearables';
+        else if (bare.startsWith('wieldable_')) prefix = 'wieldables';
+        else if (bare.startsWith('consumable_')) prefix = 'consumables';
+        else if (bare.startsWith('gatherable_') || bare.startsWith('resource_')) prefix = 'gatherables';
+        else if (bare.startsWith('recipe_')) prefix = 'recipes';
+        else if (bare.startsWith('projectile_')) prefix = 'projectiles';
+        else if (bare.startsWith('building_prop_')) prefix = 'props';
+        else if (bare.startsWith('item_')) prefix = 'materials';
+    }
     let cat;
     if      (prefix === 'wearables')   cat = 'armor';
     else if (prefix === 'wieldables')  cat = bare.startsWith('wieldable_tool')   ? 'tools'
@@ -28,7 +38,10 @@ function toEmbedUrl(paxDeiSlug, fallback) {
     else if (prefix === 'projectiles') cat = 'projectiles';
     else if (prefix === 'props')       cat = 'props';
     else if (prefix === 'materials')   cat = 'materials';
-    else return { url: fallback, noTooltip: true };
+    else {
+        const embedPath = /^https:\/\/paxdei\.gaming\.tools\/(armor|weapons|tools|shields|consumables|gatherables|recipes|projectiles|props|materials)\//i;
+        return { url: fallback, noTooltip: !embedPath.test(fallback || '') };
+    }
     return { url: `https://paxdei.gaming.tools/${cat}/${bare}`, noTooltip: false };
 }
 

@@ -215,6 +215,40 @@
             display: inline-flex;
             align-items: center;
         }
+        #listings-table th {
+            position: relative;
+        }
+        #listings-table.pda-columns-resized {
+            min-width: max-content;
+            table-layout: fixed;
+        }
+        .pda-column-resize-handle {
+            position: absolute;
+            top: 0;
+            right: -4px;
+            z-index: 5;
+            width: 9px;
+            height: 100%;
+            cursor: col-resize;
+            touch-action: none;
+        }
+        .pda-column-resize-handle::after {
+            content: '';
+            position: absolute;
+            top: 20%;
+            bottom: 20%;
+            left: 4px;
+            width: 1px;
+            background: transparent;
+        }
+        #listings-table th:hover > .pda-column-resize-handle::after {
+            background: #fbbf24;
+        }
+        body.pda-column-resizing,
+        body.pda-column-resizing * {
+            cursor: col-resize !important;
+            user-select: none !important;
+        }
         /* Icon wrapper — position: relative so overlays anchor to it */
         .listing-item-icon {
             position: relative;
@@ -4979,6 +5013,54 @@
             setMastercrafted(false);
             setEnchantTier(0);
         }
+    })();
+    </script>
+
+    <script>
+    (function setupLedgerColumnResizing() {
+        const table = document.getElementById('listings-table');
+        if (!table) return;
+        const headers = Array.from(table.querySelectorAll('thead th'));
+        const storageKey = 'pda.ledgerColumnWidths.v1';
+        let saved = [];
+        try { saved = JSON.parse(localStorage.getItem(storageKey) || '[]'); } catch (_) { saved = []; }
+        if (saved.length === headers.length) {
+            table.classList.add('pda-columns-resized');
+            headers.forEach((header, index) => { if (saved[index] > 40) header.style.width = saved[index] + 'px'; });
+        }
+        headers.slice(0, -1).forEach((header) => {
+            const handle = document.createElement('span');
+            handle.className = 'pda-column-resize-handle';
+            handle.setAttribute('role', 'separator');
+            handle.setAttribute('aria-orientation', 'vertical');
+            handle.title = 'Drag to resize column · double-click to reset';
+            header.appendChild(handle);
+            handle.addEventListener('pointerdown', (event) => {
+                event.preventDefault();
+                const widths = headers.map((cell) => Math.round(cell.getBoundingClientRect().width));
+                headers.forEach((cell, index) => { cell.style.width = widths[index] + 'px'; });
+                table.classList.add('pda-columns-resized');
+                document.body.classList.add('pda-column-resizing');
+                const index = headers.indexOf(header);
+                const startX = event.clientX;
+                const startWidth = widths[index];
+                const move = (moveEvent) => { header.style.width = Math.max(70, startWidth + moveEvent.clientX - startX) + 'px'; };
+                const finish = () => {
+                    document.removeEventListener('pointermove', move);
+                    document.removeEventListener('pointerup', finish);
+                    document.body.classList.remove('pda-column-resizing');
+                    try { localStorage.setItem(storageKey, JSON.stringify(headers.map((cell) => Math.round(cell.getBoundingClientRect().width)))); } catch (_) {}
+                };
+                document.addEventListener('pointermove', move);
+                document.addEventListener('pointerup', finish, { once: true });
+            });
+            handle.addEventListener('dblclick', (event) => {
+                event.preventDefault();
+                headers.forEach((cell) => { cell.style.width = ''; });
+                table.classList.remove('pda-columns-resized');
+                try { localStorage.removeItem(storageKey); } catch (_) {}
+            });
+        });
     })();
     </script>
 
