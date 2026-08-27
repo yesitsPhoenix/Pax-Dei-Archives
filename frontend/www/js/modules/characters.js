@@ -53,6 +53,28 @@ export const setCurrentCharacterGold = (gold) => {
     }
 };
 
+// Ledger mutations update gold in the database independently of the Charter
+// character cache. Refresh it before repainting the dashboard so a completed
+// transaction can never leave Current Holdings showing the pre-transaction value.
+export const refreshCurrentCharacterGold = async () => {
+  if (!currentCharacterId) {
+    setCurrentCharacterGold(0);
+    return 0;
+  }
+
+  const { data, error } = await supabase
+    .from('characters')
+    .select('gold')
+    .eq('character_id', currentCharacterId)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  const gold = Number(data?.gold) || 0;
+  setCurrentCharacterGold(gold);
+  return gold;
+};
+
 
 export const loadCurrentCharacterData = () => {
     if (currentCharacterId) {

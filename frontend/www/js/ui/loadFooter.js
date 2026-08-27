@@ -1,4 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
+    if (!document.querySelector('script[data-suite-messaging]')) {
+        const messaging = document.createElement('script');
+        messaging.src = 'https://admin.yesitsphoenix.dev/shared/suite-messaging.js?v=suite-messaging-v1';
+        messaging.dataset.suiteMessaging = 'true';
+        document.head.append(messaging);
+    }
     const footerPlaceholder = document.getElementById('footer-placeholder');
     if (!footerPlaceholder) return;
 
