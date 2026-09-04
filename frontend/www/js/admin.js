@@ -688,6 +688,26 @@ function parseComment(text) {
     }
 }
 
+function getDiscordMessageTimestamp(source) {
+    if (!source) return null;
+
+    try {
+        const url = new URL(source);
+        if (url.hostname !== 'discord.com' && url.hostname !== 'www.discord.com') return null;
+
+        const pathParts = url.pathname.split('/').filter(Boolean);
+        const messageId = pathParts[pathParts.length - 1];
+        if (!/^\d{17,20}$/.test(messageId)) return null;
+
+        const discordEpochMs = 1420070400000n;
+        const timestampMs = (BigInt(messageId) >> 22n) + discordEpochMs;
+        const timestamp = new Date(Number(timestampMs));
+        return Number.isNaN(timestamp.getTime()) ? null : timestamp.toISOString();
+    } catch (error) {
+        return null;
+    }
+}
+
 // ─────────────────────────────────────────────────────────────
 // Modal gating
 // ─────────────────────────────────────────────────────────────
@@ -895,8 +915,8 @@ function setupCommentFormHandlers() {
                 return;
             }
 
-            let utcTimestamp = null;
-            if (timestamp) utcTimestamp = new Date(timestamp).toISOString();
+            let utcTimestamp = getDiscordMessageTimestamp(source);
+            if (!utcTimestamp && timestamp) utcTimestamp = new Date(timestamp).toISOString();
 
             if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Submitting\u2026'; }
 
