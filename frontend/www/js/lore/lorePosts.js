@@ -2,6 +2,15 @@
 import { supabase } from '../supabaseClient.js';
 import { formatCommentDateTime } from '../utils.js';
 
+async function queryPublicLore(columns, configureQuery = query => query) {
+  const runQuery = table => configureQuery(supabase.from(table).select(columns));
+  let result = await runQuery('lore_items_public');
+  if (result.error?.code === '42P01' || result.error?.code === 'PGRST205') {
+    result = await runQuery('lore_items');
+  }
+  return result;
+}
+
 export async function fetchAndRenderLorePosts(containerId, limit = null, searchTerm = null) {
   const container = document.getElementById(containerId);
   if (!container && !searchTerm) return [];
@@ -11,21 +20,17 @@ export async function fetchAndRenderLorePosts(containerId, limit = null, searchT
   }
 
   try {
-    let query = supabase
-      .from('lore_items')
-      .select('*');
-
-    if (searchTerm) {
-      query = query.or(`title.ilike.%${searchTerm}%,content.ilike.%${searchTerm}%,slug.ilike.%${searchTerm}%`);
-    }
-
-    query = query.order('created_at', { ascending: false });
-
-    if (limit) {
-      query = query.limit(limit);
-    }
-
-    const { data, error } = await query;
+    const { data, error } = await queryPublicLore(
+      'title, content, slug, created_at',
+      query => {
+        if (searchTerm) {
+          query = query.or(`title.ilike.%${searchTerm}%,content.ilike.%${searchTerm}%,slug.ilike.%${searchTerm}%`);
+        }
+        query = query.order('created_at', { ascending: false });
+        if (limit) query = query.limit(limit);
+        return query;
+      }
+    );
 
     if (error) {
       console.error('Error fetching lore posts:', error.message);

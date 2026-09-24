@@ -45,7 +45,7 @@ HTTP_READ_TIMEOUT_S = float(os.getenv("LORE_BOT_READ_TIMEOUT_S", "120"))
 HOST = os.getenv("LORE_BOT_HOST", "0.0.0.0")
 PORT = int(os.getenv("LORE_BOT_PORT", "8642"))
 
-# Supabase connection (reads lore_items table via REST API)
+# Supabase connection (reads public lore via REST API)
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://jrjgbnopmfovxwvtbivh.supabase.co")
 SUPABASE_ANON_KEY = os.getenv(
     "SUPABASE_ANON_KEY",
@@ -502,20 +502,35 @@ def load_lore_corpus() -> str:
 
     print(f"[INFO] Fetching lore entries from Supabase...")
 
-    select_fields = "*,embedding" if USE_VECTOR_SEARCH else "*"
+    selected_columns = ["title", "slug", "category", "author", "date", "content", "summary"]
+    if USE_VECTOR_SEARCH:
+        selected_columns.append("embedding")
+    select_fields = ",".join(selected_columns)
 
     try:
-        resp = httpx.get(
-            f"{SUPABASE_URL}/rest/v1/lore_items",
-            params={"select": select_fields, "order": "category.asc,sort_order.asc,title.asc"},
-            headers={
-                "apikey": SUPABASE_ANON_KEY,
-                "Authorization": f"Bearer {SUPABASE_ANON_KEY}",
-            },
-            timeout=30,
-        )
-        resp.raise_for_status()
-        rows = resp.json()
+        rows = None
+        for relation in ("lore_items_public", "lore_items"):
+            resp = httpx.get(
+                f"{SUPABASE_URL}/rest/v1/{relation}",
+                params={"select": select_fields, "order": "category.asc,sort_order.asc,title.asc"},
+                headers={
+                    "apikey": SUPABASE_ANON_KEY,
+                    "Authorization": f"Bearer {SUPABASE_ANON_KEY}",
+                },
+                timeout=30,
+            )
+            if relation == "lore_items_public" and resp.is_error:
+                try:
+                    error_code = resp.json().get("code")
+                except (ValueError, AttributeError):
+                    error_code = None
+                if error_code in {"42P01", "PGRST205"}:
+                    continue
+            resp.raise_for_status()
+            rows = resp.json()
+            break
+        if rows is None:
+            raise RuntimeError("No public lore relation is available")
     except Exception as e:
         print(f"[ERROR] Failed to fetch lore from Supabase: {e}")
         return ""

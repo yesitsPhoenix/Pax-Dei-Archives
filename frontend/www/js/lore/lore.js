@@ -57,12 +57,23 @@ let itemsCache = {};
 let itemDetailCache = {};
 let allItemsCache = null;
 
+async function queryPublicLore(columns, configureQuery = query => query, selectOptions) {
+    const runQuery = table => configureQuery(
+        supabase.from(table).select(columns, selectOptions)
+    );
+    let result = await runQuery('lore_items_public');
+    if (result.error?.code === '42P01' || result.error?.code === 'PGRST205') {
+        result = await runQuery('lore_items');
+    }
+    return result;
+}
+
 async function fetchCategories() {
     if (categoriesCache) return categoriesCache;
-    const { data, error } = await supabase
-        .from('lore_items')
-        .select('category')
-        .order('category', { ascending: true });
+    const { data, error } = await queryPublicLore(
+        'category',
+        query => query.order('category', { ascending: true })
+    );
     if (error) { console.error('Error fetching categories:', error); return []; }
     categoriesCache = [...new Set(data.map(r => r.category).filter(Boolean))];
     return categoriesCache;
@@ -80,12 +91,13 @@ async function fetchCategoryCounts() {
 
 async function fetchItemsByCategory(category) {
     if (itemsCache[category]) return itemsCache[category];
-    const { data, error } = await supabase
-        .from('lore_items')
-        .select('id, title, slug, sort_order, content, author, date')
-        .eq('category', category)
-        .order('sort_order', { ascending: true })
-        .order('title', { ascending: true });
+    const { data, error } = await queryPublicLore(
+        'id, title, slug, sort_order, content, author, date',
+        query => query
+            .eq('category', category)
+            .order('sort_order', { ascending: true })
+            .order('title', { ascending: true })
+    );
     if (error) { console.error('Error fetching items:', error); return []; }
     itemsCache[category] = data || [];
     return itemsCache[category];
@@ -93,11 +105,10 @@ async function fetchItemsByCategory(category) {
 
 async function fetchItemDetail(slug) {
     if (itemDetailCache[slug]) return itemDetailCache[slug];
-    const { data, error } = await supabase
-        .from('lore_items')
-        .select('*')
-        .eq('slug', slug)
-        .single();
+    const { data, error } = await queryPublicLore(
+        'id, title, slug, category, sort_order, author, date, titles, association, known_works, sources, related_entries, content',
+        query => query.eq('slug', slug).single()
+    );
     if (error) { console.warn(`Lore item '${slug}' not found:`, error.message); return null; }
     itemDetailCache[slug] = data;
     return data;
@@ -105,11 +116,10 @@ async function fetchItemDetail(slug) {
 
 async function fetchAllItems() {
     if (allItemsCache) return allItemsCache;
-    const { data, error } = await supabase
-        .from('lore_items')
-        .select('id, title, slug, category')
-        .order('category')
-        .order('title');
+    const { data, error } = await queryPublicLore(
+        'id, title, slug, category',
+        query => query.order('category').order('title')
+    );
     if (error) { console.error('Error fetching all items:', error); return []; }
     allItemsCache = data || [];
     return allItemsCache;
@@ -348,13 +358,12 @@ async function renderArticle(slug, category) {
     // Infobox
     const infoboxHtml = buildInfobox(item);
 
-    // Sources / research footer
+    // Public sources footer; research notes are reserved for Lore editors.
     let footerHtml = '';
-    if (item.sources || item.research) {
+    if (item.sources) {
         footerHtml = `<div class="lore-article-footer">
-            <h4><i class="fa-solid fa-scroll" style="margin-right: 6px;"></i>Sources & Research</h4>
-            ${item.sources ? `<div class="footer-section">${renderMarkdown(item.sources)}</div>` : ''}
-            ${item.research ? `<div class="footer-section"><strong>Research Notes:</strong><br>${renderMarkdown(item.research)}</div>` : ''}
+            <h4><i class="fa-solid fa-scroll" style="margin-right: 6px;"></i>Sources</h4>
+            <div class="footer-section">${renderMarkdown(item.sources)}</div>
         </div>`;
     }
 

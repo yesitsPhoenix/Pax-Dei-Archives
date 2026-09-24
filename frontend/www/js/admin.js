@@ -8,6 +8,17 @@ import { authSession } from './authSessionManager.js';
 let initialAuthCheckComplete = false;
 let dashboardStatsCache = null;
 let lastStatsFetchTime = 0;
+
+async function queryPublicLore(columns, configureQuery = query => query, selectOptions) {
+    const runQuery = table => configureQuery(
+        supabase.from(table).select(columns, selectOptions)
+    );
+    let result = await runQuery('lore_items_public');
+    if (result.error?.code === '42P01' || result.error?.code === 'PGRST205') {
+        result = await runQuery('lore_items');
+    }
+    return result;
+}
 const STATS_CACHE_DURATION = 5 * 60 * 1000;
 let tagListCache = null;
 let isAdminAuthorizedCache = null;
@@ -150,7 +161,7 @@ async function fetchDashboardStats() {
         supabase.from('quest_categories').select('*', { count: 'exact', head: true }),
         supabase.from('developer_comments').select('*', { count: 'exact', head: true }),
         supabase.from('developer_comments').select('*', { count: 'exact', head: true }).gte('comment_date', startOfMonth).lte('comment_date', endOfMonth),
-        supabase.from('lore_items').select('*', { count: 'exact', head: true }),
+        queryPublicLore('id', query => query, { count: 'exact', head: true }),
         supabase.from('publications').select('*', { count: 'exact', head: true }).eq('status', 'published'),
         supabase.from('admin_users').select('*', { count: 'exact', head: true }),
         supabase.from('characters').select('*', { count: 'exact', head: true }),
@@ -206,7 +217,10 @@ async function fetchRecentActivity() {
         { data: lastPublication },
     ] = await Promise.all([
         supabase.from('developer_comments').select('author, comment_date, content').order('comment_date', { ascending: false }).limit(1).single(),
-        supabase.from('lore_items').select('title, created_at, category').order('created_at', { ascending: false }).limit(1).single(),
+        queryPublicLore(
+            'title, created_at, category',
+            query => query.order('created_at', { ascending: false }).limit(1).single()
+        ),
         supabase.from('publications').select('title, release_date, issue_number').eq('status', 'published').order('release_date', { ascending: false }).limit(1).single(),
     ]);
 
