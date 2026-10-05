@@ -11,7 +11,7 @@ A most humble master scribe, well-known for a series of letters providing crucia
 - [The Elysium Age](lore.html?category=Writings&item=the-elysium-age-letter)
 - [The Great Surge](lore.html?category=Writings&item=the-great-surge)
 - [The Age of Legends](lore.html?category=Writings&item=the-age-of-legends-letter)
-- [The Age of the Kingdoms](lore.html?category=Writings&item=the-age-of-the-kindgoms-letter)
+- [The Age of the Kingdoms](lore.html?category=Writings&item=the-age-of-the-kingdoms-letter)
 - [The Age of the Papacy](lore.html?category=Writings&item=the-age-of-the-papacy-letter)
 - [The Great Cataclysm](lore.html?category=Writings&item=the-great-cataclysm-letter)
 - [The Last Word](lore.html?category=Writings&item=the-last-word)

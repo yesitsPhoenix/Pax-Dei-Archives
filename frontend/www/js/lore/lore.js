@@ -27,7 +27,24 @@ function getQueryParams() {
     return params;
 }
 
+function canonicalLoreSlug(slug) {
+    return slug === 'the-age-of-the-kindgoms-letter'
+        ? 'the-age-of-the-kingdoms-letter'
+        : slug;
+}
+
+function replaceLegacyLoreUrl(category, slug) {
+    const canonicalSlug = canonicalLoreSlug(slug);
+    if (canonicalSlug !== slug) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('item', canonicalSlug);
+        window.history.replaceState({ category, item: canonicalSlug }, '', url);
+    }
+    return canonicalSlug;
+}
+
 function updateUrl(category, itemSlug = null) {
+    itemSlug = canonicalLoreSlug(itemSlug);
     const parts = [];
     if (category) parts.push(`category=${encodeURIComponent(category)}`);
     if (itemSlug) parts.push(`item=${encodeURIComponent(itemSlug)}`);
@@ -104,6 +121,7 @@ async function fetchItemsByCategory(category) {
 }
 
 async function fetchItemDetail(slug) {
+    slug = canonicalLoreSlug(slug);
     if (itemDetailCache[slug]) return itemDetailCache[slug];
     const { data, error } = await queryPublicLore(
         'id, title, slug, category, sort_order, author, date, titles, association, known_works, sources, related_entries, content',
@@ -451,7 +469,7 @@ async function displayLoreContent(category, slug) {
 document.addEventListener('DOMContentLoaded', async function () {
     const params = getQueryParams();
     const category = params.category || null;
-    const slug = params.item || null;
+    const slug = replaceLegacyLoreUrl(category, params.item || null);
 
     await displayLoreContent(category, slug);
 
@@ -462,7 +480,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             e.preventDefault();
             const url = new URL(anchor.getAttribute('href'), window.location.origin);
             const newCat = url.searchParams.get('category');
-            const newSlug = url.searchParams.get('item');
+            const newSlug = canonicalLoreSlug(url.searchParams.get('item'));
             updateUrl(newCat, newSlug);
             displayLoreContent(newCat, newSlug);
 
@@ -474,7 +492,9 @@ document.addEventListener('DOMContentLoaded', async function () {
     // Popstate (browser back/forward)
     window.onpopstate = async function () {
         const p = getQueryParams();
-        await displayLoreContent(p.category || null, p.item || null);
+        const category = p.category || null;
+        const slug = replaceLegacyLoreUrl(category, p.item || null);
+        await displayLoreContent(category, slug);
     };
 
     // ── Smart Search ──────────────────────────────────────────
